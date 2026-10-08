@@ -3,7 +3,7 @@ import { useTranslations } from 'next-intl';
 
 import { Swirl } from './decor';
 import { FaqAccordion } from './faq-accordion';
-import { Reveal } from './reveal';
+import { FaqMotion } from './faq-motion';
 import { accentOnBlue } from './rich';
 import { SectionHeading } from './section-heading';
 import { faqItems, landingSections } from '../_data/landing-content';
@@ -11,7 +11,8 @@ import { faqItems, landingSections } from '../_data/landing-content';
 /*
  * «Preguntas frecuentes» (Figma): the mockup's questions; the answers the
  * mockup leaves out come from the landing doc. The copy is translated here
- * and handed to the client accordion.
+ * and handed to the client accordion. The pieces carry `data-piece` for
+ * their entrance (faq-motion.tsx).
  */
 export function Faq() {
   const t = useTranslations('landing.faq');
@@ -28,20 +29,23 @@ export function Faq() {
       className="relative scroll-mt-28 px-gutter py-16 lg:py-24"
     >
       <Swirl variant="bg-2" className="bottom-[-90%] left-[-85%] w-[190%]" />
-      <div className="relative mx-auto max-w-3xl">
-        <Reveal>
+      <FaqMotion>
+        <div className="relative mx-auto max-w-3xl">
           <SectionHeading
             id="faq-title"
             chip={{ icon: Help, label: t('chip') }}
             title={t.rich('title', accentOnBlue)}
             description={t('description')}
             tone="on-blue"
+            pieces={{
+              chip: 'chip',
+              title: 'title',
+              description: 'description',
+            }}
           />
-        </Reveal>
-        <Reveal delay="short" className="mt-10">
-          <FaqAccordion items={items} />
-        </Reveal>
-      </div>
+          <FaqAccordion items={items} className="mt-10" />
+        </div>
+      </FaqMotion>
     </section>
   );
 }

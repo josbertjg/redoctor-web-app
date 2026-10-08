@@ -946,7 +946,13 @@ written out in full, or Next.js does not inline it).
   behind it (measured, so in a column they come from above and below it),
   each price counts up from zero as its card lands (a MotionValue in the
   sequence writing the locale's format into the amount's span), the tag
-  pops, the benefits step in 70 ms apart and the buttons rise. Nothing
+  pops, the benefits step in 70 ms apart and the buttons rise. «Preguntas
+  frecuentes»: the chip, title and line, then the questions step in from
+  the left 70 ms apart, each chevron turning into place with its row
+  (Motion's `transform` on top of the open state's `rotate`), each
+  separator — a drawn line, not a border — drawing itself from the left a
+  beat after, and the first answer, open on arrival, settling in under its
+  question; hover steps a question right and grows its chevron. Nothing
   hides after it has painted: a section already on screen when the page
   loads (a reload keeps the scroll) shows no entrance, by design (§8.2).
 - **No root `loading.tsx` (2026-10-08):** §4.
