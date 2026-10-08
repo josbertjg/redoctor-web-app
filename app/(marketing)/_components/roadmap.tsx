@@ -3,19 +3,26 @@ import { useTranslations } from 'next-intl';
 import { cn } from '@/app/lib/utils';
 
 import { Swirl } from './decor';
-import { IconBadge } from './icon-badge';
+import { IconBadge, toneFills } from './icon-badge';
 import { accentOnBlue, accentOnWhite } from './rich';
+import { RoadmapBelt } from './roadmap-belt';
 import { RoadmapMotion } from './roadmap-motion';
 import { landingSections, roadmapItems } from '../_data/landing-content';
 
 /*
  * «Prepárate para lo que viene» (Figma): a ribbon of cards that moves by
- * itself and pauses under the pointer. The list is in the track twice so the
- * loop never shows a seam; the copy is read once. With reduced motion the
- * ribbon stands still and scrolls by hand. The pieces carry `data-piece`
- * for their entrance (roadmap-motion.tsx); over a card it lifts and its
- * badge grows.
+ * itself, pauses under the pointer and can be dragged (roadmap-belt.tsx).
+ * The list is in the track four times so the loop never shows a seam and
+ * a drag either way finds cards; the copy is read once. With reduced motion
+ * and on touch screens the ribbon stands still and scrolls by hand. The
+ * pieces carry `data-piece` for their entrance (roadmap-motion.tsx). Over
+ * a card it lifts, its badge grows and the badge's tint grows out of the
+ * badge until it fills the card: a `::before` under the content, clipped
+ * to a circle centred on the badge (its padding plus half its size down).
  */
+const fill =
+  'before:absolute before:inset-0 before:-z-10 before:transition-[clip-path] before:duration-slow before:ease-house before:[clip-path:circle(0%_at_50%_calc(--spacing(9)_+_--spacing(8)))] hover:before:[clip-path:circle(100%_at_50%_calc(--spacing(9)_+_--spacing(8)))]';
+
 export function Roadmap() {
   const t = useTranslations('landing.roadmap');
 
@@ -23,7 +30,11 @@ export function Roadmap() {
     <li
       key={item.key}
       data-piece="card"
-      className="group relative w-72 shrink-0 cursor-pointer snap-start overflow-hidden rounded-2xl bg-pure-white px-6 py-9 shadow-md transition-[translate,box-shadow] duration-base ease-house hover:-translate-y-1 hover:shadow-lg"
+      className={cn(
+        'group relative isolate w-72 shrink-0 snap-start overflow-hidden rounded-2xl bg-pure-white px-6 py-9 shadow-md transition-[translate,box-shadow] duration-base ease-house hover:-translate-y-1 hover:shadow-lg',
+        fill,
+        toneFills[item.tone],
+      )}
     >
       <Swirl
         variant={item.swirl}
@@ -37,7 +48,8 @@ export function Roadmap() {
           size="lg"
           className="shadow-md transition-[scale] duration-base ease-house group-hover:scale-110"
         />
-        <p className="text-subtitle-s font-semibold text-pure-black">
+        {/* On the tint the green words step one shade darker to keep AA. */}
+        <p className="text-subtitle-s font-semibold text-pure-black [&_span]:transition-colors [&_span]:duration-slow [&_span]:ease-house group-hover:[&_span]:text-green-800">
           {t.rich(`items.${item.key}`, accentOnWhite)}
         </p>
         <span
@@ -89,25 +101,18 @@ export function Roadmap() {
         </div>
         {/* On touch screens and with reduced motion the ribbon stands still
             and scrolls by hand, with the copy once. */}
-        <div
-          role="region"
-          aria-label={t('listLabel')}
-          // A region that scrolls by hand must be reachable with the
-          // keyboard (axe: scrollable-region-focusable).
-          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
-          tabIndex={0}
-          className="group/belt mt-10 flex scrollbar-none overflow-hidden py-3 outline-none focus-visible:ring-3 focus-visible:ring-white-50/70 motion-reduce:snap-x motion-reduce:overflow-x-auto motion-reduce:px-gutter lg:mt-12 touch:snap-x touch:overflow-x-auto touch:px-gutter"
-        >
-          <div className="flex w-max animate-marquee gap-7 pr-7 group-focus-within/belt:[animation-play-state:paused] group-hover/belt:[animation-play-state:paused] motion-reduce:animate-none motion-reduce:pr-0 touch:animate-none touch:pr-0">
-            <ul className="flex gap-7">{cards}</ul>
+        <RoadmapBelt label={t('listLabel')}>
+          <ul className="flex gap-7">{cards}</ul>
+          {[2, 3, 4].map((copy) => (
             <ul
+              key={copy}
               className="flex gap-7 motion-reduce:hidden touch:hidden"
               aria-hidden="true"
             >
               {cards}
             </ul>
-          </div>
-        </div>
+          ))}
+        </RoadmapBelt>
       </RoadmapMotion>
     </section>
   );

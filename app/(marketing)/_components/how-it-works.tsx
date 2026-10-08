@@ -7,7 +7,7 @@ import { cn } from '@/app/lib/utils';
 import { Button } from '@/app/ui/button';
 
 import { Plus, Swirl } from './decor';
-import { IconBadge } from './icon-badge';
+import { IconBadge, toneFills } from './icon-badge';
 import { Reveal } from './reveal';
 import { accentOnBlue } from './rich';
 import { RoleCardMotion } from './role-card-motion';
@@ -100,20 +100,11 @@ const stepLean = [
    take the tone's lightest shade that keeps 4.5:1 on that tint (measured:
    blue-500 8.4, green-700 4.7, orange-800 6.6, warning-800 5.3; the 600s
    and orange-700 fall short). */
-const stepTone: Record<IconTone, { fill: string; words: string }> = {
-  blue: { fill: 'before:bg-blue-50', words: 'group-hover/step:text-primary' },
-  green: {
-    fill: 'before:bg-green-50',
-    words: 'group-hover/step:text-green-700',
-  },
-  orange: {
-    fill: 'before:bg-orange-50',
-    words: 'group-hover/step:text-orange-800',
-  },
-  warning: {
-    fill: 'before:bg-warning-50',
-    words: 'group-hover/step:text-warning-800',
-  },
+const stepWords: Record<IconTone, string> = {
+  blue: 'group-hover/step:text-primary',
+  green: 'group-hover/step:text-green-700',
+  orange: 'group-hover/step:text-orange-800',
+  warning: 'group-hover/step:text-warning-800',
 };
 
 type RoleCardProps = {
@@ -180,7 +171,7 @@ function RoleCard({
               className={cn(
                 'group/step relative isolate flex items-center gap-3 overflow-hidden rounded-lg bg-pure-white px-3 py-2.5 text-left shadow-md transition-[translate,box-shadow] duration-base ease-house hover:-translate-y-0.5 hover:shadow-lg',
                 'before:absolute before:inset-0 before:-z-10 before:origin-left before:scale-x-0 before:transition-[scale] before:duration-slow before:ease-house hover:before:scale-x-100',
-                stepTone[step.tone].fill,
+                toneFills[step.tone],
               )}
             >
               <IconBadge
@@ -193,7 +184,7 @@ function RoleCard({
               <span
                 className={cn(
                   'text-title-md font-semibold text-pure-black transition-colors duration-base ease-house sm:text-subtitle-s',
-                  stepTone[step.tone].words,
+                  stepWords[step.tone],
                 )}
               >
                 {step.label}

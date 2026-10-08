@@ -9,7 +9,14 @@ import 'client-only';
  * an `export *` barrel Turbopack cannot tree-shake, and it shipped the whole
  * library (40 KB) where this ships what the page uses (10 KB).
  */
-export { AnimatePresence, m, stagger } from 'framer-motion';
+export {
+  AnimatePresence,
+  m,
+  stagger,
+  useAnimationFrame,
+  useMotionValue,
+  useTransform,
+} from 'framer-motion';
 export type {
   AnimationSequence,
   DOMKeyframesDefinition,
@@ -18,6 +25,7 @@ export type {
 } from 'framer-motion';
 export { arcTo, type Arc } from './arc';
 export { Choreographed } from './choreographed';
+export { useCoarsePointer } from './coarse-pointer';
 export { Entrance } from './entrance';
 export { useReducedMotion } from './reduced-motion';
 export { StaggeredText, type TextSegment } from './staggered-text';

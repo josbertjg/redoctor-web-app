@@ -62,12 +62,13 @@
     }
   }
 
+  /* One copy of four (the track pads one gap after the last). */
   @keyframes marquee {
     from {
       transform: translateX(0);
     }
     to {
-      transform: translateX(-50%);
+      transform: translateX(calc(-100% / 4));
     }
   }
 

@@ -135,7 +135,7 @@ favorites, notifications inbox, the specialist's panel. They come after.
 | Errors | **Sentry** (`@sentry/nextjs` 11) | `dataCollection` all off (v11's successor of `sendDefaultPii: false`); same privacy rules as the app; off while the DSN is empty |
 | Icons | **Material Symbols Rounded** as inline SVG per icon (`@material-symbols/svg-400`) | Same family as the app; only the icons in use ship — never the variable icon font (several MB) |
 | Font | **Urbanist** via `next/font/google` | Weights 300–700, `display: swap`, exposed as `--font-urbanist` |
-| Animation | **Motion** (`framer-motion` 14, the library behind the `motion` wrapper) | One door, `app/ui/motion` (§8.11): `MotionProvider` loads the features after the first render, `m`, the hooks, timings read from `tokens.css`, `StaggeredText`. Nothing imports `framer-motion` elsewhere (lint). `framer-motion` and not `motion`: the wrapper's `export *` barrel defeats Turbopack's tree shaking (40 KB in the initial JS instead of 10, measured). CSS keeps hover, accordion, marquee and menu |
+| Animation | **Motion** (`framer-motion` 14, the library behind the `motion` wrapper) | One door, `app/ui/motion` (§8.11): `MotionProvider` loads the features after the first render, `m`, the hooks, timings read from `tokens.css`, `StaggeredText`. Nothing imports `framer-motion` elsewhere (lint). `framer-motion` and not `motion`: the wrapper's `export *` barrel defeats Turbopack's tree shaking (40 KB in the initial JS instead of 10, measured). CSS keeps hover, accordion and menu; the marquee rolls by CSS until JavaScript takes it over to be dragged |
 | Splash | **Rive** (`@rive-app/react-canvas-lite`) | The app's own `splash_logo.riv` (`public/animations`), landing only, a session's first visit (§13). Its runtime compiles WebAssembly: `'wasm-unsafe-eval'` in the CSP |
 | Unit/component tests | **Vitest 5** + Testing Library + **MSW 3** | jsdom; `jest-axe` for accessibility; MSW handlers built from the OpenAPI shapes |
 | E2E | **Playwright** + `@axe-core/playwright` | Mobile viewports first (iPhone 13 / Pixel 7 profiles) |
@@ -660,7 +660,8 @@ primitive in `app/ui` that takes size and color from the tokens.
     pieces (`data-piece`); the HTML arrives visible, and what is still out
     of view hides after hydration until it enters, as `Reveal` does.
     Nothing imports `framer-motion` elsewhere (lint). CSS keeps what CSS does well: hover,
-    the accordion, the marquee, the menu. Above the fold only what makes
+    the accordion, the menu; the marquee rolls by CSS until JavaScript takes
+    it over where it stands, to make it draggable (`RoadmapBelt`). Above the fold only what makes
     its entrance on purpose starts hidden (the hero's words and cursor);
     the picture, the search and the chips paint on the first frame. Under
     reduced motion everything is plain content, no entrance. Animated text
@@ -932,7 +933,14 @@ written out in full, or Next.js does not inline it).
   viene»: the rocket flies in on one arc
   from below left, the lead line and the title rise, the pin drops, and the
   cards land on the rolling ribbon from the right 100 ms apart with their
-  badges popping after; hover lifts a card and grows its badge. Nothing
+  badges popping after. The ribbon can be dragged (`RoadmapBelt`:
+  JavaScript takes the CSS marquee over where it stands, four copies so a
+  drag of a screen's width either way finds cards, the same pace, no
+  momentum so it rolls on from where it is let go, paused under the pointer
+  or a visible focus; not on touch screens, where it scrolls by hand);
+  hover lifts a card, grows its badge and fills the card with the badge's
+  tint growing out of the badge (a `::before` clipped to a circle centred
+  on it), the green words one shade darker to keep AA on the tint. Nothing
   hides after it has painted: a section already on screen when the page
   loads (a reload keeps the scroll) shows no entrance, by design (§8.2).
 - **No root `loading.tsx` (2026-10-08):** §4.

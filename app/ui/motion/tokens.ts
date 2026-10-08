@@ -14,7 +14,8 @@ export type DurationToken =
   | 'entrance'
   | 'splash'
   | 'splash-fallback'
-  | 'cursor-pause';
+  | 'cursor-pause'
+  | 'marquee';
 
 const durations: Record<DurationToken, number> = {
   fast: 0.2,
@@ -24,6 +25,7 @@ const durations: Record<DurationToken, number> = {
   splash: 1.5,
   'splash-fallback': 2.5,
   'cursor-pause': 5,
+  marquee: 45,
 };
 
 type Bezier = [number, number, number, number];

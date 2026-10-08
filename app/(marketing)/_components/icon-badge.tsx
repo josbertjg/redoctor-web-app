@@ -13,6 +13,14 @@ const tones: Record<IconTone, string> = {
   warning: 'bg-warning-50 text-warning-500',
 };
 
+/** The same tints as a fill that grows over a card on hover (a `::before`). */
+export const toneFills: Record<IconTone, string> = {
+  blue: 'before:bg-blue-50',
+  green: 'before:bg-green-50',
+  orange: 'before:bg-orange-50',
+  warning: 'before:bg-warning-50',
+};
+
 const sizes = {
   sm: { circle: 'size-10', icon: 20 },
   md: { circle: 'size-12', icon: 24 },
