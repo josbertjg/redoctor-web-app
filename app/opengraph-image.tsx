@@ -22,7 +22,7 @@ export default async function OpenGraphImage() {
   return new ImageResponse(
     <BrandCard
       title={t('metadata.tagline')}
-      subtitle={t('landing.provisional.description')}
+      subtitle={t('landing.footer.tagline')}
     />,
     { ...size, fonts: ogFonts },
   );

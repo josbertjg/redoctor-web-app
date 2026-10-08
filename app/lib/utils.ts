@@ -7,6 +7,7 @@ import { extendTailwindMerge } from 'tailwind-merge';
  * sits next to `text-primary`.
  */
 const typeScale = [
+  'display-xl',
   'display-lg',
   'display-md',
   'display-sm',

@@ -32,6 +32,54 @@
   --animate-fade-in: fade-in var(--duration-base) var(--ease-house) both;
   --animate-fade-up: fade-up var(--duration-base) var(--ease-house) both;
   --animate-scale-in: scale-in var(--duration-base) var(--ease-house) both;
+  --animate-fade-out: fade-out var(--duration-fast) var(--ease-house) both;
+  /* A ribbon of cards that moves by itself: the track holds the list twice
+     and slides one list's width, so the loop never shows a seam. */
+  --animate-marquee: marquee var(--duration-marquee) linear infinite;
+  /* Radix Accordion content, with the height the library measures. */
+  --animate-accordion-down: accordion-down var(--duration-base)
+    var(--ease-house);
+  --animate-accordion-up: accordion-up var(--duration-base) var(--ease-house);
+
+  @keyframes fade-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+      opacity: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+      opacity: 1;
+    }
+  }
+
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+      opacity: 1;
+    }
+    to {
+      height: 0;
+      opacity: 0;
+    }
+  }
 
   @keyframes fade-in {
     from {
@@ -64,6 +112,9 @@
     }
   }
 }
+
+/* Screens driven by a finger: what moves by itself should scroll by hand. */
+@custom-variant touch (@media (hover: none) and (pointer: coarse));
 
 /* Transition durations from the motion tokens: duration-fast/base/slow. */
 @utility duration-fast {

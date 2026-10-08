@@ -55,7 +55,10 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
     <html
       lang="es"
       data-theme="light"
-      className={cn(urbanist.variable, 'h-full antialiased')}
+      className={cn(
+        urbanist.variable,
+        'h-full antialiased motion-safe:scroll-smooth',
+      )}
     >
       <body className="flex min-h-full flex-col">
         <NextIntlClientProvider messages={pickClientMessages(messages)}>

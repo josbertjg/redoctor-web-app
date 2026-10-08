@@ -803,14 +803,47 @@ written out in full, or Next.js does not inline it).
    prototype shipped and the port does).
 10. The daily-summary opt-out link: the web serves `/resumen/baja?token=…`;
     the API's email must use that exact format (to confirm with Heyscar).
-11. iOS and the specialist bridges: until the DNS cutover, redoctorapp.com
-    serves the prototype's AASA, without `/agenda`, `/especialidades`,
-    `/perfil`. Either cut over or add the same entries to the prototype.
-12. Stars color: the app paints `#F9BF24`, a constant outside its theme;
-    the web uses `warning-500` until a token is added to `tokens.css`.
-13. Figma vs this file: the Snackbar is filled with color (blue, green, red,
+11. Figma vs this file: the Snackbar is filled with color (blue, green, red,
     yellow, dark grey with white text) while our Toast is a light card; the
     «secondary» button is blue outline in Figma and green in §8.
+
+### Decided (2026-10-08)
+
+- **Stars color:** `warning-500`. The app's `#F9BF24` stays out of
+  `tokens.css`.
+- **iOS and the specialist bridges:** no change to the prototype. The
+  domain moves to this web as soon as possible, and this web must be ready
+  for it (§6 "Domain cutover"). Until then iPhones open `/agenda`,
+  `/especialidades` and `/perfil` in the old web.
+- **Unknown ids under a valid route answer 200 + `noindex`:** accepted for
+  now (see Improvements).
+- **First steps are development:** Vercel, Sentry, PostHog, the GitHub
+  secret and Renovate wait until the web works in development.
+- **The landing (M9) follows the middle mockup of Figma «LANDING PAGE»**
+  (`4464:341`), copy included, over the landing doc's copy; the bar stays
+  as designed for now. No mobile design exists: the phone layout is ours.
+  Where the mockup and the tokens disagree, the tokens won and the gap is
+  listed here for the owner: radius 80 → `2xl` (30), 25 → `xl` (20),
+  15 → `lg` (12); the 80 px hero line got its own token (`display-xl`);
+  brand green on white is text only as `green-700` (the 500 fails AA, as
+  the doc warns), and the green card of «Del mensaje a la consulta» is
+  `green-600` so its white text reaches 3:1; the landing's buttons use the
+  new `shape="soft"`. Still
+  sample data: specialties (the API's catalog comes with the logic),
+  plans and prices (the mockup's; the doc keeps prices off the landing
+  while the app links here, §6), the footer channels (REDOC-357), the
+  plans' one-line descriptions (not in the mockup). «Entrar», «Comenzar»,
+  «Seleccionar plan», the search and the chips are visual until their
+  modules exist.
+
+### Improvements noted (not scheduled)
+
+- A real 404 for unknown profiles and paths (§4): a check in `proxy.ts`, or
+  routes that do not match.
+- The home page fades its whole content in, so Chrome never records a
+  contentful paint and Lighthouse fails it (`NO_FCP`). Solve it together
+  with the splash-like loading animation planned for the web: content
+  that arrives with the page must paint at once.
 
 ---
 

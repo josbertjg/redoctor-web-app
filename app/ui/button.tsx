@@ -12,7 +12,7 @@ import { Icon } from '@/app/ui/icons';
 
 const buttonVariants = cva(
   [
-    'relative inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-transparent',
+    'relative inline-flex shrink-0 items-center justify-center gap-2 border border-transparent',
     'text-label-lg whitespace-nowrap select-none',
     'transition-[background-color,border-color,color,box-shadow,transform] duration-fast ease-house',
     'outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
@@ -39,11 +39,17 @@ const buttonVariants = cva(
         true: 'w-full',
         false: '',
       },
+      /** The app's pill, or the softer corners of the landing (Figma). */
+      shape: {
+        pill: 'rounded-full',
+        soft: 'rounded-lg',
+      },
     },
     defaultVariants: {
       variant: 'primary',
       size: 'large',
       block: false,
+      shape: 'pill',
     },
   },
 );
@@ -64,6 +70,7 @@ export function Button({
   variant = 'primary',
   size = 'large',
   block = false,
+  shape = 'pill',
   asChild = false,
   loading = false,
   type = 'button',
@@ -86,7 +93,7 @@ export function Button({
       data-slot="button"
       data-variant={variant}
       data-size={size}
-      className={cn(buttonVariants({ variant, size, block }), className)}
+      className={cn(buttonVariants({ variant, size, block, shape }), className)}
       onClick={handleClick}
       {...(asChild ? {} : { type })}
       {...(loading ? { 'aria-busy': true, 'data-loading': '' } : {})}

@@ -46,13 +46,13 @@ Git hooks (Husky): lint-staged on commit, typecheck and tests on push.
 
 ## What exists today (M1)
 
-| Path                                                                                       | What it is                                                                                  |
-| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
-| `/`                                                                                        | Provisional cover; the landing (M9) waits for its design                                    |
-| `/s/{specialistId}`                                                                        | Public profile of a specialist (M8): read-only, server-rendered, with its own preview image |
-| `/suscripcion`, `/agenda`, `/agenda/{YYYY-MM-DD}`, `/especialidades`, `/perfil`, `/home/*` | Bridges: they say what opens in the app and offer «Abrir en la app»                         |
-| `/resumen/baja?token=…`                                                                    | Daily-summary opt-out from the API's email (a Server Action)                                |
-| `/.well-known/apple-app-site-association`, `/.well-known/assetlinks.json`                  | Universal Links and App Links of the mobile app, byte-exact                                 |
+| Path                                                                                       | What it is                                                                                                                                     |
+| ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`                                                                                        | The landing (M9), after the middle mockup of Figma «LANDING PAGE»: the look and the structure; search, sign-in and plans get their logic later |
+| `/s/{specialistId}`                                                                        | Public profile of a specialist (M8): read-only, server-rendered, with its own preview image                                                    |
+| `/suscripcion`, `/agenda`, `/agenda/{YYYY-MM-DD}`, `/especialidades`, `/perfil`, `/home/*` | Bridges: they say what opens in the app and offer «Abrir en la app»                                                                            |
+| `/resumen/baja?token=…`                                                                    | Daily-summary opt-out from the API's email (a Server Action)                                                                                   |
+| `/.well-known/apple-app-site-association`, `/.well-known/assetlinks.json`                  | Universal Links and App Links of the mobile app, byte-exact                                                                                    |
 
 Next: session (M2), invitation (M4), appointment (M5) and the rest of
 AGENTS.md §1, one module at a time.

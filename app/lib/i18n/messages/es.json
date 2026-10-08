@@ -7,10 +7,163 @@
     "ogImageAlt": "Redoctor: especialistas verificados, citas sin enredos"
   },
   "landing": {
-    "provisional": {
-      "title": "Especialistas verificados. Citas sin enredos.",
-      "description": "Tu especialista te agenda, tú confirmas desde el teléfono y todo queda en un solo lugar, sin llamadas ni esperas.",
-      "linkHint": "¿Te llegó un enlace de tu especialista? Ábrelo: ahí está tu cita."
+    "nav": {
+      "label": "Principal",
+      "specialists": "Especialistas",
+      "plans": "Planes",
+      "faq": "Preguntas frecuentes",
+      "signIn": "Entrar",
+      "openMenu": "Abrir el menú",
+      "closeMenu": "Cerrar el menú"
+    },
+    "hero": {
+      "titleLead": "Confianza, salud y gestión eficiente,",
+      "title": "en un solo <accent>click</accent>.",
+      "search": {
+        "label": "Buscar especialistas",
+        "specialty": "Especialidad, enfermedad, doctor",
+        "city": "Ciudad",
+        "submit": "Buscar"
+      },
+      "specialtiesLabel": "Especialidades"
+    },
+    "summary": {
+      "title": "Del mensaje a la consulta, <accent>sin llamadas ni esperas</accent>.",
+      "verified": {
+        "title": "Especialistas",
+        "subtitle": "verificados",
+        "photoAlt": "Médico con bata blanca y estetoscopio"
+      },
+      "free": {
+        "title": "Gratis",
+        "subtitle": "para pacientes",
+        "photoAlt": "Paciente mirando hacia arriba"
+      },
+      "fast": {
+        "lead": "tu cita ahora en",
+        "title": "1 minuto",
+        "photoAlt": "Mano sosteniendo un teléfono con la pantalla de agendar cita"
+      }
+    },
+    "howItWorks": {
+      "title": "Así de <accent>simple</accent>.",
+      "cta": "Comenzar",
+      "specialist": {
+        "title": "¿Especialista?",
+        "description": "Quieres tus servicios, precios y tu agenda.",
+        "steps": {
+          "profile": "Crea tu perfil",
+          "verify": "Te verificamos",
+          "schedule": "Agenda a tus pacientes",
+          "attend": "Atiende con tu día en orden"
+        }
+      },
+      "patient": {
+        "title": "¿Paciente?",
+        "description": "Quieres encontrar especialistas calificados y agendar citas.",
+        "steps": {
+          "receive": "Recibe tu cita",
+          "save": "Guárdala en tu cuenta",
+          "confirm": "Confírmala",
+          "rate": "Califica tu consulta"
+        }
+      }
+    },
+    "trust": {
+      "chip": "Especialistas verificados",
+      "title": "Sí, puedes <accent>c</accent>onfiar en nuestros <accent>especialistas</accent>.",
+      "description": "Queremos que te sientas seguro al agendar, por eso, antes de que un perfil aparezca en Redoctor, nuestro equipo revisa la solicitud a mano. Ningún perfil sale en línea sin nuestra revisión.",
+      "stepsLabel": "Cómo verificamos a cada especialista",
+      "steps": {
+        "identity": "Confirmamos los datos de identidad con su cédula.",
+        "specialty": "Validamos cada especialidad del profesional",
+        "approved": "Solo la info. aprobada se muestra en su perfil",
+        "published": "El perfil se publica como “Especialista verificado”"
+      }
+    },
+    "roadmap": {
+      "lead": "Esto es solo el comienzo",
+      "title": "Prepárate para <accent>lo que viene</accent>",
+      "listLabel": "Lo que viene a Redoctor",
+      "audience": {
+        "patient": "Paciente",
+        "specialist": "Especialista"
+      },
+      "items": {
+        "favorites": "<accent>Guarda</accent> tus especialistas para volver a agendar",
+        "search": "<accent>Busca</accent> especialistas por especialidad y ubicación",
+        "book": "Agenda citas con tu especialista en <accent>segundos</accent>",
+        "app": "La app de Redoctor para pacientes, en <accent>tu teléfono</accent>",
+        "cities": "<accent>Más ciudades</accent> de Venezuela y, luego, Latinoamérica"
+      }
+    },
+    "pricing": {
+      "chip": "Planes",
+      "title": "Elige el plan <accent>ideal</accent>",
+      "description": "Aumenta tu visibilidad y conecta con más pacientes de forma segura.",
+      "perMonth": "al mes",
+      "featuresTitle": "Beneficios y características",
+      "cta": "Seleccionar plan",
+      "featured": "Plan recomendado",
+      "plans": {
+        "essential": {
+          "name": "Plan Esencial",
+          "description": "Para empezar con tu perfil verificado y un consultorio."
+        },
+        "professional": {
+          "name": "Plan Profesional",
+          "description": "Para una consulta con varios consultorios y más pacientes."
+        },
+        "corporate": {
+          "name": "Plan Corporativo",
+          "description": "Para clínicas y equipos que atienden en varios lugares."
+        }
+      },
+      "features": {
+        "search": "Aparecer en las búsquedas",
+        "offices": "Máximo 3 consultorios",
+        "reports": "Visualización y descarga de reportes administrativos"
+      }
+    },
+    "faq": {
+      "chip": "FAQ",
+      "title": "<accent>Preguntas</accent> frecuentes",
+      "description": "¿Tienes dudas? Te ayudamos a resolverlas antes de comenzar",
+      "items": {
+        "app": {
+          "question": "¿Tengo que descargar una app?",
+          "answer": "No. Todo funciona desde el navegador de tu teléfono o tu computadora."
+        },
+        "cost": {
+          "question": "¿Cuánto cuesta?",
+          "answer": "Nada: Redoctor es gratis para los pacientes. La consulta la pagas directamente a tu especialista; Redoctor no gestiona cobros ni pagos."
+        },
+        "confirm": {
+          "question": "¿Cómo confirmo mi cita?",
+          "answer": "Desde 24 horas antes verás el botón «Confirmar» en el detalle de tu cita. También te avisamos por correo."
+        },
+        "reschedule": {
+          "question": "¿Puedo reprogramar o cancelar?",
+          "answer": "Sí, desde el detalle de tu cita. Para reprogramar, eliges un nuevo horario entre los disponibles de tu especialista."
+        },
+        "family": {
+          "question": "¿Puedo llevar la cita de un familiar?",
+          "answer": "Sí. Al guardar la cita indicas que es para otra persona, como tu hijo o tu mamá, y la llevas desde tu misma cuenta."
+        },
+        "missing": {
+          "question": "¿Qué hago si no encuentro mi cita?",
+          "answer": "Entra con la misma cuenta de Google o Apple que usaste la primera vez. Si sigues sin verla, escríbenos por WhatsApp."
+        }
+      }
+    },
+    "footer": {
+      "tagline": "Confianza, salud y gestión eficiente en un solo click.",
+      "contact": "Contáctanos",
+      "legalLabel": "Legal",
+      "terms": "Términos y condiciones",
+      "privacy": "Política de privacidad",
+      "deleteAccount": "Eliminar mi cuenta",
+      "copyright": "© {year} Redoctor. Hecho en Venezuela."
     }
   },
   "common": {

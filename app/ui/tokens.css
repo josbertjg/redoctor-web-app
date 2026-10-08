@@ -81,6 +81,11 @@
   --text-label-sm--font-weight: 600;
 
   /* ---------- Type scale (the app's compact names) ---------------------- */
+  /* Landing hero only (Figma «LANDING PAGE», 2026-10-08): one step above
+     the app's scale, which tops at 60px. */
+  --text-display-xl: 80px;
+  --text-display-xl--line-height: 1.1;
+  --text-display-xl--font-weight: 700;
   --text-title-xxxl: 60px;
   --text-title-xxxl--line-height: 1.1;
   --text-title-xxl: 42px;
@@ -260,11 +265,13 @@
   --duration-fast: 200ms;
   --duration-base: 250ms; /* the house default */
   --duration-slow: 300ms;
+  --duration-marquee: 45s; /* one loop of a ribbon that moves by itself */
   --ease-house: cubic-bezier(0.42, 0, 0.58, 1); /* ease-in-out */
 
   /* ---------- Layout ---------------------------------------------------- */
   --spacing-gutter: 16px; /* side padding at every width */
   --container-content: 42rem; /* reading width of a patient page */
+  --container-landing: 79rem; /* the landing's content width (Figma: 1262px at 1440) */
   --spacing-control: 40px; /* inputs and small buttons → h-control */
   --spacing-control-lg: 48px; /* large (block) buttons → h-control-lg */
   --spacing-touch: 44px; /* minimum tap target → min-h-touch, min-w-touch */
