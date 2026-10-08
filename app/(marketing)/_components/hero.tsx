@@ -18,7 +18,7 @@ export function Hero() {
   return (
     <section
       aria-labelledby="hero-title"
-      className="relative overflow-hidden px-gutter pt-16 pb-10 sm:pt-20 lg:pt-28 lg:pb-14"
+      className="relative px-gutter pt-16 pb-10 sm:pt-20 lg:pt-28 lg:pb-14"
     >
       <Swirl
         variant="bg-4"

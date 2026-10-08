@@ -26,7 +26,7 @@ export function HowItWorks() {
     <section
       id={landingSections.howItWorks}
       aria-labelledby="how-it-works-title"
-      className="relative scroll-mt-28 overflow-hidden px-gutter py-16 lg:py-24"
+      className="relative scroll-mt-28 px-gutter py-16 lg:py-24"
     >
       <Swirl variant="bg-1" className="top-[8%] left-[16%] w-[110%]" />
       <Plus className="top-0 right-[16%] w-16 opacity-30" />
@@ -41,7 +41,7 @@ export function HowItWorks() {
           {t.rich('title', accentOnBlue)}
         </h2>
       </Reveal>
-      <div className="relative mx-auto mt-10 grid max-w-5xl gap-8 lg:mt-16 lg:grid-cols-2 lg:gap-20">
+      <div className="relative mx-auto mt-10 grid max-w-4xl gap-6 md:grid-cols-2 lg:mt-14 lg:gap-10">
         <Reveal>
           <RoleCard
             illustration="avatar-specialist"
@@ -96,31 +96,31 @@ function RoleCard({
   cta,
 }: RoleCardProps) {
   return (
-    <article className="flex h-full flex-col items-center gap-5 rounded-2xl bg-pure-white px-5 py-6 text-center shadow-md sm:px-6">
+    <article className="flex h-full flex-col items-center gap-4 rounded-2xl bg-pure-white px-4 py-5 text-center shadow-md sm:px-6">
       <Image
         src={`/illustrations/landing/${illustration}.svg`}
         alt=""
         aria-hidden="true"
-        width={110}
-        height={110}
-        className="size-28"
+        width={104}
+        height={104}
+        className="size-24 lg:size-26"
       />
-      <div className="flex flex-col gap-2">
-        <h3 className="text-headline-md font-bold text-pure-black lg:text-title-xxl">
+      <div className="flex flex-col gap-1.5">
+        <h3 className="text-headline-sm font-bold text-pure-black lg:text-headline-md">
           {title}
         </h3>
-        <p className="text-body-lg text-grey-800 sm:text-subtitle-m">
+        <p className="text-body-md text-grey-800 sm:text-body-lg">
           {description}
         </p>
       </div>
-      <ol className="flex w-full flex-col gap-4">
+      <ol className="flex w-full flex-col gap-3">
         {steps.map((step) => (
           <li
             key={step.key}
-            className="flex items-center gap-4 rounded-xl bg-pure-white px-3 py-3.5 text-left shadow-md"
+            className="flex items-center gap-3 rounded-lg bg-pure-white px-3 py-2.5 text-left shadow-md"
           >
-            <IconBadge icon={step.icon} tone={step.tone} />
-            <span className="text-title-lg font-bold text-pure-black sm:text-subtitle-m">
+            <IconBadge icon={step.icon} tone={step.tone} size="sm" />
+            <span className="text-title-md font-semibold text-pure-black sm:text-subtitle-s">
               {step.label}
             </span>
           </li>

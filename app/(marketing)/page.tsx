@@ -22,7 +22,10 @@ export const metadata: Metadata = {
  */
 export default function HomePage() {
   return (
-    <div className="relative isolate flex flex-1 flex-col overflow-x-clip bg-primary">
+    // The page clips the background shapes at its own edges (`clip` keeps the
+    // header sticky); the sections never do, so a shape can run from one
+    // section into the next (see decor.tsx).
+    <div className="relative isolate flex flex-1 flex-col overflow-clip bg-primary">
       <LandingHeader />
       <main className="flex flex-col">
         <Hero />

@@ -12,7 +12,9 @@ import { landingSections, trustSteps } from '../_data/landing-content';
 
 /*
  * «Sí, puedes confiar» (Figma): the verification in four numbered cards,
- * each with its illustration peeking from the bottom edge.
+ * each with its illustration peeking from the bottom edge. The words and
+ * the picture have separate areas, one under the other, so a longer line
+ * makes the card taller instead of running under the picture.
  */
 export function Trust() {
   const t = useTranslations('landing.trust');
@@ -42,30 +44,34 @@ export function Trust() {
             {trustSteps.map((step, index) => (
               <li
                 key={step.key}
-                className="relative aspect-291/183 overflow-hidden rounded-2xl bg-pure-white shadow-sm"
+                className="flex flex-col overflow-hidden rounded-2xl bg-pure-white shadow-sm"
               >
-                <div className="flex items-start gap-3 p-5">
+                <div className="flex items-start gap-3 p-5 pb-3">
                   <span
                     aria-hidden="true"
                     className="flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-50 text-label-lg text-primary shadow-sm"
                   >
                     {index + 1}
                   </span>
-                  <p className="text-body-xs font-semibold text-primary">
+                  <p className="text-body-xs font-semibold text-pretty text-primary">
                     {t(`steps.${step.key}`)}
                   </p>
                 </div>
-                <Image
-                  src={`/illustrations/landing/${step.illustration}.svg`}
-                  alt=""
-                  aria-hidden="true"
-                  width={step.width}
-                  height={step.height}
-                  className={cn(
-                    'absolute left-1/2 h-auto -translate-x-1/2',
-                    step.placement,
-                  )}
-                />
+                {/* The picture area: as tall as the mockup leaves under two
+                    lines, and the card's edge cuts what sticks out. */}
+                <div className="relative mt-auto aspect-291/112">
+                  <Image
+                    src={`/illustrations/landing/${step.illustration}.svg`}
+                    alt=""
+                    aria-hidden="true"
+                    width={step.width}
+                    height={step.height}
+                    className={cn(
+                      'absolute left-1/2 h-auto -translate-x-1/2',
+                      step.placement,
+                    )}
+                  />
+                </div>
               </li>
             ))}
           </ol>

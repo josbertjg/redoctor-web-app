@@ -834,7 +834,12 @@ written out in full, or Next.js does not inline it).
   while the app links here, §6), the footer channels (REDOC-357), the
   plans' one-line descriptions (not in the mockup). «Entrar», «Comenzar»,
   «Seleccionar plan», the search and the chips are visual until their
-  modules exist.
+  modules exist. Two sections are deliberately smaller than the mockup
+  (owner's request, same day): «Del mensaje a la consulta» (container
+  64 rem, title 42 px, words sized by the card through container queries)
+  and «Así de simple» (container 56 rem, one type step smaller, 40 px
+  badges). The trust cards keep words and picture in separate areas, so a
+  longer line grows the card instead of running under the illustration.
 
 ### Improvements noted (not scheduled)
 
@@ -844,6 +849,14 @@ written out in full, or Next.js does not inline it).
   contentful paint and Lighthouse fails it (`NO_FCP`). Solve it together
   with the splash-like loading animation planned for the web: content
   that arrives with the page must paint at once.
+- The root `loading.tsx` costs every page a skeleton flash: the CSP nonce
+  makes each page dynamic, so Next streams it behind that skeleton and
+  React reveals the content a few hundred ms after the HTML has arrived —
+  on `/` too, where there is nothing to wait for (seen 2026-10-08 in the
+  e2e screencast, Chromium). Proposed: drop the root loading state and
+  keep the per-module ones (`s/[specialistId]/loading.tsx`); without a
+  boundary above the page, `notFound()` would also answer a real 404
+  (§4). The e2e audit waits for the `main` landmark meanwhile.
 
 ---
 

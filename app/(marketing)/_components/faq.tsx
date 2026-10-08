@@ -25,7 +25,7 @@ export function Faq() {
     <section
       id={landingSections.faq}
       aria-labelledby="faq-title"
-      className="relative scroll-mt-28 overflow-hidden px-gutter py-16 lg:py-24"
+      className="relative scroll-mt-28 px-gutter py-16 lg:py-24"
     >
       <Swirl variant="bg-2" className="bottom-[-90%] left-[-85%] w-[190%]" />
       <div className="relative mx-auto max-w-3xl">

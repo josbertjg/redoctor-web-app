@@ -11,11 +11,17 @@ const tones: Record<IconTone, string> = {
   warning: 'bg-warning-50 text-warning-500',
 };
 
+const sizes = {
+  sm: { circle: 'size-10', icon: 20 },
+  md: { circle: 'size-12', icon: 24 },
+  lg: { circle: 'size-16', icon: 24 },
+} as const;
+
 type IconBadgeProps = {
   icon: IconComponent;
   tone: IconTone;
-  /** 48 px with a 24 px icon, or 64 px with a 32 px icon. */
-  size?: 'md' | 'lg';
+  /** 40 px with a 20 px icon, 48 px with a 24 px icon, or 64 px with a 32 px icon. */
+  size?: keyof typeof sizes;
   className?: string;
 };
 
@@ -30,12 +36,16 @@ export function IconBadge({
     <span
       className={cn(
         'flex shrink-0 items-center justify-center rounded-full',
-        size === 'lg' ? 'size-16' : 'size-12',
+        sizes[size].circle,
         tones[tone],
         className,
       )}
     >
-      <Icon icon={icon} size={24} className={size === 'lg' ? 'size-8' : ''} />
+      <Icon
+        icon={icon}
+        size={sizes[size].icon}
+        className={size === 'lg' ? 'size-8' : ''}
+      />
     </span>
   );
 }

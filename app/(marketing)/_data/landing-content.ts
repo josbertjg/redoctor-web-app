@@ -79,35 +79,40 @@ export const patientSteps: Step<'receive' | 'save' | 'confirm' | 'rate'>[] = [
   { key: 'rate', icon: KidStar, tone: 'warning' },
 ];
 
-/** The four verification steps and the illustration each card shows. */
+/**
+ * The four verification steps and the illustration each card shows. The
+ * placement is inside the card's picture area, under the words: the short
+ * ones peek out of the bottom edge, the tall ones start at the top and are
+ * cut by it.
+ */
 export const trustSteps = [
   {
     key: 'identity',
     illustration: 'trust-id-card',
     width: 172,
     height: 109,
-    placement: 'w-[59%] bottom-[-2%]',
+    placement: 'w-[59%] bottom-[-3%]',
   },
   {
     key: 'specialty',
     illustration: 'trust-shield',
     width: 104,
     height: 111,
-    placement: 'w-[36%] bottom-[-2%]',
+    placement: 'w-[36%] bottom-[-3%]',
   },
   {
     key: 'approved',
     illustration: 'trust-phone',
     width: 103,
     height: 206,
-    placement: 'w-[35%] top-[43%]',
+    placement: 'w-[35%] top-[6%]',
   },
   {
     key: 'published',
     illustration: 'trust-doctor',
     width: 156,
     height: 166,
-    placement: 'w-[53%] top-[43%]',
+    placement: 'w-[53%] top-[8%]',
   },
 ] as const;
 
