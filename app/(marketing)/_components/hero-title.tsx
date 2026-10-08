@@ -58,6 +58,7 @@ export function HeroTitle({ lead, title, waitForSplash }: HeroTitleProps) {
       <span className="mt-1 inline-flex items-end gap-1 text-display-sm font-bold sm:gap-2 sm:text-display-lg lg:text-display-xl">
         <StaggeredText
           segments={title}
+          by="word"
           play={start && stage !== 'lead'}
           onComplete={toCursor}
         />

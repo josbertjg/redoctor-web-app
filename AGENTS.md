@@ -881,8 +881,11 @@ written out in full, or Next.js does not inline it).
   on 2G or with data saving on; never on `/i`, `/a`, `/s`. The runtime's
   WebAssembly (~360 KB gzip) is served from this origin and preloaded; the
   CSS alone fades the veil at 2.5 s when JavaScript never runs.
-  The bar slides down and the hero's words wait for it, then enter letter
-  by letter, and the cursor arrives and clicks every 5 s.
+  Then the hero's choreography (`(marketing)/_components/choreography.ts`):
+  the bar slides down, the slogan's first line enters letter by letter and
+  the second word by word, the search bar fades up and the specialist rises
+  out of it, the chips enter from the middle of the row outwards, and the
+  cursor arrives and clicks every 5 s.
 - **No root `loading.tsx` (2026-10-08):** §4.
 
 ### Improvements noted (not scheduled)

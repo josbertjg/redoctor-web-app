@@ -14,6 +14,13 @@ const offsets = {
   bottom: { y: 40 },
   left: { x: -40 },
   right: { x: 40 },
+  /**
+   * Out of something that clips it: starts fully below its box, opaque, and
+   * rises into view — the clipping edge reveals it, not a fade.
+   */
+  behind: { y: '100%', opacity: 1 },
+  /** A short step up, for small pieces in a tight row. */
+  nudge: { y: 16 },
 } as const;
 
 type EntranceProps = {
@@ -26,6 +33,8 @@ type EntranceProps = {
   onComplete?: (() => void) | undefined;
   children: ReactNode;
 };
+
+const settled = { opacity: 1, x: 0, y: 0, scale: 1 };
 
 /**
  * A piece that slides and fades into place. Under reduced motion it is
@@ -48,12 +57,12 @@ export function Entrance({
 
   if (reduced) return <div className={className}>{children}</div>;
 
-  const hidden = { opacity: 0, x: 0, y: 0, ...offsets[from] };
+  const hidden = { ...settled, opacity: 0, ...offsets[from] };
   return (
     <m.div
       className={className}
       initial={hidden}
-      animate={play ? { opacity: 1, x: 0, y: 0 } : hidden}
+      animate={play ? settled : hidden}
       transition={transition}
       onAnimationComplete={() => {
         if (play) onComplete?.();
