@@ -861,7 +861,9 @@ written out in full, or Next.js does not inline it).
   as designed for now. No mobile design exists: the phone layout is ours.
   Where the mockup and the tokens disagree, the tokens won and the gap is
   listed here for the owner: radius 80 → `2xl` (30), 25 → `xl` (20),
-  15 → `lg` (12); the 80 px hero line got its own token (`display-xl`);
+  15 → `lg` (12), except the hero's search bar, a pill as the owner's
+  screenshot of the mockup shows it (2026-10-08; the node says 15); the
+  80 px hero line got its own token (`display-xl`);
   brand green on white is text only as `green-700` (the 500 fails AA, as
   the doc warns), and the green card of «Del mensaje a la consulta» is
   `green-600` so its white text reaches 3:1; the landing's buttons use the

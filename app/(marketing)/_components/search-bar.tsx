@@ -8,8 +8,11 @@ import { cn } from '@/app/lib/utils';
 import { Icon, type IconComponent } from '@/app/ui/icons';
 
 /*
- * The search bar of the hero (Figma): specialty and city in one white bar,
- * the search icon at its end. One row from tablets up; stacked on phones.
+ * The search bar of the hero (Figma): a white pill, 56 px tall, with the
+ * specialty and the city side by side, one short line between them and
+ * the search icon alone at the end — 20 px in from the edges, 24 px
+ * between the pieces. Stacked on phones, with lines between the rows and
+ * the search as a labelled row.
  * TODO(search): the submit wires to the search when it opens (AGENTS.md §1).
  */
 export function SearchBar({ className }: { className?: string }) {
@@ -20,22 +23,38 @@ export function SearchBar({ className }: { className?: string }) {
       role="search"
       aria-label={t('label')}
       className={cn(
-        'mx-auto w-full max-w-3xl rounded-lg bg-pure-white shadow-md transition-shadow duration-fast ease-house focus-within:ring-3 focus-within:ring-ring/50',
+        'mx-auto flex w-full max-w-3xl flex-col rounded-2xl bg-pure-white shadow-md transition-shadow duration-fast ease-house focus-within:ring-3 focus-within:ring-ring/50 sm:min-h-14 sm:flex-row sm:items-center sm:gap-6 sm:rounded-full sm:px-5',
         className,
       )}
     >
-      <div className="flex flex-col divide-y divide-grey-300 sm:flex-row sm:items-stretch sm:divide-x sm:divide-y-0">
-        <SearchField name="q" icon={Stethoscope} label={t('specialty')} />
-        <SearchField name="city" icon={LocationOn} label={t('city')} />
-        <button
-          type="submit"
-          className="flex min-h-touch items-center justify-center gap-2 rounded-b-lg px-5 text-label-lg text-primary transition-colors duration-fast ease-house outline-none hover:bg-blue-50 focus-visible:bg-blue-50 sm:rounded-r-lg sm:rounded-bl-none"
-        >
-          <Icon icon={Search} size={24} />
-          <span className="sm:sr-only">{t('submit')}</span>
-        </button>
-      </div>
+      <SearchField name="q" icon={Stethoscope} label={t('specialty')} />
+      <Divider />
+      <SearchField name="city" icon={LocationOn} label={t('city')} />
+      <Divider className="sm:hidden" />
+      {/* On a phone a row of its own; from tablets up, the bare icon with a
+          full tap target, pulled in so the glyph sits 20 px from the edge. */}
+      <button
+        type="submit"
+        className="flex min-h-touch items-center justify-center gap-2 rounded-b-2xl px-5 text-label-lg text-primary transition-[background-color,scale] duration-fast ease-house outline-none hover:bg-blue-50 focus-visible:bg-blue-50 sm:-mr-2.5 sm:size-11 sm:shrink-0 sm:rounded-full sm:px-0 sm:hover:scale-110 sm:hover:bg-transparent sm:focus-visible:bg-transparent sm:focus-visible:ring-3 sm:focus-visible:ring-ring/50"
+      >
+        <Icon icon={Search} size={24} />
+        <span className="sm:sr-only">{t('submit')}</span>
+      </button>
     </form>
+  );
+}
+
+/* A hairline between two rows on a phone; a short upright line, centred,
+   between the two fields from tablets up. */
+function Divider({ className }: { className?: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        'mx-5 h-px shrink-0 bg-grey-300 sm:mx-0 sm:h-6.5 sm:w-px',
+        className,
+      )}
+    />
   );
 }
 
@@ -49,7 +68,7 @@ function SearchField({
   label: string;
 }) {
   return (
-    <label className="flex flex-1 items-center gap-2.5 px-5 py-3.5 text-grey-700">
+    <label className="flex flex-1 items-center gap-2.5 px-5 py-4 text-grey-700 sm:px-0">
       <Icon icon={icon} size={24} />
       <span className="sr-only">{label}</span>
       <input
