@@ -651,7 +651,11 @@ primitive in `app/ui` that takes size and color from the tokens.
     landing's choreography, `(marketing)/_components/choreography.ts`) take
     `--duration-entrance` (500 ms) with `--ease-entrance`, a stronger
     ease-in-out, so pieces settle instead of snapping; UI feedback keeps
-    §7's 200–300 ms. Nothing imports `framer-motion` elsewhere (lint). CSS keeps what CSS does well: hover,
+    §7's 200–300 ms. A section with several pieces entering on scroll uses
+    `Choreographed`: a Motion sequence by selector over server-rendered
+    pieces (`data-piece`); the HTML arrives visible, and what is still out
+    of view hides after hydration until it enters, as `Reveal` does.
+    Nothing imports `framer-motion` elsewhere (lint). CSS keeps what CSS does well: hover,
     the accordion, the marquee, the menu. Above the fold only what makes
     its entrance on purpose starts hidden (the hero's words and cursor);
     the picture, the search and the chips paint on the first frame. Under

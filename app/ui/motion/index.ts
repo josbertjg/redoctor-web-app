@@ -10,8 +10,14 @@ import 'client-only';
  * library (40 KB) where this ships what the page uses (10 KB).
  */
 export { AnimatePresence, m } from 'framer-motion';
-export type { Transition, Variants } from 'framer-motion';
+export type {
+  AnimationSequence,
+  DOMKeyframesDefinition,
+  Transition,
+  Variants,
+} from 'framer-motion';
 export { arcTo, type Arc } from './arc';
+export { Choreographed } from './choreographed';
 export { Entrance } from './entrance';
 export { useReducedMotion } from './reduced-motion';
 export { StaggeredText, type TextSegment } from './staggered-text';
