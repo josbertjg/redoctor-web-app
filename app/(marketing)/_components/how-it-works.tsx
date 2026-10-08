@@ -202,13 +202,14 @@ function RoleCard({
           </li>
         ))}
       </ol>
-      {/* TODO(M2/M11): the specialist opens the app, the patient signs in. */}
+      {/* TODO(M2/M11): the specialist opens the app, the patient signs in.
+          Full height, as the mockup's 43 px, and a deeper hover than the
+          primitive's one step (owner's request). */}
       <Button
         data-piece="cta"
         block
         shape="soft"
-        size="small"
-        className="mt-auto"
+        className="mt-auto hover:bg-blue-700"
       >
         {cta}
       </Button>

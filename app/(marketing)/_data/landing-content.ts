@@ -81,6 +81,7 @@ export const patientSteps: Step<'receive' | 'save' | 'confirm' | 'rate'>[] = [
 
 /** The surface of a verification card: white, brand green or brand blue. */
 export type TrustTone = 'white' | 'green' | 'blue';
+export type TrustStepKey = (typeof trustSteps)[number]['key'];
 
 /**
  * The four verification steps, the surface of each card (the mockup's

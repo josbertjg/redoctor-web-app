@@ -7,9 +7,14 @@ import { useAnimate } from 'framer-motion';
 
 import type { AnimationSequence, DOMKeyframesDefinition } from 'framer-motion';
 
+type HiddenStates = Record<string, DOMKeyframesDefinition>;
+
 type ChoreographedProps = {
-  /** Each piece's state before it enters, by selector inside the box. */
-  hidden: Record<string, DOMKeyframesDefinition>;
+  /**
+   * Each piece's state before it enters, by selector inside the box — or a
+   * function of the box, for states measured from where the pieces sit.
+   */
+  hidden: HiddenStates | ((box: HTMLDivElement) => HiddenStates);
   /** The entrance: a Motion sequence over the same selectors. */
   sequence: AnimationSequence;
   /** How much of the box must be on screen for the entrance to start. */
@@ -54,7 +59,8 @@ export function Choreographed({
     )
       return;
 
-    for (const [selector, state] of Object.entries(hidden)) {
+    const states = typeof hidden === 'function' ? hidden(box) : hidden;
+    for (const [selector, state] of Object.entries(states)) {
       animate(selector, state, { duration: 0 });
     }
     const observer = new IntersectionObserver(

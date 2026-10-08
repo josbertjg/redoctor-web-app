@@ -55,8 +55,37 @@ export async function revealWholePage(page: Page): Promise<void> {
 }
 
 /** axe on the settled page. */
+/**
+ * Contrast the owner accepted below AA (AGENTS.md §13): the white words on
+ * the brand green card of «Sí, puedes confiar» (2.8:1). Everything else on
+ * the page must pass.
+ */
+const acceptedContrast = '#verificacion [data-piece="card-2"]';
+
 export async function auditAccessibility(page: Page) {
   await revealWholePage(page);
   const results = await new AxeBuilder({ page }).analyze();
-  return results.violations;
+  const violations = [];
+  for (const violation of results.violations) {
+    if (violation.id !== 'color-contrast') {
+      violations.push(violation);
+      continue;
+    }
+    const selectors = violation.nodes.map((node) =>
+      node.target
+        .map((part) => (Array.isArray(part) ? part.join(' ') : part))
+        .join(' '),
+    );
+    const accepted = await page.evaluate(
+      ([list, within]) =>
+        list.map((selector) => {
+          const element = document.querySelector(selector);
+          return element ? element.closest(within) !== null : false;
+        }),
+      [selectors, acceptedContrast] as const,
+    );
+    const nodes = violation.nodes.filter((_, index) => !accepted[index]);
+    if (nodes.length > 0) violations.push({ ...violation, nodes });
+  }
+  return violations;
 }

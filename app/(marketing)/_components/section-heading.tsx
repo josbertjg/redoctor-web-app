@@ -15,6 +15,8 @@ type SectionHeadingProps = {
   /** On the blue page the text is white; inside a white container, blue. */
   tone: 'on-blue' | 'on-white';
   align?: 'center' | 'start';
+  /** `data-piece` marks for a choreography (Choreographed), part by part. */
+  pieces?: { chip?: string; title?: string; description?: string };
   className?: string;
 };
 
@@ -26,6 +28,7 @@ export function SectionHeading({
   description,
   tone,
   align = 'center',
+  pieces,
   className,
 }: SectionHeadingProps) {
   const onBlue = tone === 'on-blue';
@@ -38,9 +41,14 @@ export function SectionHeading({
         className,
       )}
     >
-      {chip ? <LabelChip icon={chip.icon}>{chip.label}</LabelChip> : null}
+      {chip ? (
+        <LabelChip data-piece={pieces?.chip} icon={chip.icon}>
+          {chip.label}
+        </LabelChip>
+      ) : null}
       <h2
         id={id}
+        data-piece={pieces?.title}
         className={cn(
           'text-headline-md font-bold sm:text-display-sm lg:text-title-xxxl',
           onBlue ? 'text-pure-white' : 'text-primary',
@@ -50,6 +58,7 @@ export function SectionHeading({
       </h2>
       {description ? (
         <p
+          data-piece={pieces?.description}
           className={cn(
             'text-body-lg font-medium sm:text-subtitle-m',
             onBlue ? 'text-pure-white' : 'text-pure-black',

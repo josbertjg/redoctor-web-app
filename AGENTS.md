@@ -878,10 +878,11 @@ written out in full, or Next.js does not inline it).
   longer line grows the card instead of running under the illustration.
   The designer's update of 2026-10-08 (same frame, `4464:341`; `4585:3077`
   is her copy of the previous version) is in: the second trust card is
-  green and the third blue with white words — green-700, the lightest
-  green that gives 16 px white words 4.5:1 (her green-500 gives 2.8) — and
-  the plans show a bigger price (42 px), 16 px words and benefits and a
-  visible «Recomendado» tag. Two slips of that update stay out: the second
+  brand green (green-500, the owner's decision the same day over a
+  green-700 that passed AA: its 16 px white words measure 2.8:1, and the
+  e2e audit lists that card as its one accepted contrast exception) and
+  the third blue with white words, and the plans show a bigger price
+  (42 px), 16 px words and benefits and a visible «Recomendado» tag. Two slips of that update stay out: the second
   and third plans both named «Corporativo» (the second keeps «Profesional»)
   and prices with a decimal point (the locale's comma stays, §5).
 
@@ -916,9 +917,24 @@ written out in full, or Next.js does not inline it).
   67 ms cascade; a step lifts, its badge's tint sweeps across the row from
   the left (a `::before` scaled from the left edge, 300 ms) and its words
   take the tone's lightest shade that keeps 4.5:1 on that tint (blue-500,
-  green-700, orange-800, warning-800). Nothing hides after it has painted:
-  a section already on screen when the page loads (a reload keeps the
-  scroll) shows no entrance, by design (§8.2).
+  green-700, orange-800, warning-800). «Sí, puedes confiar»: the chip pops,
+  the title and paragraph rise, the first card fades up and the other three
+  come out from behind the card above them, or else the one before (offsets
+  measured from the layout: `Choreographed` takes `hidden` as a function
+  of the box; no card crosses over another's words), each
+  number popping 67 ms after its card and each picture rising from the
+  card's bottom edge 150 ms after; hover lifts the card, its picture peeks
+  up and a wave of the opposite surface washes over it (a `::before` whose
+  `clip-path` circle or ellipse grows from the wave's origin): green up
+  from the bottom on the first, white from the top right on the second,
+  white from the bottom left on the third, green out of the specialist's
+  circle at the bottom centre on the fourth. «Prepárate para lo que
+  viene»: the rocket flies in on one arc
+  from below left, the lead line and the title rise, the pin drops, and the
+  cards land on the rolling ribbon from the right 100 ms apart with their
+  badges popping after; hover lifts a card and grows its badge. Nothing
+  hides after it has painted: a section already on screen when the page
+  loads (a reload keeps the scroll) shows no entrance, by design (§8.2).
 - **No root `loading.tsx` (2026-10-08):** §4.
 
 ### Improvements noted (not scheduled)
