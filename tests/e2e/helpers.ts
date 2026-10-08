@@ -26,6 +26,11 @@ export async function waitForAnimations(page: Page): Promise<void> {
  */
 export async function waitForContent(page: Page): Promise<void> {
   await page.locator('main').first().waitFor({ state: 'visible' });
+  // The landing's splash veil, when a session starts with it: let it leave.
+  await page
+    .locator('[data-splash]')
+    .waitFor({ state: 'detached', timeout: 6_000 })
+    .catch(() => undefined);
 }
 
 /**

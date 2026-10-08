@@ -26,9 +26,11 @@ describe('buildContentSecurityPolicy', () => {
       "'self'",
       "'nonce-bm9uY2U='",
       "'strict-dynamic'",
+      // WebAssembly compilation for the splash's Rive runtime; not eval.
+      "'wasm-unsafe-eval'",
     ]);
     expect(policy).toContain('upgrade-insecure-requests');
-    expect(policy).not.toContain('unsafe-eval');
+    expect(policy).not.toContain("'unsafe-eval'");
   });
 
   it('upgrades subresources only when the page itself is on HTTPS', () => {

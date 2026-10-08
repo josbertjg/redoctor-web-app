@@ -1,15 +1,22 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { renderWithIntl } from '@/tests/render';
 
 import HomePage from './page';
 
+// The splash has played this session: the page is the landing alone.
+vi.mock('next/headers', () => ({
+  cookies: () => Promise.resolve({ has: () => true }),
+}));
+
+const renderHome = async () => renderWithIntl(await HomePage());
+
 describe('HomePage', () => {
   it('renders the landing without accessibility violations', async () => {
-    const { container } = renderWithIntl(<HomePage />);
+    const { container } = await renderHome();
 
     expect(
       screen.getByRole('heading', { level: 1, name: /en un solo click\./ }),
@@ -23,11 +30,12 @@ describe('HomePage', () => {
     expect(
       screen.getByRole('heading', { level: 2, name: 'Elige el plan ideal' }),
     ).toBeInTheDocument();
+    expect(document.querySelector('[data-splash]')).toBeNull();
     expect(await axe(container)).toHaveNoViolations();
   }, 20_000);
 
   it('unfolds the menu on small screens and folds it on a choice', async () => {
-    renderWithIntl(<HomePage />);
+    await renderHome();
 
     await userEvent.click(
       screen.getByRole('button', { name: 'Abrir el menú' }),
@@ -46,7 +54,7 @@ describe('HomePage', () => {
   });
 
   it('answers one question at a time', async () => {
-    renderWithIntl(<HomePage />);
+    await renderHome();
 
     const first = screen.getByRole('button', {
       name: '¿Tengo que descargar una app?',

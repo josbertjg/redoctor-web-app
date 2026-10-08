@@ -40,6 +40,18 @@
   --animate-accordion-down: accordion-down var(--duration-base)
     var(--ease-house);
   --animate-accordion-up: accordion-up var(--duration-base) var(--ease-house);
+  /* The landing's splash veil, when JavaScript never answers: a fade after
+     this delay. With JavaScript the veil swaps it for `fade-out` the moment
+     the logo is done. */
+  --animate-splash-out: splash-out var(--duration-fast) var(--ease-house)
+    var(--duration-splash-fallback) forwards;
+
+  @keyframes splash-out {
+    to {
+      opacity: 0;
+      visibility: hidden;
+    }
+  }
 
   @keyframes fade-out {
     from {
@@ -125,6 +137,9 @@
 }
 @utility duration-slow {
   transition-duration: var(--duration-slow);
+}
+@utility duration-entrance {
+  transition-duration: var(--duration-entrance);
 }
 
 @layer base {

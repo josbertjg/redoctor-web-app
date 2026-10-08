@@ -7,15 +7,19 @@ import { routes } from '@/app/lib/routes';
 import { Button } from '@/app/ui/button';
 import { Logo } from '@/app/ui/logo';
 
+import { AfterSplash } from './after-splash';
+import { beats } from './choreography';
 import { LandingNav } from './landing-nav';
 import { landingSections } from '../_data/landing-content';
 
 /*
  * The landing's bar (Figma): a white pill that floats over the page and
- * stays while scrolling, with the logo, the section links and «Entrar».
- * Its content is the first thing the page paints, so it never animates in.
+ * stays while scrolling, with the logo, the section links and «Entrar». It
+ * slides down into place when the page starts (after the splash, when there
+ * is one); the sticky box that holds it is there from the first frame, so
+ * nothing below moves.
  */
-export function LandingHeader() {
+export function LandingHeader({ waitForSplash }: { waitForSplash: boolean }) {
   const t = useTranslations('landing.nav');
   const common = useTranslations('common');
   const links = [
@@ -26,7 +30,12 @@ export function LandingHeader() {
 
   return (
     <header className="sticky top-3 z-20 px-gutter sm:top-5">
-      <div className="relative mx-auto flex max-w-landing items-center justify-between gap-4 rounded-2xl bg-pure-white py-2.5 pr-3 pl-5 shadow-md lg:py-4 lg:pr-7 lg:pl-8">
+      <AfterSplash
+        waitForSplash={waitForSplash}
+        from="top"
+        delay={beats.bar}
+        className="relative mx-auto flex max-w-landing items-center justify-between gap-4 rounded-2xl bg-pure-white py-2.5 pr-3 pl-5 shadow-md lg:py-4 lg:pr-7 lg:pl-8"
+      >
         <Link
           href={routes.home()}
           aria-label={common('homeLabel')}
@@ -62,7 +71,7 @@ export function LandingHeader() {
             }}
           />
         </div>
-      </div>
+      </AfterSplash>
     </header>
   );
 }

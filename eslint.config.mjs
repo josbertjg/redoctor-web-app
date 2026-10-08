@@ -168,6 +168,34 @@ const eslintConfig = defineConfig([
     },
   },
   {
+    // Motion enters through app/ui/motion only (AGENTS.md §8, rule 11).
+    files: ['**/*.{ts,tsx}'],
+    ignores: ['app/ui/motion/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'motion/react',
+              message: 'Import from @/app/ui/motion (AGENTS.md §8, rule 11).',
+            },
+            {
+              name: 'framer-motion',
+              message: 'Import from @/app/ui/motion (AGENTS.md §8, rule 11).',
+            },
+          ],
+          patterns: [
+            {
+              group: ['motion/*', 'framer-motion/*'],
+              message: 'Import from @/app/ui/motion (AGENTS.md §8, rule 11).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // app/lib holds no React (AGENTS.md §3, rule 9).
     files: ['app/lib/**/*.{ts,tsx}'],
     rules: {

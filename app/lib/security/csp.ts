@@ -66,6 +66,9 @@ export function buildContentSecurityPolicy(
       "'self'",
       `'nonce-${nonce}'`,
       "'strict-dynamic'",
+      // The landing's splash runs the app's logo through Rive, which compiles
+      // WebAssembly: this allows that compilation and nothing else (no eval).
+      "'wasm-unsafe-eval'",
       // React reconstructs server error stacks with eval in development only.
       ...(isDevelopment ? ["'unsafe-eval'"] : []),
     ],

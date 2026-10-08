@@ -135,6 +135,8 @@ favorites, notifications inbox, the specialist's panel. They come after.
 | Errors | **Sentry** (`@sentry/nextjs` 11) | `dataCollection` all off (v11's successor of `sendDefaultPii: false`); same privacy rules as the app; off while the DSN is empty |
 | Icons | **Material Symbols Rounded** as inline SVG per icon (`@material-symbols/svg-400`) | Same family as the app; only the icons in use ship — never the variable icon font (several MB) |
 | Font | **Urbanist** via `next/font/google` | Weights 300–700, `display: swap`, exposed as `--font-urbanist` |
+| Animation | **Motion** (`framer-motion` 14, the library behind the `motion` wrapper) | One door, `app/ui/motion` (§8.11): `MotionProvider` loads the features after the first render, `m`, the hooks, timings read from `tokens.css`, `StaggeredText`. Nothing imports `framer-motion` elsewhere (lint). `framer-motion` and not `motion`: the wrapper's `export *` barrel defeats Turbopack's tree shaking (40 KB in the initial JS instead of 10, measured). CSS keeps hover, accordion, marquee and menu |
+| Splash | **Rive** (`@rive-app/react-canvas-lite`) | The app's own `splash_logo.riv` (`public/animations`), landing only, a session's first visit (§13). Its runtime compiles WebAssembly: `'wasm-unsafe-eval'` in the CSP |
 | Unit/component tests | **Vitest 5** + Testing Library + **MSW 3** | jsdom; `jest-axe` for accessibility; MSW handlers built from the OpenAPI shapes |
 | E2E | **Playwright** + `@axe-core/playwright` | Mobile viewports first (iPhone 13 / Pixel 7 profiles) |
 | Lint/format | **ESLint 10** (flat) + typescript-eslint `strictTypeChecked` + `eslint-plugin-import-x` + `jsx-a11y` + `react-hooks`; **Prettier** + `prettier-plugin-tailwindcss` | Layer boundaries enforced with `import-x/no-restricted-paths` (`eslint-plugin-import` crashes under ESLint 10). Unused code is ESLint's job: `next dev` generates a route validator with unused imports, so `noUnusedLocals` stays off in tsconfig |
@@ -170,12 +172,12 @@ share the **domain language** (entities, names, rules), not the folder tree.
 ```
 app/                                  # The application: routes, UI and logic
   layout.tsx                          #   <html lang="es">, fonts, providers, base metadata
-  loading.tsx · error.tsx · not-found.tsx · global-error.tsx
+  error.tsx · not-found.tsx · global-error.tsx   # no root loading.tsx, on purpose (§4)
   robots.ts · sitemap.ts · manifest.ts · opengraph-image.tsx · icon.png
   providers.tsx                       #   'use client': QueryClient, next-intl, PostHog, Sentry wiring
   (marketing)/                        # module: landing (M9)
     page.tsx                          #   /
-    _components/                      #   hero, sections, faq — this module only
+    _components/                      #   hero, sections, faq, splash/ (the Rive veil) — this module only
   (auth)/                             # module: session (M2)
     entrar/page.tsx                   #   /entrar?redirect=
   (invitations)/                      # module: the invitation link (M3, M4)
@@ -205,6 +207,7 @@ app/                                  # The application: routes, UI and logic
     app-bridge/                       #   open-in-app-button, store-badges
     appointments/ · specialists/ · billing/ · reviews/   # domain components used by two or more modules
     analytics/ · og/                  #   link-origin-tracker; the Open Graph brand card (next/og)
+    motion/                           #   the one door to Motion: provider, m, tokens, staggered-text (§8.11)
     icons.tsx                         #   the Icon primitive (not icon.tsx: that name is a Next.js metadata file)
     fonts.ts · tokens.css · globals.css
   lib/                                # ALL non-React logic
@@ -219,7 +222,7 @@ app/                                  # The application: routes, UI and logic
     env.ts · public-env.ts · routes.ts · deep-links.ts · site.ts · utils.ts
   hooks/                              # shared client hooks: use-session, use-link-origin, use-device
 tests/                                # setup.ts · msw/ (server + handlers per domain) · factories/ · e2e/ (Playwright)
-public/                               # .well-known/ (§6) · brand/ (logo.svg, logo-white.svg, icons) · illustrations/
+public/                               # .well-known/ (§6) · brand/ (logo.svg, logo-white.svg, icons) · illustrations/ · animations/ (the app's splash_logo.riv)
 proxy.ts                              # Next 16's name for middleware: the CSP nonce per request, /.well-known excluded — nothing else
 instrumentation.ts · instrumentation-client.ts   # Sentry and PostHog, each only when its variable is set
 next.config.ts · eslint.config.mjs · postcss.config.mjs · tsconfig.json · vitest.config.mts · playwright.config.ts
@@ -311,7 +314,13 @@ Every route path is built from one place, `app/lib/routes.ts` (the app has
   `notFound()` inside it answers **200 + `noindex`** with the not-found UI
   (Next.js docs, not-found.md); only bots that cannot run JavaScript get a
   real 404 (their metadata blocks). A real 404 needs the route not to match
-  or a check in `proxy.ts`. Every page sits under the root `loading.tsx`.
+  or a check in `proxy.ts`. There is **no root `loading.tsx`** (decided
+  2026-10-08): every page is dynamic because of the CSP nonce, and a root
+  skeleton made each one flash grey bars for a few hundred ms before React
+  revealed the streamed content — on `/` too, with nothing to wait for. A
+  page without a loading state of its own now renders whole before its
+  HTML goes out. Only `/s/[specialistId]` keeps one, because its data comes
+  from the API; so it still answers 200 + `noindex` for an unknown id.
 - `error.tsx` and `not-found.tsx` at the root and in each route group, using
   the design system's empty/error state.
 
@@ -629,8 +638,26 @@ primitive in `app/ui` that takes size and color from the tokens.
     fonts preloaded, no client-side data fetching on public pages.
     Measured on 2026-10-07 (module scripts, gzip, analytics off): `/` 198 KB,
     `/s/{id}` 225 KB, bridges 208 KB, of which React 19 + Next.js 16 are
-    ≈140 KB. Sentry adds ≈54 KB and PostHog ≈52 KB where they are on. The JS
-    budget is a warning in `lighthouserc.cjs` until it is decided (§13).
+    ≈140 KB. Sentry adds ≈54 KB and PostHog ≈52 KB where they are on. On
+    2026-10-08 the landing weighs 261 KB (242 before Motion and the
+    splash; the splash's Rive runtime, ≈56 KB plus ≈360 KB of WebAssembly,
+    loads apart and only on a session's first visit). The JS budget is a
+    warning in `lighthouserc.cjs` until it is decided (§13).
+11. **Animation beyond CSS goes through Motion, through one door.**
+    `app/ui/motion` exports `m`, the hooks, `MotionProvider` (mounted where
+    the `m` components live; the features load after the first render) and
+    helpers that read every timing from `tokens.css`, so CSS and JavaScript
+    share one clock and reduced motion collapses both. Entrances (the
+    landing's choreography, `(marketing)/_components/choreography.ts`) take
+    `--duration-entrance` (500 ms) with `--ease-entrance`, a stronger
+    ease-in-out, so pieces settle instead of snapping; UI feedback keeps
+    §7's 200–300 ms. Nothing imports `framer-motion` elsewhere (lint). CSS keeps what CSS does well: hover,
+    the accordion, the marquee, the menu. Above the fold only what makes
+    its entrance on purpose starts hidden (the hero's words and cursor);
+    the picture, the search and the chips paint on the first frame. Under
+    reduced motion everything is plain content, no entrance. Animated text
+    goes through `StaggeredText`: assistive technology reads the sentence,
+    the letters are hidden from it.
 
 Composites to mirror from the app (names first, then build when a module
 needs them): `Button` (primary / secondary / white / error; small / large;
@@ -728,7 +755,8 @@ pnpm check          # typecheck + lint + format:check + test + build
   scrubbed in `before_send`. Turn on "Discard client IP data" in the
   PostHog project.
 - HTTP headers: a strict CSP with a per-request nonce set in `proxy.ts`
-  (allow Firebase Auth, PostHog, Sentry, Google Fonts), and in
+  (allow Firebase Auth, PostHog, Sentry, Google Fonts; `'wasm-unsafe-eval'`
+  so the splash's Rive runtime can compile WebAssembly, never eval), and in
   `next.config.ts` HSTS, `frame-ancestors 'none'`,
   `Referrer-Policy: strict-origin-when-cross-origin`, a restrictive
   `Permissions-Policy`.
@@ -841,22 +869,26 @@ written out in full, or Next.js does not inline it).
   badges). The trust cards keep words and picture in separate areas, so a
   longer line grows the card instead of running under the illustration.
 
+- **Animation (2026-10-08): Motion, not GSAP**, through `app/ui/motion`
+  (§8.11). GSAP only if a piece ever needs pinned or scrubbed scroll or SVG
+  morphing, and then isolated in that piece.
+- **The splash (2026-10-08):** the app's `splash_logo.riv` over the landing
+  only, on a session's first visit (session cookie `redoctor-splash`): the
+  logo's entrance (`Timeline 1`, 1.5 s as measured — the runtime never
+  reports a one-shot timeline's end, so the veil counts from `Play`; the
+  app's waiting bob, `Timeline 2`, has nothing to wait for here) and a
+  200 ms fade; a tap or Escape skips it; no veil under reduced motion, nor
+  on 2G or with data saving on; never on `/i`, `/a`, `/s`. The runtime's
+  WebAssembly (~360 KB gzip) is served from this origin and preloaded; the
+  CSS alone fades the veil at 2.5 s when JavaScript never runs.
+  The bar slides down and the hero's words wait for it, then enter letter
+  by letter, and the cursor arrives and clicks every 5 s.
+- **No root `loading.tsx` (2026-10-08):** §4.
+
 ### Improvements noted (not scheduled)
 
 - A real 404 for unknown profiles and paths (§4): a check in `proxy.ts`, or
   routes that do not match.
-- The home page fades its whole content in, so Chrome never records a
-  contentful paint and Lighthouse fails it (`NO_FCP`). Solve it together
-  with the splash-like loading animation planned for the web: content
-  that arrives with the page must paint at once.
-- The root `loading.tsx` costs every page a skeleton flash: the CSP nonce
-  makes each page dynamic, so Next streams it behind that skeleton and
-  React reveals the content a few hundred ms after the HTML has arrived —
-  on `/` too, where there is nothing to wait for (seen 2026-10-08 in the
-  e2e screencast, Chromium). Proposed: drop the root loading state and
-  keep the per-module ones (`s/[specialistId]/loading.tsx`); without a
-  boundary above the page, `notFound()` would also answer a real 404
-  (§4). The e2e audit waits for the `main` landmark meanwhile.
 
 ---
 

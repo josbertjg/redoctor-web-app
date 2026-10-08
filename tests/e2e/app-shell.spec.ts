@@ -25,12 +25,12 @@ test('the home page is served with a nonce CSP and the security headers', async 
   expect(headers['permissions-policy']).toContain('camera=()');
   expect(headers['x-powered-by']).toBeUndefined();
 
-  // Every script Next.js renders carries this response's nonce.
-  const scriptNonces = await page
-    .locator('script')
-    .evaluateAll((scripts) => scripts.map((script) => script.nonce));
-  expect(scriptNonces.length).toBeGreaterThan(0);
-  for (const scriptNonce of scriptNonces) expect(scriptNonce).toBe(nonce);
+  // Every script Next.js renders carries this response's nonce. (Chunks the
+  // page loads later, such as Motion's features and the splash's runtime,
+  // run under 'strict-dynamic': a nonced script asked for them.)
+  const scriptTags = (await response?.text())?.match(/<script\b[^>]*>/g) ?? [];
+  expect(scriptTags.length).toBeGreaterThan(0);
+  for (const tag of scriptTags) expect(tag).toContain(`nonce="${nonce}"`);
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'es');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();

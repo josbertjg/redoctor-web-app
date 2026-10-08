@@ -61,7 +61,7 @@ export function Reveal({ children, delay = 'none', className }: RevealProps) {
       ref={ref}
       data-reveal="idle"
       className={cn(
-        'transition-[opacity,transform] duration-slow ease-house data-[reveal=pending]:translate-y-6 data-[reveal=pending]:opacity-0',
+        'transition-[opacity,transform] duration-entrance ease-entrance data-[reveal=pending]:translate-y-6 data-[reveal=pending]:opacity-0',
         delayClass[delay],
         className,
       )}

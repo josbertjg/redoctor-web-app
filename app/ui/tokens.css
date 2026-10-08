@@ -314,3 +314,21 @@
     --duration-slow: 1ms;
   }
 }
+
+/*
+ * Tokens JavaScript reads (app/ui/motion/tokens.ts) and no utility uses:
+ * `static`, or Tailwind would leave them out of the CSS. The landing's
+ * splash: how long the logo's entrance may take, and when the veil leaves
+ * by itself if JavaScript never answers; then the pause between the hero
+ * cursor's clicks.
+ */
+@theme static {
+  /* The entrances of the landing's choreography: slower than UI feedback
+     (§7's 200–300 ms) and with a stronger ease-in-out, so pieces settle
+     into place instead of snapping. */
+  --duration-entrance: 500ms;
+  --ease-entrance: cubic-bezier(0.65, 0, 0.35, 1);
+  --duration-splash: 1500ms;
+  --duration-splash-fallback: 2500ms;
+  --duration-cursor-pause: 5000ms;
+}
