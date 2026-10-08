@@ -613,7 +613,11 @@ primitive in `app/ui` that takes size and color from the tokens.
    shift.
 3. **Never disable a control to mean "busy".** Keep it clickable, show the
    loading state inside it, and guard inside the handler
-   (`if (isPending) return`). A greyed-out button reads as broken.
+   (`if (isPending) return`). A greyed-out button reads as broken. Whatever
+   can be pressed shows the hand: Tailwind 4's preflight leaves buttons
+   with the arrow, so `globals.css` restores `cursor: pointer` on enabled
+   buttons; a card or row that only answers the pointer (the landing's
+   hover cards) declares `cursor-pointer` itself.
 4. **Design tokens only** (§7). No `#hex`, no magic `px`, no inline
    `style={{}}` for things a token or a utility covers.
 5. **Mobile first.** Patients arrive from WhatsApp on phones: design at
@@ -890,6 +894,23 @@ written out in full, or Next.js does not inline it).
   the second word by word, the search bar fades up and the specialist rises
   out of it, the chips enter from the middle of the row outwards, and the
   cursor sweeps in from below right along a curve and clicks every 5 s.
+- **The sections' entrances (2026-10-08)**, one `Choreographed` each, on
+  scroll, every piece on `--duration-entrance`: «Del mensaje a la consulta»
+  fades its box in, the side cards slide out from behind the middle one and
+  the photos come in from their card's edges 200 ms apart; on hover each
+  card hides its photo a little and grows its words (CSS on `translate`
+  and `scale`, which Motion's `transform` never touches). «Así de simple»:
+  each role card builds itself (the patients' card 100 ms behind): the
+  avatar pops in, the words rise, the four steps are dealt one from under
+  the other 100 ms apart — the words block is opaque and above them, so no
+  step ever paints over text — with their badge popping 67 ms after its
+  row, then the button. Hover: the avatar nods, the steps lean right in a
+  67 ms cascade; a step lifts, its badge's tint sweeps across the row from
+  the left (a `::before` scaled from the left edge, 300 ms) and its words
+  take the tone's lightest shade that keeps 4.5:1 on that tint (blue-500,
+  green-700, orange-800, warning-800). Nothing hides after it has painted:
+  a section already on screen when the page loads (a reload keeps the
+  scroll) shows no entrance, by design (§8.2).
 - **No root `loading.tsx` (2026-10-08):** §4.
 
 ### Improvements noted (not scheduled)

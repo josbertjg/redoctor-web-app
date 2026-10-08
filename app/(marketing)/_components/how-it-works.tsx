@@ -2,22 +2,29 @@ import Image from 'next/image';
 
 import { useTranslations } from 'next-intl';
 
+import { cn } from '@/app/lib/utils';
+
 import { Button } from '@/app/ui/button';
 
 import { Plus, Swirl } from './decor';
 import { IconBadge } from './icon-badge';
 import { Reveal } from './reveal';
 import { accentOnBlue } from './rich';
+import { RoleCardMotion } from './role-card-motion';
 import {
   landingSections,
   patientSteps,
   specialistSteps,
+  type IconTone,
 } from '../_data/landing-content';
 
 /*
  * «Así de simple» (Figma): one card per role with its four steps. The copy
  * of the steps is the mockup's; the landing doc's longer version waits for
- * the decision on the final copy.
+ * the decision on the final copy. Each card builds itself as it scrolls
+ * into view (role-card-motion.tsx, through the `data-piece` marks) and
+ * answers the pointer: over the card the avatar nods and the steps lean
+ * right one after another; over a step, it lifts and its badge grows.
  */
 export function HowItWorks() {
   const t = useTranslations('landing.howItWorks');
@@ -42,7 +49,7 @@ export function HowItWorks() {
         </h2>
       </Reveal>
       <div className="relative mx-auto mt-10 grid max-w-4xl gap-6 md:grid-cols-2 lg:mt-14 lg:gap-10">
-        <Reveal>
+        <RoleCardMotion>
           <RoleCard
             illustration="avatar-specialist"
             title={t('specialist.title')}
@@ -55,8 +62,9 @@ export function HowItWorks() {
             }))}
             cta={t('cta')}
           />
-        </Reveal>
-        <Reveal delay="short">
+        </RoleCardMotion>
+        {/* A step beat behind its neighbour when the two share a row. */}
+        <RoleCardMotion delay={0.1}>
           <RoleCard
             illustration="avatar-patient"
             title={t('patient.title')}
@@ -69,11 +77,44 @@ export function HowItWorks() {
             }))}
             cta={t('cta')}
           />
-        </Reveal>
+        </RoleCardMotion>
       </div>
     </section>
   );
 }
+
+/* Each step sits above the next, so a row entering from one row up comes
+   out from under the one before; the words block, above them all, hides
+   the first until it sets off. */
+const stepDepth = ['z-4', 'z-3', 'z-2', 'z-1'];
+/* Over the card, the steps lean right one after another, a third of a
+   fast beat apart. */
+const stepLean = [
+  '',
+  'delay-[calc(var(--duration-fast)/3)]',
+  'delay-[calc(var(--duration-fast)/3*2)]',
+  'delay-(--duration-fast)',
+];
+/* Over a step, its badge's tint (the same icon-badge.tsx paints) sweeps
+   across the row from the left, as if the circle spread out, and the words
+   take the tone's lightest shade that keeps 4.5:1 on that tint (measured:
+   blue-500 8.4, green-700 4.7, orange-800 6.6, warning-800 5.3; the 600s
+   and orange-700 fall short). */
+const stepTone: Record<IconTone, { fill: string; words: string }> = {
+  blue: { fill: 'before:bg-blue-50', words: 'group-hover/step:text-primary' },
+  green: {
+    fill: 'before:bg-green-50',
+    words: 'group-hover/step:text-green-700',
+  },
+  orange: {
+    fill: 'before:bg-orange-50',
+    words: 'group-hover/step:text-orange-800',
+  },
+  warning: {
+    fill: 'before:bg-warning-50',
+    words: 'group-hover/step:text-warning-800',
+  },
+};
 
 type RoleCardProps = {
   illustration: 'avatar-specialist' | 'avatar-patient';
@@ -96,16 +137,27 @@ function RoleCard({
   cta,
 }: RoleCardProps) {
   return (
-    <article className="flex h-full flex-col items-center gap-4 rounded-2xl bg-pure-white px-4 py-5 text-center shadow-md sm:px-6">
+    /* The hovers move `translate`, `rotate` and `scale` only, which the
+       entrance (transform) never touches. `isolate` keeps the steps' depth
+       inside the card, away from the header's. */
+    <article
+      data-piece="card"
+      className="group/card relative isolate flex h-full cursor-pointer flex-col items-center gap-4 rounded-2xl bg-pure-white px-4 py-5 text-center shadow-md sm:px-6"
+    >
       <Image
+        data-piece="avatar"
         src={`/illustrations/landing/${illustration}.svg`}
         alt=""
         aria-hidden="true"
         width={104}
         height={104}
-        className="size-24 lg:size-26"
+        className="size-24 transition-[translate,rotate] duration-base ease-house group-hover/card:-translate-y-1 group-hover/card:-rotate-6 lg:size-26"
       />
-      <div className="flex flex-col gap-1.5">
+      {/* Opaque and above the steps: the first comes out from under it. */}
+      <div
+        data-piece="heading"
+        className="relative z-10 flex w-full flex-col gap-1.5 bg-pure-white"
+      >
         <h3 className="text-headline-sm font-bold text-pure-black lg:text-headline-md">
           {title}
         </h3>
@@ -114,20 +166,50 @@ function RoleCard({
         </p>
       </div>
       <ol className="flex w-full flex-col gap-3">
-        {steps.map((step) => (
+        {steps.map((step, index) => (
           <li
             key={step.key}
-            className="flex items-center gap-3 rounded-lg bg-pure-white px-3 py-2.5 text-left shadow-md"
+            data-piece="step"
+            className={cn(
+              'relative transition-[translate] duration-base ease-house group-hover/card:translate-x-1',
+              stepDepth[index],
+              stepLean[index],
+            )}
           >
-            <IconBadge icon={step.icon} tone={step.tone} size="sm" />
-            <span className="text-title-md font-semibold text-pure-black sm:text-subtitle-s">
-              {step.label}
-            </span>
+            <div
+              className={cn(
+                'group/step relative isolate flex items-center gap-3 overflow-hidden rounded-lg bg-pure-white px-3 py-2.5 text-left shadow-md transition-[translate,box-shadow] duration-base ease-house hover:-translate-y-0.5 hover:shadow-lg',
+                'before:absolute before:inset-0 before:-z-10 before:origin-left before:scale-x-0 before:transition-[scale] before:duration-slow before:ease-house hover:before:scale-x-100',
+                stepTone[step.tone].fill,
+              )}
+            >
+              <IconBadge
+                data-piece="badge"
+                icon={step.icon}
+                tone={step.tone}
+                size="sm"
+                className="transition-[scale] duration-base ease-house group-hover/step:scale-110"
+              />
+              <span
+                className={cn(
+                  'text-title-md font-semibold text-pure-black transition-colors duration-base ease-house sm:text-subtitle-s',
+                  stepTone[step.tone].words,
+                )}
+              >
+                {step.label}
+              </span>
+            </div>
           </li>
         ))}
       </ol>
       {/* TODO(M2/M11): the specialist opens the app, the patient signs in. */}
-      <Button block shape="soft" size="small" className="mt-auto">
+      <Button
+        data-piece="cta"
+        block
+        shape="soft"
+        size="small"
+        className="mt-auto"
+      >
         {cta}
       </Button>
     </article>

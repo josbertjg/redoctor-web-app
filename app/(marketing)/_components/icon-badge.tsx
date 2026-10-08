@@ -1,3 +1,5 @@
+import type { ComponentProps } from 'react';
+
 import { cn } from '@/app/lib/utils';
 
 import { Icon, type IconComponent } from '@/app/ui/icons';
@@ -17,12 +19,11 @@ const sizes = {
   lg: { circle: 'size-16', icon: 24 },
 } as const;
 
-type IconBadgeProps = {
+type IconBadgeProps = ComponentProps<'span'> & {
   icon: IconComponent;
   tone: IconTone;
   /** 40 px with a 20 px icon, 48 px with a 24 px icon, or 64 px with a 32 px icon. */
   size?: keyof typeof sizes;
-  className?: string;
 };
 
 /** An icon in a tinted circle, as the steps and the roadmap cards show them. */
@@ -31,6 +32,7 @@ export function IconBadge({
   tone,
   size = 'md',
   className,
+  ...props
 }: IconBadgeProps) {
   return (
     <span
@@ -40,6 +42,7 @@ export function IconBadge({
         tones[tone],
         className,
       )}
+      {...props}
     >
       <Icon
         icon={icon}

@@ -44,7 +44,7 @@ export function Pricing() {
               <li key={plan.key}>
                 <article
                   className={cn(
-                    'flex h-full flex-col gap-8 rounded-xl px-7 py-6 shadow-md transition-transform duration-base ease-house hover:-translate-y-1',
+                    'flex h-full cursor-pointer flex-col gap-8 rounded-xl px-7 py-6 shadow-md transition-transform duration-base ease-house hover:-translate-y-1',
                     plan.featured
                       ? 'bg-primary text-pure-white'
                       : 'bg-pure-white text-pure-black',

@@ -9,7 +9,7 @@ import 'client-only';
  * an `export *` barrel Turbopack cannot tree-shake, and it shipped the whole
  * library (40 KB) where this ships what the page uses (10 KB).
  */
-export { AnimatePresence, m } from 'framer-motion';
+export { AnimatePresence, m, stagger } from 'framer-motion';
 export type {
   AnimationSequence,
   DOMKeyframesDefinition,
