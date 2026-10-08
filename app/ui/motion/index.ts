@@ -12,6 +12,7 @@ import 'client-only';
 export {
   AnimatePresence,
   m,
+  motionValue,
   stagger,
   useAnimationFrame,
   useMotionValue,

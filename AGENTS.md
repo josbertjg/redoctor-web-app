@@ -940,7 +940,13 @@ written out in full, or Next.js does not inline it).
   or a visible focus; not on touch screens, where it scrolls by hand);
   hover lifts a card, grows its badge and fills the card with the badge's
   tint growing out of the badge (a `::before` clipped to a circle centred
-  on it), the green words one shade darker to keep AA on the tint. Nothing
+  on it), the green words one shade darker to keep AA on the tint. «Elige
+  el plan ideal»: the box fades in, the chip, title and line follow, the
+  recommended plan grows into place and the other two slide out from
+  behind it (measured, so in a column they come from above and below it),
+  each price counts up from zero as its card lands (a MotionValue in the
+  sequence writing the locale's format into the amount's span), the tag
+  pops, the benefits step in 70 ms apart and the buttons rise. Nothing
   hides after it has painted: a section already on screen when the page
   loads (a reload keeps the scroll) shows no entrance, by design (§8.2).
 - **No root `loading.tsx` (2026-10-08):** §4.
