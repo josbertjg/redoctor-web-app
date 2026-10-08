@@ -1,0 +1,16 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.redoctor.mobileapp",
+      "sha256_cert_fingerprints": [
+        "B6:76:7E:54:2D:EB:49:3D:52:1C:37:32:08:42:C6:97:F8:D4:90:02:45:61:AE:CC:BE:15:EE:AD:E6:D7:B8:B7",
+        "58:4A:34:AF:D7:CE:4F:A9:B8:A9:71:E9:5F:EA:6B:4C:BD:66:75:94:9F:DC:AE:0A:0D:F4:87:FC:D1:E7:86:F6",
+        "78:68:62:DD:37:D9:CD:B1:64:1C:7C:05:AF:21:50:63:4B:1D:05:7C:E6:69:AE:8A:5A:C3:51:CA:9E:FD:B0:AE",
+        "AD:2D:15:6E:68:0B:CD:53:C2:9A:96:56:D6:3A:05:45:FC:29:06:B3:E7:75:3C:3C:A5:EB:B2:D2:3D:77:95:AA",
+        "A4:DF:F2:CB:6D:D7:4D:36:BF:BE:A4:06:35:E1:C3:9E:3C:8B:E4:1D:C0:1F:67:EB:F9:FF:A0:2F:FF:5B:65:C8"
+      ]
+    }
+  }
+]

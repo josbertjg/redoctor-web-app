@@ -1,0 +1,20 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["SLAQ84BD94.com.redoctor.mobileapp"],
+        "components": [
+          { "/": "/s/*" },
+          { "/": "/i/*" },
+          { "/": "/a/*" },
+          { "/": "/suscripcion" },
+          { "/": "/home/*" },
+          { "/": "/agenda" },
+          { "/": "/agenda/*" },
+          { "/": "/especialidades" },
+          { "/": "/perfil" }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,94 @@
+/*
+ * Global stylesheet: Tailwind 4 plus the design tokens (app/ui/tokens.css).
+ * Imported once, from app/layout.tsx. Component styles live with their
+ * components; only truly global rules belong here.
+ */
+@import 'tailwindcss';
+@import './tokens.css';
+
+/*
+ * The semantic names shadcn/Radix components expect, mapped onto our tokens.
+ * Never their default palette: every value here points at tokens.css.
+ */
+@theme {
+  --color-foreground: var(--color-text-primary);
+  --color-card: var(--color-surface);
+  --color-card-foreground: var(--color-text-primary);
+  --color-popover: var(--color-surface);
+  --color-popover-foreground: var(--color-text-primary);
+  --color-primary-foreground: var(--color-on-primary);
+  --color-secondary-foreground: var(--color-on-secondary);
+  --color-muted: var(--color-surface-variant);
+  --color-muted-foreground: var(--color-text-secondary);
+  --color-accent: var(--color-white-300);
+  --color-accent-foreground: var(--color-text-primary);
+  --color-destructive: var(--color-error);
+  --color-destructive-foreground: var(--color-on-primary);
+  --color-input: var(--color-border);
+  --color-ring: var(--color-primary);
+
+  /* Entrances (AGENTS.md §8.2). The durations collapse to 1ms under
+     prefers-reduced-motion through tokens.css, so these become instant. */
+  --animate-fade-in: fade-in var(--duration-base) var(--ease-house) both;
+  --animate-fade-up: fade-up var(--duration-base) var(--ease-house) both;
+  --animate-scale-in: scale-in var(--duration-base) var(--ease-house) both;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(0.5rem);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+/* Transition durations from the motion tokens: duration-fast/base/slow. */
+@utility duration-fast {
+  transition-duration: var(--duration-fast);
+}
+@utility duration-base {
+  transition-duration: var(--duration-base);
+}
+@utility duration-slow {
+  transition-duration: var(--duration-slow);
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Native controls and scrollbars follow the theme that is actually on. */
+  :root[data-theme='light'] {
+    color-scheme: light;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-text-primary);
+  }
+}

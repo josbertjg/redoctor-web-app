@@ -1,0 +1,47 @@
+import Image from 'next/image';
+import Link from 'next/link';
+
+import { getTranslations } from 'next-intl/server';
+
+import { routes } from '@/app/lib/routes';
+
+import { Button } from '@/app/ui/button';
+import { EmptyState } from '@/app/ui/empty-state';
+import { SiteHeader } from '@/app/ui/layout/site-header';
+
+/*
+ * A profile that does not exist (deleted, or a broken link). As in the app,
+ * nothing here can fix it, so there is no retry: a way home. The app offers
+ * a search instead, which the web does not have during the pilot.
+ */
+export default async function SpecialistNotFound() {
+  const t = await getTranslations();
+
+  return (
+    <>
+      <SiteHeader homeLabel={t('common.homeLabel')} />
+      <main className="flex flex-1 flex-col justify-center pb-16">
+        <EmptyState
+          headingLevel={1}
+          illustration={
+            <Image
+              src="/illustrations/no-data-found.svg"
+              alt=""
+              width={132}
+              height={146}
+              preload
+              className="h-auto w-32"
+            />
+          }
+          title={t('specialists.notFound.title')}
+          description={t('specialists.notFound.description')}
+          action={
+            <Button asChild>
+              <Link href={routes.home()}>{t('not_found.go_home')}</Link>
+            </Button>
+          }
+        />
+      </main>
+    </>
+  );
+}

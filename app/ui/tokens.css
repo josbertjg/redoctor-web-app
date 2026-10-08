@@ -1,0 +1,309 @@
+/*
+ * Redoctor design tokens — the mobile app's theme, verbatim, as Tailwind 4
+ * `@theme` variables. Source: redoctor-mobile-app/lib/config/theme/.
+ *
+ * Rules: every color, radius, shadow, size and duration in the UI comes from
+ * here. Values change in this file only, and in agreement with the app.
+ * Light is the theme that ships; dark is defined and kept current but not
+ * wired (no toggle) — the same state as the app.
+ *
+ * This file holds only the theme. `app/ui/globals.css` imports it right
+ * after `@import "tailwindcss";`.
+ */
+
+@theme {
+  /* ---------- Font ------------------------------------------------------ */
+  --font-sans:
+    var(--font-urbanist), 'Urbanist', ui-sans-serif, system-ui, -apple-system,
+    'Segoe UI', Roboto, sans-serif;
+
+  --font-weight-light: 300;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* ---------- Type scale (role names) ----------------------------------- */
+  --text-display-lg: 57px;
+  --text-display-lg--line-height: 1.12;
+  --text-display-lg--letter-spacing: -0.25px;
+  --text-display-lg--font-weight: 700;
+  --text-display-md: 45px;
+  --text-display-md--line-height: 1.16;
+  --text-display-md--font-weight: 600;
+  --text-display-sm: 36px;
+  --text-display-sm--line-height: 1.22;
+  --text-display-sm--font-weight: 600;
+
+  --text-headline-lg: 32px;
+  --text-headline-lg--line-height: 1.25;
+  --text-headline-lg--font-weight: 700;
+  --text-headline-md: 28px;
+  --text-headline-md--line-height: 1.29;
+  --text-headline-md--font-weight: 600;
+  --text-headline-sm: 24px;
+  --text-headline-sm--line-height: 1.33;
+  --text-headline-sm--font-weight: 600;
+
+  --text-title-lg: 22px;
+  --text-title-lg--line-height: 1.27;
+  --text-title-lg--font-weight: 700;
+  --text-title-md: 18px;
+  --text-title-md--line-height: 1.33;
+  --text-title-md--letter-spacing: 0.15px;
+  --text-title-md--font-weight: 600;
+  --text-title-sm: 14px;
+  --text-title-sm--line-height: 1.43;
+  --text-title-sm--letter-spacing: 0.1px;
+  --text-title-sm--font-weight: 600;
+
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 1.5;
+  --text-body-lg--letter-spacing: 0.5px;
+  --text-body-md: 14px;
+  --text-body-md--line-height: 1.43;
+  --text-body-md--letter-spacing: 0.25px;
+  --text-body-sm: 12px;
+  --text-body-sm--line-height: 1.33;
+  --text-body-sm--letter-spacing: 0.4px;
+
+  --text-label-lg: 14px;
+  --text-label-lg--line-height: 1.43;
+  --text-label-lg--letter-spacing: 0.1px;
+  --text-label-lg--font-weight: 600;
+  --text-label-md: 12px;
+  --text-label-md--line-height: 1.33;
+  --text-label-md--letter-spacing: 0.5px;
+  --text-label-md--font-weight: 600;
+  --text-label-sm: 11px;
+  --text-label-sm--line-height: 1.45;
+  --text-label-sm--letter-spacing: 0.5px;
+  --text-label-sm--font-weight: 600;
+
+  /* ---------- Type scale (the app's compact names) ---------------------- */
+  --text-title-xxxl: 60px;
+  --text-title-xxxl--line-height: 1.1;
+  --text-title-xxl: 42px;
+  --text-title-xxl--line-height: 1.15;
+  --text-title-xl: 36px;
+  --text-title-xl--line-height: 1.22;
+  --text-subtitle-l: 30px;
+  --text-subtitle-l--line-height: 1.25;
+  --text-subtitle-m: 22px;
+  --text-subtitle-m--line-height: 1.27;
+  --text-subtitle-s: 18px;
+  --text-subtitle-s--line-height: 1.33;
+  --text-body-xs: 16px;
+  --text-body-xs--line-height: 1.5;
+  --text-body-xxs: 14px;
+  --text-body-xxs--line-height: 1.43;
+  --text-body-xxxs: 12px;
+  --text-body-xxxs--line-height: 1.33;
+
+  /* ---------- Color scales (50 → 900; 500 is the base) ------------------ */
+  --color-blue-50: #e6e6fc;
+  --color-blue-100: #b0b0f4;
+  --color-blue-200: #8a8aef;
+  --color-blue-300: #5454e8;
+  --color-blue-400: #3333e3;
+  --color-blue-500: #0000dc;
+  --color-blue-600: #0000c8;
+  --color-blue-700: #00009c;
+  --color-blue-800: #000079;
+  --color-blue-900: #00005c;
+
+  --color-green-50: #eaf7f2;
+  --color-green-100: #bfe0d7;
+  --color-green-200: #9fdac4;
+  --color-green-300: #74c9a9;
+  --color-green-400: #59bf98;
+  --color-green-500: #2faf7e;
+  --color-green-600: #2b9f73;
+  --color-green-700: #217c59;
+  --color-green-800: #1a6045;
+  --color-green-900: #144a35;
+
+  --color-grey-50: #f2f2f2;
+  --color-grey-100: #d8d8d8;
+  --color-grey-200: #c5c5c5;
+  --color-grey-300: #aaaaaa;
+  --color-grey-400: #999999;
+  --color-grey-500: #808080;
+  --color-grey-600: #747474;
+  --color-grey-700: #5b5b5b;
+  --color-grey-800: #464646;
+  --color-grey-900: #363636;
+
+  --color-white-50: #fdfdfd;
+  --color-white-100: #f8f8f8;
+  --color-white-200: #f4f4f4;
+  --color-white-300: #f0f0f0;
+  --color-white-400: #ededed;
+  --color-white-500: #e8e8e8;
+  --color-white-600: #d3d3d3;
+  --color-white-700: #a5a5a5;
+  --color-white-800: #808080;
+  --color-white-900: #616161;
+
+  --color-error-50: #fdeded;
+  --color-error-100: #f8c8c8;
+  --color-error-200: #f5aeae;
+  --color-error-300: #f18989;
+  --color-error-400: #ee7272;
+  --color-error-500: #ea4f4f;
+  --color-error-600: #d54848;
+  --color-error-700: #a63838;
+  --color-error-800: #812b2b;
+  --color-error-900: #622121;
+
+  --color-verified-50: #ecf2fe;
+  --color-verified-100: #c3d8fc;
+  --color-verified-200: #a6c5fa;
+  --color-verified-300: #7eabf8;
+  --color-verified-400: #659af7;
+  --color-verified-500: #3e81f5;
+  --color-verified-600: #3875df;
+  --color-verified-700: #2c5cae;
+  --color-verified-800: #224787;
+  --color-verified-900: #1a3667;
+
+  --color-warning-50: #fcf8ea;
+  --color-warning-100: #f6e9be;
+  --color-warning-200: #f2de9e;
+  --color-warning-300: #eccf72;
+  --color-warning-400: #e8c556;
+  --color-warning-500: #e2b72c;
+  --color-warning-600: #cea728;
+  --color-warning-700: #a0821f;
+  --color-warning-800: #7c6518;
+  --color-warning-900: #5f4d12;
+
+  --color-orange-50: #fff1e6;
+  --color-orange-100: #ffd8b0;
+  --color-orange-200: #ffc08a;
+  --color-orange-300: #ffa454;
+  --color-orange-400: #ff9233;
+  --color-orange-500: #ff7700;
+  --color-orange-600: #e86c00;
+  --color-orange-700: #b55400;
+  --color-orange-800: #8c4100;
+  --color-orange-900: #6b3200;
+
+  --color-silver-50: #f2f4f7;
+  --color-silver-100: #e0e4eb;
+  --color-silver-200: #cbd1dc;
+  --color-silver-300: #b7becd;
+  --color-silver-400: #a8b1c2;
+  --color-silver-500: #9aa3b7;
+  --color-silver-600: #818ca2;
+  --color-silver-700: #626d84;
+  --color-silver-800: #4b5468;
+  --color-silver-900: #373f4e;
+
+  --color-pure-white: #ffffff;
+  --color-pure-black: #000000;
+
+  /* ---------- Semantic aliases (light; see the dark block below) -------- */
+  --color-primary: var(--color-blue-500);
+  --color-on-primary: var(--color-white-50);
+  --color-secondary: var(--color-green-500);
+  --color-on-secondary: var(--color-white-50);
+
+  --color-background: var(--color-white-50);
+  --color-surface: var(--color-white-100);
+  --color-surface-variant: var(--color-white-300);
+  --color-on-background: var(--color-grey-900);
+  --color-on-surface: var(--color-grey-800);
+
+  --color-text-primary: var(--color-grey-900);
+  --color-text-secondary: var(--color-grey-600);
+  --color-text-disabled: var(--color-grey-400);
+  --color-text-on-primary: var(--color-white-50);
+  --color-text-on-secondary: var(--color-white-50);
+  --color-text-contrast: var(--color-pure-white);
+  --color-contrast-black: var(--color-pure-black);
+  --color-contrast-white: var(--color-pure-white);
+
+  --color-success: var(--color-green-500);
+  --color-success-light: var(--color-green-100);
+  --color-error: var(--color-error-500);
+  --color-error-light: var(--color-error-100);
+  --color-warning: var(--color-warning-500);
+  --color-warning-light: var(--color-warning-100);
+  --color-verified: var(--color-verified-500);
+  --color-verified-light: var(--color-verified-100);
+  --color-info: var(--color-blue-400);
+  --color-info-light: var(--color-blue-50);
+
+  --color-border: var(--color-grey-300);
+  --color-divider: var(--color-grey-200);
+  --color-shadow: rgb(0 0 0 / 0.1);
+
+  /* ---------- Radii ----------------------------------------------------- */
+  --radius-sm: 8px; /* alerts, toasts */
+  --radius-md: 10px; /* inputs (40px tall), search-like buttons */
+  --radius-lg: 12px; /* compact cards (price cards, menus) */
+  --radius-xl: 20px; /* cards, inked containers (the app's default) */
+  --radius-2xl: 30px; /* bottom-sheet top corners */
+  --radius-full: 9999px; /* pills, chips, avatars */
+
+  /* ---------- Shadows (the app's xs/sm/md/lg/shrink) -------------------- */
+  --shadow-xs: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+  --shadow-sm: 0 1px 3px 1px rgb(0 0 0 / 0.15), 0 2px 2px 0 rgb(0 0 0 / 0.12);
+  --shadow-md: 0 2px 3px 1px rgb(0 0 0 / 0.15), 0 3px 7px 0 rgb(0 0 0 / 0.12);
+  --shadow-lg:
+    0 4px 6px -1px rgb(0 0 0 / 0.1), 0 10px 15px -3px rgb(0 0 0 / 0.15);
+  --shadow-shrink:
+    0 1px 1px 1px rgb(0 0 0 / 0.15), 0 1px 0.5px 0 rgb(0 0 0 / 0.3);
+
+  /* ---------- Motion ---------------------------------------------------- */
+  --duration-fast: 200ms;
+  --duration-base: 250ms; /* the house default */
+  --duration-slow: 300ms;
+  --ease-house: cubic-bezier(0.42, 0, 0.58, 1); /* ease-in-out */
+
+  /* ---------- Layout ---------------------------------------------------- */
+  --spacing-gutter: 16px; /* side padding at every width */
+  --container-content: 42rem; /* reading width of a patient page */
+  --spacing-control: 40px; /* inputs and small buttons → h-control */
+  --spacing-control-lg: 48px; /* large (block) buttons → h-control-lg */
+  --spacing-touch: 44px; /* minimum tap target → min-h-touch, min-w-touch */
+}
+
+/*
+ * Dark aliases: defined to stay in step with the app, not wired (no toggle).
+ * The `:root:not([data-theme="light"])` guard lets an explicit light choice
+ * win over the OS the day a toggle exists.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-background: var(--color-grey-900);
+    --color-surface: var(--color-grey-800);
+    --color-surface-variant: var(--color-grey-700);
+    --color-on-background: var(--color-white-100);
+    --color-on-surface: var(--color-white-200);
+    --color-text-primary: var(--color-white-100);
+    --color-text-secondary: var(--color-grey-300);
+    --color-text-disabled: var(--color-grey-500);
+    --color-contrast-black: var(--color-pure-white);
+    --color-contrast-white: var(--color-pure-black);
+    --color-success: var(--color-green-400);
+    --color-success-light: var(--color-green-800);
+    --color-error-light: var(--color-error-800);
+    --color-warning-light: var(--color-warning-800);
+    --color-verified-light: var(--color-verified-800);
+    --color-info: var(--color-blue-300);
+    --color-info-light: var(--color-blue-800);
+    --color-border: var(--color-grey-600);
+    --color-divider: var(--color-grey-700);
+    --color-shadow: rgb(0 0 0 / 0.25);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 1ms;
+    --duration-base: 1ms;
+    --duration-slow: 1ms;
+  }
+}

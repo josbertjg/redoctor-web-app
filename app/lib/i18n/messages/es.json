@@ -1,0 +1,191 @@
+{
+  "metadata": {
+    "siteName": "Redoctor",
+    "title": "Redoctor · Especialistas verificados y citas sin enredos",
+    "description": "Redoctor une a pacientes con especialistas de la salud verificados en Venezuela. Recibe, confirma y gestiona tus citas desde el teléfono, sin llamadas.",
+    "tagline": "Especialistas verificados. Citas sin enredos.",
+    "ogImageAlt": "Redoctor: especialistas verificados, citas sin enredos"
+  },
+  "landing": {
+    "provisional": {
+      "title": "Especialistas verificados. Citas sin enredos.",
+      "description": "Tu especialista te agenda, tú confirmas desde el teléfono y todo queda en un solo lugar, sin llamadas ni esperas.",
+      "linkHint": "¿Te llegó un enlace de tu especialista? Ábrelo: ahí está tu cita."
+    }
+  },
+  "common": {
+    "homeLabel": "Redoctor, ir al inicio",
+    "loading": "Cargando…"
+  },
+  "not_found": {
+    "metaTitle": "Página no encontrada",
+    "title": "Esta página no existe",
+    "description": "Si buscabas tu cita, abre el enlace que te envió tu especialista.",
+    "go_home": "Ir al inicio"
+  },
+  "errors": {
+    "page": {
+      "title": "No pudimos cargar esta página",
+      "description": "Puede ser tu conexión o un problema de nuestro lado. Inténtalo de nuevo en un momento."
+    }
+  },
+  "notifications": {
+    "title": "Notificaciones"
+  },
+  "apiErrors": {
+    "network": "No pudimos conectarnos. Revisa tu conexión a internet e inténtalo de nuevo.",
+    "timeout": "La conexión tardó demasiado. Inténtalo de nuevo en un momento.",
+    "uncertainOutcome": "Se cortó la conexión antes de confirmar la operación. Revisa si se aplicó antes de volver a intentarlo.",
+    "unexpected": "Algo salió mal. Inténtalo de nuevo en un momento.",
+    "genericCustomErrors": {
+      "registrationIncomplete": "Termina tu registro para continuar."
+    },
+    "notificationErrors": {
+      "invalidUnsubscribeLink": "Este enlace ya no es válido. Usa el del último correo que recibiste."
+    },
+    "billingErrors": {
+      "alreadySubscribed": "Ya tienes una suscripción en curso.",
+      "invalidTransition": "Tu suscripción cambió hace un momento. Revísala e inténtalo de nuevo.",
+      "planUnavailable": "Ese plan ya no está disponible. Elige otro.",
+      "changeWithDebt": "Tienes un pago pendiente. Ponte al día antes de cambiar de plan.",
+      "changeOverOfficeLimit": "Tienes más consultorios activos de los que permite ese plan. Desactiva los que sobran antes de cambiar.",
+      "changeNotAllowed": "Ese cambio de plan no está disponible en este momento.",
+      "paymentExpired": "El monto en bolívares venció. Lo calculamos de nuevo.",
+      "paymentInReview": "Ya tienes un pago en revisión. Te avisaremos en cuanto lo verifiquemos.",
+      "noExchangeRate": "No podemos calcular el monto en bolívares ahora. Inténtalo más tarde.",
+      "discountActive": "Ya tienes un cupón aplicado. Podrás usar otro cuando termine.",
+      "discountLossNotAccepted": "Para cambiar de plan tienes que aceptar que pierdes tu cupón.",
+      "subscriptionRequired": "Necesitas un plan activo para agendar citas."
+    }
+  },
+  "appBridge": {
+    "openInApp": "Abrir en la app",
+    "desktopNote": {
+      "link": "Abre este enlace desde tu teléfono, donde tienes la app de Redoctor.",
+      "email": "Abre este correo desde tu teléfono, donde tienes la app de Redoctor."
+    },
+    "appStore": "Descargar en App Store",
+    "playStore": "Descargar en Google Play"
+  },
+  "bridges": {
+    "subscription": {
+      "metaTitle": "Tu suscripción",
+      "title": "Tu suscripción se abre en la app de Redoctor",
+      "description": "Abre la app de Redoctor para ver tu plan y tus pagos. Si tu sesión está cerrada, te pedirá entrar y te llevará directo a tu suscripción. Si aún no tienes la app, instálala y vuelve a tocar el botón del correo."
+    },
+    "agenda": {
+      "metaTitle": "Tu agenda",
+      "title": "Tu agenda se abre en la app de Redoctor",
+      "description": "Abre la app de Redoctor para ver tus citas del día. Si tu sesión está cerrada, te pedirá entrar y te llevará directo a tu agenda. Si aún no tienes la app, instálala y vuelve a tocar el botón del correo."
+    },
+    "specialties": {
+      "metaTitle": "Tus especialidades",
+      "title": "Tus especialidades se abren en la app de Redoctor",
+      "description": "Abre la app de Redoctor para ver tus especialidades y cómo va su revisión. Si tu sesión está cerrada, te pedirá entrar y te llevará directo a ellas. Si aún no tienes la app, instálala y vuelve a tocar el botón del correo."
+    },
+    "profile": {
+      "metaTitle": "Tu perfil",
+      "title": "Tu perfil se abre en la app de Redoctor",
+      "description": "Abre la app de Redoctor para revisar tu perfil profesional. Si tu sesión está cerrada, te pedirá entrar y te llevará directo a tu perfil. Si aún no tienes la app, instálala y vuelve a tocar el botón del correo."
+    },
+    "home": {
+      "metaTitle": "Abrir Redoctor",
+      "title": "Esto se abre en la app de Redoctor",
+      "description": "Abre la app de Redoctor para continuar. Si aún no tienes la app, instálala y vuelve a tocar el enlace."
+    }
+  },
+  "dailySummary": {
+    "metaTitle": "Resumen diario",
+    "ask": {
+      "title": "Resumen diario de tu agenda",
+      "description": "Es el correo con tus citas del día. Si ya no lo quieres, deja de recibirlo aquí. Podrás volver a activarlo cuando quieras.",
+      "action": "Dejar de recibirlo"
+    },
+    "unsubscribed": {
+      "title": "Listo, ya no te enviaremos el resumen diario",
+      "description": "Si cambias de idea, puedes volver a recibirlo.",
+      "action": "Volver a recibirlo"
+    },
+    "subscribed": {
+      "title": "Volverás a recibir el resumen diario",
+      "description": "Te llegará con tus citas del día.",
+      "action": "Dejar de recibirlo"
+    },
+    "invalidLink": {
+      "title": "Este enlace ya no es válido",
+      "description": "Usa el enlace del último resumen diario que recibiste."
+    },
+    "failed": "No pudimos guardar el cambio. Revisa tu conexión e inténtalo de nuevo."
+  },
+  "specialists": {
+    "metaDescription": "Perfil de {name} en Redoctor: especialidades, consultorios y opiniones de sus pacientes.",
+    "ogImageAlt": "Perfil de un especialista en Redoctor",
+    "bookingSoon": "Pronto podrás agendar aquí; por ahora pídele tu cita a tu especialista.",
+    "directions": "Cómo llegar",
+    "directionsTo": "Cómo llegar a {office}",
+    "noOffices": "Este especialista aún no tiene consultorios publicados.",
+    "noVerifiedSpecialties": "Aún no hay especialidades verificadas para mostrar.",
+    "starsLabel": "{rating} de 5 estrellas",
+    "distributionLabel": "{stars, plural, one {# estrella} other {# estrellas}}: {percent}",
+    "galleryLabel": "Fotos de {name}",
+    "galleryPhoto": "Foto {position} de {name}",
+    "trainingLabel": "Formación de {name}",
+    "notFound": {
+      "metaTitle": "Perfil no disponible",
+      "title": "Este perfil no está disponible",
+      "description": "Puede que el enlace esté incompleto o que el perfil ya no esté publicado. Pídele a tu especialista que te lo envíe de nuevo."
+    }
+  },
+  "search": {
+    "verifiedSpecialist": "Especialista verificado",
+    "specialtiesCount": "y {count} más",
+    "officesCount": "y {count} más",
+    "noDescription": "Este especialista no cuenta con una descripción.",
+    "attentionOffices": "Consultorios de atención",
+    "noAboutSpecialist": "Este especialista no cuenta ni con imágenes ni con una descripción de su experiencia.",
+    "noReviewsYet": "Aún no hay reseñas disponibles",
+    "beFirstToReview": "¡Sé uno de los primeros pacientes en compartir su experiencia con {name}!"
+  },
+  "rating": {
+    "review": "reseña",
+    "reviews": "reseñas"
+  },
+  "reviews": {
+    "title": "Opiniones",
+    "list": {
+      "overall": "Calificación general",
+      "countOne": "{count} opinión",
+      "countMany": "{count} opiniones",
+      "noComment": "Esta reseña no tiene comentarios.",
+      "anonymous": "Usuario de Redoctor",
+      "loadError": "No pudimos cargar las opiniones"
+    }
+  },
+  "specialistProfile": {
+    "aboutSpecialist": "Sobre este especialista",
+    "noCertifications": "Aún no hay certificaciones para mostrar"
+  },
+  "certificationTypes": {
+    "diploma": "Diplomado",
+    "course": "Curso",
+    "workshop": "Taller",
+    "fellow": "Fellowship"
+  },
+  "description": "Descripción",
+  "education": "Educación",
+  "certifications": "Certificaciones",
+  "readMore": "Leer más",
+  "showLess": "Ver menos",
+  "refresh": "Refrescar",
+  "billing": {
+    "couponRejection": {
+      "invalid": "Este cupón no es válido.",
+      "usageLimit": "Este cupón ya alcanzó su límite de usos.",
+      "expired": "Este cupón ya venció.",
+      "wrongPlan": "Este cupón no aplica a este plan.",
+      "unavailable": "Este cupón ya no está disponible."
+    }
+  },
+  "retry": "Reintentar",
+  "close": "Cerrar"
+}

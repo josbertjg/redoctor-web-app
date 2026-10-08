@@ -1,0 +1,84 @@
+# When Vercel finishes a preview deployment: the end-to-end tests on phone
+# profiles and the Lighthouse budgets, against the preview itself.
+#
+# Secrets (GitHub → Settings → Secrets and variables → Actions):
+# - VERCEL_AUTOMATION_BYPASS_SECRET: only if previews have Deployment
+#   Protection (Vercel → Settings → Deployment Protection → Protection
+#   Bypass for Automation). Without protection, leave it unset.
+name: Preview
+
+on:
+  deployment_status:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-${{ github.event.deployment.sha }}
+  cancel-in-progress: true
+
+env:
+  PREVIEW_URL: ${{ github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
+  VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+
+jobs:
+  e2e:
+    name: Playwright (iPhone 13, Pixel 7)
+    if: github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Preview'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.deployment.sha }}
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium webkit
+      - run: pnpm test:e2e
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ env.PREVIEW_URL }}
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-results
+          path: test-results
+          retention-days: 7
+
+  lighthouse:
+    name: Lighthouse budgets
+    if: github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Preview'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.deployment.sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      # One request carries the bypass secret; Lighthouse only sends the
+      # resulting cookie, and lighthouserc.cjs blocks every third party.
+      - name: Preview cookie
+        id: preview
+        if: env.VERCEL_AUTOMATION_BYPASS_SECRET != ''
+        run: |
+          cookie=$(curl -s -D - -o /dev/null \
+            -H "x-vercel-protection-bypass: $VERCEL_AUTOMATION_BYPASS_SECRET" \
+            -H "x-vercel-set-bypass-cookie: true" "$PREVIEW_URL" \
+            | grep -i '^set-cookie: _vercel_jwt=' | head -1 \
+            | sed -e 's/^[Ss]et-[Cc]ookie: //' -e 's/;.*//' | tr -d '\r')
+          echo "::add-mask::$cookie"
+          echo "cookie=$cookie" >> "$GITHUB_OUTPUT"
+      - run: npx --yes @lhci/cli@0.15.1 autorun --config=./lighthouserc.cjs
+        env:
+          PREVIEW_COOKIE: ${{ steps.preview.outputs.cookie }}
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: lighthouse-reports
+          path: lighthouse-reports
+          retention-days: 14
