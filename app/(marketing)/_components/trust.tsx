@@ -8,14 +8,26 @@ import { cn } from '@/app/lib/utils';
 import { Reveal } from './reveal';
 import { accentOnBlue } from './rich';
 import { SectionHeading } from './section-heading';
-import { landingSections, trustSteps } from '../_data/landing-content';
+import {
+  landingSections,
+  trustSteps,
+  type TrustTone,
+} from '../_data/landing-content';
 
 /*
  * «Sí, puedes confiar» (Figma): the verification in four numbered cards,
  * each with its illustration peeking from the bottom edge. The words and
  * the picture have separate areas, one under the other, so a longer line
- * makes the card taller instead of running under the picture.
+ * makes the card taller instead of running under the picture. Since the
+ * mockup's update of 2026-10-08 the second card is green and the third
+ * blue, with white words; the green is green-700, the lightest green that
+ * gives 16 px white words 4.5:1 (the mockup's 500 gives 2.8).
  */
+const surfaces: Record<TrustTone, string> = {
+  white: 'bg-pure-white text-primary',
+  green: 'bg-green-700 text-pure-white',
+  blue: 'bg-primary text-pure-white',
+};
 export function Trust() {
   const t = useTranslations('landing.trust');
 
@@ -44,7 +56,10 @@ export function Trust() {
             {trustSteps.map((step, index) => (
               <li
                 key={step.key}
-                className="flex flex-col overflow-hidden rounded-2xl bg-pure-white shadow-sm"
+                className={cn(
+                  'flex flex-col overflow-hidden rounded-2xl shadow-md',
+                  surfaces[step.tone],
+                )}
               >
                 <div className="flex items-start gap-3 p-5 pb-3">
                   <span
@@ -53,7 +68,7 @@ export function Trust() {
                   >
                     {index + 1}
                   </span>
-                  <p className="text-body-xs font-semibold text-pretty text-primary">
+                  <p className="text-body-xs font-semibold text-pretty">
                     {t(`steps.${step.key}`)}
                   </p>
                 </div>

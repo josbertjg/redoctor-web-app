@@ -2,7 +2,9 @@ import type { ReactNode } from 'react';
 
 import { cn } from '@/app/lib/utils';
 
-import { Icon, type IconComponent } from '@/app/ui/icons';
+import type { IconComponent } from '@/app/ui/icons';
+
+import { LabelChip } from './label-chip';
 
 type SectionHeadingProps = {
   /** The id the section's `aria-labelledby` points at. */
@@ -36,12 +38,7 @@ export function SectionHeading({
         className,
       )}
     >
-      {chip ? (
-        <span className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-3 py-1.5 text-label-lg text-primary shadow-sm">
-          <Icon icon={chip.icon} size={16} />
-          {chip.label}
-        </span>
-      ) : null}
+      {chip ? <LabelChip icon={chip.icon}>{chip.label}</LabelChip> : null}
       <h2
         id={id}
         className={cn(

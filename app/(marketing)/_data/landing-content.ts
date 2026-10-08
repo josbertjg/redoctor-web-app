@@ -79,15 +79,27 @@ export const patientSteps: Step<'receive' | 'save' | 'confirm' | 'rate'>[] = [
   { key: 'rate', icon: KidStar, tone: 'warning' },
 ];
 
+/** The surface of a verification card: white, brand green or brand blue. */
+export type TrustTone = 'white' | 'green' | 'blue';
+
 /**
- * The four verification steps and the illustration each card shows. The
- * placement is inside the card's picture area, under the words: the short
- * ones peek out of the bottom edge, the tall ones start at the top and are
- * cut by it.
+ * The four verification steps, the surface of each card (the mockup's
+ * update of 2026-10-08 paints the second green and the third blue) and the
+ * illustration each shows. The placement is inside the card's picture
+ * area, under the words: the short ones peek out of the bottom edge, the
+ * tall ones start at the top and are cut by it.
  */
-export const trustSteps = [
+export const trustSteps: {
+  key: 'identity' | 'specialty' | 'approved' | 'published';
+  tone: TrustTone;
+  illustration: string;
+  width: number;
+  height: number;
+  placement: string;
+}[] = [
   {
     key: 'identity',
+    tone: 'white',
     illustration: 'trust-id-card',
     width: 172,
     height: 109,
@@ -95,6 +107,7 @@ export const trustSteps = [
   },
   {
     key: 'specialty',
+    tone: 'green',
     illustration: 'trust-shield',
     width: 104,
     height: 111,
@@ -102,6 +115,7 @@ export const trustSteps = [
   },
   {
     key: 'approved',
+    tone: 'blue',
     illustration: 'trust-phone',
     width: 103,
     height: 206,
@@ -109,12 +123,13 @@ export const trustSteps = [
   },
   {
     key: 'published',
+    tone: 'white',
     illustration: 'trust-doctor',
     width: 156,
     height: 166,
     placement: 'w-[53%] top-[8%]',
   },
-] as const;
+];
 
 export type Audience = 'patient' | 'specialist';
 

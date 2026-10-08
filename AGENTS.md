@@ -876,6 +876,14 @@ written out in full, or Next.js does not inline it).
   and «Así de simple» (container 56 rem, one type step smaller, 40 px
   badges). The trust cards keep words and picture in separate areas, so a
   longer line grows the card instead of running under the illustration.
+  The designer's update of 2026-10-08 (same frame, `4464:341`; `4585:3077`
+  is her copy of the previous version) is in: the second trust card is
+  green and the third blue with white words — green-700, the lightest
+  green that gives 16 px white words 4.5:1 (her green-500 gives 2.8) — and
+  the plans show a bigger price (42 px), 16 px words and benefits and a
+  visible «Recomendado» tag. Two slips of that update stay out: the second
+  and third plans both named «Corporativo» (the second keeps «Profesional»)
+  and prices with a decimal point (the locale's comma stays, §5).
 
 - **Animation (2026-10-08): Motion, not GSAP**, through `app/ui/motion`
   (§8.11). GSAP only if a piece ever needs pinned or scrubbed scroll or SVG

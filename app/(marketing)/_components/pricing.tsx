@@ -8,6 +8,7 @@ import { Button } from '@/app/ui/button';
 import { Icon } from '@/app/ui/icons';
 
 import { Swirl } from './decor';
+import { LabelChip } from './label-chip';
 import { Reveal } from './reveal';
 import { accentOnWhite } from './rich';
 import { SectionHeading } from './section-heading';
@@ -15,9 +16,12 @@ import { landingSections, planFeatures, plans } from '../_data/landing-content';
 
 /*
  * «Elige el plan ideal» (Figma): three plans in a white container, the
- * middle one in brand blue. Sample plans and prices for the visual stage;
- * the landing doc keeps prices off the page while the app links here
- * (AGENTS.md §6), a decision that stays open.
+ * middle one in brand blue with its «Recomendado» tag. Sample plans and
+ * prices for the visual stage; the landing doc keeps prices off the page
+ * while the app links here (AGENTS.md §6), a decision that stays open. The
+ * mockup's update of 2026-10-08 (bigger price, words and benefits, the
+ * visible tag) is in; its slips are not: the second plan keeps its own
+ * name and the price keeps the locale's decimal comma.
  */
 export function Pricing() {
   const t = useTranslations('landing.pricing');
@@ -50,15 +54,17 @@ export function Pricing() {
                       : 'bg-pure-white text-pure-black',
                   )}
                 >
-                  <div className="flex flex-col gap-2.5">
-                    <h3 className="text-subtitle-s font-bold">
-                      {t(`plans.${plan.key}.name`)}
+                  <div className="flex flex-col gap-3">
+                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                      <h3 className="text-subtitle-s font-bold">
+                        {t(`plans.${plan.key}.name`)}
+                      </h3>
                       {plan.featured ? (
-                        <span className="sr-only"> ({t('featured')})</span>
+                        <LabelChip>{t('featured')}</LabelChip>
                       ) : null}
-                    </h3>
+                    </div>
                     <p className="flex items-baseline gap-2.5">
-                      <span className="text-title-xl font-bold">
+                      <span className="text-title-xxl font-bold">
                         $&nbsp;
                         {format.number(plan.price, {
                           minimumFractionDigits: 2,
@@ -76,20 +82,20 @@ export function Pricing() {
                     </p>
                     <p
                       className={cn(
-                        'text-body-xxs',
+                        'text-body-xs font-medium',
                         plan.featured ? 'text-blue-100' : 'text-grey-600',
                       )}
                     >
                       {t(`plans.${plan.key}.description`)}
                     </p>
-                    <h4 className="mt-2 text-body-xs font-semibold">
+                    <h4 className="mt-4 text-body-xs font-semibold">
                       {t('featuresTitle')}
                     </h4>
                     <ul className="flex flex-col gap-1.5">
                       {planFeatures.map((feature) => (
                         <li
                           key={feature}
-                          className="flex items-start gap-2.5 text-body-xxs"
+                          className="flex items-start gap-2.5 text-body-xs"
                         >
                           <Icon
                             icon={CheckCircleFill}
