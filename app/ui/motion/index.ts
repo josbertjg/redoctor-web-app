@@ -11,6 +11,7 @@ import 'client-only';
  */
 export { AnimatePresence, m } from 'framer-motion';
 export type { Transition, Variants } from 'framer-motion';
+export { arcTo, type Arc } from './arc';
 export { Entrance } from './entrance';
 export { useReducedMotion } from './reduced-motion';
 export { StaggeredText, type TextSegment } from './staggered-text';

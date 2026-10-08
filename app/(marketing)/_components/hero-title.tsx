@@ -7,6 +7,7 @@ import Image from 'next/image';
 import {
   houseTransition,
   m,
+  arcTo,
   readDuration,
   StaggeredText,
   useReducedMotion,
@@ -68,14 +69,36 @@ export function HeroTitle({ lead, title, waitForSplash }: HeroTitleProps) {
   );
 }
 
-const hidden = { opacity: 0, x: 12, y: 12 };
+/* Where the cursor waits: well down and to the right of its place, in the
+   title's own em so the sweep grows with the type. */
+const farAway = { x: 2, y: 1.5 };
+const waiting = {
+  opacity: 0,
+  x: `${String(farAway.x)}em`,
+  y: `${String(farAway.y)}em`,
+};
 const shown = { opacity: 1, x: 0, y: 0 };
 
 /** The cursor of the mockup: it slides in, presses, and a ring spreads from its tip. */
 function Cursor({ stage, onEntered }: { stage: Stage; onEntered: () => void }) {
   const reduced = useReducedMotion();
   const transition = useMemo(() => houseTransition('base'), []);
-  const entrance = useMemo(() => houseTransition('entrance'), []);
+  // The sweep in: one gentle arc from far below right, bowed a little under
+  // the straight line, with the entrance ease over the whole way; it shows
+  // up early on the path. The keyframes carry the easing: played linearly.
+  const arc = useMemo(
+    () => arcTo({ from: farAway, control: { x: 0.8, y: 1.2 } }),
+    [],
+  );
+  const arriving = useMemo(() => ({ opacity: 1, x: arc.x, y: arc.y }), [arc]);
+  const sweep = useMemo(() => {
+    const along = {
+      duration: readDuration('entrance'),
+      ease: 'linear' as const,
+      times: arc.times,
+    };
+    return { opacity: houseTransition('fast'), x: along, y: along };
+  }, [arc]);
   const press = useMemo(
     () => ({
       ...transition,
@@ -91,8 +114,8 @@ function Cursor({ stage, onEntered }: { stage: Stage; onEntered: () => void }) {
     <m.span
       className="relative mb-1 inline-block size-6 sm:size-9 lg:mb-2 lg:size-13"
       initial={false}
-      animate={visible ? shown : hidden}
-      transition={entrance}
+      animate={reduced ? shown : visible ? arriving : waiting}
+      transition={sweep}
       onAnimationComplete={() => {
         if (stage === 'cursor') onEntered();
       }}

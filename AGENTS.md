@@ -885,7 +885,7 @@ written out in full, or Next.js does not inline it).
   the bar slides down, the slogan's first line enters letter by letter and
   the second word by word, the search bar fades up and the specialist rises
   out of it, the chips enter from the middle of the row outwards, and the
-  cursor arrives and clicks every 5 s.
+  cursor sweeps in from below right along a curve and clicks every 5 s.
 - **No root `loading.tsx` (2026-10-08):** §4.
 
 ### Improvements noted (not scheduled)
