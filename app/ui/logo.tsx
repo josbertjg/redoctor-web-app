@@ -2,14 +2,16 @@ import Image from 'next/image';
 
 import { cn } from '@/app/lib/utils';
 
-/* Intrinsic size of public/brand/logo.svg (Figma «REDOCTOR APP», landing header). */
-const LOGO_WIDTH = 212;
-const LOGO_HEIGHT = 38;
-
+/*
+ * Intrinsic sizes of the brand files (Figma «REDOCTOR APP»): the wordmark
+ * of the landing header, and the short mark — its «Re» alone, the app's
+ * `logo-short` with the letters in brand blue and green.
+ */
 const sources = {
-  brand: '/brand/logo.svg',
+  brand: { src: '/brand/logo.svg', width: 212, height: 38 },
   // The same wordmark with its blue turned white, for blue backgrounds.
-  inverse: '/brand/logo-white.svg',
+  inverse: { src: '/brand/logo-white.svg', width: 212, height: 38 },
+  mark: { src: '/brand/logo-mark.svg', width: 43, height: 28 },
 };
 
 type LogoProps = {
@@ -19,7 +21,7 @@ type LogoProps = {
    */
   label?: string;
   preload?: boolean;
-  /** `inverse` on a blue background. */
+  /** `inverse` on a blue background; `mark` for the short «Re». */
   tone?: keyof typeof sources;
   className?: string;
 };
@@ -31,12 +33,13 @@ export function Logo({
   tone = 'brand',
   className,
 }: LogoProps) {
+  const source = sources[tone];
   return (
     <Image
-      src={sources[tone]}
+      src={source.src}
       alt={label ?? ''}
-      width={LOGO_WIDTH}
-      height={LOGO_HEIGHT}
+      width={source.width}
+      height={source.height}
       preload={preload}
       className={cn('h-7 w-auto', className)}
     />

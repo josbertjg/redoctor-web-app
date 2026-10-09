@@ -31,6 +31,12 @@ import type { IconComponent } from '@/app/ui/icons';
  * from the API and the rest from configuration.
  */
 
+/**
+ * The box around the hero's search bar: once it slips under the bar, the
+ * bar docks and shows a search of its own (landing-header.tsx).
+ */
+export const heroSearchId = 'buscador';
+
 /** In-page anchors the header and the footer link to. */
 export const landingSections = {
   howItWorks: 'como-funciona',

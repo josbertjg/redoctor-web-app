@@ -10,6 +10,7 @@ import { Swirl } from './decor';
 import { HeroTitle } from './hero-title';
 import { SearchBar } from './search-bar';
 import { SpecialtyChips } from './specialty-chips';
+import { heroSearchId } from '../_data/landing-content';
 
 /** The title's rich text as segments the letters can carry: the accent word in green. */
 function accentSegments(markup: string): TextSegment[] {
@@ -77,14 +78,15 @@ export function Hero({ waitForSplash }: { waitForSplash: boolean }) {
               />
             </AfterSplash>
           </div>
-          <AfterSplash
-            waitForSplash={waitForSplash}
-            from="bottom"
-            delay={beats.search}
-            className="relative z-10"
-          >
-            <SearchBar />
-          </AfterSplash>
+          <div id={heroSearchId} className="relative z-10">
+            <AfterSplash
+              waitForSplash={waitForSplash}
+              from="bottom"
+              delay={beats.search}
+            >
+              <SearchBar />
+            </AfterSplash>
+          </div>
         </div>
         <SpecialtyChips
           waitForSplash={waitForSplash}

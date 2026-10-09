@@ -957,6 +957,18 @@ written out in full, or Next.js does not inline it).
   question; hover steps a question right and grows its chevron. Nothing
   hides after it has painted: a section already on screen when the page
   loads (a reload keeps the scroll) shows no entrance, by design (§8.2).
+- **The bar docks (2026-10-08, owner's request, no mockup):** at rest the
+  links sit beside the logo, not centred. Once the hero's search bar slips
+  under the bar (`heroSearchId`, watched by an IntersectionObserver
+  through `useSyncExternalStore`), the bar rises to the top edge and widens
+  to the screen at the same height, the wordmark narrows to the «Re» mark
+  (`public/brand/logo-mark.svg`, the app's `logo-short` with blue letters;
+  the width is measured and animated by Motion, the two cross-fade), a
+  search of its own (`SearchBar variant="bar"`, inert until then) opens
+  between the mark and the links and takes the free room, which slides the
+  links over to «Entrar». CSS transitions on `data-docked`, 300 ms, house
+  curve; scrolling back undoes it. Two search landmarks need two names
+  (`landing.hero.search.barLabel`).
 - **No root `loading.tsx` (2026-10-08):** §4.
 
 ### Improvements noted (not scheduled)
