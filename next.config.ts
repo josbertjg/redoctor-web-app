@@ -84,9 +84,12 @@ const nextConfig: NextConfig = {
         destination: '/panel/subscription',
         permanent: true,
       },
+      // The bare /agenda has its own rule: Vercel writes an empty `:path*` as
+      // a trailing slash (/panel/agenda/, one hop more), `next start` not.
+      { source: '/agenda', destination: '/panel/agenda', permanent: true },
       {
-        source: '/agenda/:path*',
-        destination: '/panel/agenda/:path*',
+        source: '/agenda/:path+',
+        destination: '/panel/agenda/:path+',
         permanent: true,
       },
       {

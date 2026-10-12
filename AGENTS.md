@@ -546,13 +546,23 @@ Every shared path renders, besides its content, a way to open the app:
   for `/a/{id}`. `/s/{id}` may have a rich preview (name, specialty, photo):
   that is public information.
 
-### Domain cutover (M12)
+### Domain cutover (done 2026-10-12)
 
-`redoctorapp.com` currently points to the Vite prototype on Vercel, which
-serves the `.well-known` files and static bridge pages. The day DNS moves to
-this project, those files and the bridge paths must already answer
-identically here — run the e2e `.well-known` test against the preview URL
-before switching.
+`redoctorapp.com` serves this web since 2026-10-12 (the Vite prototype
+before: the `.well-known` files and static bridges for `/s`, `/i`, `/a` and
+`/suscripcion`). The apex is the primary domain and answers directly;
+`www.redoctorapp.com` answers 308 to it, path and query kept. Keep it that
+way round: the app claims only the apex (`applinks:redoctorapp.com`, the
+Android host `redoctorapp.com`), and neither Apple's CDN nor Android's
+verifier follow a redirect to a `.well-known` file. Publishing is a push to
+`master` (Vercel's Git integration).
+
+After a deploy that touches a public link or `.well-known`, test production
+itself: the e2e `well-known` and `bridges` specs with
+`PLAYWRIGHT_BASE_URL=https://redoctorapp.com` (Vercel and `next start` do
+not always redirect alike), Google's verdict at
+`https://digitalassetlinks.googleapis.com/v1/statements:list?source.web.site=https://redoctorapp.com&relation=delegate_permission/common.handle_all_urls`,
+and Apple's copy (above; each layer of its CDN keeps it 6 h).
 
 ### Auth return URL
 
@@ -943,13 +953,12 @@ written out in full, or Next.js does not inline it).
   `tokens.css`.
 - **iOS and the specialist bridges:** no change to the prototype. The
   domain moves to this web as soon as possible, and this web must be ready
-  for it (§6 "Domain cutover"). Until then iPhones open the specialist's
-  paths in the old web (`/panel/*` since 2026-10-12; `/agenda`,
-  `/especialidades` and `/perfil` before).
+  for it (§6 "Domain cutover"). It moved on 2026-10-12.
 - **Unknown ids under a valid route answer 200 + `noindex`:** accepted for
   now (see Improvements).
 - **First steps are development:** Vercel, Sentry, PostHog, the GitHub
-  secret and Renovate wait until the web works in development.
+  secret and Renovate wait until the web works in development. Vercel went
+  first, with the domain, on 2026-10-12 (§6 "Domain cutover").
 - **The landing (M9) follows the middle mockup of Figma «LANDING PAGE»**
   (`4464:341`), copy included, over the landing doc's copy; the bar stays
   as designed for now. No mobile design exists: the phone layout is ours.

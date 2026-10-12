@@ -130,10 +130,10 @@ chunk only when it is on.
 
 ## Deployment
 
-Vercel builds every branch as a preview and `master` as production. The
-domain `redoctorapp.com` still points to the previous prototype; the
-cutover (M12) is in AGENTS.md §6. Until then, iOS reads the prototype's
-`apple-app-site-association`.
+Vercel builds every branch as a preview and `master` as production, on
+`redoctorapp.com` since 2026-10-12 (`www` redirects to it). After a deploy
+that touches a public link or `.well-known`, run the e2e `well-known` and
+`bridges` specs against production (AGENTS.md §6 "Domain cutover").
 
 ## Conventions
 
