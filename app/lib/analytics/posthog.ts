@@ -2,6 +2,7 @@
 // (≈50 KB gzip instead of ≈100). Surveys, recordings and the rest stay off.
 import posthog from 'posthog-js/dist/module.slim.no-external';
 
+import { setIdentitySink } from './identity';
 import { setAnalyticsSink } from './track';
 import { scrubAnalyticsEvent } from '../observability/scrub';
 
@@ -39,5 +40,15 @@ export function initPosthog({ key, host }: { key: string; host: string }) {
 
   setAnalyticsSink((event, properties) => {
     posthog.capture(event, properties);
+  });
+
+  // The person is their id and role (AGENTS.md §9); sign-out resets.
+  setIdentitySink({
+    identify: ({ id, role }) => {
+      posthog.identify(id, { role });
+    },
+    reset: () => {
+      posthog.reset();
+    },
   });
 }

@@ -40,3 +40,18 @@ export function detectDevice({
 
   return { isIOS, isAndroid, isAndroidChrome, isDesktop };
 }
+
+/**
+ * The browsers that live inside another app. Google refuses to sign anyone
+ * in from them (AGENTS.md §1), so the sign-in page explains how to open the
+ * link in Chrome or Safari instead of trying. Facebook, Messenger and
+ * Instagram name themselves; an Android WebView says `; wv)`.
+ */
+export type InAppBrowser = 'facebook' | 'instagram' | 'webview';
+
+export function detectInAppBrowser(userAgent: string): InAppBrowser | null {
+  if (/Instagram/i.test(userAgent)) return 'instagram';
+  if (/FBAN|FBAV|FB_IAB|FBIOS|Messenger/i.test(userAgent)) return 'facebook';
+  if (/;\s?wv\)/.test(userAgent)) return 'webview';
+  return null;
+}

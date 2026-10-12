@@ -3,11 +3,20 @@ import type { ReactNode } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '@/app/lib/api/errors';
 
 import { Providers } from './providers';
+
+// The session follows Firebase; here nobody is signed in.
+vi.mock('@/app/lib/firebase/client', () => ({
+  watchSession: (listener: (user: null) => void) => {
+    listener(null);
+    return () => undefined;
+  },
+  signOutUser: () => Promise.resolve(),
+}));
 
 const notice = 'No pudimos conectarnos.';
 
@@ -44,6 +53,8 @@ function renderProviders(children: ReactNode) {
     <Providers
       toasterLabels={{ region: 'Notificaciones', close: 'Cerrar' }}
       networkNotice={notice}
+      sessionExpected={false}
+      sessionExpiredNotice="Tu sesión ha caducado"
     >
       {children}
     </Providers>,

@@ -17,4 +17,15 @@ export const publicEnv = {
   androidPackage: process.env.NEXT_PUBLIC_ANDROID_PACKAGE ?? '',
   appStoreId: optional(process.env.NEXT_PUBLIC_APP_STORE_ID),
   playStoreId: optional(process.env.NEXT_PUBLIC_PLAY_STORE_ID),
+  /**
+   * The Firebase web app of the project shared with the mobile app, for Auth
+   * only (AGENTS.md §2). Public by design (§11): the key is restricted by
+   * referrer in Google Cloud. Analytics stays off, so no measurement id.
+   */
+  firebase: {
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? '',
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? '',
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? '',
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID ?? '',
+  },
 };

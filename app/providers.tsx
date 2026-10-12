@@ -12,12 +12,14 @@ import {
 import { isApiError } from '@/app/lib/api/errors';
 import { createNetworkNoticeThrottle } from '@/app/lib/api/network-notice';
 
+import { SessionProvider } from '@/app/ui/auth/session-provider';
 import { toast, Toaster } from '@/app/ui/toast';
 
 /*
  * Client-side plumbing shared by every page. next-intl's provider wraps this
- * in app/layout.tsx; PostHog and Sentry join here in M1 step 10, off while
- * their variables are empty.
+ * in app/layout.tsx; the session (Firebase, `/me`) lives inside the Query
+ * client, which it clears on sign-out; PostHog and Sentry join through
+ * instrumentation-client.ts, off while their variables are empty.
  */
 
 /** One toast id: a notice still on screen is replaced, never stacked. */
@@ -55,19 +57,30 @@ type ProvidersProps = {
   toasterLabels: { region: string; close: string };
   /** The one neutral connectivity notice (i18n: `apiErrors.network`). */
   networkNotice: string;
+  /** The request carried the session hint cookie (app/lib/auth/session-hint). */
+  sessionExpected: boolean;
+  /** Said when the API rejects the session (i18n: `auth.sessionExpired`). */
+  sessionExpiredNotice: string;
 };
 
 export function Providers({
   children,
   toasterLabels,
   networkNotice,
+  sessionExpected,
+  sessionExpiredNotice,
 }: ProvidersProps) {
   // The locale never changes in a session: the notice is read once.
   const [queryClient] = useState(() => createQueryClient(networkNotice));
 
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
+      <SessionProvider
+        expected={sessionExpected}
+        expiredNotice={sessionExpiredNotice}
+      >
+        {children}
+      </SessionProvider>
       <Toaster
         regionLabel={toasterLabels.region}
         closeLabel={toasterLabels.close}

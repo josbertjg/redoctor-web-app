@@ -210,6 +210,15 @@
       "discountActive": "Ya tienes un cupón aplicado. Podrás usar otro cuando termine.",
       "discountLossNotAccepted": "Para cambiar de plan tienes que aceptar que pierdes tu cupón.",
       "subscriptionRequired": "Necesitas un plan activo para agendar citas."
+    },
+    "firebaseAuthErrors": {
+      "popupBlocked": "Tu navegador bloqueó la ventana para entrar. Permítela e inténtalo de nuevo.",
+      "accountExistsWithDifferentCredential": "Tu cuenta ya existe, pero entraste con otro método. Prueba con el otro botón.",
+      "network": "No hay conexión. Revisa tu internet e inténtalo de nuevo.",
+      "operationNotAllowed": "Esta forma de entrar no está disponible en este momento. Prueba con la otra o contacta a soporte.",
+      "userDisabled": "Tu cuenta ha sido deshabilitada. Contacta a soporte para recibir más información.",
+      "tooManyRequests": "Hubo demasiados intentos seguidos. Espera un momento e inténtalo de nuevo.",
+      "unknownAuth": "No pudimos entrar. Inténtalo de nuevo en un momento."
     }
   },
   "appBridge": {
@@ -220,6 +229,52 @@
     },
     "appStore": "Descargar en App Store",
     "playStore": "Descargar en Google Play"
+  },
+  "auth": {
+    "metaTitle": "Entrar",
+    "title": "Inicia sesión de manera rápida y segura",
+    "description": "Entra con la misma cuenta de Google o Apple que usas en la app de Redoctor.",
+    "signIn": "Entrar",
+    "signOut": "Cerrar sesión",
+    "continueWithGoogle": "Continuar con Google",
+    "continueWithApple": "Continuar con Apple",
+    "lastUsed": "Última vez",
+    "byLoggingInAcceptsOur": "Al iniciar sesión, aceptas nuestros ",
+    "termsOfUseAndPrivacy": "Términos de uso y políticas de privacidad",
+    "menu": {
+      "label": "Tu cuenta",
+      "specialistHome": "Mis herramientas"
+    },
+    "inAppBrowser": {
+      "title": "Abre este enlace en tu navegador",
+      "description": "{app, select, instagram {Instagram} facebook {Facebook} other {Esta app}} abre las páginas en su propio navegador, y Google no permite entrar desde ahí. Ábrelo en Chrome o Safari y vuelve a intentarlo.",
+      "steps": "Toca el menú de los tres puntos y elige «Abrir en el navegador». Si no aparece, copia el enlace y pégalo en Chrome o Safari.",
+      "copyLink": "Copiar enlace",
+      "copied": "Enlace copiado"
+    },
+    "noFacet": {
+      "title": "Te falta completar tu registro",
+      "description": "Esta cuenta todavía no tiene registro en Redoctor. Si eres paciente, muy pronto podrás registrarte aquí mismo. Si eres especialista, el registro se hace desde la app: escríbenos a soporte y te damos acceso.",
+      "privateEmail": "Entraste con un correo privado de Apple. Si ya usabas Redoctor con Google, entra con Google para seguir en la misma cuenta.",
+      "switchAccount": "Entrar con otra cuenta"
+    },
+    "accountError": {
+      "title": "No pudimos leer tu cuenta",
+      "description": "Puede ser tu conexión o un problema de nuestro lado. Inténtalo de nuevo en un momento."
+    },
+    "wrongArea": {
+      "specialist": {
+        "title": "Esta página es para especialistas",
+        "description": "Tu cuenta es de paciente. Desde el inicio puedes buscar especialistas.",
+        "action": "Ir al inicio"
+      },
+      "patient": {
+        "title": "Esta página es para pacientes",
+        "description": "Tu cuenta es de especialista. Tus herramientas están en tu página.",
+        "action": "Ir a mis herramientas"
+      }
+    },
+    "sessionExpired": "Tu sesión ha caducado, vuelve a iniciar sesión."
   },
   "bridges": {
     "subscription": {
@@ -247,6 +302,30 @@
       "title": "Esto se abre en la app de Redoctor",
       "description": "Abre la app de Redoctor para continuar. Si aún no tienes la app, instálala y vuelve a tocar el enlace."
     }
+  },
+  "specialistHome": {
+    "metaTitle": "Tus herramientas",
+    "title": "Tus herramientas están en la app",
+    "description": "Desde la app de Redoctor manejas tu agenda, tus especialidades, tu perfil y tu suscripción. Elige una para abrirla en tu teléfono.",
+    "options": {
+      "agenda": {
+        "title": "Agenda",
+        "description": "Tus citas, día a día."
+      },
+      "specialties": {
+        "title": "Especialidades",
+        "description": "Las especialidades que atiendes."
+      },
+      "profile": {
+        "title": "Perfil",
+        "description": "Lo que ven tus pacientes."
+      },
+      "subscription": {
+        "title": "Suscripción",
+        "description": "Tu plan y tus pagos."
+      }
+    },
+    "adminNote": "Tu cuenta es de administración: sus herramientas también están en la app."
   },
   "dailySummary": {
     "metaTitle": "Resumen diario",

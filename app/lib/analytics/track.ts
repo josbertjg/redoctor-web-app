@@ -55,6 +55,8 @@ export function track<E extends AnalyticsEventName>(
     return;
   }
   if (current.queue.length < MAX_QUEUED_EVENTS) {
-    current.queue.push({ event, properties });
+    // The pair is one of the union's members; TypeScript cannot tie the two
+    // generics together by itself.
+    current.queue.push({ event, properties } as QueuedEvent);
   }
 }

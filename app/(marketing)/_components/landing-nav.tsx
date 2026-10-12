@@ -6,19 +6,20 @@ import Close from '@material-symbols/svg-400/rounded/close.svg?svgr';
 import Menu from '@material-symbols/svg-400/rounded/menu.svg?svgr';
 import { Collapsible } from 'radix-ui';
 
+import { SessionButton } from '@/app/ui/auth/session-button';
 import { Button } from '@/app/ui/button';
 import { Icon } from '@/app/ui/icons';
 
 type LandingNavProps = {
   links: { href: string; label: string }[];
   /** Already translated on the server (i18n: `landing.nav.*`). */
-  labels: { open: string; close: string; signIn: string };
+  labels: { open: string; close: string };
 };
 
 /*
- * The menu on phones and tablets: the links and «Entrar» unfold under the
- * bar and fold back on a choice or on Escape. Desktop shows the links inline
- * (landing-header.tsx).
+ * The menu on phones and tablets: the links and the session («Entrar», or
+ * the account's options) unfold under the bar and fold back on a choice or
+ * on Escape. Desktop shows the links inline (landing-header.tsx).
  */
 export function LandingNav({ links, labels }: LandingNavProps) {
   const [open, setOpen] = useState(false);
@@ -59,10 +60,7 @@ export function LandingNav({ links, labels }: LandingNavProps) {
             </li>
           ))}
           <li className="mt-2 sm:hidden">
-            {/* TODO(M2): routes.signIn() once /entrar exists. */}
-            <Button block shape="soft" size="small">
-              {labels.signIn}
-            </Button>
+            <SessionButton layout="list" />
           </li>
         </ul>
       </Collapsible.Content>

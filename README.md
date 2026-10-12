@@ -51,10 +51,12 @@ Git hooks (Husky): lint-staged on commit, typecheck and tests on push.
 | `/`                                                                                        | The landing (M9), after the middle mockup of Figma «LANDING PAGE»: the look and the structure; search, sign-in and plans get their logic later |
 | `/s/{specialistId}`                                                                        | Public profile of a specialist (M8): read-only, server-rendered, with its own preview image                                                    |
 | `/suscripcion`, `/agenda`, `/agenda/{YYYY-MM-DD}`, `/especialidades`, `/perfil`, `/home/*` | Bridges: they say what opens in the app and offer «Abrir en la app»                                                                            |
+| `/entrar?redirect=`                                                                        | Sign in with Google or Apple (M2), the same accounts as the app; comes back to the same-origin path given                                      |
+| `/panel`                                                                                   | A signed-in specialist's page: the app's options, each opening the app through its bridge                                                      |
 | `/resumen/baja?token=…`                                                                    | Daily-summary opt-out from the API's email (a Server Action)                                                                                   |
 | `/.well-known/apple-app-site-association`, `/.well-known/assetlinks.json`                  | Universal Links and App Links of the mobile app, byte-exact                                                                                    |
 
-Next: session (M2), invitation (M4), appointment (M5) and the rest of
+Next: sign-up (M3), invitation (M4), appointment (M5) and the rest of
 AGENTS.md §1, one module at a time.
 
 ## Layout

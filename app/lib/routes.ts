@@ -14,6 +14,13 @@ import { env } from './env';
 
 const segment = (value: string) => encodeURIComponent(value);
 
+/** `/agenda` opens today; `/agenda/{YYYY-MM-DD}` that day (the app's link). */
+function agendaBridge(): '/agenda';
+function agendaBridge(date: string): `/agenda/${string}`;
+function agendaBridge(date?: string) {
+  return date ? (`/agenda/${segment(date)}` as const) : ('/agenda' as const);
+}
+
 export const routes = {
   home: () => '/' as const,
 
@@ -33,6 +40,9 @@ export const routes = {
   appointments: () => '/citas' as const,
   account: () => '/cuenta' as const,
 
+  /* Specialist (M2): the page with the app's options, after signing in. */
+  specialistHome: () => '/panel' as const,
+
   /* Legal (M10). */
   privacy: () => '/privacidad' as const,
   terms: () => '/terminos' as const,
@@ -43,8 +53,7 @@ export const routes = {
 
   /* Bridges that only open the app (M11). */
   subscriptionBridge: () => '/suscripcion' as const,
-  agendaBridge: (date?: string) =>
-    date ? (`/agenda/${segment(date)}` as const) : ('/agenda' as const),
+  agendaBridge,
   specialtiesBridge: () => '/especialidades' as const,
   profileBridge: () => '/perfil' as const,
   /** The app's internal paths (`/home/*`): never a web page of their own. */

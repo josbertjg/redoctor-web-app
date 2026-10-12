@@ -19,9 +19,13 @@ export type ApiErrorReport = {
   kind: string;
 };
 
+/** The signed-in person as the reports may know them: id and role, nothing else. */
+export type ReportedPerson = { id: string; role: string };
+
 type Reporters = {
   apiError?: ((report: ApiErrorReport) => void) | undefined;
   error?: ((error: unknown) => void) | undefined;
+  person?: ((person: ReportedPerson | null) => void) | undefined;
 };
 
 const key: unique symbol = Symbol.for('redoctor.observability.reporters');
@@ -44,9 +48,20 @@ export function setErrorReporter(
   reporters().error = next;
 }
 
+export function setPersonReporter(
+  next: ((person: ReportedPerson | null) => void) | undefined,
+): void {
+  reporters().person = next;
+}
+
 /** An API failure worth a look: unknown codes and broken contracts. */
 export function reportApiError(report: ApiErrorReport): void {
   reporters().apiError?.(report);
+}
+
+/** Who the next reports belong to; `null` once they sign out. */
+export function reportPerson(person: ReportedPerson | null): void {
+  reporters().person?.(person);
 }
 
 /** An error a boundary caught (error.tsx, global-error.tsx). */

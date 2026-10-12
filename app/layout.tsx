@@ -1,10 +1,12 @@
 import type { Metadata, Viewport } from 'next';
 
+import { cookies } from 'next/headers';
 import { connection } from 'next/server';
 
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations } from 'next-intl/server';
 
+import { sessionHintCookie } from '@/app/lib/auth/session-hint';
 import { pickClientMessages } from '@/app/lib/i18n/client-messages';
 import { isIndexable, siteUrl } from '@/app/lib/site';
 import { cn } from '@/app/lib/utils';
@@ -47,7 +49,14 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: LayoutProps<'/'>) {
   // The CSP nonce (proxy.ts) exists per request: every page renders per request.
   await connection();
-  const [t, messages] = await Promise.all([getTranslations(), getMessages()]);
+  const [t, messages, cookieStore] = await Promise.all([
+    getTranslations(),
+    getMessages(),
+    cookies(),
+  ]);
+  // A browser that signed in before gets a placeholder where the account
+  // goes, not «Entrar», until Firebase answers (app/lib/auth/session-hint).
+  const sessionExpected = cookieStore.get(sessionHintCookie)?.value === '1';
 
   return (
     // data-theme="light": the dark aliases of tokens.css stay defined but off,
@@ -68,6 +77,8 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
               close: t('close'),
             }}
             networkNotice={t('apiErrors.network')}
+            sessionExpected={sessionExpected}
+            sessionExpiredNotice={t('auth.sessionExpired')}
           >
             {children}
           </Providers>

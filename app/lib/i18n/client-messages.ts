@@ -13,6 +13,8 @@ export const clientNamespaces = [
   'close',
   // «Abrir en la app» (app/ui/app-bridge): every page shared with the app.
   'appBridge',
+  // The session (app/ui/auth): the account in the bar, the sign-in buttons.
+  'auth',
 ] as const satisfies readonly (keyof Messages)[];
 
 export type ClientMessages = Pick<Messages, (typeof clientNamespaces)[number]>;

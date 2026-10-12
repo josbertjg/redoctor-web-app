@@ -1,6 +1,10 @@
 import * as Sentry from '@sentry/nextjs';
 
-import { setApiErrorReporter, setErrorReporter } from './report';
+import {
+  setApiErrorReporter,
+  setErrorReporter,
+  setPersonReporter,
+} from './report';
 import { scrubBreadcrumb, scrubEvent } from './scrub';
 
 /*
@@ -68,5 +72,11 @@ export function initSentry({
 
   setErrorReporter((error) => {
     Sentry.captureException(error);
+  });
+
+  // The person is their id and role, nothing else (AGENTS.md §11).
+  setPersonReporter((person) => {
+    Sentry.setUser(person ? { id: person.id } : null);
+    Sentry.setTag('role', person?.role);
   });
 }

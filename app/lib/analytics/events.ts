@@ -1,4 +1,6 @@
+import type { AuthProvider } from '../auth/last-provider';
 import type { LinkOrigin } from '../deep-links';
+import type { AccountRole } from '../schemas/identity';
 
 /*
  * The web's analytics events (AGENTS.md §9): `web_<area>_<action>`, with the
@@ -12,6 +14,9 @@ export type LinkKind = 'specialist' | 'invitation' | 'appointment';
 
 export type AnalyticsEvents = {
   web_link_opened: { origin: LinkOrigin; link: LinkKind };
+  /** A deliberate sign-in that ended with an account the API knows. */
+  web_signin_completed: { provider: AuthProvider; role: AccountRole };
+  web_signout: Record<string, never>;
 };
 
 export type AnalyticsEventName = keyof AnalyticsEvents;

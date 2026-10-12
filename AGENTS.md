@@ -105,8 +105,12 @@ favorites, notifications inbox, the specialist's panel. They come after.
   mistake.
 - **Soft review wall:** `/citas` is blocked until a pending review is given;
   pages reached through a link (`/i`, `/a`, `/s`) are never blocked.
-- An **admin** who signs in is told that their account is used in the app.
-  A **specialist** may sign in only to pay (M13).
+- **Where signing in leads (2026-10-12):** a **patient** stays on the
+  landing — the search lives there — or returns to the link they came from.
+  A **specialist** lands on `/panel`, a page with the app's options
+  (agenda, specialties, profile, subscription, each opening the app through
+  its bridge) where the payment (M13) will join. An **admin** gets the same
+  page with a note that their tools are in the app.
 - Public profile `/s/{id}` is read-only during the pilot and says "Pronto
   podrás agendar aquí; por ahora pídele tu cita a tu especialista".
 - **Another browser, another session.** Gmail, Instagram and Facebook open
@@ -130,7 +134,7 @@ favorites, notifications inbox, the specialist's panel. They come after.
 | Env | `@t3-oss/env-nextjs` | `app/lib/env.ts`; build fails on a missing variable. Client components read public values from `app/lib/public-env.ts` (validated at build, keeps zod out of the browser) |
 | i18n | **next-intl 4** | Single locale `es`, no URL prefix, messages mirror the app's keys |
 | Forms | react-hook-form + `@hookform/resolvers/zod` | Field-level errors, same patterns as the app's inputs |
-| Auth | **Firebase Web SDK 12** (Auth only) | Google + Apple providers; project `redoctor-3acf8` (shared with the app) |
+| Auth | **Firebase Web SDK 13** (Auth only) | Google + Apple providers; project `redoctor-3acf8` (shared with the app) |
 | Analytics | **PostHog** (`posthog-js`, slim build without external scripts) | Funnel by `origin`; no personal data (§11); off while the key is empty |
 | Errors | **Sentry** (`@sentry/nextjs` 11) | `dataCollection` all off (v11's successor of `sendDefaultPii: false`); same privacy rules as the app; off while the DSN is empty |
 | Icons | **Material Symbols Rounded** as inline SVG per icon (`@material-symbols/svg-400`) | Same family as the app; only the icons in use ship — never the variable icon font (several MB) |
@@ -179,7 +183,8 @@ app/                                  # The application: routes, UI and logic
     page.tsx                          #   /
     _components/                      #   hero, sections, faq, splash/ (the Rive veil) — this module only
   (auth)/                             # module: session (M2)
-    entrar/page.tsx                   #   /entrar?redirect=
+    entrar/page.tsx                   #   /entrar?redirect= — Google and Apple, the same accounts as the app
+    _components/                      #   sign-in-card
   (invitations)/                      # module: the invitation link (M3, M4)
     i/[token]/page.tsx · loading.tsx · error.tsx          # /i/{token}
     _components/
@@ -187,8 +192,9 @@ app/                                  # The application: routes, UI and logic
     a/[appointmentId]/page.tsx · loading.tsx · error.tsx  # /a/{id}
     citas/layout.tsx · page.tsx · loading.tsx             # /citas — layout = <RequireSession>
     _components/
-  (specialists)/                      # module: public profile (M8)
+  (specialists)/                      # module: public profile (M8) and the specialist's own page (M2)
     s/[specialistId]/page.tsx · loading.tsx · not-found.tsx · opengraph-image.tsx   # /s/{id}
+    panel/layout.tsx · page.tsx · loading.tsx        # /panel — layout = <RequireSession facet="specialist">
     _components/
   (account)/                          # module: account and legal (M10)
     cuenta/layout.tsx · page.tsx      #   /cuenta — layout = <RequireSession>
@@ -203,7 +209,7 @@ app/                                  # The application: routes, UI and logic
   ui/                                 # ALL shared UI
     button.tsx · input.tsx · sheet.tsx · skeleton.tsx · toast.tsx · empty-state.tsx · chip.tsx · avatar.tsx …
     layout/                           #   site-header, site-footer, page-frame, bottom-actions
-    auth/                             #   require-session, sign-in-buttons, in-app-browser-help
+    auth/                             #   session-provider, session-button, require-session, sign-in-buttons, in-app-browser-help, provider-logos
     app-bridge/                       #   open-in-app-button, store-badges
     appointments/ · specialists/ · billing/ · reviews/   # domain components used by two or more modules
     analytics/ · og/                  #   link-origin-tracker; the Open Graph brand card (next/og)
@@ -216,11 +222,13 @@ app/                                  # The application: routes, UI and logic
     data/                             #   server-only fetchers for Server Components (fetch + cache tags → DTOs)
     queries/                          #   TanStack queryOptions + mutation functions per domain (client)
     actions/                          #   Server Actions — only where no user token is needed
-    firebase/ · analytics/ · format/ · i18n/
+    firebase/                         #   client.ts: Firebase Auth, loaded on demand (client-only)
+    auth/                             #   session-hint (the cookie), last-provider, token (the bearer's source), destination
+    analytics/ · format/ · i18n/
     observability/                    #   report.ts (the seam), scrub.ts (what never leaves), sentry.ts
     security/                         #   csp.ts (the nonce policy proxy.ts sends)
     env.ts · public-env.ts · routes.ts · deep-links.ts · site.ts · utils.ts
-  hooks/                              # shared client hooks: use-session, use-link-origin, use-device
+  hooks/                              # shared client hooks: use-session, use-link-origin, use-device, use-in-app-browser
 tests/                                # setup.ts · msw/ (server + handlers per domain) · factories/ · e2e/ (Playwright)
 public/                               # .well-known/ (§6) · brand/ (logo.svg, logo-white.svg, icons) · illustrations/ · animations/ (the app's splash_logo.riv)
 proxy.ts                              # Next 16's name for middleware: the CSP nonce per request, /.well-known excluded — nothing else
@@ -685,13 +693,26 @@ accent / neutral / warning / error tones), `Avatar`, `StarsRating`,
   `app/lib/queries/<domain>.ts`, explicit `staleTime`, invalidate
   after every write, optimistic updates only where the app does them. No
   global stores for server state.
-- **Session** (`app/providers.tsx`, `app/hooks/use-session.ts`, and
-  `<RequireSession>` from `app/ui/auth` in the layout of each segment that
-  needs it): Firebase `onIdTokenChanged`, token kept in
-  memory, `/me` resolved **before** the first paint of any authenticated
-  route (a route-level pending state; never a flash of the wrong UI), facet
-  and role guards, "return to where you were" through a same-origin
-  `redirect` query only. Sign-out clears Query cache and PostHog identity.
+- **Session** (`SessionProvider` in `app/ui/auth`, mounted by
+  `app/providers.tsx`; `app/hooks/use-session.ts`; `<RequireSession>` from
+  `app/ui/auth` in the layout of each segment that needs it): Firebase
+  Auth loaded on demand (`app/lib/firebase/client.ts`, `import()` so the
+  landing's JS stays without it), `onIdTokenChanged`, the token never
+  stored by the web (`app/lib/auth/token.ts` asks Firebase for a fresh one),
+  `/identity/me` through TanStack Query keyed by uid, resolved **before**
+  the first paint of any authenticated route (the segment's skeleton; never
+  a flash of the wrong UI), facet guards (`profiles.patient` /
+  `profiles.specialist`, an admin passes the specialist gate), "return to
+  where you were" through a same-origin `redirect` query only. Signing in
+  opens the provider's window (`signInWithPopup`: Safari and iOS are fine
+  with it; the redirect flow waits for the `/__/auth/*` proxy of §6).
+  Inside Instagram's or Facebook's browser the buttons give way to the
+  steps to open the link in Chrome or Safari. A cookie `redoctor-session=1`
+  (nothing else in it) tells the server a session is likely, so the bar
+  renders a placeholder instead of «Entrar» until Firebase answers. The
+  last provider used wears «Última vez» and goes first (localStorage).
+  Sign-out clears the Query cache, the hint, the PostHog identity and
+  Sentry's user.
 - **i18n**: next-intl, locale `es`, messages in
   `app/lib/i18n/messages/es.json` with **dot keys that mirror the app's
   `assets/translations/es.json`** (e.g. `appointments.confirm.title`) so
@@ -970,6 +991,36 @@ written out in full, or Next.js does not inline it).
   curve; scrolling back undoes it. Two search landmarks need two names
   (`landing.hero.search.barLabel`).
 - **No root `loading.tsx` (2026-10-08):** §4.
+
+### Decided (2026-10-12)
+
+- **The session (M2) as built:** `/entrar` is a page, not a sheet (it has a
+  URL, carries `redirect` and serves from the emails); its card mirrors the
+  app's login: «Inicia sesión de manera rápida y segura», the two provider
+  buttons in their brands' colours (Google white with the «G», Apple black
+  with the logo, 48 px, `shape="soft"`), the last-used one first with the
+  «Última vez» chip, the legal line as text until M10 links it. A patient
+  stays on the landing; a specialist lands on `/panel` (his pick of
+  2026-10-12), the page with the app's
+  options; an account with no facet at all (a sign-in without a sign-up)
+  is told to complete its registration in the app for now (M3 brings the
+  web's sign-up), with a word about Apple's private email when the address
+  is a relay one. The landing's bar shows «Entrar», or the avatar with its
+  menu, from tablets up, and the phone menu holds the same.
+- **Firebase SDK 13 (2026-10-12):** the major's breaking changes are all in
+  AI Logic (`@firebase/ai` 3.0.0); App and Auth moved by a patch, so the
+  owner took it. §2 says 13.
+- **A brand-new Firebase account on `/identity/me` (read from the app,
+  2026-10-12):** a 200 with `registrationStatus: PENDING_REGISTRATION` (a
+  missing value counts as that) and no facets; the app sends it to the
+  sign-up form, and the web does the same from M3 (`needsSignUp`). The
+  API closes a session only with a 401, 403 or 404 on `/me`: the web signs
+  out and says «Tu sesión ha caducado» (`auth.sessionExpired`); any other
+  failure offers a retry. A status this version does not know is
+  `unknown` and never sends anyone to sign up again. The web's sign-up
+  (M3) is for patients only: a specialist signs up in the app, so the web
+  points them to support (phone, WhatsApp) — or to the store's QR once the
+  app is published.
 
 ### Improvements noted (not scheduled)
 

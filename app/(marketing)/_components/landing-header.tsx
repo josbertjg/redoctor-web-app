@@ -26,7 +26,6 @@ export function LandingHeader({ waitForSplash }: { waitForSplash: boolean }) {
       labels={{
         nav: t('label'),
         home: common('homeLabel'),
-        signIn: t('signIn'),
         openMenu: t('openMenu'),
         closeMenu: t('closeMenu'),
       }}

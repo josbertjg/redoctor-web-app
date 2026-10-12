@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { routes } from '@/app/lib/routes';
 import { cn } from '@/app/lib/utils';
 
-import { Button } from '@/app/ui/button';
+import { SessionButton } from '@/app/ui/auth/session-button';
 import { Logo } from '@/app/ui/logo';
 import { houseTransition, m, useReducedMotion } from '@/app/ui/motion';
 
@@ -24,7 +24,6 @@ type LandingBarProps = {
   labels: {
     nav: string;
     home: string;
-    signIn: string;
     openMenu: string;
     closeMenu: string;
   };
@@ -94,17 +93,11 @@ export function LandingBar({
           </ul>
         </nav>
         <div className="ml-auto flex shrink-0 items-center gap-2">
-          {/* TODO(M2): routes.signIn() once /entrar exists. */}
-          <Button size="small" shape="soft" className="hidden sm:inline-flex">
-            {labels.signIn}
-          </Button>
+          {/* «Entrar», or the account, from tablets up; the phone menu holds it. */}
+          <SessionButton className="hidden sm:inline-flex" />
           <LandingNav
             links={links}
-            labels={{
-              open: labels.openMenu,
-              close: labels.closeMenu,
-              signIn: labels.signIn,
-            }}
+            labels={{ open: labels.openMenu, close: labels.closeMenu }}
           />
         </div>
       </AfterSplash>

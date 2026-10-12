@@ -1,3 +1,4 @@
+import { identityHandlers } from './identity';
 import { notificationsHandlers } from './notifications';
 import { reviewsHandlers } from './reviews';
 import { specialistsHandlers } from './specialists';
@@ -10,6 +11,7 @@ import type { HttpHandler } from 'msw';
  * from the factories so the mocks never drift from the zod contract.
  */
 export const handlers: HttpHandler[] = [
+  ...identityHandlers,
   ...specialistsHandlers,
   ...reviewsHandlers,
   ...specialtiesHandlers,
