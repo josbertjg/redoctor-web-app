@@ -7,6 +7,22 @@ type FacetInput = NonNullable<NonNullable<MeInput['profiles']>['patient']>;
 
 export const knownUserId = '5c1c1a3e-8d7a-4e0b-9f2e-1f0b7c6d2a11';
 
+/** A document number another account already uses (check-document says so). */
+export const takenDocumentNumber = '11111111';
+
+/** What `GET /identity/me` answers for a Firebase account with no sign-up yet. */
+export function buildNewAccountMeResponse(
+  overrides: Partial<MeInput> = {},
+): MeInput {
+  return buildMeResponse({
+    displayName: null,
+    role: null,
+    registrationStatus: 'PENDING_REGISTRATION',
+    profiles: { patient: { exists: false }, specialist: { exists: false } },
+    ...overrides,
+  });
+}
+
 /** What `GET /identity/me` answers for a patient whose sign-up is complete. */
 export function buildMeResponse(overrides: Partial<MeInput> = {}): MeInput {
   return {

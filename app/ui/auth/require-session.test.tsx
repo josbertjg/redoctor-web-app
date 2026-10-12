@@ -58,7 +58,7 @@ describe('RequireSession', () => {
     renderGuard(session({ status: 'signed-out' }));
 
     expect(screen.getByText('Esqueleto')).toBeInTheDocument();
-    expect(router.replace).toHaveBeenCalledWith('/entrar?redirect=%2Fpanel');
+    expect(router.replace).toHaveBeenCalledWith('/sign-in?redirect=%2Fpanel');
   });
 
   it('shows the skeleton until the person is known', () => {

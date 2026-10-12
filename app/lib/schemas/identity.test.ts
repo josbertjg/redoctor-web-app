@@ -8,6 +8,9 @@ import {
   meResponseSchema,
   mustFinishPatientSignup,
   needsSignUp,
+  patientCompletionBodySchema,
+  patientRegistrationBodySchema,
+  specialistMustFinishInApp,
   toAccount,
   toFacetStatus,
   toRegistrationStatus,
@@ -205,5 +208,74 @@ describe('registration status', () => {
 
     const noFacets = me('PENDING_COMPLETE_PATIENT', null);
     expect(mustFinishPatientSignup(noFacets)).toBe(true);
+  });
+});
+
+describe('who signs up where', () => {
+  const account = (overrides: Record<string, unknown>) =>
+    toAccount(meResponseSchema.parse({ ...base, ...overrides }));
+
+  it('never sends an admin to the sign-up form', () => {
+    expect(
+      needsSignUp(
+        account({ role: 'ADMIN', registrationStatus: null, profiles: null }),
+      ),
+    ).toBe(false);
+  });
+
+  it('sends an open specialist sign-up to the app, but not one under review', () => {
+    const pending = account({
+      role: 'SPECIALIST',
+      profiles: {
+        patient: { exists: false },
+        specialist: { exists: true, id: 's', status: 'PENDING_KYC' },
+      },
+    });
+    expect(specialistMustFinishInApp(pending)).toBe(true);
+
+    const review = account({
+      role: 'SPECIALIST',
+      profiles: {
+        patient: { exists: false },
+        specialist: { exists: true, id: 's', status: 'WAITING_ADMIN_REVIEW' },
+      },
+    });
+    expect(specialistMustFinishInApp(review)).toBe(false);
+    expect(specialistMustFinishInApp(account({}))).toBe(false);
+  });
+});
+
+describe('sign-up bodies', () => {
+  it('take only what the API expects', () => {
+    expect(
+      patientRegistrationBodySchema.safeParse({
+        firstName: 'Ana',
+        lastName: 'Pérez',
+        acceptedTerms: true,
+        acceptedSensitiveData: true,
+        acceptedNewsletter: false,
+        role: 'PATIENT',
+      }).success,
+    ).toBe(true);
+    expect(
+      patientRegistrationBodySchema.safeParse({
+        firstName: 'Ana',
+        lastName: 'Pérez',
+        acceptedTerms: false,
+        acceptedSensitiveData: true,
+        acceptedNewsletter: false,
+        role: 'PATIENT',
+      }).success,
+    ).toBe(false);
+    expect(
+      patientCompletionBodySchema.safeParse({
+        dateOfBirth: '1990-01-15',
+        phone: '+584141234567',
+        documentType: 'V',
+        documentNumber: '12345678',
+        sex: 'FEMALE',
+        extra: true,
+      }).success,
+    ).toBe(false);
   });
 });

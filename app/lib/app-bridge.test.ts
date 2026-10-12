@@ -14,16 +14,16 @@ describe('smartAppBanner', () => {
   it('stays off while the App Store id is empty (pilot)', async () => {
     const { smartAppBanner } = await loadWithAppStoreId('');
 
-    expect(smartAppBanner('/suscripcion')).toEqual({});
+    expect(smartAppBanner('/panel/subscription')).toEqual({});
   });
 
   it('opens the app on the same page once the listing exists', async () => {
     const { smartAppBanner } = await loadWithAppStoreId('1234567890');
 
-    expect(smartAppBanner('/suscripcion')).toEqual({
+    expect(smartAppBanner('/panel/subscription')).toEqual({
       itunes: {
         appId: '1234567890',
-        appArgument: 'http://localhost:3000/suscripcion',
+        appArgument: 'http://localhost:3000/panel/subscription',
       },
     });
   });

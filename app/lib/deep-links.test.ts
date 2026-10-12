@@ -35,15 +35,22 @@ describe('universalLinkPaths', () => {
 });
 
 describe('isAppOwnedPath', () => {
-  it('recognizes the segments the app owns', () => {
+  it('recognizes the paths the app opens', () => {
     expect(isAppOwnedPath('/s/123')).toBe(true);
+    expect(isAppOwnedPath('/panel/subscription')).toBe(true);
+    expect(isAppOwnedPath('/panel/agenda/2026-10-01')).toBe(true);
+    expect(isAppOwnedPath('/home/home/my-subscription')).toBe(true);
+  });
+
+  it('keeps the names older copies of the app know', () => {
     expect(isAppOwnedPath('/suscripcion')).toBe(true);
     expect(isAppOwnedPath('/agenda/2026-10-01')).toBe(true);
   });
 
-  it('leaves web-only paths alone', () => {
-    expect(isAppOwnedPath('/pagar')).toBe(false);
-    expect(isAppOwnedPath('/citas')).toBe(false);
+  it('leaves web-only paths alone, /panel itself included', () => {
+    expect(isAppOwnedPath('/panel')).toBe(false);
+    expect(isAppOwnedPath('/pay')).toBe(false);
+    expect(isAppOwnedPath('/appointments')).toBe(false);
     expect(isAppOwnedPath('/')).toBe(false);
   });
 });
@@ -117,7 +124,7 @@ describe('store URLs', () => {
 });
 
 describe('appBridgeLinks', () => {
-  const page = 'https://redoctorapp.com/suscripcion';
+  const page = 'https://redoctorapp.com/panel/subscription';
   const iPhone = {
     isIOS: true,
     isAndroid: false,
@@ -143,16 +150,19 @@ describe('appBridgeLinks', () => {
     playStoreId: 'com.redoctor.mobileapp',
   };
 
-  it('keeps the specialist bridges on the same path (app v0.161.0)', () => {
+  it('keeps the specialist pages on the same path', () => {
     expect(
-      appBridgeLinks('https://redoctorapp.com/agenda/2026-10-08', iPhone, pilot)
-        .openApp,
-    ).toBe('redoctor://redoctorapp.com/agenda/2026-10-08');
+      appBridgeLinks(
+        'https://redoctorapp.com/panel/agenda/2026-10-08',
+        iPhone,
+        pilot,
+      ).openApp,
+    ).toBe('redoctor://redoctorapp.com/panel/agenda/2026-10-08');
   });
 
   it('opens the app through its scheme on an iPhone', () => {
     expect(appBridgeLinks(page, iPhone, pilot)).toEqual({
-      openApp: 'redoctor://redoctorapp.com/suscripcion',
+      openApp: 'redoctor://redoctorapp.com/panel/subscription',
       appStore: undefined,
       playStore: undefined,
       storeRedirect: undefined,

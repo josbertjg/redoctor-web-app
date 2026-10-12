@@ -17,6 +17,9 @@ export const publicEnv = {
   androidPackage: process.env.NEXT_PUBLIC_ANDROID_PACKAGE ?? '',
   appStoreId: optional(process.env.NEXT_PUBLIC_APP_STORE_ID),
   playStoreId: optional(process.env.NEXT_PUBLIC_PLAY_STORE_ID),
+  /** `Label|+number` entries (app/lib/support.ts), until REDOC-357. */
+  supportWhatsapp: process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP ?? '',
+  supportPhones: process.env.NEXT_PUBLIC_SUPPORT_PHONES ?? '',
   /**
    * The Firebase web app of the project shared with the mobile app, for Auth
    * only (AGENTS.md §2). Public by design (§11): the key is restricted by

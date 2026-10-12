@@ -30,15 +30,19 @@ import type { AuthProvider } from '../auth/last-provider';
  */
 
 export type SessionUser = {
-  /** Firebase's uid: the only id analytics and error reports ever see. */
+  /** Firebase's uid (the API's own id comes with `/identity/me`). */
   id: string;
   email: string | null;
   name: string | null;
   photo: string | null;
   /** The provider behind the account, when it is one of ours. */
   provider: AuthProvider | null;
-  /** A fresh ID token for the API's bearer. */
-  getToken: () => Promise<string>;
+  /**
+   * An ID token for the API's bearer. `true` asks Firebase for a new one
+   * now: after the sign-up, whose new claims (role, registration status)
+   * the API reads from the token.
+   */
+  getToken: (forceRefresh?: boolean) => Promise<string>;
 };
 
 /**
@@ -91,7 +95,7 @@ export function toSessionUser(user: User): SessionUser {
     name: user.displayName,
     photo: user.photoURL,
     provider: providerOf(user),
-    getToken: () => user.getIdToken(),
+    getToken: (forceRefresh) => user.getIdToken(forceRefresh),
   };
 }
 

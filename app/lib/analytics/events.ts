@@ -17,6 +17,8 @@ export type AnalyticsEvents = {
   /** A deliberate sign-in that ended with an account the API knows. */
   web_signin_completed: { provider: AuthProvider; role: AccountRole };
   web_signout: Record<string, never>;
+  /** A patient's sign-up step done on the web: the names, the personal data. */
+  web_signup_completed: { step: 'register' | 'personal_data' };
 };
 
 export type AnalyticsEventName = keyof AnalyticsEvents;

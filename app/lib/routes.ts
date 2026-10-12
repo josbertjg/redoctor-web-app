@@ -7,28 +7,37 @@ import { env } from './env';
  * `router.push`): a builder whose page does not exist yet fails to compile at
  * the call site, never silently at runtime.
  *
- * URL segments are Spanish and fixed: the ones shared with the app are a
- * contract (app/lib/deep-links.ts); the payment route comes from the
- * environment until its name is decided (AGENTS.md §13).
+ * URL segments are English (owner, 2026-10-12). What the path says is who
+ * it is for: the short links people share at the top (`/s`, `/i`, `/a`),
+ * the specialist's pages that the app opens under `/panel/`, and the payment
+ * outside it on purpose (AGENTS.md §6). A renamed path keeps answering with
+ * a redirect (next.config.ts). The payment route comes from the environment
+ * until its name is decided (AGENTS.md §13).
  */
 
 const segment = (value: string) => encodeURIComponent(value);
 
-/** `/agenda` opens today; `/agenda/{YYYY-MM-DD}` that day (the app's link). */
-function agendaBridge(): '/agenda';
-function agendaBridge(date: string): `/agenda/${string}`;
+/** `/panel/agenda` opens today; `/panel/agenda/{YYYY-MM-DD}` that day. */
+function agendaBridge(): '/panel/agenda';
+function agendaBridge(date: string): `/panel/agenda/${string}`;
 function agendaBridge(date?: string) {
-  return date ? (`/agenda/${segment(date)}` as const) : ('/agenda' as const);
+  return date
+    ? (`/panel/agenda/${segment(date)}` as const)
+    : ('/panel/agenda' as const);
 }
 
 export const routes = {
   home: () => '/' as const,
 
-  /* Session (M2). `redirect` is a same-origin path to return to. */
+  /* Session (M2) and sign-up (M3). `redirect` is a same-origin path to return to. */
   signIn: (redirect?: string) =>
     redirect
-      ? (`/entrar?redirect=${encodeURIComponent(redirect)}` as const)
-      : ('/entrar' as const),
+      ? (`/sign-in?redirect=${encodeURIComponent(redirect)}` as const)
+      : ('/sign-in' as const),
+  signUp: (redirect?: string) =>
+    redirect
+      ? (`/sign-up?redirect=${encodeURIComponent(redirect)}` as const)
+      : ('/sign-up' as const),
 
   /* Paths shared with the app (AGENTS.md §6). */
   specialist: (specialistId: string) => `/s/${segment(specialistId)}` as const,
@@ -37,25 +46,25 @@ export const routes = {
     `/a/${segment(appointmentId)}` as const,
 
   /* Patient (M6, M10). */
-  appointments: () => '/citas' as const,
-  account: () => '/cuenta' as const,
+  appointments: () => '/appointments' as const,
+  account: () => '/account' as const,
 
   /* Specialist (M2): the page with the app's options, after signing in. */
   specialistHome: () => '/panel' as const,
 
   /* Legal (M10). */
-  privacy: () => '/privacidad' as const,
-  terms: () => '/terminos' as const,
-  deleteAccount: () => '/eliminar-cuenta' as const,
+  privacy: () => '/privacy' as const,
+  terms: () => '/terms' as const,
+  deleteAccount: () => '/delete-account' as const,
 
   /* Specialist payment (M13): never an app path, never linked from the app. */
   payment: () => env.NEXT_PUBLIC_PAYMENT_PATH,
 
-  /* Bridges that only open the app (M11). */
-  subscriptionBridge: () => '/suscripcion' as const,
+  /* The specialist's pages the app opens (M11): bridges on the web. */
+  subscriptionBridge: () => '/panel/subscription' as const,
   agendaBridge,
-  specialtiesBridge: () => '/especialidades' as const,
-  profileBridge: () => '/perfil' as const,
+  specialtiesBridge: () => '/panel/specialties' as const,
+  profileBridge: () => '/panel/profile' as const,
   /** The app's internal paths (`/home/*`): never a web page of their own. */
   homeBridge: (rest: readonly string[] = []) =>
     rest.length === 0
@@ -64,7 +73,7 @@ export const routes = {
 
   /* Daily-summary opt-out from the specialist's email (M11). */
   dailySummaryOptOut: (token: string) =>
-    `/resumen/baja?token=${encodeURIComponent(token)}` as const,
+    `/daily-summary/unsubscribe?token=${encodeURIComponent(token)}` as const,
 };
 
 /**

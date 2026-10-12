@@ -37,7 +37,7 @@ const playStoreId = z
   .optional();
 const sitePath = z
   .string()
-  .regex(/^\/[a-z0-9-]+(\/[a-z0-9-]+)*$/, 'expected a path like /pagar');
+  .regex(/^\/[a-z0-9-]+(\/[a-z0-9-]+)*$/, 'expected a path like /pay');
 
 type IssuePath = NonNullable<
   Parameters<

@@ -19,7 +19,7 @@ describe('env', () => {
     expect(env.NEXT_PUBLIC_API_URL).toBe(
       'https://api-dev.redoctorapp.com/api/v1',
     );
-    expect(env.NEXT_PUBLIC_PAYMENT_PATH).toBe('/pagar');
+    expect(env.NEXT_PUBLIC_PAYMENT_PATH).toBe('/pay');
     expect(env.NEXT_PUBLIC_POSTHOG_KEY).toBeUndefined();
   });
 
@@ -42,8 +42,9 @@ describe('env', () => {
     await expect(loadEnv()).rejects.toThrow(/API_PROXY_TARGET/);
   });
 
-  it('refuses a payment path that the mobile app owns', async () => {
-    vi.stubEnv('NEXT_PUBLIC_PAYMENT_PATH', '/suscripcion');
+  it('refuses a payment path that the mobile app opens', async () => {
+    // Everything under /panel/ opens the app (AGENTS.md §6).
+    vi.stubEnv('NEXT_PUBLIC_PAYMENT_PATH', '/panel/pay');
 
     await expect(loadEnv()).rejects.toThrow(/NEXT_PUBLIC_PAYMENT_PATH/);
   });

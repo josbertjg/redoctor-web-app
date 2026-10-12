@@ -39,8 +39,9 @@ export async function SpecialistOptions({ className }: { className?: string }) {
     <ul className={cn('grid gap-3 sm:grid-cols-2', className)}>
       {options.map((option) => (
         <li key={option.key}>
-          {/* As a UrlObject: typed routes cannot name `/agenda` (an optional
-              catch-all) in a union; the paths still come from routes.ts. */}
+          {/* As a UrlObject: typed routes cannot name `/panel/agenda` (an
+              optional catch-all) in a union; the paths still come from
+              routes.ts. */}
           <Link
             href={{ pathname: option.href }}
             className="group flex min-h-20 items-center gap-4 rounded-2xl bg-pure-white p-4 shadow-md transition-[translate,box-shadow] duration-base ease-house outline-none hover:-translate-y-0.5 hover:shadow-lg focus-visible:ring-3 focus-visible:ring-ring/50"

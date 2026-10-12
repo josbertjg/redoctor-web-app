@@ -9,6 +9,7 @@ const account = (role: string, patient: boolean, specialist: boolean) =>
     meResponseSchema.parse({
       id: 'u',
       role,
+      registrationStatus: 'COMPLETED',
       profiles: {
         patient: { exists: patient, status: 'COMPLETED' },
         specialist: { exists: specialist, status: 'COMPLETED' },
@@ -46,5 +47,24 @@ describe('destinationAfterSignIn', () => {
     expect(
       destinationAfterSignIn(account('SPECIALIST', true, true), null),
     ).toBe('/panel');
+  });
+});
+
+describe('an account with no sign-up behind it', () => {
+  const brandNew = toAccount(
+    meResponseSchema.parse({
+      id: 'u',
+      role: null,
+      registrationStatus: 'PENDING_REGISTRATION',
+      profiles: { patient: { exists: false }, specialist: { exists: false } },
+    }),
+  );
+
+  it('goes to sign up first, keeping the way back', () => {
+    expect(destinationAfterSignIn(brandNew, null)).toBe('/sign-up');
+    expect(destinationAfterSignIn(brandNew, '/i/tok')).toBe(
+      '/sign-up?redirect=%2Fi%2Ftok',
+    );
+    expect(destinationAfterSignIn(brandNew, '//evil.example')).toBe('/sign-up');
   });
 });

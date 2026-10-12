@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { documentTypes } from '../format/identity-document';
+
 /*
  * `GET /identity/me` (AGENTS.md §5): the account behind a Firebase token.
  * One account can be a patient and a specialist at once, each facet with its
@@ -190,11 +192,25 @@ export function toAccount(me: MeResponse): Account {
 }
 
 /**
- * A sign-in with no sign-up behind it: the app sends these to the sign-up
- * form (M3 on the web; patients only — a specialist signs up in the app).
+ * A sign-in with no sign-up behind it: the API says so with
+ * `PENDING_REGISTRATION` (or no status at all), and the app then sends the
+ * person to the sign-up form — the web too (M3; patients only, a specialist
+ * signs up in the app). An admin's account is never one of them.
  */
 export function needsSignUp(account: Account): boolean {
-  return account.registration === 'pendingRegistration' || hasNoFacet(account);
+  return (
+    account.registration === 'pendingRegistration' && account.role !== 'admin'
+  );
+}
+
+/**
+ * A specialist whose sign-up is still open: it can only be finished in the
+ * app (owner's decision, 2026-10-12). Waiting for the admins' review is not
+ * one of those: the app is already theirs to use meanwhile.
+ */
+export function specialistMustFinishInApp(account: Account): boolean {
+  const { specialist } = account;
+  return specialist.isIncomplete && specialist.status !== 'waitingAdminReview';
 }
 
 /**
@@ -217,6 +233,52 @@ export function canUseSpecialistArea(account: Account): boolean {
 export function hasNoFacet(account: Account): boolean {
   return !account.patient.exists && !account.specialist.exists;
 }
+
+/*
+ * The patient's sign-up, in two writes as the API and the app split it:
+ * `POST /identity/register` (names and the consents), then, once the
+ * account is `PENDING_COMPLETE_PATIENT`, `POST /identity/complete-registration`
+ * (the personal data claiming or booking needs). Both answer the account,
+ * parsed with `meResponseSchema`. The bodies are strict on purpose: the API
+ * refuses any field it does not expect.
+ */
+export const patientRegistrationBodySchema = z.strictObject({
+  firstName: z.string().min(1).max(100),
+  lastName: z.string().min(1).max(100),
+  acceptedTerms: z.literal(true),
+  acceptedSensitiveData: z.literal(true),
+  acceptedNewsletter: z.boolean(),
+  role: z.literal('PATIENT'),
+});
+
+export type PatientRegistrationBody = z.infer<
+  typeof patientRegistrationBodySchema
+>;
+
+/** The sexes the API takes; the app's form offers the first two. */
+export const sexes = ['MALE', 'FEMALE', 'OTHER'] as const;
+
+export type Sex = (typeof sexes)[number];
+
+export const patientCompletionBodySchema = z.strictObject({
+  dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  phone: z.string().min(1),
+  documentType: z.enum(documentTypes),
+  documentNumber: z.string().regex(/^\d{6,8}$/),
+  sex: z.enum(sexes),
+});
+
+export type PatientCompletionBody = z.infer<typeof patientCompletionBodySchema>;
+
+/** `POST /identity/public/check-document`: whether nobody uses the document yet. */
+export const documentAvailabilitySchema = z.object({ available: z.boolean() });
+
+export const documentQuerySchema = z.strictObject({
+  documentType: z.enum(documentTypes),
+  documentNumber: z.string().regex(/^\d{6,8}$/),
+});
+
+export type DocumentQuery = z.infer<typeof documentQuerySchema>;
 
 /**
  * The domain of the addresses Apple makes up for «Hide my email». It forwards

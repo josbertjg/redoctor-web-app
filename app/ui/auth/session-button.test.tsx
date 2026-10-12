@@ -53,7 +53,7 @@ describe('SessionButton', () => {
 
     expect(screen.getByRole('link', { name: 'Entrar' })).toHaveAttribute(
       'href',
-      '/entrar?redirect=%2Fpanel',
+      '/sign-in?redirect=%2Fpanel',
     );
   });
 
@@ -65,7 +65,7 @@ describe('SessionButton', () => {
 
     expect(screen.getByRole('link', { name: 'Entrar' })).toHaveAttribute(
       'href',
-      '/entrar',
+      '/sign-in',
     );
   });
 

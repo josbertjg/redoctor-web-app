@@ -25,7 +25,7 @@ A module is one route group `app/(module)/` named after the module of AGENTS.md 
    - `app/(module)/_components/` — module-only components, kebab-case files.
    - Segments that need a session wrap a `layout.tsx` in `<RequireSession>`.
 3. Metadata: `generateMetadata` (or `metadata`) with title and `robots`.
-   Private pages (`/i`, `/a`, `/citas`, `/cuenta`, payment) are
+   Private pages (`/i`, `/a`, `/appointments`, `/account`, payment) are
    `noindex, nofollow` with a generic Open Graph preview.
 4. i18n: add the module's keys to `app/lib/i18n/messages/es.json` under the
    module's namespace, mirroring the app's `assets/translations/es.json` keys

@@ -12,22 +12,24 @@ describe('routes', () => {
   });
 
   it('builds the bridges', () => {
-    expect(routes.subscriptionBridge()).toBe('/suscripcion');
-    expect(routes.agendaBridge()).toBe('/agenda');
-    expect(routes.agendaBridge('2026-10-01')).toBe('/agenda/2026-10-01');
-    expect(routes.specialtiesBridge()).toBe('/especialidades');
-    expect(routes.profileBridge()).toBe('/perfil');
+    expect(routes.subscriptionBridge()).toBe('/panel/subscription');
+    expect(routes.agendaBridge()).toBe('/panel/agenda');
+    expect(routes.agendaBridge('2026-10-01')).toBe('/panel/agenda/2026-10-01');
+    expect(routes.specialtiesBridge()).toBe('/panel/specialties');
+    expect(routes.profileBridge()).toBe('/panel/profile');
     expect(routes.homeBridge()).toBe('/home');
     expect(routes.homeBridge(['home', 'my subscription'])).toBe(
       '/home/home/my%20subscription',
     );
   });
 
-  it('carries the return path when signing in', () => {
-    expect(routes.signIn()).toBe('/entrar');
+  it('carries the return path when signing in and signing up', () => {
+    expect(routes.signIn()).toBe('/sign-in');
     expect(routes.signIn('/a/abc?origin=email-12')).toBe(
-      '/entrar?redirect=%2Fa%2Fabc%3Forigin%3Demail-12',
+      '/sign-in?redirect=%2Fa%2Fabc%3Forigin%3Demail-12',
     );
+    expect(routes.signUp()).toBe('/sign-up');
+    expect(routes.signUp('/i/tok')).toBe('/sign-up?redirect=%2Fi%2Ftok');
   });
 
   it('keeps the payment route out of the app paths', () => {
@@ -36,14 +38,14 @@ describe('routes', () => {
 
   it('encodes the opt-out token', () => {
     expect(routes.dailySummaryOptOut('a+b/c')).toBe(
-      '/resumen/baja?token=a%2Bb%2Fc',
+      '/daily-summary/unsubscribe?token=a%2Bb%2Fc',
     );
   });
 });
 
 describe('isSafeRedirect', () => {
   it('accepts same-origin paths', () => {
-    expect(isSafeRedirect('/citas')).toBe(true);
+    expect(isSafeRedirect('/appointments')).toBe(true);
     expect(isSafeRedirect('/a/abc?origin=email-12')).toBe(true);
   });
 
@@ -51,7 +53,7 @@ describe('isSafeRedirect', () => {
     expect(isSafeRedirect('https://evil.example')).toBe(false);
     expect(isSafeRedirect('//evil.example')).toBe(false);
     expect(isSafeRedirect('/\\evil.example')).toBe(false);
-    expect(isSafeRedirect('citas')).toBe(false);
+    expect(isSafeRedirect('appointments')).toBe(false);
     expect(isSafeRedirect('')).toBe(false);
     expect(isSafeRedirect(null)).toBe(false);
   });

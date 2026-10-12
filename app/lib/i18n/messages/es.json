@@ -230,6 +230,27 @@
     "appStore": "Descargar en App Store",
     "playStore": "Descargar en Google Play"
   },
+  "appAccess": {
+    "join": {
+      "title": "El registro de especialistas se hace en la app",
+      "testing": "La app de Redoctor está en fase de pruebas. Escríbenos o llámanos y te damos acceso para que completes tu registro desde ahí.",
+      "store": "Descarga la app de Redoctor y completa tu registro desde ahí."
+    },
+    "finish": {
+      "title": "Termina tu registro en la app",
+      "testing": "Tu registro como especialista sigue abierto y se completa desde la app de Redoctor. Si no la tienes, escríbenos o llámanos y te damos acceso.",
+      "store": "Tu registro como especialista sigue abierto y se completa desde la app de Redoctor. Descárgala y continúa donde lo dejaste."
+    },
+    "writeSection": "Escríbenos",
+    "callSection": "Llámanos",
+    "whatsapp": "Escribir por WhatsApp",
+    "call": "Llamar a {label}, {number}",
+    "whatsappMessage": "¡Hola, equipo de Redoctor! 👋 Soy especialista y quiero acceso a la app para completar mi registro.",
+    "scan": "Escanea el código con la cámara de tu teléfono.",
+    "qrLabel": "Código QR para descargar la app en {store}",
+    "appStore": "App Store",
+    "playStore": "Google Play"
+  },
   "auth": {
     "metaTitle": "Entrar",
     "title": "Inicia sesión de manera rápida y segura",
@@ -252,12 +273,6 @@
       "copyLink": "Copiar enlace",
       "copied": "Enlace copiado"
     },
-    "noFacet": {
-      "title": "Te falta completar tu registro",
-      "description": "Esta cuenta todavía no tiene registro en Redoctor. Si eres paciente, muy pronto podrás registrarte aquí mismo. Si eres especialista, el registro se hace desde la app: escríbenos a soporte y te damos acceso.",
-      "privateEmail": "Entraste con un correo privado de Apple. Si ya usabas Redoctor con Google, entra con Google para seguir en la misma cuenta.",
-      "switchAccount": "Entrar con otra cuenta"
-    },
     "accountError": {
       "title": "No pudimos leer tu cuenta",
       "description": "Puede ser tu conexión o un problema de nuestro lado. Inténtalo de nuevo en un momento."
@@ -274,8 +289,73 @@
         "action": "Ir a mis herramientas"
       }
     },
-    "sessionExpired": "Tu sesión ha caducado, vuelve a iniciar sesión."
+    "sessionExpired": "Tu sesión ha caducado, vuelve a iniciar sesión.",
+    "switchAccount": "Entrar con otra cuenta",
+    "privateEmailHint": "Entraste con un correo privado de Apple. Si ya usabas Redoctor con Google, entra con Google para seguir en la misma cuenta.",
+    "whoAreYou": "¿Quién eres?",
+    "whichModeDoYouWantToUse": "Cuéntanos qué modo deseas usar para personalizar tu experiencia",
+    "iWantToFindSpecialists": "Quiero encontrar especialistas calificados y agendar citas",
+    "iWantToConnectWithPatients": "Quiero conectar con pacientes y automatizar mis citas",
+    "signupPatientDescription": "Regístrate y conecta con profesionales verificados cuando lo necesites",
+    "iHaveRead": "He leído y acepto los",
+    "iAgreeToRecopileData": "Autorizo el uso de mis datos de salud y geolocalización con fines de atención y gestión de citas",
+    "subscribeToOurNewsletter": "Quiero recibir consejos de salud y novedades por mi correo electrónico",
+    "identityDocumentTaken": "Ya existe una cuenta con esta cédula. Cámbiala para poder registrarte.",
+    "registrationCompletedSuccessfully": "Registro completado exitosamente"
   },
+  "signUp": {
+    "metaTitle": "Crea tu cuenta",
+    "title": "Crea tu cuenta de paciente",
+    "claimTitle": "Crea tu cuenta para reclamar tu cita",
+    "documentType": "Tipo de documento",
+    "phonePlaceholder": "414 123 4567",
+    "documentPlaceholder": "12345678",
+    "saveFailed": "No pudimos guardar tus datos. Inténtalo de nuevo en un momento.",
+    "back": "Volver"
+  },
+  "finishPatientSignup": {
+    "title": "Finalizar registro",
+    "everythingReady": "¡Todo listo!",
+    "successfulRegistration": "Tu registro se completó con éxito",
+    "nextSteps": "Ya puedes comenzar a agendar citas con profesionales verificados",
+    "findSpecialists": "Buscar especialistas",
+    "toClaim": "Para reclamar la cita solo falta completar tus datos.",
+    "toClaimPrefilled": "Para reclamar la cita solo falta completar tus datos. Ya pusimos los de la invitación: revísalos antes de seguir.",
+    "claimNextSteps": "Ya puedes reclamar tu cita.",
+    "claimAppointment": "Reclamar mi cita"
+  },
+  "input": {
+    "empty": "Este campo es requerido.",
+    "maxLength": "Este campo debe tener como máximo {maxLength} caracteres.",
+    "mustAccept": "Debes aceptar para continuar.",
+    "name": {
+      "invalidFormat": "Usa solo letras, sin números ni símbolos."
+    },
+    "dateOfBirth": {
+      "tooYoung": "Debes tener al menos 18 años.",
+      "invalid": "Esa fecha no es válida."
+    },
+    "phoneNumber": {
+      "invalidFormat": "Escribe un número de celular venezolano, como 0414 123 4567."
+    },
+    "identityDocument": {
+      "minLength": "La cédula debe tener al menos {minLength} caracteres.",
+      "maxLength": "La cédula debe tener como máximo {maxLength} caracteres."
+    }
+  },
+  "name": "Nombre",
+  "lastName": "Apellido",
+  "patient": "Paciente",
+  "specialist": "Especialista",
+  "continue": "Continuar",
+  "finish": "Finalizar",
+  "dateOfBirth": "Fecha de nacimiento",
+  "phoneNumber": "Teléfono",
+  "identityDocument": "Cédula de identidad",
+  "sex": "Sexo",
+  "male": "Hombre",
+  "female": "Mujer",
+  "ofRedoctor": "de Redoctor",
   "bridges": {
     "subscription": {
       "metaTitle": "Tu suscripción",

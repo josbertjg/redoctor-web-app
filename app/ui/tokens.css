@@ -245,6 +245,7 @@
   --color-shadow: rgb(0 0 0 / 0.1);
 
   /* ---------- Radii ----------------------------------------------------- */
+  --radius-xs: 2px; /* checkboxes: the app's Material checkbox */
   --radius-sm: 8px; /* alerts, toasts */
   --radius-md: 10px; /* inputs (40px tall), search-like buttons */
   --radius-lg: 12px; /* compact cards (price cards, menus) */

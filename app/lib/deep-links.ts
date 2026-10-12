@@ -13,42 +13,47 @@ import type { Device } from './platform';
 /** The app's own scheme: the fallback when a https link stays in the browser. */
 export const appScheme = 'redoctor';
 
-/** First path segments the app owns. */
-export const appPathSegments = [
-  's',
-  'i',
-  'a',
-  'suscripcion',
-  'home',
-  'agenda',
-  'especialidades',
-  'perfil',
-] as const;
-
-export type AppPathSegment = (typeof appPathSegments)[number];
+/**
+ * What the app opens: the short links people share, everything under
+ * `/panel/` (the specialist's pages; `/panel` itself is the web's) and its
+ * internal paths. A new specialist page under `/panel/` needs no change
+ * here, in the AASA or in the app's manifest: only the app's router and
+ * the web's bridge.
+ */
+const appPaths = ['/s/*', '/i/*', '/a/*', '/panel/*', '/home/*'] as const;
 
 /**
- * The paths published in /.well-known/apple-app-site-association, in its
- * order. A new bridge path needs the AASA, the app's manifest and this list
- * updated together (and Apple's CDN to pick it up). The specialist bridges
- * (`/agenda`, `/especialidades`, `/perfil`) open the app since its v0.161.0.
+ * The specialist's paths before they moved under `/panel/` (2026-10-12).
+ * Copies of the app from before then only know these, so the AASA keeps
+ * them until every tester runs a version that knows `/panel/*`. The web
+ * redirects them for good (next.config.ts).
  */
-export const universalLinkPaths = [
-  '/s/*',
-  '/i/*',
-  '/a/*',
+const legacyAppPaths = [
   '/suscripcion',
-  '/home/*',
   '/agenda',
   '/agenda/*',
   '/especialidades',
   '/perfil',
 ] as const;
 
-/** Whether a site path starts with a segment the app owns. */
+/**
+ * The paths published in /.well-known/apple-app-site-association, in its
+ * order (a test keeps the two equal). iOS reads them from there; Android
+ * from the app's manifest.
+ */
+export const universalLinkPaths = [...appPaths, ...legacyAppPaths] as const;
+
+/**
+ * Whether the app opens a site path, reading the patterns as iOS does: `*`
+ * covers the rest of the path, so `/panel/*` takes `/panel/agenda` and
+ * leaves `/panel` to the web.
+ */
 export function isAppOwnedPath(path: string): boolean {
-  const first = path.split('/')[1] ?? '';
-  return (appPathSegments as readonly string[]).includes(first);
+  return universalLinkPaths.some((pattern) =>
+    pattern.endsWith('*')
+      ? path.startsWith(pattern.slice(0, -1))
+      : path === pattern,
+  );
 }
 
 /* ---------- ?origin= (measurement only, AGENTS.md §6) ------------------ */

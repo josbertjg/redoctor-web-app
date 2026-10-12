@@ -1,27 +1,27 @@
 import type { Metadata } from 'next';
 
-import Stethoscope from '@material-symbols/svg-400/rounded/stethoscope.svg?svgr';
+import IdCard from '@material-symbols/svg-400/rounded/id_card.svg?svgr';
 import { getTranslations } from 'next-intl/server';
 
 import { smartAppBanner } from '@/app/lib/app-bridge';
 import { routes } from '@/app/lib/routes';
 
-import { BridgeContent } from '../_components/bridge-content';
+import { BridgeContent } from '../../_components/bridge-content';
 
-const path = routes.specialtiesBridge();
+const path = routes.profileBridge();
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations('bridges.specialties');
+  const t = await getTranslations('bridges.profile');
   return { title: t('metaTitle'), ...smartAppBanner(path) };
 }
 
-/* «Mis especialidades»: the button of the emails about their review. */
-export default async function SpecialtiesBridgePage() {
-  const t = await getTranslations('bridges.specialties');
+/* The professional profile: the button of the email that says it stopped showing in searches. */
+export default async function ProfileBridgePage() {
+  const t = await getTranslations('bridges.profile');
 
   return (
     <BridgeContent
-      icon={Stethoscope}
+      icon={IdCard}
       title={t('title')}
       description={t('description')}
       path={path}

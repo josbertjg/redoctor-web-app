@@ -6,7 +6,7 @@ import { getTranslations } from 'next-intl/server';
 import { smartAppBanner } from '@/app/lib/app-bridge';
 import { routes } from '@/app/lib/routes';
 
-import { BridgeContent } from '../_components/bridge-content';
+import { BridgeContent } from '../../_components/bridge-content';
 
 const path = routes.subscriptionBridge();
 

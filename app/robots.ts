@@ -10,16 +10,14 @@ import { absoluteUrl, isIndexable } from '@/app/lib/site';
 const privatePaths = [
   '/i/',
   '/a/',
-  '/citas',
-  '/cuenta',
-  '/entrar',
-  '/pagar',
-  '/resumen/',
-  '/suscripcion',
+  '/appointments',
+  '/account',
+  '/sign-in',
+  '/sign-up',
+  '/panel',
+  '/pay',
+  '/daily-summary/',
   '/home/',
-  '/agenda',
-  '/especialidades',
-  '/perfil',
 ];
 
 export default function robots(): MetadataRoute.Robots {

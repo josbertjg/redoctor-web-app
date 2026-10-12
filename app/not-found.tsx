@@ -18,7 +18,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /*
  * Any URL the web does not know. Composition of the app's NOT FOUND screen
- * (Figma), copy of the landing doc. «Ver mis citas» joins when /citas exists
+ * (Figma), copy of the landing doc. «Ver mis citas» joins when /appointments exists
  * (M6).
  */
 export default async function NotFound() {

@@ -7,9 +7,9 @@ import { isApiError } from '../api/errors';
 
 /*
  * Daily-summary opt-out (M11). The specialist's email links to
- * `/resumen/baja?token=…` and the signed token is the only credential: no
- * session, so this write may run on the server as a Server Action
- * (AGENTS.md §4). The token is never logged: it travels in the API's query,
+ * `/daily-summary/unsubscribe?token=…` and the signed token is the only
+ * credential: no session, so this write may run on the server as a Server
+ * Action (AGENTS.md §4). The token is never logged: it travels in the API's query,
  * and reports carry the route template only.
  */
 

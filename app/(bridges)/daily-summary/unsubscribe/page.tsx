@@ -17,12 +17,13 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /*
- * `/resumen/baja?token=…`: the opt-out link of the API's daily summary
- * (M11). The link format is the web's proposal, pending the API's emails.
+ * `/daily-summary/unsubscribe?token=…`: the opt-out link of the API's daily
+ * summary (M11), the API's own name for it. `/resumen/baja`, the first
+ * name REDOC-359 gave it, redirects here (next.config.ts).
  */
 export default async function DailySummaryOptOutPage({
   searchParams,
-}: PageProps<'/resumen/baja'>) {
+}: PageProps<'/daily-summary/unsubscribe'>) {
   const { token } = await searchParams;
   const t = await getTranslations('dailySummary');
 

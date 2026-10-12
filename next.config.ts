@@ -71,6 +71,44 @@ const nextConfig: NextConfig = {
       { source: '/api-proxy/:path*', destination: `${target}/:path*` },
     ]);
   },
+  /*
+   * Paths that changed name (AGENTS.md §6): the old one answers for good, so
+   * no link that was ever sent breaks. The query (a token, `?origin=`)
+   * travels along, and redirects run before any page.
+   */
+  redirects() {
+    return Promise.resolve([
+      // The specialist's pages moved under /panel/ (2026-10-12).
+      {
+        source: '/suscripcion',
+        destination: '/panel/subscription',
+        permanent: true,
+      },
+      {
+        source: '/agenda/:path*',
+        destination: '/panel/agenda/:path*',
+        permanent: true,
+      },
+      {
+        source: '/especialidades',
+        destination: '/panel/specialties',
+        permanent: true,
+      },
+      { source: '/perfil', destination: '/panel/profile', permanent: true },
+      // The daily-summary opt-out took the API's own name (REDOC-359).
+      {
+        source: '/resumen/baja',
+        destination: '/daily-summary/unsubscribe',
+        permanent: true,
+      },
+      // The invitation link the API builds (REDOC-255): the app's is /i/{token}.
+      {
+        source: '/citas/invitacion/:token',
+        destination: '/i/:token',
+        permanent: true,
+      },
+    ]);
+  },
   headers() {
     return [
       { source: '/:path*', headers: securityHeaders },

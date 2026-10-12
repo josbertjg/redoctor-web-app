@@ -26,9 +26,11 @@ describe('scrubUrl', () => {
 
   it('cuts every query string and fragment', () => {
     expect(
-      scrubUrl('https://redoctorapp.com/resumen/baja?token=signed#top'),
-    ).toBe('https://redoctorapp.com/resumen/baja');
-    expect(scrubUrl('/entrar?redirect=%2Fa%2F1')).toBe('/entrar');
+      scrubUrl(
+        'https://redoctorapp.com/daily-summary/unsubscribe?token=signed#top',
+      ),
+    ).toBe('https://redoctorapp.com/daily-summary/unsubscribe');
+    expect(scrubUrl('/sign-in?redirect=%2Fa%2F1')).toBe('/sign-in');
   });
 
   it('leaves the rest of the path alone', () => {
@@ -60,11 +62,11 @@ describe('scrubBreadcrumb', () => {
     expect(
       scrubBreadcrumb({
         category: 'navigation',
-        data: { from: '/i/abc?origin=x', to: '/entrar?redirect=%2Fi%2Fabc' },
+        data: { from: '/i/abc?origin=x', to: '/sign-in?redirect=%2Fi%2Fabc' },
       }),
     ).toEqual({
       category: 'navigation',
-      data: { from: '/i/[token]', to: '/entrar' },
+      data: { from: '/i/[token]', to: '/sign-in' },
     });
     expect(
       scrubBreadcrumb({
@@ -100,7 +102,9 @@ describe('scrubEvent', () => {
           cookie: 'session=x',
         },
       },
-      exception: { values: [{ value: 'Failed /resumen/baja?token=secret' }] },
+      exception: {
+        values: [{ value: 'Failed /daily-summary/unsubscribe?token=secret' }],
+      },
       breadcrumbs: [
         { category: 'console', message: 'debug' },
         { category: 'navigation', data: { to: '/i/abc123' } },
@@ -114,7 +118,7 @@ describe('scrubEvent', () => {
         url: 'https://redoctorapp.com/i/[token]',
         headers: { 'user-agent': 'Safari' },
       },
-      exception: { values: [{ value: 'Failed /resumen/baja' }] },
+      exception: { values: [{ value: 'Failed /daily-summary/unsubscribe' }] },
       breadcrumbs: [{ category: 'navigation', data: { to: '/i/[token]' } }],
     });
   });

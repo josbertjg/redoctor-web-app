@@ -69,13 +69,13 @@ describe('OpenInAppButton', () => {
   it('opens the same page in the app through its scheme on an iPhone', async () => {
     pretendDevice('iPhone');
     const { container } = renderWithIntl(
-      <OpenInAppButton path="/suscripcion" source="email" />,
+      <OpenInAppButton path="/panel/subscription" source="email" />,
     );
 
     const link = await screen.findByRole('link', { name: 'Abrir en la app' });
     expect(link).toHaveAttribute(
       'href',
-      'redoctor://localhost:3000/suscripcion',
+      'redoctor://localhost:3000/panel/subscription',
     );
     expect(screen.queryByRole('link', { name: /App Store|Google Play/ })).toBe(
       null,
@@ -98,7 +98,9 @@ describe('OpenInAppButton', () => {
 
   it('says to use the phone on a computer, where there is no app', async () => {
     pretendDevice('computer');
-    renderWithIntl(<OpenInAppButton path="/suscripcion" source="email" />);
+    renderWithIntl(
+      <OpenInAppButton path="/panel/subscription" source="email" />,
+    );
 
     expect(
       await screen.findByText(

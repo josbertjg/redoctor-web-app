@@ -72,16 +72,16 @@ transactional emails the API sends.
 | --- | --- |
 | M1 Foundations | Project, brand, environments, typed API client, error translation, `.well-known`, observability |
 | M2 Session | Google and Apple sign-in, `/me`, role guards (patient and specialist), return to the link after login, re-entry in 1–2 taps from another browser |
-| M3 Sign-up | One screen, prefilled with the invitation data |
+| M3 Sign-up | Patients only (a specialist signs up in the app). One screen, prefilled with the invitation data |
 | M4 Invitation `/i/{token}` | All states, claim for yourself or for a third party, ID-document warnings, confirm in the same step when < 24 h |
 | M5 Appointment `/a/{id}` | Confirm (from 24 h before), cancel, reschedule, directions, add to calendar |
-| M6 My appointments `/citas` | Upcoming, past, pending reviews |
+| M6 My appointments `/appointments` | Upcoming, past, pending reviews |
 | M7 Review | Stars, comment, "your review is public / anonymous by default" notice |
 | M8 Public profile `/s/{id}` | Read-only: photo, verified specialties, offices with directions, service prices, rating and reviews, "Pronto podrás agendar aquí" |
 | M9 Landing | Designed by the designer; copy in the doc «Landing de Redoctor» |
 | M10 Legal and account | Privacy, terms, account deletion (texts from the lawyer) |
-| M11 Bridges | `/suscripcion`, `/agenda`, `/especialidades`, `/perfil` (specialist pages that open the app) and `/resumen/baja` (daily-summary email opt-out) |
-| M13 Specialist payment | Own route (name pending, e.g. `/pagar`): subscription and pending month, choose a plan with a coupon, Pago Móvil and transfer data in Bs from the API, report the payment, see it in review |
+| M11 Bridges | `/panel/subscription`, `/panel/agenda`, `/panel/specialties`, `/panel/profile` (specialist pages that open the app) and `/daily-summary/unsubscribe` (daily-summary email opt-out) |
+| M13 Specialist payment | Own route (name pending, `/pay` for now): subscription and pending month, choose a plan with a coupon, Pago Móvil and transfer data in Bs from the API, report the payment, see it in review |
 | M12 Release | PostHog funnel by origin, tests on real phones from WhatsApp and Gmail, domain cutover |
 
 **Explicitly out of the pilot:** searching and booking from the web,
@@ -103,7 +103,7 @@ favorites, notifications inbox, the specialist's panel. They come after.
 - Before claiming an invitation, the page says **which email the appointment
   will be saved under**, so nobody saves it into a relative's account by
   mistake.
-- **Soft review wall:** `/citas` is blocked until a pending review is given;
+- **Soft review wall:** `/appointments` is blocked until a pending review is given;
   pages reached through a link (`/i`, `/a`, `/s`) are never blocked.
 - **Where signing in leads (2026-10-12):** a **patient** stays on the
   landing — the search lives there — or returns to the link they came from.
@@ -164,8 +164,8 @@ and `public/`. Two conventions make it ours:
   folder names are the URL segments, which the app's shared links fix for
   us (`/s`, `/i`, `/a`) — plus the module's private `_components/` and,
   when needed, its own `layout`, `loading` and `error`. The parentheses mean
-  "organize, don't change the URL": `app/(appointments)/citas/page.tsx` is
-  still `/citas`.
+  "organize, don't change the URL": `app/(appointments)/appointments/page.tsx`
+  is still `/appointments`.
 - **Everything UI lives in `app/ui`; everything that is not React lives in
   `app/lib`.** A component is promoted from a module's `_components/` to
   `app/ui/<domain>/` the day a second module needs it.
@@ -183,34 +183,38 @@ app/                                  # The application: routes, UI and logic
     page.tsx                          #   /
     _components/                      #   hero, sections, faq, splash/ (the Rive veil) — this module only
   (auth)/                             # module: session (M2)
-    entrar/page.tsx                   #   /entrar?redirect= — Google and Apple, the same accounts as the app
-    _components/                      #   sign-in-card
+    sign-in/page.tsx                  #   /sign-in?redirect= — Google and Apple, the same accounts as the app
+    sign-up/page.tsx                  #   /sign-up?redirect= — the patient's sign-up (M3)
+    _components/                      #   sign-in-card, sign-up-flow, role-choice, patient-sign-up-form, sign-up-done
   (invitations)/                      # module: the invitation link (M3, M4)
     i/[token]/page.tsx · loading.tsx · error.tsx          # /i/{token}
     _components/
   (appointments)/                     # module: appointments (M5, M6, M7)
     a/[appointmentId]/page.tsx · loading.tsx · error.tsx  # /a/{id}
-    citas/layout.tsx · page.tsx · loading.tsx             # /citas — layout = <RequireSession>
+    appointments/layout.tsx · page.tsx · loading.tsx      # /appointments — layout = <RequireSession>
     _components/
   (specialists)/                      # module: public profile (M8) and the specialist's own page (M2)
     s/[specialistId]/page.tsx · loading.tsx · not-found.tsx · opengraph-image.tsx   # /s/{id}
     panel/layout.tsx · page.tsx · loading.tsx        # /panel — layout = <RequireSession facet="specialist">
     _components/
   (account)/                          # module: account and legal (M10)
-    cuenta/layout.tsx · page.tsx      #   /cuenta — layout = <RequireSession>
-    privacidad/page.tsx · terminos/page.tsx · eliminar-cuenta/page.tsx
+    account/layout.tsx · page.tsx     #   /account — layout = <RequireSession>
+    privacy/page.tsx · terms/page.tsx · delete-account/page.tsx
   (billing)/                          # module: specialist payment (M13) — route name pending
-    pagar/layout.tsx · page.tsx · _components/
+    pay/layout.tsx · page.tsx · _components/
   (bridges)/                          # module: pages that only open the app, noindex (M11)
     layout.tsx
-    suscripcion/ · agenda/[[...date]]/ · especialidades/ · perfil/ · home/[[...rest]]/
-    resumen/baja/page.tsx             #   daily-summary opt-out — a Server Action
+    panel/subscription/ · panel/agenda/[[...date]]/ · panel/specialties/ · panel/profile/
+                                      #   /panel/* opens the app; /panel itself is (specialists)'s page
+    home/[[...rest]]/
+    daily-summary/unsubscribe/page.tsx   # daily-summary opt-out — a Server Action
   api/                                # route handlers only when the browser must not call the API (none yet)
   ui/                                 # ALL shared UI
-    button.tsx · input.tsx · sheet.tsx · skeleton.tsx · toast.tsx · empty-state.tsx · chip.tsx · avatar.tsx …
+    button.tsx · text-field.tsx · checkbox.tsx · field-error.tsx · sheet.tsx · skeleton.tsx · toast.tsx · empty-state.tsx · avatar.tsx …
+    messages-scope.tsx                #   a page's own client messages (§9)
     layout/                           #   site-header, site-footer, page-frame, bottom-actions
     auth/                             #   session-provider, session-button, require-session, sign-in-buttons, in-app-browser-help, provider-logos
-    app-bridge/                       #   open-in-app-button, store-badges
+    app-bridge/                       #   open-in-app-button, store-badges, app-access (a specialist's way to the app), store-qr
     appointments/ · specialists/ · billing/ · reviews/   # domain components used by two or more modules
     analytics/ · og/                  #   link-origin-tracker; the Open Graph brand card (next/og)
     motion/                           #   the one door to Motion: provider, m, tokens, staggered-text (§8.11)
@@ -223,11 +227,12 @@ app/                                  # The application: routes, UI and logic
     queries/                          #   TanStack queryOptions + mutation functions per domain (client)
     actions/                          #   Server Actions — only where no user token is needed
     firebase/                         #   client.ts: Firebase Auth, loaded on demand (client-only)
-    auth/                             #   session-hint (the cookie), last-provider, token (the bearer's source), destination
-    analytics/ · format/ · i18n/
+    auth/                             #   session-hint (the cookie), last-provider, token (the bearer's source), destination, sign-up (the plan)
+    format/                           #   names, phone (+58), identity-document, date-of-birth — the forms' rules
+    analytics/ · i18n/
     observability/                    #   report.ts (the seam), scrub.ts (what never leaves), sentry.ts
     security/                         #   csp.ts (the nonce policy proxy.ts sends)
-    env.ts · public-env.ts · routes.ts · deep-links.ts · site.ts · utils.ts
+    env.ts · public-env.ts · routes.ts · deep-links.ts · site.ts · support.ts · utils.ts
   hooks/                              # shared client hooks: use-session, use-link-origin, use-device, use-in-app-browser
 tests/                                # setup.ts · msw/ (server + handlers per domain) · factories/ · e2e/ (Playwright)
 public/                               # .well-known/ (§6) · brand/ (logo.svg, logo-white.svg, icons) · illustrations/ · animations/ (the app's splash_logo.riv)
@@ -264,12 +269,12 @@ for what is shared (setup, MSW, factories) and for Playwright.
    Components unless they need state, effects or browser APIs — then
    `'use client'` at the smallest leaf. `app/lib/data/*` imports
    `server-only`; Firebase Auth and PostHog code imports `client-only`.
-   Segments that need a session (`citas`, `cuenta`, `pagar`) wrap their
+   Segments that need a session (`appointments`, `account`, `pay`) wrap their
    `layout.tsx` in `<RequireSession>`, which shows a skeleton until `/me`
    resolves; `/i` and `/a` load without a session and ask for it inside.
    Authenticated mutations run in the browser through `app/lib/queries`
    (the Firebase token lives there); Server Actions only where no user token
-   is needed (the opt-out POST of `/resumen/baja`).
+   is needed (the opt-out POST of `/daily-summary/unsubscribe`).
 6. **One contract, three consumers.** `app/lib/schemas` holds the zod
    schemas; `app/lib/data` (server), `app/lib/queries` (client) and
    `tests/msw` all parse with them. No duplicated types.
@@ -279,8 +284,11 @@ for what is shared (setup, MSW, factories) and for Playwright.
    PostHog events.
 8. **Naming.** Folders and files kebab-case (`appointment-card.tsx` exports
    `AppointmentCard`); module groups in English; user-facing URL segments in
-   Spanish (`/citas`, `/cuenta`, `/entrar`, `/privacidad`); dynamic params
-   in English camelCase (`[specialistId]`).
+   English too, the paths shared with the app included (`/appointments`,
+   `/account`, `/sign-in`, `/privacy`; the owner's call of 2026-10-12), and
+   the path says who it is for: the specialist's pages that the app opens
+   live under `/panel/` (§6); dynamic params in English camelCase
+   (`[specialistId]`).
 9. **Lint-enforced boundaries** (`import/no-restricted-paths`): nothing
    imports from a module group except that module; `app/ui` imports only
    `app/lib` and `app/hooks`; `app/lib` imports no React; `app/lib/data` is
@@ -303,7 +311,7 @@ Every route path is built from one place, `app/lib/routes.ts` (the app has
   `fetch` on the server with `next: { revalidate, tags }`. Server-side calls
   are not subject to CORS, so the public profile works today even though the
   API has not opened CORS yet (§5).
-- **Authenticated flows** (`/i`, `/a`, `/citas`, `/cuenta`, payment):
+- **Authenticated flows** (`/i`, `/a`, `/appointments`, `/account`, payment):
   **Client Components** + TanStack Query, calling the API from the browser
   with the Firebase ID token. These need the API's CORS allow-list
   (REDOC-362). Until it ships, develop against MSW or the dev-only proxy in
@@ -315,7 +323,7 @@ Every route path is built from one place, `app/lib/routes.ts` (the app has
   token in the link. Every authenticated write runs in the browser: the API
   is the backend and the Firebase token lives there.
 - **Metadata** per route with `generateMetadata`. Private pages (`/i`, `/a`,
-  `/citas`, `/cuenta`, payment) are `noindex, nofollow`.
+  `/appointments`, `/account`, payment) are `noindex, nofollow`.
 - Loading states are **skeletons with the final dimensions** (`loading.tsx`
   or Suspense boundaries), never spinners in the middle of empty space.
   Consequence to know: a page under a `loading.tsx` streams, so a
@@ -389,27 +397,73 @@ app declares these paths as App Links (Android) and Universal Links (iOS);
 when the app is installed, tapping them opens the app; when it is not, they
 open **this web**, which must render something useful.
 
-### Paths owned by both (the app opens them when installed)
+Every public link is a contract among three: this web serves the page and
+the AASA, the app claims the path and maps it to a screen, and the API
+writes it into its emails. This section is the one list of them; the app's
+docs point here instead of copying it.
 
-| Path | Who | On the web |
-| --- | --- | --- |
-| `/s/{specialistId}` | public | Full read-only profile (M8) + "Abrir en la app" |
-| `/i/{token}` | patient | Full invitation experience (M4) + "Abrir en la app" |
-| `/a/{appointmentId}` | patient (and specialist in the app) | Full appointment experience (M5) + "Abrir en la app" |
-| `/suscripcion` | specialist | Bridge only: the app handles it. Never render billing here |
-| `/home/*` | app internals | Bridge to the home / store; not a web route |
-| `/agenda`, `/agenda/{YYYY-MM-DD}`, `/especialidades`, `/perfil` | specialist (app v0.161.0, same session and role rules as `/suscripcion`) | Bridge only: "Abrir en la app" with the same path (`redoctor://redoctorapp.com/agenda/2026-10-08`); a malformed date opens today in the app |
+### Paths the app opens when installed
+
+| Path | For | On the web | Who sends it |
+| --- | --- | --- | --- |
+| `/s/{specialistId}` | public | Full read-only profile (M8) + "Abrir en la app" | the app («Compartir perfil»); emails 14 and 17 |
+| `/i/{token}` | patient | Full invitation experience (M4) + "Abrir en la app" | the app (the specialist's WhatsApp); the API's `invitationUrl` |
+| `/a/{appointmentId}` | patient (and specialist in the app) | Full appointment experience (M5) + "Abrir en la app" | the app (reminders, confirmation); emails 11–13 and 15 |
+| `/panel/subscription` | specialist | Bridge only: the app handles it. Never render billing here | billing emails 01–05 and 07–09 (REDOC-356) |
+| `/panel/agenda`, `/panel/agenda/{YYYY-MM-DD}` | specialist | Bridge; a malformed date opens today in the app | the daily summary, email 10 (REDOC-359) |
+| `/panel/specialties` | specialist | Bridge | email 16 (REDOC-360) |
+| `/panel/profile` | specialist | Bridge | email 18 (REDOC-360) |
+| `/home/*` | app internals | Bridge to the home / store; not a web route | the app's own paths |
+
+The specialist's pages live under `/panel/`, and the app opens
+**everything** there: one AASA entry (`/panel/*`) and one Android
+`pathPrefix="/panel/"`. `/panel` itself is the web's page with the app's
+options (§1). So a new specialist page under `/panel/` needs only the app's
+router and the web's bridge: no AASA, no manifest, no wait for Apple's CDN.
+In the app these links need a specialist's session (without one it asks to
+sign in; another role stays on its home). "Abrir en la app" uses the same
+path: `redoctor://redoctorapp.com/panel/agenda/2026-10-08`.
+
+Paths only the web serves that others write: the daily-summary opt-out
+`/daily-summary/unsubscribe?token=…` (the API's `url_baja`, REDOC-359), the
+payment `/pay` (the admin's `webPaymentUrl`, REDOC-357) and the home page
+(`/?origin=email-14`). Push notifications carry ids, not links.
+
+**A renamed path never dies.** Until 2026-10-12 the specialist's paths were
+Spanish (`/suscripcion`, `/agenda[/…]`, `/especialidades`, `/perfil`), the
+opt-out was `/resumen/baja`, and the API's `invitationUrl` still points at
+`/citas/invitacion/{token}` (REDOC-255), a path nobody served. The web
+redirects every old name for good (`next.config.ts`, 308, query kept). The
+AASA and the app keep the old specialist names only until every tester runs
+a copy of the app that knows `/panel/*`.
 
 Reserved for the app's internal paths: `/home`. Patient web routes
-therefore live under `/citas` and `/cuenta`, never under those segments.
+therefore live under `/appointments` and `/account`, never under those
+segments.
+
+#### Adding or renaming a public link
+
+1. **Web:** the page or bridge and its builder in `app/lib/routes.ts`;
+   outside `/panel/`, `universalLinkPaths` and the AASA too (a test keeps
+   them equal); a renamed path gets its redirect in `next.config.ts`;
+   `robots.ts`; the e2e.
+2. **App** (`redoctor-mobile-app`): `AppDeepLinks.resolve` and its test;
+   outside `/panel/`, the Android manifest too.
+3. **API:** the email templates (the app repo's `emails/`, zipped to
+   REDOC-354) and any link it builds in code (`invitationUrl`, `url_baja`).
+4. **The table above.**
+5. **In that order:** a copy of the app from before does not know a new
+   path, so the emails switch last.
 
 ### The payment route is NOT an app path
 
-The specialist pays on the web (M13). Its route (**name pending**, e.g.
-`/pagar`) must **never** appear in the AASA, in `assetlinks.json` or in the
-app's manifest, and the app never links to it — Apple's rules in Venezuela
-forbid the app from pointing to an external purchase. The billing emails
-offer it only when the API's `webPaymentUrl` has a value.
+The specialist pays on the web (M13). Its route (**name pending**; `/pay`
+for now) must **never** appear in the AASA, in `assetlinks.json` or in the
+app's manifest, nor under `/panel/`, where the app opens everything (the
+environment check refuses such a path), and the app never links to it —
+Apple's rules in Venezuela forbid the app from pointing to an external
+purchase. The billing emails offer it only when the API's `webPaymentUrl`
+has a value.
 
 ### The `.well-known` files (served from `public/`, byte-exact)
 
@@ -427,8 +481,9 @@ offer it only when the API's `webPaymentUrl` has a value.
           { "/": "/s/*" },
           { "/": "/i/*" },
           { "/": "/a/*" },
-          { "/": "/suscripcion" },
+          { "/": "/panel/*" },
           { "/": "/home/*" },
+          { "/": "/suscripcion" },
           { "/": "/agenda" },
           { "/": "/agenda/*" },
           { "/": "/especialidades" },
@@ -441,7 +496,9 @@ offer it only when the API's `webPaymentUrl` has a value.
 ```
 
 `app/lib/deep-links.ts` (`universalLinkPaths`) lists the same paths in the
-same order, and a unit test fails if the two drift apart.
+same order, and a unit test fails if the two drift apart. The last five are
+the old specialist names, kept for copies of the app from before
+2026-10-12.
 
 `/.well-known/assetlinks.json` — package `com.redoctor.mobileapp`, relation
 `delegate_permission/common.handle_all_urls`, and the SHA-256 fingerprints
@@ -452,7 +509,7 @@ signing plus the upload and debug keystores.
 
 Rules: Android verifies the domain from `assetlinks.json` alone (routes live
 in the app's manifest); iOS reads the **routes from the AASA**, so a new
-specialist bridge path needs the AASA updated **and** Apple's CDN to pick it
+path outside `/panel/` needs the AASA updated **and** Apple's CDN to pick it
 up (`https://app-site-association.cdn-apple.com/a/v1/redoctorapp.com`) —
 verify with `curl` after deploying, and expect a reinstall of the app on the
 test iPhone. Both files are versioned here and have an e2e test that fetches
@@ -580,7 +637,8 @@ two codebases speak the same language): `title-xxxl` 60, `title-xxl` 42,
 
 ### Radii, shadows, motion
 
-- Radii: `sm` 8 (alerts), `md` 10 (inputs, 40 px tall), `lg` 12 (compact
+- Radii: `xs` 2 (checkboxes, as the app's Material checkbox), `sm` 8
+  (alerts), `md` 10 (inputs, 40 px tall), `lg` 12 (compact
   cards), `xl` 20 (cards, inked containers), `2xl` 30 (sheet top corners),
   `full` (pills, chips).
 - Shadows (black at the given alpha):
@@ -718,6 +776,14 @@ accent / neutral / warning / error tones), `Avatar`, `StarsRating`,
   `assets/translations/es.json`** (e.g. `appointments.confirm.title`) so
   copy can be shared with the app. Dates and numbers through `Intl` with
   `es-VE` and `America/Caracas`. No string literal reaches the user.
+  Client components only see the namespaces sent to the browser: the
+  ones every page needs (`clientNamespaces` in
+  `app/lib/i18n/client-messages.ts`, sent by the root layout) and, for a
+  page whose client components read more, its own (`pageNamespaces`,
+  wrapped in `MessagesScope` from `app/ui`). A client component reading a
+  namespace that was not sent shows the raw key in production while its
+  unit tests pass (they load the whole catalog): when a client component
+  reads a namespace, check it is sent. Server components may read any.
 - **Forms**: react-hook-form + zod schemas from `app/lib/schemas`;
   validate on blur, show the error under the field, disable nothing;
   Venezuelan ID (`V/E/P/J/G` + 6–8 digits) and phone (`+58`) validators live
@@ -828,7 +894,7 @@ Environments: `development` (local), `preview` (Vercel PR), `production`
 | `NEXT_PUBLIC_ANDROID_PACKAGE` | all | `com.redoctor.mobileapp` |
 | `NEXT_PUBLIC_SUPPORT_WHATSAPP` | all | `Redoctor\|+584227362867` (`Label\|number`); provisional until REDOC-357 |
 | `NEXT_PUBLIC_SUPPORT_PHONES` | all | `Soporte 1\|+584145598216,Soporte 2\|+584245582129`; provisional until REDOC-357 |
-| `NEXT_PUBLIC_PAYMENT_PATH` | all | `/pagar` until the final name is decided (§13) |
+| `NEXT_PUBLIC_PAYMENT_PATH` | all | `/pay` until the final name is decided (§13) |
 | `API_PROXY_TARGET` | development only | Dev-only proxy for authenticated calls until CORS (REDOC-362); must be absent in preview/production. Without it, `next dev` proxies to `NEXT_PUBLIC_API_URL` |
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | GitHub Actions secret | Only if previews have Deployment Protection: Playwright and Lighthouse use it for one request and browse with Vercel's cookie |
 | `PLAYWRIGHT_BASE_URL` · `E2E_SPECIALIST_ID` | testing | Run the e2e suite against a deployed URL; the public profile the e2e and Lighthouse runs use (api-dev's test profile by default) |
@@ -842,8 +908,12 @@ written out in full, or Next.js does not inline it).
 
 ## 13. Open decisions — ask, don't assume
 
-1. The payment route's final name (`/pagar` or other) and whether changing
-   plan and cancelling enter M13.
+1. The payment route's final name (`/pay`, the English of the first
+   `/pagar`, or another) and whether changing plan and cancelling enter
+   M13. Nothing outside the web fixes it: the API stores the full address
+   the admin types (`webPaymentUrl`, REDOC-357, `null` today); only the
+   examples in REDOC-356 and in the app's `emails/build.dart` still say
+   `/pagar`.
 2. The page background: `#FDFDFD` (token) vs `#FBF8FF` (what the app paints).
 3. PostHog event list and funnel definition (M12).
 4. Patient screens design (Figma) — the designer is working on them; the
@@ -859,8 +929,12 @@ written out in full, or Next.js does not inline it).
    Decide the budget (and whether Sentry and PostHog count) before M12.
 9. The Android `intent://` scheme: `https` (§6 text) or `redoctor` (what the
    prototype shipped and the port does).
-10. The daily-summary opt-out link: the web serves `/resumen/baja?token=…`;
-    the API's email must use that exact format (to confirm with Heyscar).
+10. The daily-summary opt-out link: the web serves
+    `/daily-summary/unsubscribe?token=…` (the API's own words) and redirects
+    the first name, `/resumen/baja`. REDOC-359 must be updated so the API's
+    email builds the new one (`url_baja`), confirmed by Heyscar; the
+    endpoints (`POST /notifications/daily-summary/unsubscribe|subscribe`)
+    are in the OpenAPI already.
 11. Figma vs this file: the Snackbar is filled with color (blue, green, red,
     yellow, dark grey with white text) while our Toast is a light card; the
     «secondary» button is blue outline in Figma and green in §8.
@@ -871,8 +945,9 @@ written out in full, or Next.js does not inline it).
   `tokens.css`.
 - **iOS and the specialist bridges:** no change to the prototype. The
   domain moves to this web as soon as possible, and this web must be ready
-  for it (§6 "Domain cutover"). Until then iPhones open `/agenda`,
-  `/especialidades` and `/perfil` in the old web.
+  for it (§6 "Domain cutover"). Until then iPhones open the specialist's
+  paths in the old web (`/panel/*` since 2026-10-12; `/agenda`,
+  `/especialidades` and `/perfil` before).
 - **Unknown ids under a valid route answer 200 + `noindex`:** accepted for
   now (see Improvements).
 - **First steps are development:** Vercel, Sentry, PostHog, the GitHub
@@ -994,7 +1069,7 @@ written out in full, or Next.js does not inline it).
 
 ### Decided (2026-10-12)
 
-- **The session (M2) as built:** `/entrar` is a page, not a sheet (it has a
+- **The session (M2) as built:** `/sign-in` is a page, not a sheet (it has a
   URL, carries `redirect` and serves from the emails); its card mirrors the
   app's login: «Inicia sesión de manera rápida y segura», the two provider
   buttons in their brands' colours (Google white with the «G», Apple black
@@ -1002,10 +1077,9 @@ written out in full, or Next.js does not inline it).
   «Última vez» chip, the legal line as text until M10 links it. A patient
   stays on the landing; a specialist lands on `/panel` (his pick of
   2026-10-12), the page with the app's
-  options; an account with no facet at all (a sign-in without a sign-up)
-  is told to complete its registration in the app for now (M3 brings the
-  web's sign-up), with a word about Apple's private email when the address
-  is a relay one. The landing's bar shows «Entrar», or the avatar with its
+  options; an account with no sign-up behind it goes to `/sign-up` (M3),
+  with a word about Apple's private email when the address is a relay
+  one. The landing's bar shows «Entrar», or the avatar with its
   menu, from tablets up, and the phone menu holds the same.
 - **Firebase SDK 13 (2026-10-12):** the major's breaking changes are all in
   AI Logic (`@firebase/ai` 3.0.0); App and Auth moved by a patch, so the
@@ -1021,6 +1095,66 @@ written out in full, or Next.js does not inline it).
   (M3) is for patients only: a specialist signs up in the app, so the web
   points them to support (phone, WhatsApp) — or to the store's QR once the
   app is published.
+- **The sign-up (M3) as built (2026-10-12):** `/sign-up?redirect=`, in
+  `(auth)`, needs a session (a stranger signs in first and comes back,
+  query included). What it asks comes from the account
+  (`app/lib/auth/sign-up.ts`): a brand-new account says who it is
+  («¿Quién eres?», the app's two cards); a patient fills the app's form —
+  names and the three consents (`POST /identity/register`) — and, only
+  when the flow needs it (claiming an invitation: `redirect` is `/i/…`),
+  the personal data of the app's «Finalizar registro» on the same screen
+  (`POST /identity/complete-registration`, allowed once the account is
+  `PENDING_COMPLETE_PATIENT`), the document checked against other accounts
+  first (`POST /identity/public/check-document`), as the app does. Then a
+  fresh ID token (its claims carry the registration status) and a fresh
+  `/me`; the names alone end with a toast and the way back, the personal
+  data with «¡Todo listo!» and «Reclamar mi cita». Both writes go through
+  the write-once guard; a 409 on the registration and a 403 on the
+  completion read `/me` and count as done if the account moved past that
+  step. A specialist — new, or with an open sign-up (`/panel` shows it
+  too) — gets `AppAccess`: while the app is in testing, WhatsApp (a
+  written message that says nothing about the person: the link passes
+  through wa.me) and the support phones (`NEXT_PUBLIC_SUPPORT_*`,
+  provisional until REDOC-357); once the store ids exist, a QR code per
+  store on a computer (drawn on the server with `uqr`, 7.6 KB gzip, no
+  dependencies: the owner asked for the QR) and the store's button on a
+  phone. Where the web differs from the app's form, on purpose and to
+  confirm: names follow the API (letters with spaces, hyphens or
+  apostrophes, 1–100) where the app wants 3+ letters and no hyphens; the
+  document types and length follow the API (V, E, P, J, G; 6–8 digits) —
+  the app also offers R and 9 digits, which the API refuses; the phone is a
+  Venezuelan mobile (+58, 412/414/416/422/424/426) where the app has a
+  country picker; the sex is not preselected (the app preselects
+  «Hombre») and offers the app's two options; an adult (18+) only, as the
+  app. Errors the API may answer with codes we do not know yet (a phone
+  already in use) say «No pudimos guardar tus datos» and reach Sentry.
+- **Two M2 slips fixed with M3 (2026-10-12):** the sign-in buttons read
+  Firebase's failures from `apiErrors`, which no page sent to the browser
+  (a failed sign-in would have shown a raw key): `/sign-in` now sends it
+  (`pageNamespaces.signIn`); the admin's note on `/panel` read
+  `specialistHome` in the browser: it now gets its text from the server.
+- **English URLs (2026-10-12, owner):** every route of the web is English,
+  the paths shared with the app included, and the path says who it is for
+  (§3.8, §6). `/sign-in` and `/sign-up` were `/entrar` and `/registro`
+  (never deployed); the modules to come get `/appointments`, `/account`,
+  `/privacy`, `/terms`, `/delete-account` and `/pay` (§13.1); the
+  specialist's pages the app opens moved under `/panel/` (`/suscripcion`,
+  `/agenda`, `/especialidades` and `/perfil` became `/panel/subscription`,
+  `/panel/agenda`, `/panel/specialties` and `/panel/profile`); the opt-out
+  `/resumen/baja` became `/daily-summary/unsubscribe`. `/s`, `/i` and `/a`
+  stay: short for chats and already shared. Old names redirect for good.
+  The change runs in order (§6): this web first (done), then the app (both
+  names, the manifest's `/panel/` prefix, the email templates zipped to
+  REDOC-354), then the API. The API's part: the new templates, `url_baja`
+  (REDOC-359), `webPaymentUrl` refusing every path the app opens
+  (REDOC-357), and the one link it already builds in code: `invitationUrl`,
+  `${APP_PUBLIC_URL}/citas/invitacion/{token}` (REDOC-255, finished; the
+  appointments and REDOC-228's endpoint return it), which becomes
+  `/i/{token}`; the app uses the token instead since v0.120.2, so nothing
+  broke. REDOC-349, the
+  `link.redoctorapp.com` plan, is superseded. Every other link the API
+  must change is still only in tickets: no email has been sent yet
+  (REDOC-354).
 
 ### Improvements noted (not scheduled)
 

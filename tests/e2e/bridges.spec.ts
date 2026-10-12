@@ -33,19 +33,22 @@ async function expectOpensInApp(page: Page, path: string) {
 
 const bridges = [
   {
-    path: '/suscripcion',
+    path: '/panel/subscription',
     heading: 'Tu suscripción se abre en la app de Redoctor',
   },
-  { path: '/agenda', heading: 'Tu agenda se abre en la app de Redoctor' },
+  { path: '/panel/agenda', heading: 'Tu agenda se abre en la app de Redoctor' },
   {
-    path: '/agenda/2026-10-01',
+    path: '/panel/agenda/2026-10-01',
     heading: 'Tu agenda se abre en la app de Redoctor',
   },
   {
-    path: '/especialidades',
+    path: '/panel/specialties',
     heading: 'Tus especialidades se abren en la app de Redoctor',
   },
-  { path: '/perfil', heading: 'Tu perfil se abre en la app de Redoctor' },
+  {
+    path: '/panel/profile',
+    heading: 'Tu perfil se abre en la app de Redoctor',
+  },
   {
     path: '/home/home/my-subscription',
     heading: 'Esto se abre en la app de Redoctor',
@@ -71,17 +74,45 @@ for (const bridge of bridges) {
 }
 
 test('the link to the app never carries the origin tag', async ({ page }) => {
-  await page.goto('/suscripcion?origin=email-12');
+  await page.goto('/panel/subscription?origin=email-12');
 
-  await expectOpensInApp(page, '/suscripcion');
+  await expectOpensInApp(page, '/panel/subscription');
 });
 
 test('a bridge has no accessibility violations', async ({ page }) => {
-  await page.goto('/suscripcion');
+  await page.goto('/panel/subscription');
   await page.getByRole('link', { name: 'Abrir en la app' }).waitFor();
 
   expect(await auditAccessibility(page)).toEqual([]);
 });
+
+// A renamed path (AGENTS.md §6) answers for good with a permanent redirect
+// that keeps the query: a link already sent never breaks.
+const renamed = [
+  ['/suscripcion', '/panel/subscription'],
+  ['/agenda', '/panel/agenda'],
+  ['/agenda/2026-10-01', '/panel/agenda/2026-10-01'],
+  ['/especialidades', '/panel/specialties'],
+  ['/perfil?origin=email-18', '/panel/profile?origin=email-18'],
+  [
+    '/resumen/baja?token=forged-in-e2e',
+    '/daily-summary/unsubscribe?token=forged-in-e2e',
+  ],
+  ['/citas/invitacion/forged-in-e2e', '/i/forged-in-e2e'],
+] as const;
+
+for (const [from, to] of renamed) {
+  test(`${from} redirects for good to ${to}`, async ({ request }) => {
+    const response = await request.get(from, { maxRedirects: 0 });
+
+    expect(response.status()).toBe(308);
+    const location = new URL(
+      response.headers().location ?? '',
+      'http://localhost',
+    );
+    expect(`${location.pathname}${location.search}`).toBe(to);
+  });
+}
 
 // The root loading state streams every page, so a notFound() that runs in
 // the page arrives after the 200 is sent: the not-found page renders and
@@ -89,7 +120,7 @@ test('a bridge has no accessibility violations', async ({ page }) => {
 test('an agenda path the app does not know shows the not-found page', async ({
   page,
 }) => {
-  await page.goto('/agenda/2026-10-01/extra');
+  await page.goto('/panel/agenda/2026-10-01/extra');
 
   await expect(
     page.getByRole('heading', { level: 1, name: 'Esta página no existe' }),
@@ -102,7 +133,7 @@ test('an agenda path the app does not know shows the not-found page', async ({
 
 test.describe('daily-summary opt-out', () => {
   test('without a token it says the link is not valid', async ({ page }) => {
-    await page.goto('/resumen/baja');
+    await page.goto('/daily-summary/unsubscribe');
 
     await expect(
       page.getByRole('heading', {
@@ -119,7 +150,7 @@ test.describe('daily-summary opt-out', () => {
   test('a forged token changes nothing and says so (api-dev answers ERR_8004)', async ({
     page,
   }) => {
-    await page.goto('/resumen/baja?token=forged-in-e2e');
+    await page.goto('/daily-summary/unsubscribe?token=forged-in-e2e');
     await expect(
       page.getByRole('heading', { name: 'Resumen diario de tu agenda' }),
     ).toBeVisible();

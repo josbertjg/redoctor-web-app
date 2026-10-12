@@ -22,6 +22,8 @@ type RequireSessionProps = {
   facet?: SessionFacet;
   /** The segment's skeleton, shown until the person is known (never a flash of the wrong UI). */
   fallback: ReactNode;
+  /** Where to come back after signing in; the page's path by default (a page whose query matters passes it whole). */
+  returnTo?: string | undefined;
   children: ReactNode;
 };
 
@@ -40,6 +42,7 @@ function isAllowed(account: Account, facet: SessionFacet | undefined) {
 export function RequireSession({
   facet,
   fallback,
+  returnTo,
   children,
 }: RequireSessionProps) {
   const t = useTranslations();
@@ -47,10 +50,11 @@ export function RequireSession({
   const router = useRouter();
   const pathname = usePathname();
   const signedOut = session.status === 'signed-out';
+  const back = returnTo ?? pathname;
 
   useEffect(() => {
-    if (signedOut) router.replace(routes.signIn(pathname));
-  }, [signedOut, pathname, router]);
+    if (signedOut) router.replace(routes.signIn(back));
+  }, [signedOut, back, router]);
 
   if (session.status !== 'signed-in') return fallback;
 

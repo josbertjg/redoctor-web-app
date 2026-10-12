@@ -7,16 +7,11 @@ import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 
 import Login from '@material-symbols/svg-400/rounded/login.svg?svgr';
-import PersonOff from '@material-symbols/svg-400/rounded/person_off.svg?svgr';
 import { useTranslations } from 'next-intl';
 
 import { track } from '@/app/lib/analytics/track';
 import { destinationAfterSignIn } from '@/app/lib/auth/destination';
 import type { AuthProvider } from '@/app/lib/auth/last-provider';
-import {
-  isApplePrivateRelayEmail,
-  needsSignUp,
-} from '@/app/lib/schemas/identity';
 
 import { SignInButtons } from '@/app/ui/auth/sign-in-buttons';
 import { Button } from '@/app/ui/button';
@@ -34,10 +29,9 @@ type SignInCardProps = {
 /*
  * The sign-in card: the two provider buttons under a short promise, and the
  * legal line. Once Firebase has the person, the API says who they are
- * (`/me`, through the session): a patient goes back where they came from or
- * stays on the landing, a specialist goes to the page with the app's
- * options, and an account with no sign-up behind it is told so — with a
- * word about Apple's private email when that is the likely cause.
+ * (`/me`, through the session) and they move on: an account with no
+ * sign-up behind it to `/sign-up` (M3), keeping the way back; a patient
+ * back where they came from or to the landing; a specialist to `/panel`.
  */
 export function SignInCard({ redirect }: SignInCardProps) {
   const t = useTranslations('auth');
@@ -48,43 +42,15 @@ export function SignInCard({ redirect }: SignInCardProps) {
   /** The provider the person just tapped; none for a session that was already there. */
   const [chosen, setChosen] = useState<AuthProvider | null>(null);
 
-  const { account, user, status, accountStatus } = session;
-  // A sign-in with no sign-up behind it (the API says so for a brand-new
-  // account): the sign-up form in M3; the notice until then.
-  const noFacet = account !== null && needsSignUp(account);
+  const { account, status, accountStatus } = session;
 
   useEffect(() => {
-    if (account === null || noFacet) return;
+    if (account === null) return;
     if (chosen !== null) {
       track('web_signin_completed', { provider: chosen, role: account.role });
     }
     router.replace(destinationAfterSignIn(account, redirect) as Route);
-  }, [account, chosen, noFacet, redirect, router]);
-
-  const signOut = () => {
-    void session.signOut();
-  };
-
-  if (noFacet) {
-    return (
-      <EmptyState
-        headingLevel={1}
-        icon={PersonOff}
-        title={t('noFacet.title')}
-        description={
-          isApplePrivateRelayEmail(user?.email)
-            ? `${t('noFacet.description')} ${t('noFacet.privateEmail')}`
-            : t('noFacet.description')
-        }
-        action={
-          <Button shape="soft" variant="white" onClick={signOut}>
-            {t('noFacet.switchAccount')}
-          </Button>
-        }
-        className="max-w-md"
-      />
-    );
-  }
+  }, [account, chosen, redirect, router]);
 
   if (status === 'signed-in' && accountStatus === 'error') {
     return (
@@ -98,8 +64,14 @@ export function SignInCard({ redirect }: SignInCardProps) {
             <Button shape="soft" onClick={session.retryAccount}>
               {common('retry')}
             </Button>
-            <Button shape="soft" variant="white" onClick={signOut}>
-              {t('noFacet.switchAccount')}
+            <Button
+              shape="soft"
+              variant="white"
+              onClick={() => {
+                void session.signOut();
+              }}
+            >
+              {t('switchAccount')}
             </Button>
           </>
         }

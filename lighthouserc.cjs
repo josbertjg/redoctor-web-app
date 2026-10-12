@@ -16,7 +16,7 @@ const specialistId =
   process.env.E2E_SPECIALIST_ID ?? 'a0af9566-a53d-4887-8d16-1dfc589c2f3d';
 const cookie = process.env.PREVIEW_COOKIE;
 
-const pages = ['/', `/s/${specialistId}`, '/suscripcion'];
+const pages = ['/', `/s/${specialistId}`, '/panel/subscription'];
 
 module.exports = {
   ci: {

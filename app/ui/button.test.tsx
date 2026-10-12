@@ -57,12 +57,12 @@ describe('Button', () => {
   it('renders its child element with asChild', () => {
     render(
       <Button asChild>
-        <a href="/citas">Ver mis citas</a>
+        <a href="/appointments">Ver mis citas</a>
       </Button>,
     );
     const link = screen.getByRole('link', { name: 'Ver mis citas' });
 
-    expect(link).toHaveAttribute('href', '/citas');
+    expect(link).toHaveAttribute('href', '/appointments');
     expect(link).not.toHaveAttribute('type');
     expect(link).toHaveAttribute('data-slot', 'button');
   });
