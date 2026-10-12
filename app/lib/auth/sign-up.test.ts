@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 
-import { flowNeedsPersonalData, planSignUp } from './sign-up';
+import { flowNeedsPersonalData, invitationOf, planSignUp } from './sign-up';
 import { meResponseSchema, toAccount } from '../schemas/identity';
 
 const account = (overrides: Record<string, unknown>) =>
@@ -75,5 +75,29 @@ describe('planSignUp', () => {
   it('asks nothing of a complete account', () => {
     expect(planSignUp(account({}), '/i/tok')).toEqual({ step: 'done' });
     expect(planSignUp(account({}), null)).toEqual({ step: 'done' });
+  });
+});
+
+describe('invitationOf', () => {
+  it('names the invitation a sign-up comes from and whether it is theirs', () => {
+    expect(invitationOf('/i/tok-1?for=self')).toEqual({
+      token: 'tok-1',
+      forSelf: true,
+    });
+    expect(invitationOf('/i/tok-1?for=dependent')).toEqual({
+      token: 'tok-1',
+      forSelf: false,
+    });
+    expect(invitationOf('/i/tok-1')).toEqual({
+      token: 'tok-1',
+      forSelf: false,
+    });
+  });
+
+  it('is nobody’s for any other path', () => {
+    expect(invitationOf('/a/abc')).toBeNull();
+    expect(invitationOf('/i/tok/extra')).toBeNull();
+    expect(invitationOf('//evil.example/i/tok')).toBeNull();
+    expect(invitationOf(null)).toBeNull();
   });
 });

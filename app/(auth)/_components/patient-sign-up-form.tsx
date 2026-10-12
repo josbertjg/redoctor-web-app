@@ -39,10 +39,10 @@ import {
   isDocumentAvailable,
   registerPatient,
 } from '@/app/lib/queries/identity';
-import { cn } from '@/app/lib/utils';
 
 import { Button } from '@/app/ui/button';
 import { Checkbox } from '@/app/ui/checkbox';
+import { ChoiceCards } from '@/app/ui/choice-cards';
 import { FieldError } from '@/app/ui/field-error';
 import { TextField } from '@/app/ui/text-field';
 
@@ -193,7 +193,6 @@ export function PatientSignUpForm({
   const t = useTranslations();
   const queryClient = useQueryClient();
   const formErrorId = useId();
-  const sexErrorId = useId();
   const resolver = useSignUpResolver(parts);
   const [today] = useState(() => ({
     max: latestAdultBirthDate(),
@@ -347,37 +346,15 @@ export function PatientSignUpForm({
             }
             {...register('documentNumber')}
           />
-          <fieldset
-            aria-describedby={errors.sex ? sexErrorId : undefined}
-            className="flex flex-col gap-2"
-          >
-            <legend className="mb-2 text-body-xxs font-medium text-text-primary">
-              {t('sex')}
-            </legend>
-            <div className="grid grid-cols-2 gap-3">
-              {offeredSexes.map((sex) => (
-                <label
-                  key={sex}
-                  className={cn(
-                    'flex min-h-touch cursor-pointer items-center justify-center rounded-md border-2 border-transparent bg-pure-white px-3 text-body-xs text-text-primary shadow-sm transition-colors duration-fast ease-house',
-                    'has-checked:border-primary has-checked:bg-blue-50 has-checked:text-primary has-focus-visible:ring-3 has-focus-visible:ring-ring/50',
-                    errors.sex && 'border-error',
-                  )}
-                >
-                  {/* The group carries the error (`aria-describedby`): a
-                      radio cannot be marked invalid on its own. */}
-                  <input
-                    type="radio"
-                    value={sex}
-                    className="sr-only"
-                    {...register('sex')}
-                  />
-                  {t(sex === 'MALE' ? 'male' : 'female')}
-                </label>
-              ))}
-            </div>
-            <FieldError id={sexErrorId} message={errors.sex?.message} />
-          </fieldset>
+          <ChoiceCards
+            legend={t('sex')}
+            options={offeredSexes.map((sex) => ({
+              value: sex,
+              label: t(sex === 'MALE' ? 'male' : 'female'),
+            }))}
+            inputProps={register('sex')}
+            error={errors.sex?.message}
+          />
         </>
       ) : null}
 

@@ -1,4 +1,5 @@
 import { identityHandlers } from './identity';
+import { invitationsHandlers } from './invitations';
 import { notificationsHandlers } from './notifications';
 import { reviewsHandlers } from './reviews';
 import { specialistsHandlers } from './specialists';
@@ -16,4 +17,5 @@ export const handlers: HttpHandler[] = [
   ...reviewsHandlers,
   ...specialtiesHandlers,
   ...notificationsHandlers,
+  ...invitationsHandlers,
 ];

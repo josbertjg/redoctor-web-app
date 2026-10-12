@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   birthDateProblem,
   earliestBirthDate,
+  formatBirthDate,
   latestAdultBirthDate,
   todayInCaracas,
   yearsBefore,
@@ -34,5 +35,19 @@ describe('date of birth', () => {
     expect(birthDateProblem('15/01/1990', today)).toBe('invalid');
     expect(earliestBirthDate(today)).toBe('1906-10-12');
     expect(birthDateProblem('1900-01-01', today)).toBe('invalid');
+  });
+
+  it("takes anyone already born for someone in one's care", () => {
+    const today = '2026-10-12';
+    expect(birthDateProblem('2020-03-01', today, { adult: false })).toBeNull();
+    expect(birthDateProblem('2026-10-12', today, { adult: false })).toBeNull();
+    expect(birthDateProblem('2026-10-13', today, { adult: false })).toBe(
+      'invalid',
+    );
+    expect(birthDateProblem('2020-03-01', today)).toBe('tooYoung');
+  });
+
+  it('writes a date of birth as the app does', () => {
+    expect(formatBirthDate('1990-05-14')).toBe('14/05/1990');
   });
 });

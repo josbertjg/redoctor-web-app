@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { meResponseSchema, toAccount } from '@/app/lib/schemas/identity';
 
+import { invitationTokens } from '@/tests/factories/invitations';
 import { renderWithIntl } from '@/tests/render';
 
 import { SessionContext, type Session } from '@/app/hooks/use-session';
@@ -14,6 +15,7 @@ import {
   buildMeResponse,
   buildNewAccountMeResponse,
   buildSpecialistMeResponse,
+  patientFacet,
   specialistFacet,
 } from '../../../tests/factories/identity';
 import { validToken } from '../../../tests/msw/handlers/identity';
@@ -95,6 +97,51 @@ describe('SignUpFlow', () => {
     expect(screen.getByRole('textbox', { name: 'Nombre' })).toBeInTheDocument();
     expect(
       screen.getByRole('textbox', { name: 'Cédula de identidad' }),
+    ).toBeInTheDocument();
+  });
+
+  it('starts from the invitation’s data when the appointment is theirs', async () => {
+    renderFlow(
+      session(
+        buildMeResponse({
+          registrationStatus: 'PENDING_COMPLETE_PATIENT',
+          profiles: {
+            patient: patientFacet({ status: 'PENDING_PERSONAL_DATA' }),
+            specialist: { exists: false },
+          },
+        }),
+      ),
+      `/i/${invitationTokens.pending}?for=self`,
+    );
+
+    expect(
+      await screen.findByText(
+        'Para reclamar la cita solo falta completar tus datos. Ya pusimos los de la invitación: revísalos antes de seguir.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText('Fecha de nacimiento')).toHaveValue(
+      '1990-05-14',
+    );
+    expect(screen.getByRole('textbox', { name: 'Teléfono' })).toHaveValue(
+      '414 123 4567',
+    );
+    expect(
+      screen.getByRole('textbox', { name: 'Cédula de identidad' }),
+    ).toHaveValue('12345678');
+    expect(screen.getByRole('radio', { name: 'Mujer' })).toBeChecked();
+  });
+
+  it('never fills someone else’s data in a representative’s sign-up', () => {
+    renderFlow(
+      session(buildNewAccountMeResponse()),
+      `/i/${invitationTokens.pending}?for=dependent`,
+    );
+
+    expect(
+      screen.getByRole('textbox', { name: 'Cédula de identidad' }),
+    ).toHaveValue('');
+    expect(
+      screen.getByText('Para reclamar la cita solo falta completar tus datos.'),
     ).toBeInTheDocument();
   });
 

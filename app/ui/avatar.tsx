@@ -9,8 +9,10 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { initialsOf } from '@/app/lib/format/names';
 import { cn } from '@/app/lib/utils';
 
+// The initials in grey-700: 6:1 on the surface (grey-600 measured 4.1:1,
+// under AA, the day a specialist without a photo appeared, 2026-10-12).
 const avatarVariants = cva(
-  'relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-variant font-semibold text-text-secondary select-none',
+  'relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-variant font-semibold text-grey-700 select-none',
   {
     variants: {
       size: {

@@ -6,12 +6,15 @@ import type { Route } from 'next';
 
 import { useRouter } from 'next/navigation';
 
+import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
 import { destinationAfterSignIn } from '@/app/lib/auth/destination';
-import { planSignUp } from '@/app/lib/auth/sign-up';
+import { invitationOf, planSignUp } from '@/app/lib/auth/sign-up';
+import { invitationQueryOptions } from '@/app/lib/queries/invitations';
 import { routes } from '@/app/lib/routes';
 import { isApplePrivateRelayEmail } from '@/app/lib/schemas/identity';
+import { personalDataFrom, toInvitation } from '@/app/lib/schemas/invitations';
 
 import { Button } from '@/app/ui/button';
 import { toast } from '@/app/ui/toast';
@@ -37,6 +40,8 @@ type SignUpFlowProps = {
  * (app/lib/auth/sign-up.ts). A brand-new account says who it is; a patient
  * fills the form; a specialist is shown the way to the app, where their
  * sign-up happens. Done, the person goes back to where they were going.
+ * Claiming an invitation that is theirs (M4: `/i/{token}?for=self`), the
+ * form starts from the invitation's data, as the app's prefill does.
  */
 export function SignUpFlow({ redirect, joinApp, finishApp }: SignUpFlowProps) {
   const t = useTranslations();
@@ -46,6 +51,13 @@ export function SignUpFlow({ redirect, joinApp, finishApp }: SignUpFlowProps) {
   const [role, setRole] = useState<SignUpRole | null>(null);
   const [finished, setFinished] = useState(false);
 
+  const claim = invitationOf(redirect);
+  const invitation = useQuery({
+    ...invitationQueryOptions(claim?.token ?? ''),
+    enabled: claim?.forSelf === true,
+  });
+  const waitingForInvitation = claim?.forSelf === true && invitation.isPending;
+
   const plan = account === null ? null : planSignUp(account, redirect);
   const leaving = plan?.step === 'done' && !finished;
 
@@ -54,7 +66,13 @@ export function SignUpFlow({ redirect, joinApp, finishApp }: SignUpFlowProps) {
     router.replace(destinationAfterSignIn(account, redirect) as Route);
   }, [leaving, account, redirect, router]);
 
-  if (account === null || user === null || plan === null || leaving) {
+  if (
+    account === null ||
+    user === null ||
+    plan === null ||
+    leaving ||
+    waitingForInvitation
+  ) {
     return <SignUpSkeleton />;
   }
 
@@ -116,8 +134,17 @@ export function SignUpFlow({ redirect, joinApp, finishApp }: SignUpFlowProps) {
     : parts.personalData
       ? t('signUp.claimTitle')
       : t('signUp.title');
+  const defaults =
+    parts.personalData && invitation.data
+      ? personalDataFrom(toInvitation(invitation.data))
+      : undefined;
+  const prefilled = defaults !== undefined && Object.keys(defaults).length > 0;
   const description = parts.personalData
-    ? t('finishPatientSignup.toClaim')
+    ? t(
+        prefilled
+          ? 'finishPatientSignup.toClaimPrefilled'
+          : 'finishPatientSignup.toClaim',
+      )
     : t('auth.signupPatientDescription');
 
   return (
@@ -126,6 +153,7 @@ export function SignUpFlow({ redirect, joinApp, finishApp }: SignUpFlowProps) {
         <PatientSignUpForm
           user={user}
           parts={parts}
+          defaults={defaults}
           submitLabel={parts.personalData ? t('finish') : t('continue')}
           onDone={() => {
             if (parts.personalData) {

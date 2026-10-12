@@ -64,12 +64,24 @@ export function earliestBirthDate(today = todayInCaracas()): string {
   return yearsBefore(today, oldestAge);
 }
 
+/** «14/05/1990», as the app shows a date of birth (a calendar date: never shifted). */
+export function formatBirthDate(value: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : value;
+}
+
+/**
+ * What is wrong with a date of birth. The account holder must be an adult,
+ * as in the app; someone in their care may be any age (`adult: false`), as
+ * long as they were born already.
+ */
 export function birthDateProblem(
   value: string,
   today = todayInCaracas(),
+  { adult = true }: { adult?: boolean } = {},
 ): BirthDateProblem | null {
   if (value === '') return 'empty';
   if (!isRealDate(value) || value < earliestBirthDate(today)) return 'invalid';
-  if (value > latestAdultBirthDate(today)) return 'tooYoung';
-  return null;
+  if (adult) return value > latestAdultBirthDate(today) ? 'tooYoung' : null;
+  return value > today ? 'invalid' : null;
 }

@@ -19,6 +19,11 @@ export type AnalyticsEvents = {
   web_signout: Record<string, never>;
   /** A patient's sign-up step done on the web: the names, the personal data. */
   web_signup_completed: { step: 'register' | 'personal_data' };
+  /** An invitation claimed (M4): for oneself or for someone in one's care, and confirmed in the same step or not. */
+  web_invitation_claimed: {
+    relationship: 'self' | 'dependent';
+    confirmed: boolean;
+  };
 };
 
 export type AnalyticsEventName = keyof AnalyticsEvents;

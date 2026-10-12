@@ -42,9 +42,9 @@ describe('isAppOwnedPath', () => {
     expect(isAppOwnedPath('/home/home/my-subscription')).toBe(true);
   });
 
-  it('keeps the names older copies of the app know', () => {
-    expect(isAppOwnedPath('/suscripcion')).toBe(true);
-    expect(isAppOwnedPath('/agenda/2026-10-01')).toBe(true);
+  it('no longer claims the Spanish names, which only redirect now', () => {
+    expect(isAppOwnedPath('/suscripcion')).toBe(false);
+    expect(isAppOwnedPath('/agenda/2026-10-01')).toBe(false);
   });
 
   it('leaves web-only paths alone, /panel itself included', () => {

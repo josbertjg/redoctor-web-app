@@ -500,5 +500,65 @@
     }
   },
   "retry": "Reintentar",
-  "close": "Cerrar"
+  "close": "Cerrar",
+  "appointments": {
+    "invitation": {
+      "title": "Invitación a una cita",
+      "invitedPatient": "Paciente invitado",
+      "loadError": "No pudimos abrir la invitación",
+      "loadErrorDescription": "Puede ser tu conexión o un problema de nuestro lado. Inténtalo de nuevo en un momento.",
+      "notFound": "Esta invitación no existe o el enlace es incorrecto",
+      "notFoundDescription": "Revisa que el enlace esté completo o pídele al especialista que te lo envíe de nuevo.",
+      "whoIsItFor": "¿Para quién es esta cita?",
+      "forMe": "Para mí",
+      "forMeDescription": "Soy {name}.",
+      "forDependent": "Para un tercero",
+      "forDependentDescription": "{name} está a mi cargo.",
+      "chooseWho": "Elige para quién es la cita.",
+      "onlyAsRepresentative": "Esta cita no tiene una cédula con la que verificar tu identidad, así que solo puedes reclamarla como representante del paciente.",
+      "completeDependentData": "Completa los datos que faltan del paciente. Quedará registrado como tu tercero y podrás agendarle citas desde tu cuenta.",
+      "confirmNow": "Confirmar mi asistencia",
+      "confirmNowDescription": "La cita ya está dentro de su ventana de confirmación: puedes confirmarla en este mismo paso.",
+      "claim": "Reclamar cita",
+      "savedUnder": "La cita quedará en tu cuenta <strong>{email}</strong>.",
+      "needsAccount": "Necesitas una cuenta para reclamarla",
+      "needsAccountDescription": "Entra con tu cuenta de Redoctor o crea una: al terminar volverás aquí para reclamar la cita.",
+      "justClaimed": "¡Listo! La cita ya es tuya",
+      "justClaimedConfirmed": "La cita quedó vinculada a tu cuenta y tu asistencia está confirmada.",
+      "alreadyClaimed": "Ya reclamaste esta cita",
+      "claimedDescription": "La cita está vinculada a tu cuenta.",
+      "claimedByOther": "Esta invitación ya fue reclamada",
+      "claimedByOtherDescription": "Otra persona vinculó esta cita a su cuenta. Si crees que es un error, habla con el especialista.",
+      "claimedSignedOutDescription": "Si la reclamaste tú, entra con esa cuenta para verla.",
+      "expiredDescription": "Pídele al especialista que te envíe una invitación nueva.",
+      "forPatients": "Esta invitación es para tu paciente",
+      "forPatientsDescription": "Tu paciente la abre con su enlace para reclamar la cita. Tú gestionas tus citas desde la app de Redoctor.",
+      "claimFailed": "No pudimos reclamar la cita. Inténtalo de nuevo en un momento.",
+      "status": {
+        "expired": "Esta invitación venció",
+        "cancelled": "Esta invitación fue cancelada"
+      },
+      "documentIssue": {
+        "title": "No pudimos verificar que la cita sea tuya",
+        "invitationWithoutDocument": "La cita se registró sin cédula, así que no hay con qué compararla. Reclámala como representante del paciente o pide al especialista que añada la cédula.",
+        "accountWithoutDocument": "Tu cuenta no tiene una cédula registrada. Agrégala en tu perfil e inténtalo de nuevo, o reclámala como representante del paciente.",
+        "documentMismatch": "La cédula de tu cuenta no es la del paciente invitado. Si la cita es para alguien a tu cargo, reclámala como su representante."
+      },
+      "metaTitle": "Tienes una cita en Redoctor",
+      "metaDescription": "Mira los detalles de tu cita y guárdala en tu cuenta de Redoctor."
+    },
+    "detail": {
+      "specialist": "Especialista",
+      "office": "Consultorio",
+      "schedule": "Fecha y hora",
+      "reason": "Motivo de consulta",
+      "seeProfile": "Ver perfil"
+    }
+  },
+  "priceFormat": {
+    "from": "Desde {amount}",
+    "range": "Desde {min} hasta {max}",
+    "rangeShort": "{min} – {max}"
+  },
+  "price": "Precio"
 }

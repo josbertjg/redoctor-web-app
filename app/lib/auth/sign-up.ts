@@ -38,6 +38,24 @@ export function flowNeedsPersonalData(
   );
 }
 
+/**
+ * The invitation a sign-up comes from (`redirect` is `/i/{token}`), and
+ * whether the person said the appointment is theirs (`?for=self`): only
+ * then does the form start from the invitation's data.
+ */
+export function invitationOf(
+  redirect: string | null | undefined,
+): { token: string; forSelf: boolean } | null {
+  if (!redirect || !flowNeedsPersonalData(redirect)) return null;
+  const url = new URL(redirect, 'https://redoctorapp.invalid');
+  const token = /^\/i\/([^/]+)$/.exec(url.pathname)?.[1];
+  if (token === undefined) return null;
+  return {
+    token: decodeURIComponent(token),
+    forSelf: url.searchParams.get('for') === 'self',
+  };
+}
+
 export function planSignUp(
   account: Account,
   redirect: string | null | undefined,

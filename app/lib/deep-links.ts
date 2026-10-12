@@ -14,34 +14,22 @@ import type { Device } from './platform';
 export const appScheme = 'redoctor';
 
 /**
- * What the app opens: the short links people share, everything under
- * `/panel/` (the specialist's pages; `/panel` itself is the web's) and its
- * internal paths. A new specialist page under `/panel/` needs no change
- * here, in the AASA or in the app's manifest: only the app's router and
- * the web's bridge.
+ * What the app opens, as published in
+ * /.well-known/apple-app-site-association and in its order (a test keeps the
+ * two equal): the short links people share, everything under `/panel/` (the
+ * specialist's pages; `/panel` itself is the web's) and its internal paths.
+ * iOS reads them from there; Android from the app's manifest. A new
+ * specialist page under `/panel/` needs no change here, in the AASA or in
+ * the manifest: only the app's router and the web's bridge. The Spanish
+ * names of before 2026-10-12 are only redirects now (next.config.ts).
  */
-const appPaths = ['/s/*', '/i/*', '/a/*', '/panel/*', '/home/*'] as const;
-
-/**
- * The specialist's paths before they moved under `/panel/` (2026-10-12).
- * Copies of the app from before then only know these, so the AASA keeps
- * them until every tester runs a version that knows `/panel/*`. The web
- * redirects them for good (next.config.ts).
- */
-const legacyAppPaths = [
-  '/suscripcion',
-  '/agenda',
-  '/agenda/*',
-  '/especialidades',
-  '/perfil',
+export const universalLinkPaths = [
+  '/s/*',
+  '/i/*',
+  '/a/*',
+  '/panel/*',
+  '/home/*',
 ] as const;
-
-/**
- * The paths published in /.well-known/apple-app-site-association, in its
- * order (a test keeps the two equal). iOS reads them from there; Android
- * from the app's manifest.
- */
-export const universalLinkPaths = [...appPaths, ...legacyAppPaths] as const;
 
 /**
  * Whether the app opens a site path, reading the patterns as iOS does: `*`

@@ -1,0 +1,64 @@
+import { formatLocale, timeZone } from '../i18n/config';
+
+/*
+ * The day and the hour of an appointment as the API's emails and the app
+ * write them (AGENTS.md §5): «jueves 1 de octubre de 2026», «3:00 p. m.».
+ * The slot's date and times are the office's wall clock, so they are shown
+ * as they come and never moved through a time zone; instants (when the
+ * confirmation window opens) are shown in Caracas.
+ */
+
+const dayFormat = (zone: string) =>
+  new Intl.DateTimeFormat(formatLocale, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: zone,
+  });
+
+const timeFormat = (zone: string) =>
+  new Intl.DateTimeFormat(formatLocale, {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: zone,
+  });
+
+const calendarDay = /^(\d{4})-(\d{2})-(\d{2})$/;
+const wallClock = /^(\d{1,2}):(\d{2})/;
+
+/** «jueves, 1 de…» → «jueves 1 de…», as the emails write it. */
+const withoutWeekdayComma = (text: string) =>
+  text.replace(/^(\p{L}+),\s/u, '$1 ');
+
+/** «jueves 1 de octubre de 2026» from a calendar date (YYYY-MM-DD). */
+export function formatAppointmentDay(date: string): string {
+  const match = calendarDay.exec(date);
+  if (!match) return date;
+  const [, year, month, day] = match;
+  const utc = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  return withoutWeekdayComma(dayFormat('UTC').format(utc));
+}
+
+/** «3:00 p. m.» from a wall-clock time (HH:mm). */
+export function formatAppointmentTime(time: string): string {
+  const match = wallClock.exec(time);
+  if (!match) return time;
+  const [, hours, minutes] = match;
+  const utc = new Date(Date.UTC(2000, 0, 1, Number(hours), Number(minutes)));
+  return timeFormat('UTC').format(utc);
+}
+
+/** An instant from the API as a day and an hour in Caracas. */
+export function formatInstant(instant: string): {
+  day: string;
+  time: string;
+} | null {
+  const date = new Date(instant);
+  if (Number.isNaN(date.getTime())) return null;
+  return {
+    day: withoutWeekdayComma(dayFormat(timeZone).format(date)),
+    time: timeFormat(timeZone).format(date),
+  };
+}

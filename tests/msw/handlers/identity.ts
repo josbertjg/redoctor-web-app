@@ -16,16 +16,16 @@ import { apiUrl, errorEnvelope } from '../api-url';
 /** The bearer the handlers accept; anything else is a stranger. */
 export const validToken = 'valid-id-token';
 
-const isStranger = (request: Request) =>
+export const isStranger = (request: Request) =>
   request.headers.get('authorization') !== `Bearer ${validToken}`;
 
-const unauthorized = () =>
+export const unauthorized = () =>
   HttpResponse.json(errorEnvelope('ERR_1001', 'Unauthorized'), {
     status: 401,
   });
 
 /** The body the web sent breaks the contract: what the API would answer. */
-const badRequest = () =>
+export const badRequest = () =>
   HttpResponse.json(errorEnvelope('ERR_1002', 'Validation failed'), {
     status: 400,
   });

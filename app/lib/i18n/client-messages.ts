@@ -63,4 +63,23 @@ export const pageNamespaces = {
     'specialist',
     'ofRedoctor',
   ],
+  // The invitation (M4): the claim, its sign-in buttons and the
+  // appointment's summary, all read in the browser.
+  invitation: [
+    'apiErrors',
+    'appointments',
+    'priceFormat',
+    'price',
+    'input',
+    'finishPatientSignup',
+    'dateOfBirth',
+    'identityDocument',
+    'sex',
+    'male',
+    'female',
+    'name',
+    'continue',
+    'refresh',
+    'specialists',
+  ],
 } as const satisfies Record<string, readonly Namespace[]>;

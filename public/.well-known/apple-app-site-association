@@ -8,12 +8,7 @@
           { "/": "/i/*" },
           { "/": "/a/*" },
           { "/": "/panel/*" },
-          { "/": "/home/*" },
-          { "/": "/suscripcion" },
-          { "/": "/agenda" },
-          { "/": "/agenda/*" },
-          { "/": "/especialidades" },
-          { "/": "/perfil" }
+          { "/": "/home/*" }
         ]
       }
     ]

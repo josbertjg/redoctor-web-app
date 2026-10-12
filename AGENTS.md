@@ -186,9 +186,10 @@ app/                                  # The application: routes, UI and logic
     sign-in/page.tsx                  #   /sign-in?redirect= — Google and Apple, the same accounts as the app
     sign-up/page.tsx                  #   /sign-up?redirect= — the patient's sign-up (M3)
     _components/                      #   sign-in-card, sign-up-flow, role-choice, patient-sign-up-form, sign-up-done
-  (invitations)/                      # module: the invitation link (M3, M4)
-    i/[token]/page.tsx · loading.tsx · error.tsx          # /i/{token}
-    _components/
+  (invitations)/                      # module: the invitation link (M4)
+    layout.tsx · error.tsx            #   the bar with the account; the error under it
+    i/[token]/page.tsx                #   /i/{token} — read in the browser, claimed right there
+    _components/                      #   invitation-flow, claim-form, appointment-headline, appointment-details
   (appointments)/                     # module: appointments (M5, M6, M7)
     a/[appointmentId]/page.tsx · loading.tsx · error.tsx  # /a/{id}
     appointments/layout.tsx · page.tsx · loading.tsx      # /appointments — layout = <RequireSession>
@@ -210,7 +211,7 @@ app/                                  # The application: routes, UI and logic
     daily-summary/unsubscribe/page.tsx   # daily-summary opt-out — a Server Action
   api/                                # route handlers only when the browser must not call the API (none yet)
   ui/                                 # ALL shared UI
-    button.tsx · text-field.tsx · checkbox.tsx · field-error.tsx · sheet.tsx · skeleton.tsx · toast.tsx · empty-state.tsx · avatar.tsx …
+    button.tsx · text-field.tsx · checkbox.tsx · choice-cards.tsx · field-error.tsx · sheet.tsx · skeleton.tsx · toast.tsx · empty-state.tsx · avatar.tsx …
     messages-scope.tsx                #   a page's own client messages (§9)
     layout/                           #   site-header, site-footer, page-frame, bottom-actions
     auth/                             #   session-provider, session-button, require-session, sign-in-buttons, in-app-browser-help, provider-logos
@@ -228,7 +229,7 @@ app/                                  # The application: routes, UI and logic
     actions/                          #   Server Actions — only where no user token is needed
     firebase/                         #   client.ts: Firebase Auth, loaded on demand (client-only)
     auth/                             #   session-hint (the cookie), last-provider, token (the bearer's source), destination, sign-up (the plan)
-    format/                           #   names, phone (+58), identity-document, date-of-birth — the forms' rules
+    format/                           #   names, phone (+58), identity-document, date-of-birth — the forms' rules; money, appointment-time — prices, days and hours
     analytics/ · i18n/
     observability/                    #   report.ts (the seam), scrub.ts (what never leaves), sentry.ts
     security/                         #   csp.ts (the nonce policy proxy.ts sends)
@@ -407,7 +408,7 @@ docs point here instead of copying it.
 | Path | For | On the web | Who sends it |
 | --- | --- | --- | --- |
 | `/s/{specialistId}` | public | Full read-only profile (M8) + "Abrir en la app" | the app («Compartir perfil»); emails 14 and 17 |
-| `/i/{token}` | patient | Full invitation experience (M4) + "Abrir en la app" | the app (the specialist's WhatsApp); the API's `invitationUrl` |
+| `/i/{token}` | patient | Full invitation experience (M4); "Abrir en la app" once the app is published (patients have none in the pilot, §13) | the app (the specialist's WhatsApp); the API's `invitationUrl` |
 | `/a/{appointmentId}` | patient (and specialist in the app) | Full appointment experience (M5) + "Abrir en la app" | the app (reminders, confirmation); emails 11–13 and 15 |
 | `/panel/subscription` | specialist | Bridge only: the app handles it. Never render billing here | billing emails 01–05 and 07–09 (REDOC-356) |
 | `/panel/agenda`, `/panel/agenda/{YYYY-MM-DD}` | specialist | Bridge; a malformed date opens today in the app | the daily summary, email 10 (REDOC-359) |
@@ -433,9 +434,9 @@ payment `/pay` (the admin's `webPaymentUrl`, REDOC-357) and the home page
 Spanish (`/suscripcion`, `/agenda[/…]`, `/especialidades`, `/perfil`), the
 opt-out was `/resumen/baja`, and the API's `invitationUrl` still points at
 `/citas/invitacion/{token}` (REDOC-255), a path nobody served. The web
-redirects every old name for good (`next.config.ts`, 308, query kept). The
-AASA and the app keep the old specialist names only until every tester runs
-a copy of the app that knows `/panel/*`.
+redirects every old name for good (`next.config.ts`, 308, query kept); the
+AASA lists only the current paths since the app learned `/panel/*`
+(2026-10-12).
 
 Reserved for the app's internal paths: `/home`. Patient web routes
 therefore live under `/appointments` and `/account`, never under those
@@ -482,12 +483,7 @@ has a value.
           { "/": "/i/*" },
           { "/": "/a/*" },
           { "/": "/panel/*" },
-          { "/": "/home/*" },
-          { "/": "/suscripcion" },
-          { "/": "/agenda" },
-          { "/": "/agenda/*" },
-          { "/": "/especialidades" },
-          { "/": "/perfil" }
+          { "/": "/home/*" }
         ]
       }
     ]
@@ -496,9 +492,7 @@ has a value.
 ```
 
 `app/lib/deep-links.ts` (`universalLinkPaths`) lists the same paths in the
-same order, and a unit test fails if the two drift apart. The last five are
-the old specialist names, kept for copies of the app from before
-2026-10-12.
+same order, and a unit test fails if the two drift apart.
 
 `/.well-known/assetlinks.json` — package `com.redoctor.mobileapp`, relation
 `delegate_permission/common.handle_all_urls`, and the SHA-256 fingerprints
@@ -1143,9 +1137,10 @@ written out in full, or Next.js does not inline it).
   `/panel/agenda`, `/panel/specialties` and `/panel/profile`); the opt-out
   `/resumen/baja` became `/daily-summary/unsubscribe`. `/s`, `/i` and `/a`
   stay: short for chats and already shared. Old names redirect for good.
-  The change runs in order (§6): this web first (done), then the app (both
-  names, the manifest's `/panel/` prefix, the email templates zipped to
-  REDOC-354), then the API. The API's part: the new templates, `url_baja`
+  The change ran in order (§6): this web, then the app (the manifest's
+  `/panel/` prefix and the email templates, zipped to REDOC-354 the same
+  day; the AASA then dropped the old names), and last the API. The API's
+  part, pending: the new templates, `url_baja`
   (REDOC-359), `webPaymentUrl` refusing every path the app opens
   (REDOC-357), and the one link it already builds in code: `invitationUrl`,
   `${APP_PUBLIC_URL}/citas/invitacion/{token}` (REDOC-255, finished; the
@@ -1155,6 +1150,46 @@ written out in full, or Next.js does not inline it).
   `link.redoctorapp.com` plan, is superseded. Every other link the API
   must change is still only in tickets: no email has been sent yet
   (REDOC-354).
+- **The invitation (M4) as built (2026-10-12):** `/i/{token}` loads with no
+  session and reads the invitation in the browser (the public
+  `GET /scheduling/invitations/{token}`; a 404 says the link leads nowhere
+  and is not reported). Its states follow the app's invitation screen,
+  decided by the invitation's status alone (`planInvitationView`): over
+  (expired, cancelled), claimed by this account or another, and pending.
+  Pending, a stranger signs in right there with the Google and Apple
+  buttons (one tap, §1); a patient claims it with the app's form: «¿Para
+  quién es esta cita?» (SELF, or DEPENDENT for someone in their care; an
+  invitation with no document can only be claimed by a representative),
+  the birth date and sex of that person when the invitation lacks them,
+  and «Confirmar mi asistencia», on by default when the API says
+  `canConfirmNow` (`confirm: true` in the same claim). The claim goes
+  through the write-once guard; a refusal because this account already
+  holds it counts as done; the API's reasons for refusing a SELF claim
+  (409 `ERR_4014`) are explained in place with the app's words. **The
+  patient finishes the sign-up first** (owner, 2026-10-12): an account
+  whose patient sign-up is not done is sent to
+  `/sign-up?redirect=/i/{token}?for=self|dependent`, and with `for=self`
+  the form starts from the invitation's birth date, phone, document and
+  sex (not the names, as in the app); «Reclamar mi cita» brings the
+  answer back. A specialist's or an admin's account is told the
+  invitation is their patient's (the app sends them home). Where the web
+  differs from the app, on purpose and to confirm: nothing is preselected
+  in «¿Para quién es esta cita?» (the app preselects by comparing the
+  account's document, which the web's `/me` does not carry), nor the sex
+  of the person in one's care (the app: «Hombre»); the page says which
+  account the appointment goes to («La cita quedará en tu cuenta …», §1),
+  which the app does not; a stranger sees who, when, where, the price and
+  the invited name, while the document, birth date, sex and reason wait
+  for a signed-in person, and an invitation that is over or someone
+  else's shows nothing of the appointment (REDOC-315: the API answers it
+  all to anyone with the token); a signed-out viewer of a claimed
+  invitation is offered to sign in, in case it was them; and «Abrir en la
+  app» is not on `/i` while the app is unpublished, since patients cannot
+  have it in the pilot (§6). Not yet: «Ver mi cita» waits for `/a/{id}`
+  (M5). Production needs the API's CORS (REDOC-362): the e2e answers the
+  API's call in the browser itself (`page.route`). With M4 the avatar's
+  initials went to grey-700 (6:1; grey-600 measured 4.1:1 on the
+  surface).
 
 ### Improvements noted (not scheduled)
 

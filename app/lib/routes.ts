@@ -41,7 +41,11 @@ export const routes = {
 
   /* Paths shared with the app (AGENTS.md §6). */
   specialist: (specialistId: string) => `/s/${segment(specialistId)}` as const,
-  invitation: (token: string) => `/i/${segment(token)}` as const,
+  /** `claimFor` keeps the person's answer to «¿Para quién es esta cita?» across the sign-up. */
+  invitation: (token: string, claimFor?: 'self' | 'dependent') =>
+    claimFor
+      ? (`/i/${segment(token)}?for=${claimFor}` as const)
+      : (`/i/${segment(token)}` as const),
   appointment: (appointmentId: string) =>
     `/a/${segment(appointmentId)}` as const,
 
