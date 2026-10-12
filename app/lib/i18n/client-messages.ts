@@ -82,4 +82,26 @@ export const pageNamespaces = {
     'refresh',
     'specialists',
   ],
+  // The appointment (M5): its states, its actions and their sheets (the
+  // reschedule's calendar and slots), and the sign-in it may need.
+  appointment: [
+    'apiErrors',
+    'appointments',
+    'priceFormat',
+    'price',
+    'specialists',
+    'identityDocument',
+    'dateOfBirth',
+    'sex',
+    'male',
+    'female',
+    'refresh',
+    'cancel',
+    'back',
+    'pickADate',
+    'morning',
+    'afternoon',
+    'evening',
+    'no_slots_available',
+  ],
 } as const satisfies Record<string, readonly Namespace[]>;

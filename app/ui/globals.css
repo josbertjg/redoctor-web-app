@@ -33,6 +33,10 @@
   --animate-fade-up: fade-up var(--duration-base) var(--ease-house) both;
   --animate-scale-in: scale-in var(--duration-base) var(--ease-house) both;
   --animate-fade-out: fade-out var(--duration-fast) var(--ease-house) both;
+  /* The sheet on phones (app/ui/sheet.tsx): up from the bottom edge, and
+     down from wherever a drag left it (no `from`: it starts where it is). */
+  --animate-sheet-up: sheet-up var(--duration-base) var(--ease-house) both;
+  --animate-sheet-down: sheet-down var(--duration-fast) var(--ease-house) both;
   /* A ribbon of cards that moves by itself: the track holds the list twice
      and slides one list's width, so the loop never shows a seam. */
   --animate-marquee: marquee var(--duration-marquee) linear infinite;
@@ -91,6 +95,21 @@
     to {
       height: 0;
       opacity: 0;
+    }
+  }
+
+  @keyframes sheet-up {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: none;
+    }
+  }
+
+  @keyframes sheet-down {
+    to {
+      transform: translateY(100%);
     }
   }
 

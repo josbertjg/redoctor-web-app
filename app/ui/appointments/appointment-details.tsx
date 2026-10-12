@@ -6,34 +6,41 @@ import Payments from '@material-symbols/svg-400/rounded/payments.svg?svgr';
 import Person from '@material-symbols/svg-400/rounded/person.svg?svgr';
 import { useTranslations } from 'next-intl';
 
-import { formatBirthDate } from '@/app/lib/format/date-of-birth';
-import { formatIdentityDocument } from '@/app/lib/format/identity-document';
 import { formatPrice } from '@/app/lib/format/money';
 import { directionsUrl } from '@/app/lib/maps';
-import type { Invitation } from '@/app/lib/schemas/invitations';
+import type { AppointmentSummary } from '@/app/lib/schemas/appointments';
 
 import { Icon, type IconComponent } from '@/app/ui/icons';
 
+/** One labelled fact of the patient's section (document, reason, notes…). */
+export type PatientFact = { term: string; value: string };
+
 type AppointmentDetailsProps = {
-  invitation: Invitation;
+  appointment: AppointmentSummary;
   /**
-   * The invited person's document, birth date, sex and the reason: only for
-   * someone signed in. A link travels by WhatsApp and gets forwarded, and
-   * the API still answers it all to anyone who has it (REDOC-315).
+   * Who attends: the page decides what of them its viewer may see — an
+   * invitation shows a stranger only the name (REDOC-315), the patient's
+   * own appointment shows the reason and the notes.
    */
-  showPrivate: boolean;
+  patient: {
+    heading: string;
+    name: string | null;
+    facts: readonly PatientFact[];
+    /** A line under the facts (the appointment is someone in one's care). */
+    note?: string | undefined;
+  } | null;
 };
 
 /*
- * The rest of the app's invitation summary: the office (with «Cómo llegar»
- * to its exact place), the price and the invited patient.
+ * An appointment's details, as the app's summary lists them: the office,
+ * with «Cómo llegar» to its exact place, the price and who attends. The
+ * invitation (M4) and the appointment page (M5) share it.
  */
 export function AppointmentDetails({
-  invitation,
-  showPrivate,
+  appointment,
+  patient,
 }: AppointmentDetailsProps) {
   const t = useTranslations();
-  const { appointment, invited } = invitation;
   const { office } = appointment;
   const price = formatPrice(
     appointment.price,
@@ -44,12 +51,6 @@ export function AppointmentDetails({
     },
     'detailed',
   );
-  const sex =
-    invited.sex === 'MALE'
-      ? t('male')
-      : invited.sex === 'FEMALE'
-        ? t('female')
-        : null;
 
   return (
     <dl className="flex animate-fade-up flex-col divide-y divide-divider rounded-2xl bg-pure-white px-5 shadow-md">
@@ -79,34 +80,28 @@ export function AppointmentDetails({
           <p className="text-text-primary">{price}</p>
         </Detail>
       ) : null}
-      <Detail icon={Person} term={t('appointments.invitation.invitedPatient')}>
-        <p className="font-medium text-text-primary">
-          {invited.firstName} {invited.lastName}
-        </p>
-        {showPrivate ? (
-          <dl className="mt-1 grid gap-1">
-            {invited.document ? (
-              <Fact term={t('identityDocument')}>
-                {formatIdentityDocument(
-                  invited.document.type,
-                  invited.document.number,
-                )}
-              </Fact>
-            ) : null}
-            {invited.dateOfBirth ? (
-              <Fact term={t('dateOfBirth')}>
-                {formatBirthDate(invited.dateOfBirth)}
-              </Fact>
-            ) : null}
-            {sex ? <Fact term={t('sex')}>{sex}</Fact> : null}
-            {appointment.reason ? (
-              <Fact term={t('appointments.detail.reason')}>
-                {appointment.reason}
-              </Fact>
-            ) : null}
-          </dl>
-        ) : null}
-      </Detail>
+      {patient ? (
+        <Detail icon={Person} term={patient.heading}>
+          {patient.name ? (
+            <p className="font-medium text-text-primary">{patient.name}</p>
+          ) : null}
+          {patient.facts.length > 0 ? (
+            <dl className="mt-1 grid gap-1">
+              {patient.facts.map((fact) => (
+                // Term and value flow as one sentence: a long note wraps
+                // under its label instead of dropping below it.
+                <div key={fact.term}>
+                  <dt className="inline">{fact.term}: </dt>
+                  <dd className="inline text-text-primary">{fact.value}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : null}
+          {patient.note ? (
+            <p className="mt-1 text-body-sm">{patient.note}</p>
+          ) : null}
+        </Detail>
+      ) : null}
     </dl>
   );
 }
@@ -131,15 +126,6 @@ function Detail({
       <dd className="flex min-w-0 flex-col gap-0.5 pl-7 text-body-md text-text-secondary">
         {children}
       </dd>
-    </div>
-  );
-}
-
-function Fact({ term, children }: { term: string; children: ReactNode }) {
-  return (
-    <div className="flex flex-wrap gap-x-1">
-      <dt>{term}:</dt>
-      <dd className="text-text-primary">{children}</dd>
     </div>
   );
 }

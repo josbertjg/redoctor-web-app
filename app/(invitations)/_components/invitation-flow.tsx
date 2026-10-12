@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+
+import Link from 'next/link';
 
 import CheckCircle from '@material-symbols/svg-400/rounded/check_circle.svg?svgr';
 import CloudOff from '@material-symbols/svg-400/rounded/cloud_off.svg?svgr';
@@ -14,6 +16,7 @@ import { useTranslations } from 'next-intl';
 import { track } from '@/app/lib/analytics/track';
 import type { AuthProvider } from '@/app/lib/auth/last-provider';
 import { invitationQueryOptions } from '@/app/lib/queries/invitations';
+import { routes } from '@/app/lib/routes';
 import {
   planInvitationView,
   toInvitation,
@@ -21,16 +24,16 @@ import {
   type Invitation,
 } from '@/app/lib/schemas/invitations';
 
+import { AppointmentHeadline } from '@/app/ui/appointments/appointment-headline';
 import { SignInButtons } from '@/app/ui/auth/sign-in-buttons';
 import { Button } from '@/app/ui/button';
 import { EmptyState } from '@/app/ui/empty-state';
-import { Icon, type IconComponent } from '@/app/ui/icons';
+import { StatusCard } from '@/app/ui/status-card';
 
 import { useSession } from '@/app/hooks/use-session';
 
-import { AppointmentDetails } from './appointment-details';
-import { AppointmentHeadline } from './appointment-headline';
 import { ClaimForm } from './claim-form';
+import { InvitationDetails } from './invitation-details';
 import { ClaimSkeleton, InvitationSkeleton } from './invitation-skeleton';
 
 type InvitationFlowProps = {
@@ -149,7 +152,7 @@ export function InvitationFlow({
     case 'claimed-signed-out':
       return (
         <Frame>
-          <Panel
+          <StatusCard
             icon={Group}
             title={t('appointments.invitation.claimedByOther')}
             description={t(
@@ -157,7 +160,7 @@ export function InvitationFlow({
             )}
           >
             {signIn}
-          </Panel>
+          </StatusCard>
         </Frame>
       );
 
@@ -165,7 +168,7 @@ export function InvitationFlow({
       return (
         <Frame>
           <AppointmentHeadline appointment={invitation.appointment} />
-          <Panel
+          <StatusCard
             icon={CheckCircle}
             title={
               claimed
@@ -177,8 +180,14 @@ export function InvitationFlow({
                 ? t('appointments.invitation.justClaimedConfirmed')
                 : t('appointments.invitation.claimedDescription')
             }
-          />
-          <AppointmentDetails invitation={invitation} showPrivate />
+          >
+            <Button asChild block shape="soft">
+              <Link href={routes.appointment(invitation.appointment.id)}>
+                {t('appointments.invitation.seeAppointment')}
+              </Link>
+            </Button>
+          </StatusCard>
+          <InvitationDetails invitation={invitation} showPrivate />
         </Frame>
       );
 
@@ -216,7 +225,7 @@ export function InvitationFlow({
       return (
         <Frame>
           <AppointmentHeadline appointment={invitation.appointment} />
-          <Panel
+          <StatusCard
             icon={Login}
             title={t('appointments.invitation.needsAccount')}
             description={t('appointments.invitation.needsAccountDescription')}
@@ -229,8 +238,8 @@ export function InvitationFlow({
                 {t('auth.termsOfUseAndPrivacy')}
               </span>
             </p>
-          </Panel>
-          <AppointmentDetails invitation={invitation} showPrivate={false} />
+          </StatusCard>
+          <InvitationDetails invitation={invitation} showPrivate={false} />
         </Frame>
       );
 
@@ -238,12 +247,12 @@ export function InvitationFlow({
       return (
         <Frame>
           <AppointmentHeadline appointment={invitation.appointment} />
-          <Panel
+          <StatusCard
             icon={Group}
             title={t('appointments.invitation.forPatients')}
             description={t('appointments.invitation.forPatientsDescription')}
           />
-          <AppointmentDetails invitation={invitation} showPrivate={false} />
+          <InvitationDetails invitation={invitation} showPrivate={false} />
         </Frame>
       );
 
@@ -292,7 +301,7 @@ function ClaimView({
         onClaimed={onClaimed}
         onSwitchAccount={onSwitchAccount}
       />
-      <AppointmentDetails invitation={invitation} showPrivate />
+      <InvitationDetails invitation={invitation} showPrivate />
     </Frame>
   );
 }
@@ -305,39 +314,5 @@ function Frame({ children }: { children: ReactNode }) {
       <h1 className="text-headline-sm text-text-primary">{t('title')}</h1>
       {children}
     </div>
-  );
-}
-
-/** A state of the invitation inside a card, with room for its actions. */
-function Panel({
-  icon,
-  title,
-  description,
-  children,
-}: {
-  icon: IconComponent;
-  title: string;
-  description: string;
-  children?: ReactNode;
-}) {
-  const headingId = useId();
-  return (
-    <section
-      aria-labelledby={headingId}
-      className="flex animate-fade-up flex-col gap-5 rounded-2xl bg-pure-white p-5 shadow-md"
-    >
-      <div className="flex items-start gap-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-info-light text-primary">
-          <Icon icon={icon} size={24} />
-        </span>
-        <div className="flex flex-col gap-1">
-          <h2 id={headingId} className="text-title-md text-text-primary">
-            {title}
-          </h2>
-          <p className="text-body-md text-text-secondary">{description}</p>
-        </div>
-      </div>
-      {children}
-    </section>
   );
 }

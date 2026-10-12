@@ -24,6 +24,11 @@ export type AnalyticsEvents = {
     relationship: 'self' | 'dependent';
     confirmed: boolean;
   };
+  /** What the patient did with their appointment (M5). */
+  web_appointment_confirmed: Record<string, never>;
+  web_appointment_cancelled: Record<string, never>;
+  web_appointment_rescheduled: Record<string, never>;
+  web_appointment_calendar_added: { calendar: 'google' | 'ics' };
 };
 
 export type AnalyticsEventName = keyof AnalyticsEvents;

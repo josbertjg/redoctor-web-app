@@ -4,11 +4,12 @@ import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { describe, expect, it, vi } from 'vitest';
 
+import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 import { meResponseSchema, toAccount } from '@/app/lib/schemas/identity';
 import type { ClaimRelationship } from '@/app/lib/schemas/invitations';
 
 import { invitationTokens } from '@/tests/factories/invitations';
-import { renderWithIntl } from '@/tests/render';
+import { renderWithPageMessages } from '@/tests/render';
 
 import {
   noSession,
@@ -54,7 +55,7 @@ function renderInvitation(
   session: Session = noSession,
   initialRelationship: ClaimRelationship | null = null,
 ) {
-  return renderWithIntl(
+  return renderWithPageMessages(
     <QueryClientProvider client={new QueryClient()}>
       <SessionContext.Provider value={session}>
         <InvitationFlow
@@ -63,6 +64,7 @@ function renderInvitation(
         />
       </SessionContext.Provider>
     </QueryClientProvider>,
+    pageNamespaces.invitation,
   );
 }
 

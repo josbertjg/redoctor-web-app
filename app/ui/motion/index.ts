@@ -15,6 +15,7 @@ export {
   motionValue,
   stagger,
   useAnimationFrame,
+  useDragControls,
   useMotionValue,
   useTransform,
 } from 'framer-motion';

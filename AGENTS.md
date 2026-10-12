@@ -189,11 +189,12 @@ app/                                  # The application: routes, UI and logic
   (invitations)/                      # module: the invitation link (M4)
     layout.tsx · error.tsx            #   the bar with the account; the error under it
     i/[token]/page.tsx                #   /i/{token} — read in the browser, claimed right there
-    _components/                      #   invitation-flow, claim-form, appointment-headline, appointment-details
+    _components/                      #   invitation-flow, claim-form, invitation-details
   (appointments)/                     # module: appointments (M5, M6, M7)
-    a/[appointmentId]/page.tsx · loading.tsx · error.tsx  # /a/{id}
-    appointments/layout.tsx · page.tsx · loading.tsx      # /appointments — layout = <RequireSession>
-    _components/
+    layout.tsx · error.tsx            #   the bar with the account; the error under it
+    a/[appointmentId]/page.tsx        #   /a/{id} — read in the browser with the patient's session
+    appointments/layout.tsx · page.tsx · loading.tsx      # /appointments (M6) — layout = <RequireSession>
+    _components/                      #   appointment-flow, -view, -actions, -record; cancel-sheet, reschedule-sheet, month-calendar, calendar-menu
   (specialists)/                      # module: public profile (M8) and the specialist's own page (M2)
     s/[specialistId]/page.tsx · loading.tsx · not-found.tsx · opengraph-image.tsx   # /s/{id}
     panel/layout.tsx · page.tsx · loading.tsx        # /panel — layout = <RequireSession facet="specialist">
@@ -211,12 +212,12 @@ app/                                  # The application: routes, UI and logic
     daily-summary/unsubscribe/page.tsx   # daily-summary opt-out — a Server Action
   api/                                # route handlers only when the browser must not call the API (none yet)
   ui/                                 # ALL shared UI
-    button.tsx · text-field.tsx · checkbox.tsx · choice-cards.tsx · field-error.tsx · sheet.tsx · skeleton.tsx · toast.tsx · empty-state.tsx · avatar.tsx …
+    button.tsx · text-field.tsx · checkbox.tsx · choice-cards.tsx · field-error.tsx · sheet.tsx · skeleton.tsx · toast.tsx · empty-state.tsx · status-card.tsx · avatar.tsx …
     messages-scope.tsx                #   a page's own client messages (§9)
     layout/                           #   site-header, site-footer, page-frame, bottom-actions
     auth/                             #   session-provider, session-button, require-session, sign-in-buttons, in-app-browser-help, provider-logos
     app-bridge/                       #   open-in-app-button, store-badges, app-access (a specialist's way to the app), store-qr
-    appointments/ · specialists/ · billing/ · reviews/   # domain components used by two or more modules
+    appointments/ · specialists/ · billing/ · reviews/   # domain components used by two or more modules (appointments/: headline, details)
     analytics/ · og/                  #   link-origin-tracker; the Open Graph brand card (next/og)
     motion/                           #   the one door to Motion: provider, m, tokens, staggered-text (§8.11)
     icons.tsx                         #   the Icon primitive (not icon.tsx: that name is a Next.js metadata file)
@@ -233,7 +234,7 @@ app/                                  # The application: routes, UI and logic
     analytics/ · i18n/
     observability/                    #   report.ts (the seam), scrub.ts (what never leaves), sentry.ts
     security/                         #   csp.ts (the nonce policy proxy.ts sends)
-    env.ts · public-env.ts · routes.ts · deep-links.ts · site.ts · support.ts · utils.ts
+    env.ts · public-env.ts · routes.ts · deep-links.ts · site.ts · support.ts · utils.ts · calendar.ts (.ics, Google Calendar)
   hooks/                              # shared client hooks: use-session, use-link-origin, use-device, use-in-app-browser
 tests/                                # setup.ts · msw/ (server + handlers per domain) · factories/ · e2e/ (Playwright)
 public/                               # .well-known/ (§6) · brand/ (logo.svg, logo-white.svg, icons) · illustrations/ · animations/ (the app's splash_logo.riv)
@@ -296,7 +297,7 @@ for what is shared (setup, MSW, factories) and for Playwright.
    never imported from client files (also guaranteed by `server-only`).
 10. **Advanced routing when it improves the experience, never for show:**
     intercepting + parallel routes for a URL-addressable sheet (for example
-    `a/[appointmentId]/(.)cancelar`), `template.tsx` for per-navigation
+    `a/[appointmentId]/(.)cancel`), `template.tsx` for per-navigation
     transitions. `generateStaticParams` does not apply: the data lives in
     the API.
 
@@ -690,10 +691,12 @@ primitive in `app/ui` that takes size and color from the tokens.
    side («Tu cita», «Confirmar mi cita»). Buttons say what happens. Errors
    say what went wrong and how to fix it. No developer vocabulary on screen.
    Urbanist draws the ordinal «º» as «o»: write «N.°».
-8. **Sheets and dialogs** go through one `Sheet` primitive: bottom sheet on
-   mobile, centered dialog on desktop, drag-to-close, keyboard-safe height,
-   primary action always visible. One sheet at a time; a sheet that opens
-   another pushes inside the same sheet instead of stacking.
+8. **Sheets and dialogs** go through one `Sheet` primitive
+   (`app/ui/sheet.tsx`, since M5: Radix's dialog, dragged down from its
+   handle through Motion): bottom sheet on mobile, centered dialog on
+   desktop, drag-to-close, keyboard-safe height, primary action always
+   visible. One sheet at a time; a sheet that opens another pushes inside
+   the same sheet instead of stacking.
 9. **Empty, error and loading states** are first-class components
    (`EmptyState`, `ErrorState`, `Skeleton`), never ad-hoc text.
 10. **Performance budgets** (checked in CI with Lighthouse on the preview):
@@ -775,9 +778,10 @@ accent / neutral / warning / error tones), `Avatar`, `StarsRating`,
   `app/lib/i18n/client-messages.ts`, sent by the root layout) and, for a
   page whose client components read more, its own (`pageNamespaces`,
   wrapped in `MessagesScope` from `app/ui`). A client component reading a
-  namespace that was not sent shows the raw key in production while its
-  unit tests pass (they load the whole catalog): when a client component
-  reads a namespace, check it is sent. Server components may read any.
+  namespace that was not sent shows the raw key in production while a test
+  that loads the whole catalog passes: a page's flow is tested with
+  `renderWithPageMessages` (`tests/render.tsx`), which sends only what the
+  page sends and fails on any key it lacks. Server components may read any.
 - **Forms**: react-hook-form + zod schemas from `app/lib/schemas`;
   validate on blur, show the error under the field, disable nothing;
   Venezuelan ID (`V/E/P/J/G` + 6–8 digits) and phone (`+58`) validators live
@@ -1185,16 +1189,57 @@ written out in full, or Next.js does not inline it).
   all to anyone with the token); a signed-out viewer of a claimed
   invitation is offered to sign in, in case it was them; and «Abrir en la
   app» is not on `/i` while the app is unpublished, since patients cannot
-  have it in the pilot (§6). Not yet: «Ver mi cita» waits for `/a/{id}`
+  have it in the pilot (§6). Once claimed, «Ver mi cita» opens `/a/{id}`
   (M5). Production needs the API's CORS (REDOC-362): the e2e answers the
   API's call in the browser itself (`page.route`). With M4 the avatar's
   initials went to grey-700 (6:1; grey-600 measured 4.1:1 on the
   surface).
 
+- **The appointment (M5) as built (2026-10-12):** `/a/{id}` needs the
+  session and asks for it right there (the Google and Apple buttons;
+  nothing is read before), then reads `GET /scheduling/appointments/{id}`
+  in the browser: a 403 says the appointment is in another account, with
+  «Entrar con otra cuenta»; a 404 (or an id the API refuses) says the link
+  leads nowhere. The page follows the app's patient detail: the state
+  chip, who and when, what can be done — first on the page, as email 12
+  promises (REDOC-360) —, the office with «Cómo llegar», the price, the
+  patient (someone in one's care in full, the reason, the notes) and the
+  record (every reschedule, struck out → new; the cancellation, by whom,
+  when and why). «Confirmar cita» while pending and inside its window
+  (`canConfirmNow`), and before it the hour it opens; «Reprogramar» (a
+  sheet: the same office's month, its days with free hours, that day's
+  free hours by morning, afternoon and evening; the API moves an
+  appointment inside its office only) and «Cancelar» (a sheet that asks;
+  no reason, as in the app). The three writes go through the write-once
+  guard and the page then shows the appointment the API answered; a
+  closed window (`ERR_4013`) and an hour just taken (`ERR_4002`) are said
+  where they happen. A specialist or an admin who is not the patient sees
+  it read-only, with «Abrir en la app» (they have the app; patients do
+  not, so the patient's page has no bridge, as `/i`). Where the web
+  differs from the app, on purpose and to confirm: nothing changes once
+  the appointment has started (REDOC-308; the app allows it until it
+  ends); the reschedule sheet chooses nothing for the person and lists
+  only the free hours (the app preselects the first and shows the taken
+  ones); «Agregar al calendario» (Google Calendar, or an .ics for Apple,
+  Outlook and the rest; the event carries who, when, where and this
+  page's link, never the reason), which the app does not have; the cancel
+  sheet stays open until the API answers, so a failure shows there; the
+  dates carry the year. Production needs the API's CORS (REDOC-362): the
+  e2e covers the page without a session, the component tests (MSW) the
+  rest. With M5: `Sheet` (§8.8) and `StatusCard` in `app/ui`, the
+  invitation's headline and details promoted to `app/ui/appointments`, an
+  hour never broken across lines (no-break spaces), the calendar's days
+  44 px tall, and `renderWithPageMessages` (§9), which found the five
+  namespaces `/a` was not sending.
+
 ### Improvements noted (not scheduled)
 
 - A real 404 for unknown profiles and paths (§4): a check in `proxy.ts`, or
   routes that do not match.
+- The e2e of the critical path with a mocked sign-in (§10: open `/i` →
+  sign in → claim → confirm) needs a way to sign in under Playwright —
+  the Firebase Auth emulator is the clean one. Until then the signed-in
+  flows of `/i` and `/a` are covered by the component tests (MSW).
 
 ---
 

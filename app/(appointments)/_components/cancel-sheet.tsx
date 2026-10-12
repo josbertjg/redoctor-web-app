@@ -1,0 +1,124 @@
+'use client';
+
+import { useId } from 'react';
+
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
+
+import { track } from '@/app/lib/analytics/track';
+import type { SessionUser } from '@/app/lib/firebase/client';
+import {
+  formatAppointmentDay,
+  formatAppointmentTime,
+} from '@/app/lib/format/appointment-time';
+import {
+  appointmentKeys,
+  cancelAppointment,
+} from '@/app/lib/queries/appointments';
+import type {
+  AppointmentResponse,
+  AppointmentSummary,
+} from '@/app/lib/schemas/appointments';
+
+import { Button } from '@/app/ui/button';
+import { FieldError } from '@/app/ui/field-error';
+import { Sheet } from '@/app/ui/sheet';
+import { toast } from '@/app/ui/toast';
+
+import { actionFailure } from './action-failure';
+
+type CancelSheetProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  appointment: AppointmentSummary;
+  user: SessionUser;
+  onCancelled: (appointment: AppointmentResponse) => void;
+};
+
+/*
+ * «¿Cancelar esta cita?», the app's confirmation: what will be cancelled,
+ * that it cannot be undone, and the two ways out. No reason is asked, as in
+ * the app. The sheet stays open until the API answers, so a failure is
+ * said where the person is looking.
+ */
+export function CancelSheet({
+  open,
+  onOpenChange,
+  appointment,
+  user,
+  onCancelled,
+}: CancelSheetProps) {
+  const t = useTranslations();
+  const queryClient = useQueryClient();
+
+  const cancel = useMutation({
+    mutationFn: () => cancelAppointment(user, appointment.id),
+    onSuccess: (response) => {
+      onCancelled(response);
+      onOpenChange(false);
+      track('web_appointment_cancelled', {});
+      toast.success(t('appointments.detail.cancelledTitle'), {
+        description: t('appointments.detail.cancelledDescriptionPatient'),
+      });
+    },
+    onError: () => {
+      // It may have changed meanwhile: the page shows what it is now.
+      void queryClient.invalidateQueries({
+        queryKey: appointmentKeys.detail(user.id, appointment.id),
+      });
+    },
+  });
+
+  const date = formatAppointmentDay(appointment.date);
+  const time = formatAppointmentTime(appointment.startTime);
+  const name = appointment.specialist.name;
+  const failureKey = cancel.error ? actionFailure(cancel.error) : null;
+  const failureId = useId();
+
+  return (
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) cancel.reset();
+        onOpenChange(next);
+      }}
+      title={t('appointments.detail.cancelTitle')}
+      footer={
+        <div className="flex flex-col gap-2">
+          <FieldError
+            id={failureId}
+            message={failureKey ? t(failureKey) : undefined}
+            className="text-center"
+          />
+          <Button
+            variant="error"
+            block
+            shape="soft"
+            loading={cancel.isPending}
+            onClick={() => {
+              if (!cancel.isPending) cancel.mutate();
+            }}
+          >
+            {t('appointments.detail.cancelAppointment')}
+          </Button>
+          <Button
+            variant="white"
+            block
+            shape="soft"
+            onClick={() => {
+              onOpenChange(false);
+            }}
+          >
+            {t('back')}
+          </Button>
+        </div>
+      }
+    >
+      <p className="text-body-md text-text-secondary">
+        {name
+          ? t('appointments.detail.cancelWarningPatient', { name, date, time })
+          : t('appointments.detail.cancelWarning', { date, time })}
+      </p>
+    </Sheet>
+  );
+}

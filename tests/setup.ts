@@ -58,6 +58,11 @@ if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
   });
 }
 
+// jsdom lays nothing out, so it has no scrollIntoView; the sheets call it.
+if (typeof Element !== 'undefined') {
+  Element.prototype.scrollIntoView = () => undefined;
+}
+
 beforeAll(() => {
   // Every API call in a unit test goes through MSW; an unmocked one fails.
   server.listen({ onUnhandledFrame: 'error' });

@@ -32,6 +32,9 @@ const wallClock = /^(\d{1,2}):(\d{2})/;
 const withoutWeekdayComma = (text: string) =>
   text.replace(/^(\p{L}+),\s/u, '$1 ');
 
+/** An hour never breaks across lines: «6:00 p.» here, «m.» there. */
+const unbreakable = (text: string) => text.replace(/\s/g, '\u00a0');
+
 /** «jueves 1 de octubre de 2026» from a calendar date (YYYY-MM-DD). */
 export function formatAppointmentDay(date: string): string {
   const match = calendarDay.exec(date);
@@ -47,7 +50,7 @@ export function formatAppointmentTime(time: string): string {
   if (!match) return time;
   const [, hours, minutes] = match;
   const utc = new Date(Date.UTC(2000, 0, 1, Number(hours), Number(minutes)));
-  return timeFormat('UTC').format(utc);
+  return unbreakable(timeFormat('UTC').format(utc));
 }
 
 /** An instant from the API as a day and an hour in Caracas. */
@@ -59,6 +62,29 @@ export function formatInstant(instant: string): {
   if (Number.isNaN(date.getTime())) return null;
   return {
     day: withoutWeekdayComma(dayFormat(timeZone).format(date)),
-    time: timeFormat(timeZone).format(date),
+    time: unbreakable(timeFormat(timeZone).format(date)),
   };
+}
+
+/** «octubre de 2026», a month (YYYY-MM) as a calendar's title says it. */
+export function formatMonth(month: string): string {
+  const [year, number] = month.split('-').map(Number);
+  if (!year || !number) return month;
+  return new Intl.DateTimeFormat(formatLocale, {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(Date.UTC(year, number - 1, 1)));
+}
+
+/** The weekdays' initials from Monday, as a month grid heads its columns. */
+export function weekdayInitials(): string[] {
+  const format = new Intl.DateTimeFormat(formatLocale, {
+    weekday: 'narrow',
+    timeZone: 'UTC',
+  });
+  // 2026-10-05 is a Monday.
+  return Array.from({ length: 7 }, (_, index) =>
+    format.format(new Date(Date.UTC(2026, 9, 5 + index))).toUpperCase(),
+  );
 }

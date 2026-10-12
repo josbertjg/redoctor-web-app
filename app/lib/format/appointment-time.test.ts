@@ -42,3 +42,11 @@ describe('formatInstant', () => {
     expect(formatInstant('soon')).toBeNull();
   });
 });
+
+describe('calendar headings', () => {
+  it('names a month and the weekdays from Monday', async () => {
+    const { formatMonth, weekdayInitials } = await import('./appointment-time');
+    expect(formatMonth('2026-10')).toBe('octubre de 2026');
+    expect(weekdayInitials()).toEqual(['L', 'M', 'M', 'J', 'V', 'S', 'D']);
+  });
+});
