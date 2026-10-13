@@ -81,7 +81,7 @@ transactional emails the API sends.
 | M9 Landing | Designed by the designer; copy in the doc «Landing de Redoctor» |
 | M10 Legal and account | Privacy, terms, account deletion (texts from the lawyer) |
 | M11 Bridges | `/panel/subscription`, `/panel/agenda`, `/panel/specialties`, `/panel/profile` (specialist pages that open the app) and `/daily-summary/unsubscribe` (daily-summary email opt-out) |
-| M13 Specialist payment | Own route (name pending, `/pay` for now): subscription and pending month, choose a plan with a coupon, Pago Móvil and transfer data in Bs from the API, report the payment, see it in review |
+| M13 Specialist payment | `/pay` (the owner's name, 2026-10-12): the subscription and the receipt it owes, choose a plan with a coupon, Pago Móvil and transfer data in Bs from the API, report the payment, see it in review; changing plan, cancelling and the rest stay in the app for now (§13, Decided) |
 | M12 Release | PostHog funnel by origin, tests on real phones from WhatsApp and Gmail, domain cutover |
 
 **Explicitly out of the pilot:** searching and booking from the web,
@@ -202,8 +202,10 @@ app/                                  # The application: routes, UI and logic
   (account)/                          # module: account and legal (M10)
     account/layout.tsx · page.tsx     #   /account — layout = <RequireSession>
     privacy/page.tsx · terms/page.tsx · delete-account/page.tsx
-  (billing)/                          # module: specialist payment (M13) — route name pending
-    pay/layout.tsx · page.tsx · _components/
+  (billing)/                          # module: specialist payment (M13)
+    error.tsx                         #   the root error under the bar
+    pay/layout.tsx · page.tsx · loading.tsx      # /pay — layout = <RequireSession facet="specialist">
+    _components/                      #   pay-flow, subscription-view, notice-panel, plans-view, pay-view, method-step, payment-step, payment-totals, coupon-sheet, bank-picker, different-amount-sheet, payment-done, copy-button, detail-list, pay-skeleton
   (bridges)/                          # module: pages that only open the app, noindex (M11)
     layout.tsx
     panel/subscription/ · panel/agenda/[[...date]]/ · panel/specialties/ · panel/profile/
@@ -230,7 +232,8 @@ app/                                  # The application: routes, UI and logic
     actions/                          #   Server Actions — only where no user token is needed
     firebase/                         #   client.ts: Firebase Auth, loaded on demand (client-only)
     auth/                             #   session-hint (the cookie), last-provider, token (the bearer's source), destination, sign-up (the plan)
-    format/                           #   names, phone (+58), identity-document, date-of-birth — the forms' rules; money, appointment-time — prices, days and hours
+    format/                           #   names, phone (+58), identity-document, date-of-birth — the forms' rules; money, appointment-time, dates — prices and billing amounts, days and hours
+    billing/                          #   banks.ts: the app's list of Venezuelan banks (the API publishes none)
     analytics/ · i18n/
     observability/                    #   report.ts (the seam), scrub.ts (what never leaves), sentry.ts
     security/                         #   csp.ts (the nonce policy proxy.ts sends)
@@ -464,10 +467,10 @@ segments.
 
 ### The payment route is NOT an app path
 
-The specialist pays on the web (M13). Its route (**name pending**; `/pay`
-for now) must **never** appear in the AASA, in `assetlinks.json` or in the
-app's manifest, nor under `/panel/`, where the app opens everything (the
-environment check refuses such a path), and the app never links to it —
+The specialist pays on the web (M13) at `/pay` (the owner's name,
+2026-10-12). The route must **never** appear in the AASA, in
+`assetlinks.json` or in the app's manifest, nor under `/panel/`, where the
+app opens everything (a unit test keeps it out), and the app never links to it —
 Apple's rules in Venezuela forbid the app from pointing to an external
 purchase. The billing emails offer it only when the API's `webPaymentUrl`
 has a value.
@@ -908,7 +911,6 @@ Environments: `development` (local), `preview` (Vercel PR), `production`
 | `NEXT_PUBLIC_ANDROID_PACKAGE` | all | `com.redoctor.mobileapp` |
 | `NEXT_PUBLIC_SUPPORT_WHATSAPP` | all | `Redoctor\|+584227362867` (`Label\|number`); provisional until REDOC-357 |
 | `NEXT_PUBLIC_SUPPORT_PHONES` | all | `Soporte 1\|+584145598216,Soporte 2\|+584245582129`; provisional until REDOC-357 |
-| `NEXT_PUBLIC_PAYMENT_PATH` | all | `/pay` until the final name is decided (§13) |
 | `API_PROXY_TARGET` | development only | Dev-only proxy for authenticated calls until CORS (REDOC-362); must be absent in preview/production. Without it, `next dev` proxies to `NEXT_PUBLIC_API_URL` |
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | GitHub Actions secret | Only if previews have Deployment Protection: Playwright and Lighthouse use it for one request and browse with Vercel's cookie |
 | `PLAYWRIGHT_BASE_URL` · `E2E_SPECIALIST_ID` | testing | Run the e2e suite against a deployed URL; the public profile the e2e and Lighthouse runs use (api-dev's test profile by default) |
@@ -922,34 +924,28 @@ written out in full, or Next.js does not inline it).
 
 ## 13. Open decisions — ask, don't assume
 
-1. The payment route's final name (`/pay`, the English of the first
-   `/pagar`, or another) and whether changing plan and cancelling enter
-   M13. Nothing outside the web fixes it: the API stores the full address
-   the admin types (`webPaymentUrl`, REDOC-357, `null` today); only the
-   examples in REDOC-356 and in the app's `emails/build.dart` still say
-   `/pagar`.
-2. The page background: `#FDFDFD` (token) vs `#FBF8FF` (what the app paints).
-3. PostHog event list and funnel definition (M12).
-4. Patient screens design (Figma) — the designer is working on them; the
+1. The page background: `#FDFDFD` (token) vs `#FBF8FF` (what the app paints).
+2. PostHog event list and funnel definition (M12).
+3. Patient screens design (Figma) — the designer is working on them; the
    landing design and copy are hers too («Landing de Redoctor» doc).
-5. When REDOC-362 (CORS, pilot environment) and REDOC-357 (configuration
+4. When REDOC-362 (CORS, pilot environment) and REDOC-357 (configuration
    endpoint) ship; until then the dev-only proxy and the provisional
    constants stay isolated.
-6. Legal texts (privacy, terms, account deletion) — from the lawyer; the
+5. Legal texts (privacy, terms, account deletion) — from the lawyer; the
    pages exist with placeholders marked as such, never with invented text.
-7. Store ids — empty until the apps are published.
-8. The JS budget of §8.10: 150 KB gzip is below what React 19 + Next.js 16
+6. Store ids — empty until the apps are published.
+7. The JS budget of §8.10: 150 KB gzip is below what React 19 + Next.js 16
    weigh on their own (≈140 KB); today's public pages ship 198–225 KB.
    Decide the budget (and whether Sentry and PostHog count) before M12.
-9. The Android `intent://` scheme: `https` (§6 text) or `redoctor` (what the
+8. The Android `intent://` scheme: `https` (§6 text) or `redoctor` (what the
    prototype shipped and the port does).
-10. The daily-summary opt-out link: the web serves
+9. The daily-summary opt-out link: the web serves
     `/daily-summary/unsubscribe?token=…` (the API's own words) and redirects
     the first name, `/resumen/baja`. REDOC-359 must be updated so the API's
     email builds the new one (`url_baja`), confirmed by Heyscar; the
     endpoints (`POST /notifications/daily-summary/unsubscribe|subscribe`)
     are in the OpenAPI already.
-11. Figma vs this file: the Snackbar is filled with color (blue, green, red,
+10. Figma vs this file: the Snackbar is filled with color (blue, green, red,
     yellow, dark grey with white text) while our Toast is a light card; the
     «secondary» button is blue outline in Figma and green in §8.
 
@@ -1150,7 +1146,7 @@ written out in full, or Next.js does not inline it).
   the paths shared with the app included, and the path says who it is for
   (§3.8, §6). `/sign-in` and `/sign-up` were `/entrar` and `/registro`
   (never deployed); the modules to come get `/appointments`, `/account`,
-  `/privacy`, `/terms`, `/delete-account` and `/pay` (§13.1); the
+  `/privacy`, `/terms`, `/delete-account` and `/pay` (§13, Decided); the
   specialist's pages the app opens moved under `/panel/` (`/suscripcion`,
   `/agenda`, `/especialidades` and `/perfil` became `/panel/subscription`,
   `/panel/agenda`, `/panel/specialties` and `/panel/profile`); the opt-out
@@ -1287,6 +1283,70 @@ written out in full, or Next.js does not inline it).
   from the profile's TrainingTabs), `StarsInput` and `TextArea` in
   `app/ui`; `RequireSession` sends an account with no sign-up to
   `/sign-up` (before, it showed «Esta página es para…», on `/panel` too).
+  Production needs the API's CORS (REDOC-362): the e2e covers the page
+  without a session, the component tests (MSW) the rest.
+
+- **The payment (M13) as built (2026-10-12):** `/pay` (the owner's name;
+  the provisional `NEXT_PUBLIC_PAYMENT_PATH` is gone, the route is a
+  literal) needs the specialist facet (`RequireSession facet="specialist"`;
+  an account the billing API refuses with a 403 — an admin's — is told the
+  page is for specialists) and reads in the browser
+  `GET /billing/me/subscription` and, when a receipt may be owed
+  (INCOMPLETE, PAST_DUE or a pending upgrade), the oldest open receipt of
+  the subscription with its attempts (`GET /billing/me/invoices?status=OPEN`,
+  then its detail), as the app's SubscriptionCubit does. The page is «Mi
+  suscripción»: the plan (the crown in its tier's metal by slug, the
+  status chip, the price «al mes»), the status message or the notice — in
+  the app's precedence: in review > past due > rejected (with the admin's
+  reason) > unpaid > upgrade pending — with «Pagar ahora», and the period
+  rows (period, next plan, coupon, free months). Without a plan, or once it
+  expired unpaid, «Todavía no tienes un plan» → «Ver planes»: the plans on
+  offer (active, with a price; the cheapest first), each with its benefits
+  derived as the app derives them, the first one chosen; «Seleccionar plan»
+  opens the payment. The payment has **two steps** where the app has seven
+  pages, one transaction: (1) «¿Cómo vas a pagar?», with the totals (the
+  plan, the coupon and the total; or the receipt's lines, what was settled
+  and what is left to pay) and the two methods, Pago móvil and
+  Transferencia; taking a plan creates the subscription when the method is
+  chosen (`POST /billing/me/subscription`, through the write-once guard; a
+  409 ERR_5071 for this same plan unpaid continues with it, any other
+  returns to the subscription; ERR_5074 returns to the plans) and fixes the
+  amount in bolívares (`POST …/payment-intents`; no rate of the day,
+  ERR_5085, is said in place with the retry a tap away); the coupon sheet
+  («Ver descuento» validates without spending the code, «Aplicar cupón»,
+  the saved coupons good for the plan; a refusal is read in the field, by
+  the API's `details.reason` before its code) and, when it covers the
+  month, «Activar mi plan» instead of a method. (2) «Realiza el pago»: the
+  amount in Bs, big, with «Copiar» (it copies `1198,39`, as the bank wants
+  it typed), its dollars and the day's rate, until when it holds,
+  Redoctor's account for the method with «Copiar» per datum and «Copiar
+  todos los datos», and the report on the same page — the reference (6 to
+  22 digits), the bank (a sheet with the app's list of 27 banks, searched
+  without accents, only the code travels), the phone (+58) for a Pago móvil
+  or the account's digits for a transfer, the day (a date field, today by
+  default, never the future) and the amount (prefilled with what was
+  asked; another one is explained before sending: what is missing stays
+  pending on the receipt, what is over becomes balance) — sent with
+  `POST …/report` through the write-once guard; an expired amount
+  (ERR_5083) is renewed and what was typed kept, a report already in
+  review (ERR_5084) sends the person back to the subscription. Then
+  «Estamos verificando tu pago» with the summary (amount, bank, method,
+  day), or «¡Tu plan ha sido activado!», and «Ir al inicio» to `/panel`,
+  whose «Suscripción» card now leads here (the bridge `/panel/subscription`
+  stays for the app and the emails). Money as the app writes it (`$ 36.99`,
+  `Bs 1.198,39`, the rate `Bs 39,95`), the dates in words. Where the web
+  differs from the app, on purpose and to confirm: two steps instead of
+  seven pages; no «Pegar» button for the reference (the keyboard pastes);
+  the day is a date field instead of «Hoy / Ayer / Otra fecha»; the phone
+  is always asked (the web's `/me` carries none to confirm); the benefits
+  unfold inside the plan's card. **Left for later, on the owner's word
+  (2026-10-12), all still in the app:** changing plan (preview and
+  proration), cancelling and resuming, abandoning an unpaid subscription,
+  undoing a scheduled change, the receipts' history, «Saldo a favor», «Mis
+  cupones» (saving and listing) and «Datos de cobro»; no email sends anyone
+  to the web for them. With M13 the billing copy entered `es.json` under
+  the app's `billing.*` keys, and `app/lib/format/dates.ts` writes instants
+  as days and hours in Caracas for anything that is not an appointment.
   Production needs the API's CORS (REDOC-362): the e2e covers the page
   without a session, the component tests (MSW) the rest.
 

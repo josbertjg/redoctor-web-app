@@ -107,4 +107,15 @@ export const pageNamespaces = {
   // The patient's appointments (M6) and the review wall before them (M7):
   // the list, the cards and the rating, all read in the browser.
   appointments: ['apiErrors', 'appointments', 'reviews', 'refresh'],
+  // The specialist's payment (M13): the subscription, the plans, the
+  // coupon sheet and the two steps of the payment, all read in the browser.
+  pay: [
+    'apiErrors',
+    'billing',
+    'refresh',
+    'continue',
+    'back',
+    'input',
+    'phoneNumber',
+  ],
 } as const satisfies Record<string, readonly Namespace[]>;

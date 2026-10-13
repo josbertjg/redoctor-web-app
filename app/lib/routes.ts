@@ -1,5 +1,3 @@
-import { env } from './env';
-
 /*
  * Every route path of the web is built here and nowhere else (the app has
  * `AppRoutes` for the same reason). The builders return literal and template
@@ -11,8 +9,7 @@ import { env } from './env';
  * it is for: the short links people share at the top (`/s`, `/i`, `/a`),
  * the specialist's pages that the app opens under `/panel/`, and the payment
  * outside it on purpose (AGENTS.md §6). A renamed path keeps answering with
- * a redirect (next.config.ts). The payment route comes from the environment
- * until its name is decided (AGENTS.md §13).
+ * a redirect (next.config.ts).
  */
 
 const segment = (value: string) => encodeURIComponent(value);
@@ -61,8 +58,8 @@ export const routes = {
   terms: () => '/terms' as const,
   deleteAccount: () => '/delete-account' as const,
 
-  /* Specialist payment (M13): never an app path, never linked from the app. */
-  payment: () => env.NEXT_PUBLIC_PAYMENT_PATH,
+  /* Specialist payment (M13, owner's name of 2026-10-12): never an app path, never linked from the app. */
+  payment: () => '/pay' as const,
 
   /* The specialist's pages the app opens (M11): bridges on the web. */
   subscriptionBridge: () => '/panel/subscription' as const,

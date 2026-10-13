@@ -31,6 +31,10 @@ export type AnalyticsEvents = {
   web_appointment_calendar_added: { calendar: 'google' | 'ics' };
   /** A finished consultation rated (M7): with a comment or stars alone. */
   web_review_submitted: { comment: boolean };
+  /** A specialist took a plan on the web (M13): with a coupon or not, and whether it covered the month whole. */
+  web_subscription_created: { coupon: boolean; free: boolean };
+  /** A payment reported on the web (M13): how it was paid. Never the amount or the reference. */
+  web_payment_reported: { method: 'mobile_payment' | 'bank_transfer' };
 };
 
 export type AnalyticsEventName = keyof AnalyticsEvents;

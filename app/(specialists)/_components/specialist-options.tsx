@@ -15,17 +15,16 @@ import { Icon, type IconComponent } from '@/app/ui/icons';
 /*
  * The app's options, one card each. A card leads to the option's bridge
  * (M11), which opens the same path in the app on a phone and says where it
- * opens on a computer: one place knows how to open the app.
+ * opens on a computer: one place knows how to open the app. The
+ * subscription is the exception: it is paid on the web (M13), so its card
+ * leads to `/pay`; the bridge `/panel/subscription` stays for the app and
+ * the emails.
  */
 const options = [
   { key: 'agenda', icon: CalendarMonth, href: routes.agendaBridge() },
   { key: 'specialties', icon: Stethoscope, href: routes.specialtiesBridge() },
   { key: 'profile', icon: IdCard, href: routes.profileBridge() },
-  {
-    key: 'subscription',
-    icon: WorkspacePremium,
-    href: routes.subscriptionBridge(),
-  },
+  { key: 'subscription', icon: WorkspacePremium, href: routes.payment() },
 ] as const satisfies readonly {
   key: string;
   icon: IconComponent;

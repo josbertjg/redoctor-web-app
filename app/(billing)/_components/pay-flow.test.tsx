@@ -1,0 +1,644 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { axe } from 'jest-axe';
+import { http, HttpResponse } from 'msw';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+
+import { todayInCaracas } from '@/app/lib/format/date-of-birth';
+import { formatCalendarDate } from '@/app/lib/format/dates';
+import { pageNamespaces } from '@/app/lib/i18n/client-messages';
+import { meResponseSchema, toAccount } from '@/app/lib/schemas/identity';
+
+import { Toaster } from '@/app/ui/toast';
+import {
+  buildInvoice,
+  buildIntent,
+  buildReported,
+  buildStartedPayment,
+  buildSubscription,
+  hoursFromNow,
+  intentIds,
+  planIds,
+  ves,
+} from '@/tests/factories/billing';
+import { renderWithPageMessages } from '@/tests/render';
+
+import { SessionContext, type Session } from '@/app/hooks/use-session';
+
+import { PayFlow } from './pay-flow';
+import { buildSpecialistMeResponse } from '../../../tests/factories/identity';
+import { apiUrl, errorEnvelope } from '../../../tests/msw/api-url';
+import {
+  invoiceDetailHandler,
+  invoicesHandler,
+  subscriptionHandler,
+} from '../../../tests/msw/handlers/billing';
+import { validToken } from '../../../tests/msw/handlers/identity';
+import { server } from '../../../tests/msw/server';
+
+const user = {
+  id: 'uid-1',
+  email: 'luis@example.com',
+  name: 'Dr. Luis Gómez',
+  photo: null,
+  provider: 'google' as const,
+  getToken: () => Promise.resolve(validToken),
+};
+
+const signedIn: Session = {
+  status: 'signed-in',
+  expected: true,
+  user,
+  account: toAccount(meResponseSchema.parse(buildSpecialistMeResponse())),
+  accountStatus: 'ready',
+  accountError: null,
+  retryAccount: vi.fn(),
+  signOut: vi.fn(() => Promise.resolve()),
+};
+
+/** As app/providers.tsx builds it: no retries, so a failure shows at once. */
+const queryClient = () =>
+  new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+
+function renderPay() {
+  return renderWithPageMessages(
+    <QueryClientProvider client={queryClient()}>
+      <SessionContext.Provider value={signedIn}>
+        {/* As the page renders it: inside its main landmark. */}
+        <main>
+          <PayFlow />
+        </main>
+      </SessionContext.Provider>
+      <Toaster regionLabel="Notificaciones" closeLabel="Cerrar" />
+    </QueryClientProvider>,
+    pageNamespaces.pay,
+  );
+}
+
+/**
+ * The bodies the API received on a path, in order. Read at `request:start`:
+ * by `request:match` the handler has consumed the body and a clone throws.
+ */
+function recordBodies(path: string) {
+  const bodies: unknown[] = [];
+  server.events.on('request:start', ({ request }) => {
+    if (
+      request.method === 'POST' &&
+      new URL(request.url).pathname.endsWith(path)
+    ) {
+      void request
+        .clone()
+        .json()
+        .then((body: unknown) => bodies.push(body));
+    }
+  });
+  return bodies;
+}
+
+const unpaidSubscription = () => [
+  subscriptionHandler(buildSubscription()),
+  invoicesHandler([buildInvoice()]),
+];
+
+const noDialog = () =>
+  waitFor(() => {
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+async function pickBank(query: string, label: string) {
+  await userEvent.click(screen.getByRole('button', { name: /Banco usado/ }));
+  const picker = await screen.findByRole('dialog', {
+    name: '¿Qué banco usaste?',
+  });
+  await userEvent.type(
+    within(picker).getByLabelText('Busca tu banco aquí'),
+    query,
+  );
+  await userEvent.click(within(picker).getByRole('button', { name: label }));
+  await noDialog();
+}
+
+beforeAll(() => {
+  // jsdom lays nothing out: the steps scroll to the top on paper only.
+  window.scrollTo = vi.fn();
+});
+
+afterEach(() => {
+  server.events.removeAllListeners();
+});
+
+describe('PayFlow', () => {
+  it('takes a plan with a coupon and reports a Pago móvil, in two steps', async () => {
+    const subscriptions = recordBodies('/billing/me/subscription');
+    const reports = recordBodies('/report');
+    const { container } = renderPay();
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Todavía no tienes un plan',
+      }),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Ver planes' }));
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Elige el plan ideal para tu perfil profesional',
+      }),
+    ).toBeInTheDocument();
+    // The cheapest comes chosen; the archived plan is not offered.
+    expect(screen.getAllByRole('radio')).toHaveLength(3);
+    expect(screen.getByRole('radio', { name: /Esencial/ })).toBeChecked();
+    await userEvent.click(screen.getByRole('radio', { name: /Profesional/ }));
+    const [, professionalToggle] = screen.getAllByRole('button', {
+      name: 'Ver beneficios',
+    });
+    if (!professionalToggle) throw new Error('No second plan to unfold');
+    await userEvent.click(professionalToggle);
+    expect(screen.getByText('Máximo 3 consultorios')).toBeInTheDocument();
+    expect(await axe(container)).toHaveNoViolations();
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Seleccionar plan' }),
+    );
+
+    // Step 1: the totals and the coupon.
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: '¿Cómo vas a pagar?',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Paso 1 de 2')).toBeInTheDocument();
+    expect(screen.getByText('Plan Profesional')).toBeInTheDocument();
+    expect(screen.getAllByText('$ 30')).toHaveLength(2);
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Añadir cupones' }),
+    );
+    const sheet = await screen.findByRole('dialog', { name: 'Añadir cupones' });
+    await userEvent.type(within(sheet).getByLabelText('Código'), 'redoctor20');
+    await userEvent.click(
+      within(sheet).getByRole('button', { name: 'Ver descuento' }),
+    );
+    expect(
+      await within(sheet).findByText(
+        '20 % de descuento en tu primera mensualidad',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(sheet).getByText('Tu mensualidad quedaría en $ 24'),
+    ).toBeInTheDocument();
+    await userEvent.click(
+      within(sheet).getByRole('button', { name: 'Aplicar cupón' }),
+    );
+    await noDialog();
+    expect(screen.getByText('REDOCTOR20')).toBeInTheDocument();
+    expect(screen.getByText('(20 %)')).toBeInTheDocument();
+    expect(screen.getByText('- $ 6')).toBeInTheDocument();
+    expect(screen.getByText('$ 24')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Pago móvil' }));
+
+    // Step 2: the amount, Redoctor's account and the report.
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Realiza el pago' }),
+    ).toBeInTheDocument();
+    expect(subscriptions).toEqual([
+      { planId: planIds.professional, coupon: { code: 'REDOCTOR20' } },
+    ]);
+    expect(screen.getByText('Paso 2 de 2')).toBeInTheDocument();
+    expect(screen.getByText('Bs 1.198,39')).toBeInTheDocument();
+    expect(
+      screen.getByText('Equivale a $ 30 · Tasa del día Bs 39,95'),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Este monto vale hasta las/)).toBeInTheDocument();
+    expect(screen.getByText('(0102) Banco de Venezuela')).toBeInTheDocument();
+    expect(screen.getByText('04141234567')).toBeInTheDocument();
+    expect(screen.getByText('J-123456789')).toBeInTheDocument();
+    expect(screen.getByLabelText('Monto en bolívares')).toHaveValue('1198,39');
+
+    await userEvent.type(
+      screen.getByLabelText('Número de referencia'),
+      '00123456',
+    );
+    await pickBank('banesco', '(0134) Banesco');
+    expect(
+      screen.getByRole('button', { name: /\(0134\) Banesco/ }),
+    ).toBeInTheDocument();
+    await userEvent.type(
+      screen.getByLabelText('Número de teléfono'),
+      '4141234567',
+    );
+    expect(await axe(container)).toHaveNoViolations();
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Estamos verificando tu pago',
+      }),
+    ).toBeInTheDocument();
+    const today = todayInCaracas();
+    expect(reports).toEqual([
+      {
+        reference: '00123456',
+        bankCode: '0134',
+        origin: '+584141234567',
+        paidOn: today,
+        amountVes: 119839,
+      },
+    ]);
+    expect(screen.getByText('Bs 1.198,39')).toBeInTheDocument();
+    expect(screen.getByText('(0134) Banesco')).toBeInTheDocument();
+    expect(screen.getByText('Pago móvil')).toBeInTheDocument();
+    expect(screen.getByText(formatCalendarDate(today))).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ir al inicio' })).toHaveAttribute(
+      'href',
+      '/panel',
+    );
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('pays an unpaid subscription by transfer, explaining a different amount first', async () => {
+    const reports = recordBodies('/report');
+    server.use(...unpaidSubscription());
+    const { container } = renderPay();
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Mi suscripción' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Sin pagar')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', {
+        level: 2,
+        name: 'Tu suscripción está sin pagar',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Págala antes del .* para activar tu plan/),
+    ).toBeInTheDocument();
+    expect(await axe(container)).toHaveNoViolations();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Pagar ahora' }));
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: '¿Cómo vas a pagar?',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Plan Profesional · 12 oct – 11 nov 2026'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Total a pagar')).toBeInTheDocument();
+    expect(screen.queryByText('Añadir cupones')).not.toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Transferencia' }),
+    );
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Realiza el pago' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('01020123456789012345')).toBeInTheDocument();
+    expect(screen.getByText('Redoctor C.A.')).toBeInTheDocument();
+    expect(screen.getByText('Corriente')).toBeInTheDocument();
+
+    await userEvent.type(
+      screen.getByLabelText('Número de referencia'),
+      '987654321',
+    );
+    await pickBank('mercantil', '(0105) Banco Mercantil');
+    await userEvent.type(screen.getByLabelText('Cuenta de origen'), '1234');
+    const amount = screen.getByLabelText('Monto en bolívares');
+    await userEvent.clear(amount);
+    await userEvent.type(amount, '1000');
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
+
+    const sheet = await screen.findByRole('dialog', {
+      name: 'Pagaste otro monto',
+    });
+    expect(
+      within(sheet).getByText(
+        'Vas a reportar Bs 1.000,00, y tu recibo pedía Bs 1.198,39.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(sheet).getByText(/Lo que falte quedará pendiente/),
+    ).toBeInTheDocument();
+    await userEvent.click(
+      within(sheet).getByRole('button', { name: 'Enviar así' }),
+    );
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Estamos verificando tu pago',
+      }),
+    ).toBeInTheDocument();
+    expect(reports).toEqual([
+      expect.objectContaining({
+        reference: '987654321',
+        bankCode: '0105',
+        origin: '1234',
+        amountVes: 100000,
+      }),
+    ]);
+    expect(screen.getByText('Bs 1.000,00')).toBeInTheDocument();
+    expect(screen.getByText('Transferencia')).toBeInTheDocument();
+  });
+
+  it('says a payment is being verified and offers nothing to pay', async () => {
+    server.use(
+      ...unpaidSubscription(),
+      invoiceDetailHandler(buildInvoice(), [
+        buildIntent({ status: 'IN_REVIEW', reported: buildReported() }),
+      ]),
+    );
+    renderPay();
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 2,
+        name: 'Estamos verificando tu pago',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Te avisaremos en cuanto lo aprobemos. Mientras tanto no hace falta enviar otro.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Pagar ahora' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows the admin’s reason for a rejected payment and the way to pay again', async () => {
+    server.use(
+      ...unpaidSubscription(),
+      invoiceDetailHandler(buildInvoice(), [
+        buildIntent({
+          id: intentIds.rejected,
+          status: 'FAILED',
+          reported: buildReported(),
+          failureReason: 'La referencia no aparece en el estado de cuenta.',
+        }),
+      ]),
+    );
+    renderPay();
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 2,
+        name: 'Rechazamos tu último pago',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Motivo del rechazo')).toBeInTheDocument();
+    expect(
+      screen.getByText('La referencia no aparece en el estado de cuenta.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Pagar ahora' }),
+    ).toBeInTheDocument();
+  });
+
+  it('tells an active plan where it stands, with its period and its coupon', async () => {
+    server.use(
+      subscriptionHandler(
+        buildSubscription({
+          status: 'ACTIVE',
+          incompleteExpiresAt: null,
+          discount: {
+            code: 'REDOCTOR20',
+            couponName: 'Bienvenida 2026',
+            discountType: 'PERCENT',
+            percentOff: 20,
+            amountOff: null,
+            duration: 'REPEATING',
+            remainingCycles: 2,
+            status: 'ACTIVE',
+          },
+          courtesy: { monthsLeft: 1, endsAt: null },
+        }),
+      ),
+    );
+    renderPay();
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Mi suscripción' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Activa')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Tu plan está al día. Se renueva el 11 de noviembre de 2026.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText('12 oct. – 11 nov. 2026')).toBeInTheDocument();
+    expect(screen.getByText('Cupón REDOCTOR20')).toBeInTheDocument();
+    expect(screen.getByText('20 % de descuento')).toBeInTheDocument();
+    expect(screen.getByText('Mensualidades con descuento')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByText('1 mes')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Pagar ahora' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('counts the days a past-due plan has left', async () => {
+    server.use(
+      subscriptionHandler(
+        buildSubscription({
+          status: 'PAST_DUE',
+          incompleteExpiresAt: null,
+          graceEndsAt: hoursFromNow(5 * 24),
+        }),
+      ),
+      invoicesHandler([buildInvoice()]),
+    );
+    renderPay();
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 2,
+        name: 'Tu plan se cancelará en 5 días',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Pago vencido')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Pagar ahora' }),
+    ).toBeInTheDocument();
+  });
+
+  it('activates the plan at once when a coupon covers the month', async () => {
+    renderPay();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Ver planes' }),
+    );
+    await userEvent.click(
+      await screen.findByRole('radio', { name: /Profesional/ }),
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Seleccionar plan' }),
+    );
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Añadir cupones' }),
+    );
+    const sheet = await screen.findByRole('dialog', { name: 'Añadir cupones' });
+    await userEvent.type(within(sheet).getByLabelText('Código'), 'GRATIS100');
+    await userEvent.click(
+      within(sheet).getByRole('button', { name: 'Ver descuento' }),
+    );
+    await userEvent.click(
+      await within(sheet).findByRole('button', { name: 'Aplicar cupón' }),
+    );
+    await noDialog();
+
+    expect(
+      screen.getByRole('heading', {
+        level: 2,
+        name: 'Tu cupón cubre este mes completo',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Pago móvil' }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Activar mi plan' }),
+    );
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: '¡Tu plan ha sido activado!',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Tu cupón GRATIS100 cubrió el 100 % del plan Profesional/,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('renews an expired amount in bolívares and keeps what was typed', async () => {
+    let starts = 0;
+    const reports = recordBodies('/report');
+    server.use(
+      ...unpaidSubscription(),
+      http.post(
+        apiUrl('/billing/me/invoices/:invoiceId/payment-intents'),
+        () => {
+          starts += 1;
+          return HttpResponse.json(
+            buildStartedPayment('MOBILE_PAYMENT', {
+              id: starts === 1 ? intentIds.expired : intentIds.fresh,
+              amountVes: starts === 1 ? ves(119839) : ves(125000),
+            }),
+            { status: 201 },
+          );
+        },
+      ),
+    );
+    renderPay();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Pagar ahora' }),
+    );
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Pago móvil' }),
+    );
+    await screen.findByRole('heading', { level: 1, name: 'Realiza el pago' });
+    await userEvent.type(
+      screen.getByLabelText('Número de referencia'),
+      '00123456',
+    );
+    await pickBank('banesco', '(0134) Banesco');
+    await userEvent.type(
+      screen.getByLabelText('Número de teléfono'),
+      '4141234567',
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
+
+    expect(
+      await screen.findByText(
+        'El monto en bolívares cambió. Revísalo y confirma de nuevo.',
+      ),
+    ).toBeInTheDocument();
+    expect(await screen.findByText('Bs 1.250,00')).toBeInTheDocument();
+    expect(screen.getByLabelText('Número de referencia')).toHaveValue(
+      '00123456',
+    );
+    expect(reports).toHaveLength(1);
+
+    // The typed amount no longer matches the new one: the sheet asks, as the app does.
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
+    const sheet = await screen.findByRole('dialog', {
+      name: 'Pagaste otro monto',
+    });
+    expect(
+      within(sheet).getByText(
+        'Vas a reportar Bs 1.198,39, y tu recibo pedía Bs 1.250,00.',
+      ),
+    ).toBeInTheDocument();
+    await userEvent.click(
+      within(sheet).getByRole('button', { name: 'Enviar así' }),
+    );
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Estamos verificando tu pago',
+      }),
+    ).toBeInTheDocument();
+    expect(reports).toHaveLength(2);
+    expect(reports[1]).toEqual(expect.objectContaining({ amountVes: 119839 }));
+  });
+
+  it('says when the subscription cannot be read and offers to try again', async () => {
+    server.use(
+      http.get(apiUrl('/billing/me/subscription'), () =>
+        HttpResponse.json(errorEnvelope('ERR_1002', 'Validation failed'), {
+          status: 400,
+        }),
+      ),
+    );
+    renderPay();
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'No pudimos cargar tu suscripción',
+      }),
+    ).toBeInTheDocument();
+    server.use(subscriptionHandler(null));
+    await userEvent.click(screen.getByRole('button', { name: 'Refrescar' }));
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Todavía no tienes un plan',
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it('tells an account the API does not take for a specialist’s', async () => {
+    server.use(
+      http.get(apiUrl('/billing/me/subscription'), () =>
+        HttpResponse.json(errorEnvelope('ERR_1003', 'Forbidden'), {
+          status: 403,
+        }),
+      ),
+    );
+    renderPay();
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Esta página es para especialistas',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Ir a mis herramientas' }),
+    ).toHaveAttribute('href', '/panel');
+  });
+});

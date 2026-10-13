@@ -387,7 +387,7 @@
   "specialistHome": {
     "metaTitle": "Tus herramientas",
     "title": "Tus herramientas están en la app",
-    "description": "Desde la app de Redoctor manejas tu agenda, tus especialidades, tu perfil y tu suscripción. Elige una para abrirla en tu teléfono.",
+    "description": "Desde la app de Redoctor manejas tu agenda, tus especialidades y tu perfil. Tu suscripción se paga aquí, en la web.",
     "options": {
       "agenda": {
         "title": "Agenda",
@@ -403,7 +403,7 @@
       },
       "subscription": {
         "title": "Suscripción",
-        "description": "Tu plan y tus pagos."
+        "description": "Tu plan y tus pagos, aquí en la web."
       }
     },
     "adminNote": "Tu cuenta es de administración: sus herramientas también están en la app."
@@ -513,12 +513,288 @@
   "showLess": "Ver menos",
   "refresh": "Refrescar",
   "billing": {
+    "metaTitle": "Pagar",
+    "plans": {
+      "title": "Elige el plan <highlight>ideal</highlight> para tu perfil profesional",
+      "subtitle": "Aumenta tu visibilidad y conecta con más pacientes de forma segura.",
+      "listLabel": "Planes",
+      "perMonth": "al mes",
+      "seeBenefits": "Ver beneficios",
+      "hideBenefits": "Ocultar beneficios",
+      "benefitsTitle": "Beneficios y características",
+      "select": "Seleccionar plan",
+      "loadErrorTitle": "No pudimos cargar los planes",
+      "loadErrorDescription": "Revisa tu conexión e inténtalo de nuevo.",
+      "emptyTitle": "No hay planes disponibles",
+      "emptyDescription": "Vuelve más tarde o escríbenos si necesitas ayuda.",
+      "benefits": {
+        "search": "Tu perfil visible para pacientes",
+        "oneClinic": "Máximo 1 consultorio",
+        "manyClinics": "Máximo {count} consultorios",
+        "unlimitedClinics": "Consultorios ilimitados",
+        "exportReports": "Visualización y descarga de reportes administrativos"
+      }
+    },
+    "mySubscription": {
+      "title": "Mi suscripción",
+      "seePlans": "Ver planes",
+      "subscribeAgain": "Contratar un plan de nuevo",
+      "loadErrorTitle": "No pudimos cargar tu suscripción",
+      "loadErrorDescription": "Revisa tu conexión e inténtalo de nuevo.",
+      "empty": {
+        "title": "Todavía no tienes un plan",
+        "description": "Contrata uno para hacer visible tu perfil y empezar a recibir pacientes."
+      },
+      "forbidden": {
+        "title": "Esta página es para especialistas",
+        "description": "Tu cuenta no tiene un perfil de especialista. Tus herramientas están en la app.",
+        "action": "Ir a mis herramientas"
+      },
+      "rows": {
+        "title": "Tu periodo",
+        "period": "Periodo actual",
+        "nextPlan": "Próximo plan",
+        "nextPlanValue": "{plan} ({price}) desde el {date}",
+        "nextPlanValueNoDate": "{plan} ({price})",
+        "coupon": "Cupón {code}",
+        "freeMonths": "Meses gratis",
+        "couponLeft": "Mensualidades con descuento"
+      },
+      "status": {
+        "active": {
+          "withDate": "Tu plan está al día. Se renueva el {date}.",
+          "noDate": "Tu plan está al día."
+        },
+        "canceling": {
+          "withDate": "Tu plan termina el {date}. Hasta entonces sigues apareciendo en las búsquedas.",
+          "noDate": "Tu plan termina al final del periodo."
+        },
+        "pastDue": {
+          "withDate": "Tu pago está vencido. Sigues apareciendo en las búsquedas hasta el {date}; después tu plan se cancela.",
+          "noDate": "Tu pago está vencido. Ponte al día para no perder tu plan."
+        },
+        "incomplete": {
+          "withDate": "Tu plan todavía no está activo. Págalo antes del {date} para activarlo y aparecer en las búsquedas.",
+          "noDate": "Tu plan todavía no está activo. Págalo para activarlo y aparecer en las búsquedas."
+        },
+        "canceled": "No apareces en las búsquedas. Puedes contratar un plan cuando quieras."
+      }
+    },
+    "months": "{count, plural, one {1 mes} other {# meses}}",
+    "coupon": {
+      "preview": {
+        "amount": "Tu mensualidad quedaría en {amount}"
+      }
+    },
     "couponRejection": {
       "invalid": "Este cupón no es válido.",
       "usageLimit": "Este cupón ya alcanzó su límite de usos.",
       "expired": "Este cupón ya venció.",
       "wrongPlan": "Este cupón no aplica a este plan.",
-      "unavailable": "Este cupón ya no está disponible."
+      "unavailable": "Este cupón ya no está disponible.",
+      "firstSubscriptionOnly": "Este cupón solo vale para tu primera suscripción."
+    },
+    "notice": {
+      "payAction": "Pagar ahora",
+      "reason": "Motivo del rechazo",
+      "inReview": {
+        "badge": "Verificando",
+        "title": "Estamos verificando tu pago",
+        "description": "Te avisaremos en cuanto lo aprobemos. Mientras tanto no hace falta enviar otro."
+      },
+      "pastDue": {
+        "badge": "Vencido",
+        "title": "Tu plan se cancelará en {days} días",
+        "titleImminent": "Tu plan está a punto de cancelarse",
+        "description": "Tu pago está vencido. Sigues apareciendo en las búsquedas hasta el {date}; después tu plan se cancela.",
+        "descriptionNoDate": "Tu pago está vencido. Págalo cuanto antes para no perder tu plan."
+      },
+      "rejected": {
+        "badge": "Pago rechazado",
+        "title": "Rechazamos tu último pago",
+        "description": "Revisa el motivo y vuelve a enviar tu pago antes del {date}.",
+        "descriptionNoDate": "Revisa el motivo y vuelve a enviar tu pago."
+      },
+      "unpaid": {
+        "badge": "Sin pagar",
+        "title": "Tu suscripción está sin pagar",
+        "description": "Págala antes del {date} para activar tu plan y aparecer en las búsquedas.",
+        "descriptionNoDate": "Págala para activar tu plan y aparecer en las búsquedas."
+      },
+      "upgradePending": {
+        "badge": "Cambio pendiente",
+        "title": "Tu cambio al plan {plan} espera su pago",
+        "description": "Paga la diferencia para empezar a usar el plan {plan}."
+      }
+    },
+    "acquire": {
+      "title": "Pagar",
+      "planBadge": "Plan {plan}",
+      "step": "Paso {current} de {total}",
+      "alreadySubscribed": "Ya tienes un plan contratado",
+      "methods": {
+        "mobile": "Pago móvil",
+        "transfer": "Transferencia"
+      },
+      "method": {
+        "title": "¿Cómo vas a pagar?",
+        "description": "Elige la forma de pago y te mostramos los datos para hacerla.",
+        "freeTitle": "Tu cupón cubre este mes completo",
+        "freeDescription": "No tienes que pagar nada: al activarlo, tu plan queda listo de inmediato.",
+        "activateFree": "Activar mi plan",
+        "failed": "No pudimos preparar tu pago. Inténtalo de nuevo."
+      },
+      "totals": {
+        "title": "Lo que vas a pagar",
+        "subtotal": "Subtotal",
+        "coupons": "Cupones",
+        "total": "Total",
+        "addCoupon": "Añadir cupones",
+        "changeCoupon": "Cambiar cupón",
+        "settled": "Abonado",
+        "toPay": "Total a pagar"
+      },
+      "coupon": {
+        "title": "Añadir cupones",
+        "label": "Código",
+        "hint": "Ingresar código",
+        "required": "Escribe el código del cupón",
+        "validate": "Ver descuento",
+        "apply": "Aplicar cupón",
+        "remove": "Quitar cupón",
+        "keep": "Mantener este cupón",
+        "saved": "Tus cupones guardados",
+        "failed": "No pudimos comprobar el cupón. Inténtalo de nuevo."
+      },
+      "fields": {
+        "holder": "Titular",
+        "account": "Cuenta",
+        "accountType": "Tipo",
+        "phone": "Teléfono",
+        "amount": "Monto",
+        "payerPhone": "Número de teléfono",
+        "reference": "Número de referencia",
+        "usedBank": "Banco usado",
+        "date": "Fecha",
+        "method": "Método de pago",
+        "bankName": "Banco",
+        "document": "RIF o cédula"
+      },
+      "instructions": {
+        "title": "Realiza el pago",
+        "description": "Transfiere el monto exacto en bolívares. Copia cada dato para no equivocarte.",
+        "action": "Ya pagué"
+      },
+      "payerPhone": {
+        "title": "¿Desde qué número pagaste?",
+        "description": "El teléfono con el que hiciste el pago móvil."
+      },
+      "reference": {
+        "title": "Ingresa el número de referencia",
+        "description": "Lo encuentras en tu app del banco como «Número de operación» o «Referencia».",
+        "hint": "N.° de referencia",
+        "paste": "Pegar",
+        "hintLength": "Debe tener entre {min} y {max} dígitos."
+      },
+      "bank": {
+        "title": "¿Qué banco usaste?",
+        "search": "Busca tu banco aquí",
+        "emptyTitle": "No encontramos ese banco",
+        "emptyDescription": "Revisa el nombre e inténtalo de nuevo.",
+        "pick": "Elegir el banco",
+        "change": "Cambiar",
+        "required": "Elige el banco desde el que pagaste."
+      },
+      "date": {
+        "title": "¿Qué día hiciste el pago?",
+        "invalid": "Elige un día que no sea futuro."
+      },
+      "confirm": {
+        "title": "Confirma los datos del pago",
+        "description": "Asegúrate de que los datos sean correctos antes de continuar.",
+        "action": "Confirmar",
+        "failed": "No pudimos enviar tu reporte. Inténtalo de nuevo."
+      },
+      "done": {
+        "pendingTitle": "Estamos verificando tu pago",
+        "pendingDescription": "Te avisaremos en cuanto lo aprobemos.",
+        "activatedTitle": "¡Tu plan ha sido activado!",
+        "activatedDescription": "Tu cupón {code} cubrió el 100 % del plan {plan}. Prepárate para recibir a tus pacientes en Redoctor.",
+        "goHome": "Ir al inicio"
+      },
+      "couponDropped": "Quitamos tu cupón",
+      "otherUnpaid": "Tienes una suscripción sin pagar del plan {plan}. Págala, o descártala desde la app, para elegir otro.",
+      "planUnavailable": "Ese plan ya no está disponible. Elige otro.",
+      "accountType": {
+        "checking": "Corriente",
+        "savings": "Ahorro",
+        "unknown": "---"
+      }
+    },
+    "billingStatus": {
+      "incomplete": "Sin pagar",
+      "incompleteExpired": "Sin activar",
+      "active": "Activa",
+      "pastDue": "Pago vencido",
+      "canceled": "Cancelada",
+      "unknown": "Sin estado"
+    },
+    "couponTerms": {
+      "percent": "{percent} % de descuento",
+      "amount": "{amount} de descuento",
+      "once": "en tu primera mensualidad",
+      "repeating": "{count, plural, one {durante 1 mes} other {durante # meses}}",
+      "forever": "en todas tus mensualidades",
+      "allMonths": "Todas"
+    },
+    "pay": {
+      "noRate": "No podemos calcular el monto en bolívares ahora. Vuelve a intentarlo en un rato.",
+      "noRateSubscribed": "No podemos calcular el monto en bolívares ahora. Tu suscripción queda guardada: vuelve a intentarlo en un rato.",
+      "amountToTransfer": "Monto a transferir",
+      "reference": "Equivale a {usd} · Tasa del día {rate}",
+      "validUntil": "Este monto vale hasta las {time}",
+      "otherAmount": "¿Pagaste otro monto?",
+      "intentExpired": "El monto en bolívares cambió. Revísalo y confirma de nuevo.",
+      "alreadyInReview": "Ya tienes un pago en revisión. Te avisaremos en cuanto lo verifiquemos.",
+      "loadErrorTitle": "No pudimos abrir tu pago",
+      "loadErrorDescription": "Revisa tu conexión e inténtalo de nuevo.",
+      "inReviewTitle": "Ya estamos verificando tu pago",
+      "inReviewDescription": "Te avisaremos en cuanto lo aprobemos. Mientras tanto no hace falta enviar otro.",
+      "copy": "Copiar",
+      "copied": "Copiado",
+      "copyAll": "Copiar todos los datos",
+      "copyAllDone": "Datos copiados",
+      "changeMethod": "Cambiar la forma de pago",
+      "report": {
+        "title": "Reporta tu pago",
+        "description": "Cuando hayas pagado, dinos con qué datos encontrarlo en el banco."
+      },
+      "origin": {
+        "accountTitle": "¿Desde qué cuenta transferiste?",
+        "accountDescription": "Basta con los últimos 4 dígitos.",
+        "accountHint": "Número de cuenta",
+        "accountTooShort": "Escribe al menos {min} dígitos.",
+        "accountLabel": "Cuenta de origen"
+      },
+      "amount": {
+        "label": "Monto en bolívares",
+        "description": "Se te pidió {expected}. Si pagaste otro monto, escríbelo tal cual.",
+        "required": "Escribe el monto que pagaste.",
+        "invalid": "Escribe el monto en bolívares, como 1198,39."
+      },
+      "differentAmount": {
+        "title": "Pagaste otro monto",
+        "description": "Vas a reportar {reported}, y tu recibo pedía {expected}.",
+        "less": "Lo que falte quedará pendiente en tu recibo, y tendrás que pagarlo aparte.",
+        "more": "Lo que sobre quedará como saldo a favor para tu próxima mensualidad.",
+        "fix": "Corregir el monto",
+        "send": "Enviar así"
+      }
+    },
+    "report": {
+      "nothingTitle": "No tienes pagos pendientes",
+      "nothingDescription": "No tienes recibos por pagar.",
+      "nothingAction": "Volver"
     }
   },
   "retry": "Reintentar",

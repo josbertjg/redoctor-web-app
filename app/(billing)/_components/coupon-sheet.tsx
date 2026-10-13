@@ -1,0 +1,274 @@
+'use client';
+
+import { useState } from 'react';
+
+import CheckCircleFill from '@material-symbols/svg-400/rounded/check_circle-fill.svg?svgr';
+import ConfirmationNumber from '@material-symbols/svg-400/rounded/confirmation_number.svg?svgr';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
+
+import type { SessionUser } from '@/app/lib/firebase/client';
+import { formatBillingAmount } from '@/app/lib/format/money';
+import {
+  couponRejectionKey,
+  savedCouponsQueryOptions,
+  validateCoupon,
+} from '@/app/lib/queries/billing';
+import {
+  couponAppliesTo,
+  couponDiscount,
+  type Coupon,
+  type CouponChoice,
+  type OfferedPlan,
+  type SavedCoupon,
+} from '@/app/lib/schemas/billing';
+
+import { Button } from '@/app/ui/button';
+import { Icon } from '@/app/ui/icons';
+import { Sheet } from '@/app/ui/sheet';
+import { TextField } from '@/app/ui/text-field';
+
+import { billingFailure } from './billing-failure';
+import { couponSummary } from './coupon-words';
+
+import type { AppliedCoupon } from './payment-types';
+
+type CouponSheetProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  user: SessionUser;
+  plan: OfferedPlan;
+  applied: AppliedCoupon | null;
+  onApply: (coupon: AppliedCoupon) => void;
+  onRemove: () => void;
+};
+
+/** What was validated and not applied yet. */
+type Preview = { code: string; coupon: Coupon; choice: CouponChoice };
+
+const normalize = (code: string) => code.trim().toUpperCase();
+
+/*
+ * The coupon before taking a plan (the app's CouponBottomSheet): two steps,
+ * **see** the discount, which only computes, and **apply**, which puts it
+ * in the totals. Neither spends the code: it travels later, inside the
+ * subscription. Under the field, the saved coupons good for this plan,
+ * so they need not be typed.
+ */
+export function CouponSheet({
+  open,
+  onOpenChange,
+  user,
+  plan,
+  applied,
+  onApply,
+  onRemove,
+}: CouponSheetProps) {
+  const t = useTranslations('billing');
+  const tRoot = useTranslations();
+  const [code, setCode] = useState(applied?.terms.code ?? '');
+  const [missing, setMissing] = useState(false);
+  const [preview, setPreview] = useState<Preview | null>(null);
+  const saved = useQuery({ ...savedCouponsQueryOptions(user), enabled: open });
+
+  const validate = useMutation({
+    mutationFn: async ({
+      code: typed,
+      savedCoupon,
+    }: {
+      code: string;
+      savedCoupon?: SavedCoupon;
+    }): Promise<Preview> => {
+      const clean = normalize(typed);
+      const coupon = await validateCoupon(user, clean, plan.id);
+      return {
+        code: clean,
+        coupon,
+        choice: savedCoupon
+          ? { savedCouponId: savedCoupon.savedCouponId }
+          : { code: clean },
+      };
+    },
+    onSuccess: setPreview,
+  });
+
+  const typed = normalize(code);
+  // What the typed code stands for: its preview, or the applied coupon when it is it.
+  const current: Pick<Preview, 'coupon' | 'choice'> | null =
+    typed === ''
+      ? null
+      : preview?.code === typed
+        ? preview
+        : applied?.terms.code === typed
+          ? { coupon: applied.terms, choice: applied.choice }
+          : null;
+  const applicable =
+    current && couponAppliesTo(current.coupon, plan.id) ? current : null;
+
+  const failedCode = validate.isError
+    ? normalize(validate.variables.code)
+    : null;
+  const failureKey =
+    failedCode === typed
+      ? (couponRejectionKey(validate.error) ??
+        billingFailure(validate.error, 'billing.acquire.coupon.failed'))
+      : null;
+  // Read in the field, not in a toast that would cover the keyboard.
+  const fieldError = missing
+    ? t('acquire.coupon.required')
+    : failureKey
+      ? tRoot(failureKey)
+      : current && !applicable
+        ? t('couponRejection.wrongPlan')
+        : undefined;
+
+  const close = () => {
+    onOpenChange(false);
+  };
+
+  const action: { label: string; run: () => void } =
+    typed === '' && applied
+      ? {
+          label: t('acquire.coupon.remove'),
+          run: () => {
+            onRemove();
+            close();
+          },
+        }
+      : applicable && applied?.terms.code !== applicable.coupon.code
+        ? {
+            label: t('acquire.coupon.apply'),
+            run: () => {
+              onApply({ choice: applicable.choice, terms: applicable.coupon });
+              close();
+            },
+          }
+        : applicable
+          ? { label: t('acquire.coupon.keep'), run: close }
+          : {
+              label: t('acquire.coupon.validate'),
+              run: () => {
+                if (validate.isPending) return;
+                if (typed === '') {
+                  setMissing(true);
+                  return;
+                }
+                validate.mutate({ code: typed });
+              },
+            };
+
+  const savedForPlan = (saved.data ?? []).filter((coupon) =>
+    couponAppliesTo(coupon, plan.id),
+  );
+
+  return (
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) {
+          // Closed however it was: what was seen and not applied is forgotten.
+          setPreview(null);
+          setMissing(false);
+          validate.reset();
+          setCode(applied?.terms.code ?? '');
+        }
+        onOpenChange(next);
+      }}
+      title={t('acquire.coupon.title')}
+      footer={
+        <Button
+          block
+          shape="soft"
+          loading={validate.isPending}
+          onClick={action.run}
+        >
+          {action.label}
+        </Button>
+      }
+    >
+      <form
+        noValidate
+        className="flex flex-col gap-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          action.run();
+        }}
+      >
+        <TextField
+          label={t('acquire.coupon.label')}
+          placeholder={t('acquire.coupon.hint')}
+          value={code}
+          autoCapitalize="characters"
+          autoComplete="off"
+          spellCheck={false}
+          error={fieldError}
+          leading={
+            <Icon
+              icon={ConfirmationNumber}
+              size={20}
+              className="ml-3 text-grey-400"
+            />
+          }
+          onChange={(event) => {
+            setCode(event.target.value.toUpperCase());
+            setMissing(false);
+          }}
+        />
+        {applicable ? (
+          <div className="animate-fade-in rounded-lg bg-success-light p-3">
+            <p className="flex items-start gap-2 text-label-lg text-green-800">
+              <Icon
+                icon={CheckCircleFill}
+                size={18}
+                className="mt-0.5 shrink-0 text-success"
+              />
+              {couponSummary(t, applicable.coupon)}
+            </p>
+            <p className="mt-1 text-body-md font-semibold text-green-800">
+              {t('coupon.preview.amount', {
+                amount: formatBillingAmount({
+                  amount:
+                    plan.price.amount.amount -
+                    couponDiscount(applicable.coupon, plan.price.amount).amount,
+                  currency: plan.price.amount.currency,
+                }),
+              })}
+            </p>
+          </div>
+        ) : null}
+        {savedForPlan.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-label-md text-text-secondary">
+              {t('acquire.coupon.saved')}
+            </p>
+            <ul className="flex flex-col divide-y divide-divider">
+              {savedForPlan.map((coupon) => (
+                <li key={coupon.savedCouponId}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCode(coupon.code);
+                      setMissing(false);
+                      validate.mutate({
+                        code: coupon.code,
+                        savedCoupon: coupon,
+                      });
+                    }}
+                    className="flex min-h-touch w-full flex-col items-start gap-0.5 rounded-lg py-2 text-left outline-none hover:bg-white-200 focus-visible:ring-3 focus-visible:ring-ring/50"
+                  >
+                    <span className="text-label-lg text-text-primary">
+                      {coupon.code}
+                    </span>
+                    <span className="text-body-sm text-text-secondary">
+                      {couponSummary(t, coupon)}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </form>
+    </Sheet>
+  );
+}

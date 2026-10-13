@@ -32,6 +32,102 @@ export function formatMoney(amount: number, currency = 'USD'): string {
   return `${symbols[currency] ?? currency} ${text}`;
 }
 
+/* ---------- Billing (M13): the app's `MoneyFormat` ------------------------ */
+
+/** The symbol never ends a line with the figure on the next. */
+const nbsp = '\u00a0';
+
+const bolivaresFormat = new Intl.NumberFormat(formatLocale, {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+const bankFigureFormat = new Intl.NumberFormat(formatLocale, {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+  useGrouping: false,
+});
+
+const billingDollarsFormat = new Intl.NumberFormat('en-US', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+const wholeBillingDollarsFormat = new Intl.NumberFormat('en-US', {
+  maximumFractionDigits: 0,
+});
+
+export type BillingAmount = { amount: number; currency: string };
+
+/**
+ * A billing amount, an integer in cents or céntimos, as the app and the
+ * billing emails write it: `$ 36.99` with the point (`$ 15` when whole) and
+ * `Bs 1.498,09` as Venezuela writes bolívares, the sign in front when
+ * negative, a plus when `showPlus` and positive (a movement that adds).
+ */
+export function formatBillingAmount(
+  money: BillingAmount,
+  { showPlus = false }: { showPlus?: boolean } = {},
+): string {
+  const sign =
+    money.amount < 0
+      ? `-${nbsp}`
+      : showPlus && money.amount > 0
+        ? `+${nbsp}`
+        : '';
+  const value = Math.abs(money.amount) / 100;
+  if (money.currency === 'VES') {
+    return `${sign}Bs${nbsp}${bolivaresFormat.format(value)}`;
+  }
+  const text = Number.isInteger(value)
+    ? wholeBillingDollarsFormat.format(value)
+    : billingDollarsFormat.format(value);
+  return `${sign}${symbols[money.currency] ?? money.currency}${nbsp}${text}`;
+}
+
+/** `1198,39`: the figure as the bank's app wants it typed, no symbol, no thousands. */
+export function formatBolivaresForBank(cents: number): string {
+  return bankFigureFormat.format(cents / 100);
+}
+
+/** The API's rate (`"40.50000000"`) as it reads: `Bs 40,50`. */
+export function formatRate(rate: string, decimals = 2): string {
+  const value = Number(rate);
+  if (rate.trim() === '' || !Number.isFinite(value)) return rate;
+  const format = new Intl.NumberFormat(formatLocale, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+  return `Bs${nbsp}${format.format(value)}`;
+}
+
+/**
+ * Céntimos from an amount as a person types it — «1.198,39», «1198,39» or
+ * «1198.39» — or null when it is not an amount. Up to two digits after the
+ * last separator are the céntimos; three are a thousands group.
+ */
+export function parseBolivares(text: string): number | null {
+  const cleaned = text.replace(/[^\d.,]/g, '');
+  if (cleaned === '') return null;
+  const lastSeparator = Math.max(
+    cleaned.lastIndexOf(','),
+    cleaned.lastIndexOf('.'),
+  );
+  let whole = cleaned;
+  let fraction = '';
+  if (lastSeparator >= 0) {
+    const tail = cleaned.slice(lastSeparator + 1);
+    if (/^\d{1,2}$/.test(tail)) {
+      whole = cleaned.slice(0, lastSeparator);
+      fraction = tail;
+    }
+  }
+  whole = whole.replace(/[.,]/g, '');
+  if (!/^\d+$/.test(whole)) return null;
+  const cents = Number(whole) * 100 + Number(fraction.padEnd(2, '0'));
+  return Number.isSafeInteger(cents) ? cents : null;
+}
+
 export type PriceInput = {
   type?: 'FIXED' | 'RANGE' | 'FROM' | null | undefined;
   currency?: string | null | undefined;

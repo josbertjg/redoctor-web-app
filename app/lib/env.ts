@@ -1,8 +1,6 @@
 import { createEnv } from '@t3-oss/env-nextjs';
 import { z } from 'zod';
 
-import { isAppOwnedPath } from './deep-links';
-
 /*
  * Every variable of AGENTS.md §12, validated once. `next.config.ts` imports
  * this module, so a build with a missing or malformed variable fails early
@@ -35,10 +33,6 @@ const playStoreId = z
   .string()
   .regex(/^[A-Za-z]\w*(\.[A-Za-z]\w*)+$/, 'expected an Android package name')
   .optional();
-const sitePath = z
-  .string()
-  .regex(/^\/[a-z0-9-]+(\/[a-z0-9-]+)*$/, 'expected a path like /pay');
-
 type IssuePath = NonNullable<
   Parameters<
     NonNullable<Parameters<typeof createEnv>[0]['onValidationError']>
@@ -81,7 +75,6 @@ export const env = createEnv({
     NEXT_PUBLIC_ANDROID_PACKAGE: nonEmpty,
     NEXT_PUBLIC_SUPPORT_WHATSAPP: supportWhatsapp,
     NEXT_PUBLIC_SUPPORT_PHONES: supportPhones,
-    NEXT_PUBLIC_PAYMENT_PATH: sitePath,
   },
   runtimeEnv: {
     SENTRY_ORG: process.env.SENTRY_ORG,
@@ -113,26 +106,11 @@ export const env = createEnv({
     NEXT_PUBLIC_ANDROID_PACKAGE: process.env.NEXT_PUBLIC_ANDROID_PACKAGE,
     NEXT_PUBLIC_SUPPORT_WHATSAPP: process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP,
     NEXT_PUBLIC_SUPPORT_PHONES: process.env.NEXT_PUBLIC_SUPPORT_PHONES,
-    NEXT_PUBLIC_PAYMENT_PATH: process.env.NEXT_PUBLIC_PAYMENT_PATH,
   },
   emptyStringAsUndefined: true,
   createFinalSchema: (shape, isServer) =>
     z.object(shape).check((ctx) => {
-      const {
-        NEXT_PUBLIC_PAYMENT_PATH,
-        NEXT_PUBLIC_APP_ENV,
-        API_PROXY_TARGET,
-      } = ctx.value;
-
-      if (isAppOwnedPath(NEXT_PUBLIC_PAYMENT_PATH)) {
-        ctx.issues.push({
-          code: 'custom',
-          input: NEXT_PUBLIC_PAYMENT_PATH,
-          path: ['NEXT_PUBLIC_PAYMENT_PATH'],
-          message:
-            'uses a path the mobile app owns; the payment route is never an app path',
-        });
-      }
+      const { NEXT_PUBLIC_APP_ENV, API_PROXY_TARGET } = ctx.value;
 
       if (
         isServer &&
