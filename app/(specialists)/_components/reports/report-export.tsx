@@ -2,25 +2,29 @@
 
 import { useState } from 'react';
 
-import Call from '@material-symbols/svg-400/rounded/call.svg?svgr';
-import Chat from '@material-symbols/svg-400/rounded/chat.svg?svgr';
 import Download from '@material-symbols/svg-400/rounded/download.svg?svgr';
-import Lock from '@material-symbols/svg-400/rounded/lock.svg?svgr';
 import PictureAsPdf from '@material-symbols/svg-400/rounded/picture_as_pdf.svg?svgr';
 import TableView from '@material-symbols/svg-400/rounded/table_view.svg?svgr';
 import { useTranslations } from 'next-intl';
 
+import type { SessionUser } from '@/app/lib/firebase/client';
 import { buildCsv } from '@/app/lib/reports/csv';
 import type { SpecialistReport } from '@/app/lib/schemas/reports';
-import { supportChannels } from '@/app/lib/support';
 
 import { Button } from '@/app/ui/button';
 import { Icon, type IconComponent } from '@/app/ui/icons';
 import { Sheet } from '@/app/ui/sheet';
 
 import { useReportCsv } from './report-csv';
+import {
+  DownloadUpsell,
+  upsellTitleKey,
+  useDownloadOffer,
+  useUpsellDescription,
+} from './report-upsell';
 
 type ReportExportProps = {
+  user: SessionUser;
   report: SpecialistReport;
   /** The office's name when the report looks at one. */
   officeName: string | null;
@@ -32,11 +36,13 @@ type ReportExportProps = {
  * «Descargar», as the app's report screens offer it: a PDF with the charts
  * and the tables, or a spreadsheet with the figures. Viewing is never plan-
  * gated; downloading is, by the plan's `canExport`: without it the sheet
- * says so and offers support, never a plan to buy. The PDF is the
+ * invites to the plan that includes it — where the app, which may not
+ * sell, offers support (the owner's rule of 2026-10-13). The PDF is the
  * browser's own print to PDF of the page laid out for paper; the CSV is
  * built here, nothing is sent anywhere.
  */
 export function ReportExport({
+  user,
   report,
   officeName,
   onPrint,
@@ -44,6 +50,8 @@ export function ReportExport({
   const t = useTranslations();
   const [open, setOpen] = useState(false);
   const csv = useReportCsv(report, officeName);
+  const offer = useDownloadOffer(user, !report.canExport);
+  const offerDescription = useUpsellDescription(offer);
 
   const downloadCsv = () => {
     const blob = new Blob([buildCsv(csv.report)], {
@@ -80,11 +88,9 @@ export function ReportExport({
         title={
           report.canExport
             ? t('reports.export.sheetTitle')
-            : t('reports.export.lockedTitle')
+            : t(upsellTitleKey(offer))
         }
-        description={
-          report.canExport ? undefined : t('reports.export.lockedDescription')
-        }
+        description={report.canExport ? undefined : offerDescription}
       >
         {report.canExport ? (
           <ul className="flex flex-col gap-3 pb-4">
@@ -109,7 +115,7 @@ export function ReportExport({
             </li>
           </ul>
         ) : (
-          <LockedSupport />
+          <DownloadUpsell offer={offer} />
         )}
       </Sheet>
     </>
@@ -141,39 +147,5 @@ function ExportOption({
         <span className="text-body-sm text-text-secondary">{description}</span>
       </span>
     </button>
-  );
-}
-
-/** The app's locked sheet: support, by WhatsApp or a call. */
-function LockedSupport() {
-  const t = useTranslations();
-  const channels = supportChannels(t('reports.export.supportMessage'));
-
-  return (
-    <div className="flex flex-col gap-3 pb-4">
-      <span className="flex size-12 items-center justify-center rounded-full bg-surface-variant text-text-secondary">
-        <Icon icon={Lock} size={24} />
-      </span>
-      {channels.whatsapp ? (
-        <Button asChild shape="soft">
-          <a
-            href={channels.whatsapp.href}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Icon icon={Chat} size={20} />
-            {t('appAccess.whatsapp')}
-          </a>
-        </Button>
-      ) : null}
-      {channels.phones.map((phone) => (
-        <Button key={phone.href} asChild variant="white" shape="soft">
-          <a href={phone.href}>
-            <Icon icon={Call} size={20} />
-            {t('appAccess.call', { label: phone.label, number: phone.number })}
-          </a>
-        </Button>
-      ))}
-    </div>
   );
 }

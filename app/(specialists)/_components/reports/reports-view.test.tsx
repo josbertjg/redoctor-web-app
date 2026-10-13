@@ -7,10 +7,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 
 import { buildSpecialistReport } from '@/tests/factories/agenda';
+import {
+  buildInvoice,
+  buildSubscription,
+  planIds,
+  usd,
+} from '@/tests/factories/billing';
 import { freezeClock, renderPanel } from '@/tests/panel';
 
 import { ReportsView } from './reports-view';
 import { apiUrl } from '../../../../tests/msw/api-url';
+import {
+  invoicesHandler,
+  subscriptionHandler,
+} from '../../../../tests/msw/handlers/billing';
 import { server } from '../../../../tests/msw/server';
 
 const navigation = vi.hoisted(() => ({
@@ -123,8 +133,63 @@ describe('ReportsView', () => {
     );
   });
 
-  it('says the plan does not include downloads, with support', async () => {
+  it('invites to the plan that downloads, instead of support', async () => {
+    server.use(
+      reportWith(false),
+      subscriptionHandler(
+        buildSubscription({
+          status: 'ACTIVE',
+          incompleteExpiresAt: null,
+          plan: { id: planIds.essential, slug: 'esencial', name: 'Esencial' },
+          price: usd(1500),
+        }),
+      ),
+    );
+    const { baseElement } = renderReports();
+    await screen.findByRole('heading', { name: 'Citas atendidas' });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Descargar' }));
+    const sheet = await screen.findByRole('dialog', {
+      name: 'Tu plan no incluye descargas',
+    });
+    expect(
+      await within(sheet).findByRole('link', { name: 'Mejorar plan' }),
+    ).toHaveAttribute('href', '/panel/subscription/pay?plan=profesional');
+    expect(
+      within(sheet).getByText(
+        'Tu plan actual no incluye descargar tus reportes. Cambia al plan Profesional para descargarlos en PDF y en hoja de cálculo.',
+      ),
+    ).toBeInTheDocument();
+    expect(within(sheet).getByText('$ 30')).toBeInTheDocument();
+    expect(
+      within(sheet).queryByRole('button', { name: /PDF/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(sheet).queryByRole('link', { name: /WhatsApp/ }),
+    ).not.toBeInTheDocument();
+    expect(await axe(baseElement)).toHaveNoViolations();
+  });
+
+  it('shows the plans to someone without one', async () => {
     server.use(reportWith(false));
+    renderReports();
+    await screen.findByRole('heading', { name: 'Citas atendidas' });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Descargar' }));
+    const sheet = await screen.findByRole('dialog', {
+      name: 'Necesitas un plan para descargar tus reportes',
+    });
+    expect(
+      await within(sheet).findByRole('link', { name: 'Ver planes' }),
+    ).toHaveAttribute('href', '/panel/subscription/pay?plan=profesional');
+  });
+
+  it('asks to pay first what is owed', async () => {
+    server.use(
+      reportWith(false),
+      subscriptionHandler(buildSubscription()),
+      invoicesHandler([buildInvoice()]),
+    );
     renderReports();
     await screen.findByRole('heading', { name: 'Citas atendidas' });
 
@@ -133,8 +198,13 @@ describe('ReportsView', () => {
       name: 'Tu plan no incluye descargas',
     });
     expect(
-      within(sheet).queryByRole('button', { name: /PDF/ }),
-    ).not.toBeInTheDocument();
+      await within(sheet).findByRole('link', { name: 'Pagar ahora' }),
+    ).toHaveAttribute('href', '/panel/subscription/pay');
+    expect(
+      within(sheet).getByText(
+        'Tu plan Profesional todavía no está activo. Completa su pago para descargar tus reportes.',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('offers the PDF and the spreadsheet when the plan allows it', async () => {

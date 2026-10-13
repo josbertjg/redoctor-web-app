@@ -69,6 +69,15 @@ export function offeredPlans(plans: readonly Plan[]): OfferedPlan[] {
  */
 export type PlanTier = 'bronze' | 'silver' | 'gold';
 
+const planSlugPattern = /^[a-z0-9][a-z0-9_-]{0,63}$/i;
+
+/** A plan's slug as a link carries it (`?plan=`); anything else is no plan. */
+export function parsePlanSlug(value: unknown): string | null {
+  return typeof value === 'string' && planSlugPattern.test(value)
+    ? value
+    : null;
+}
+
 export function planTier(slug: string): PlanTier {
   const value = slug.toLowerCase();
   if (value.includes('corporat')) return 'gold';
@@ -459,6 +468,128 @@ export const paymentReportBodySchema = z.strictObject({
 });
 
 export type PaymentReportBody = z.infer<typeof paymentReportBodySchema>;
+
+/* ---------- Changing plan ------------------------------------------------- */
+
+export const planChangeKinds = ['UPGRADE', 'DOWNGRADE'] as const;
+
+/**
+ * `GET /billing/me/subscription/change-plan/preview`: what a change would
+ * do, nothing written. An upgrade is paid now — a proration receipt: the
+ * new plan for the days left, less what the current one leaves unused —
+ * and applies once paid; a downgrade costs nothing now and applies at the
+ * period's end.
+ */
+export const planChangePreviewSchema = z.object({
+  kind: z.enum(planChangeKinds).or(unknownValue),
+  lines: z.array(invoiceLineSchema),
+  total: moneySchema,
+  effectiveAt: instant,
+  /** The coupon in use: kept, lost with the change (it must be accepted), or none. */
+  discountEffect: z.enum(['KEEPS', 'ENDS', 'NONE']).or(unknownValue),
+  /** A courtesy pays the current period. */
+  courtesyCovered: z.boolean(),
+});
+
+export type PlanChangePreview = z.infer<typeof planChangePreviewSchema>;
+
+export const planChangeBodySchema = z.strictObject({
+  planId: z.string(),
+  acceptDiscountLoss: z.literal(true).optional(),
+});
+
+/** `POST /billing/me/subscription/change-plan`: the subscription as it stays, and an upgrade's receipt. */
+export const planChangeResponseSchema = z.object({
+  kind: z.enum(planChangeKinds).or(unknownValue),
+  subscription: subscriptionSchema,
+  prorationInvoice: invoiceSchema.nullish().transform((value) => value ?? null),
+  effectiveAt: instant,
+});
+
+/**
+ * Whether the plan can be changed now, the app's rule: an active plan, not
+ * cancelled, with no upgrade waiting for its difference.
+ */
+export function canChangePlan(subscription: Subscription): boolean {
+  return (
+    subscription.status === 'ACTIVE' &&
+    subscription.cancelAtPeriodEnd !== true &&
+    subscription.pendingUpgrade == null
+  );
+}
+
+/* ---------- A feature the plan lacks ------------------------------------- */
+
+/**
+ * What to offer a specialist for a feature their plan lacks — the owner's
+ * rule (2026-10-13): the web may sell, so a missing feature invites to a
+ * plan that has it; the app may not.
+ */
+export type FeatureOffer =
+  /** Change to this one: the cheapest on offer with the feature that costs more than the current plan. */
+  | { kind: 'upgrade'; plan: OfferedPlan }
+  /** No plan, or it ended: take this one, the cheapest with the feature. */
+  | { kind: 'subscribe'; plan: OfferedPlan }
+  /**
+   * A receipt is owed first: the API changes no plan with debt (ERR_5075).
+   * Paying it is enough when it is the plan (`plan`) or the upgrade
+   * (`upgrade`) that has the feature; otherwise it comes before (`debt`).
+   */
+  | { kind: 'pay'; owed: 'plan' | 'upgrade' | 'debt'; planName: string }
+  /** Cancelled, still running until it ends: nothing to change meanwhile. */
+  | { kind: 'ending'; endsAt: string | null }
+  /** No plan on offer has it, or the plan cannot change now. */
+  | { kind: 'unavailable' };
+
+/** `plans` as `offeredPlans` gives them, the cheapest first. */
+export function featureOffer(
+  has: (plan: Plan) => boolean,
+  plans: readonly OfferedPlan[],
+  subscription: Subscription | null,
+): FeatureOffer {
+  const offered = (id: string) => plans.find((plan) => plan.id === id);
+
+  if (subscription === null || hasEnded(subscription)) {
+    const plan = plans.find(has);
+    return plan ? { kind: 'subscribe', plan } : { kind: 'unavailable' };
+  }
+  if (mayOwe(subscription)) {
+    const upgrade = subscription.pendingUpgrade;
+    if (upgrade != null && subscription.status === 'ACTIVE') {
+      const target = offered(upgrade.plan.id);
+      return {
+        kind: 'pay',
+        owed: target && has(target) ? 'upgrade' : 'debt',
+        planName: upgrade.plan.name,
+      };
+    }
+    const own = offered(subscription.plan.id);
+    return {
+      kind: 'pay',
+      owed:
+        subscription.status === 'INCOMPLETE' && own && has(own)
+          ? 'plan'
+          : 'debt',
+      planName: subscription.plan.name,
+    };
+  }
+  if (subscription.status === 'ACTIVE' && subscription.cancelAtPeriodEnd) {
+    return {
+      kind: 'ending',
+      endsAt: subscription.endsAt ?? subscription.currentPeriod?.end ?? null,
+    };
+  }
+  if (!canChangePlan(subscription)) return { kind: 'unavailable' };
+
+  const plan = plans.find(
+    (candidate) =>
+      has(candidate) &&
+      candidate.id !== subscription.plan.id &&
+      candidate.price.amount.currency === subscription.price.currency &&
+      candidate.price.amount.amount > subscription.price.amount,
+  );
+  return plan ? { kind: 'upgrade', plan } : { kind: 'unavailable' };
+}
 
 /* ---------- The notice ---------------------------------------------------- */
 

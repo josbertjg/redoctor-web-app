@@ -17,6 +17,9 @@ import {
   offeredPlans,
   openInvoicesResponseSchema,
   pickPayableInvoice,
+  planChangeBodySchema,
+  planChangePreviewSchema,
+  planChangeResponseSchema,
   plansResponseSchema,
   reportedPaymentResponseSchema,
   savedCouponsResponseSchema,
@@ -31,6 +34,7 @@ import {
   type PaymentIntent,
   type PaymentMethod,
   type PaymentReportBody,
+  type PlanChangePreview,
   type SavedCoupon,
   type StartedPayment,
   type SubscribeBody,
@@ -56,6 +60,8 @@ export const billingKeys = {
   payable: (userId: string, subscriptionId: string) =>
     ['billing', 'payable', userId, subscriptionId] as const,
   savedCoupons: (userId: string) => ['billing', 'coupons', userId] as const,
+  planChange: (userId: string, planId: string) =>
+    ['billing', 'plan-change', userId, planId] as const,
 };
 
 /** The plans a specialist can take, the cheapest first. */
@@ -384,6 +390,125 @@ export function reportPayment(
           error.status === 409 &&
           error.code === 'ERR_5084'
         ) {
+          const landed = await lookAgain();
+          if (landed) return landed;
+        }
+        throw error;
+      }
+    },
+    findLanded: lookAgain,
+  });
+}
+
+/**
+ * What changing to a plan would do — the receipt of an upgrade, the day a
+ * downgrade applies, the coupon's fate —, nothing written. A refusal (a
+ * receipt owed, a limit) has the API's own words.
+ */
+export function planChangePreviewQueryOptions(
+  user: TokenHolder,
+  planId: string,
+) {
+  return queryOptions({
+    queryKey: billingKeys.planChange(user.id, planId),
+    queryFn: async ({ signal }): Promise<PlanChangePreview> =>
+      apiFetch({
+        path: '/billing/me/subscription/change-plan/preview',
+        query: { planId },
+        token: await user.getToken(),
+        schema: planChangePreviewSchema,
+        signal,
+      }),
+    // The difference is counted by the day: never an old figure to pay.
+    staleTime: 0,
+  });
+}
+
+/** What changing plan left: the subscription and, for an upgrade, the receipt of the difference. */
+export type PlanChanged = {
+  kind: 'UPGRADE' | 'DOWNGRADE' | 'UNKNOWN';
+  subscription: Subscription;
+  /** An upgrade's receipt while something is left to pay on it. */
+  invoice: InvoiceDetail | null;
+  /** When the new plan applies, when the API says it (a downgrade: the period's end). */
+  effectiveAt: string | null;
+};
+
+const planChanges = createWriteOnceGuard<PlanChanged>();
+
+/**
+ * `POST /billing/me/subscription/change-plan`: an upgrade issues the
+ * receipt of the difference and the plan changes once it is paid; a
+ * downgrade is scheduled for the period's end. Sent twice, an upgrade
+ * would issue two receipts: a lost answer is looked for before re-sending.
+ * `acceptDiscountLoss` once the person was told the coupon ends with the
+ * change (ERR_5108 without it).
+ */
+export function changePlan(
+  user: TokenHolder,
+  {
+    planId,
+    acceptDiscountLoss,
+  }: { planId: string; acceptDiscountLoss: boolean },
+): Promise<PlanChanged> {
+  // The change this write was making, if the API got to make it: an
+  // upgrade waiting for its receipt, or already paid with the balance; a
+  // downgrade scheduled.
+  const lookAgain = async (): Promise<PlanChanged | null> => {
+    const { subscription } = await readSubscription(user);
+    if (subscription === null) return null;
+    if (subscription.pendingUpgrade?.plan.id === planId) {
+      const invoice = await resolvePayable(user, subscription);
+      return { kind: 'UPGRADE', subscription, invoice, effectiveAt: null };
+    }
+    if (subscription.scheduledChange?.plan.id === planId) {
+      return {
+        kind: 'DOWNGRADE',
+        subscription,
+        invoice: null,
+        effectiveAt: subscription.scheduledChange.effectiveAt ?? null,
+      };
+    }
+    if (subscription.plan.id === planId) {
+      return {
+        kind: 'UPGRADE',
+        subscription,
+        invoice: null,
+        effectiveAt: null,
+      };
+    }
+    return null;
+  };
+
+  return planChanges({
+    intent: `change-plan:${planId}`,
+    send: async () => {
+      try {
+        const { kind, subscription, prorationInvoice, effectiveAt } =
+          await apiFetch({
+            method: 'POST',
+            path: '/billing/me/subscription/change-plan',
+            body: planChangeBodySchema.parse({
+              planId,
+              ...(acceptDiscountLoss ? { acceptDiscountLoss: true } : {}),
+            }),
+            token: await user.getToken(),
+            schema: planChangeResponseSchema,
+          });
+        return {
+          kind,
+          subscription,
+          invoice:
+            prorationInvoice && isPayable(prorationInvoice)
+              ? toInvoiceDetail(prorationInvoice)
+              : null,
+          effectiveAt: effectiveAt ?? null,
+        };
+      } catch (error) {
+        // A conflict may be this same change, made by a lost answer or a
+        // second tab — its receipt is the debt the API now sees (ERR_5075).
+        // Any other is the page's to explain.
+        if (isApiError(error) && error.status === 409) {
           const landed = await lookAgain();
           if (landed) return landed;
         }

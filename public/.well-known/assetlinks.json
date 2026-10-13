@@ -11,6 +11,19 @@
         "AD:2D:15:6E:68:0B:CD:53:C2:9A:96:56:D6:3A:05:45:FC:29:06:B3:E7:75:3C:3C:A5:EB:B2:D2:3D:77:95:AA",
         "A4:DF:F2:CB:6D:D7:4D:36:BF:BE:A4:06:35:E1:C3:9E:3C:8B:E4:1D:C0:1F:67:EB:F9:FF:A0:2F:FF:5B:65:C8"
       ]
+    },
+    "relation_extensions": {
+      "delegate_permission/common.handle_all_urls": {
+        "dynamic_app_link_components": [
+          { "/": "/s/*" },
+          { "/": "/i/*" },
+          { "/": "/a/*" },
+          { "/": "/panel/subscription/pay", "exclude": true },
+          { "/": "/panel/subscription/pay/*", "exclude": true },
+          { "/": "/panel/*" },
+          { "/": "/home/*" }
+        ]
+      }
     }
   }
 ]

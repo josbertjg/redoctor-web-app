@@ -11,17 +11,20 @@ import {
   hoursFromNow,
   intentIds,
   invoiceIds,
+  periodEnd,
   planIds,
   usd,
 } from '@/tests/factories/billing';
 
 import {
   activeDiscount,
+  canChangePlan,
   couponAppliesTo,
   couponDiscount,
   couponSchema,
   coversFully,
   currentSubscriptionSchema,
+  featureOffer,
   hasEnded,
   intentInReview,
   invoiceDetailResponseSchema,
@@ -31,10 +34,13 @@ import {
   offeredPlans,
   paymentReportBodySchema,
   pickPayableInvoice,
+  planChangePreviewSchema,
+  planChangeResponseSchema,
   planTier,
   plansResponseSchema,
   subscriptionNotice,
   subscriptionSchema,
+  type Plan,
   type Subscription,
 } from './billing';
 
@@ -66,6 +72,146 @@ describe('plans', () => {
     expect(planTier('plan-profesional')).toBe('silver');
     expect(planTier('esencial')).toBe('bronze');
     expect(planTier('whatever-comes')).toBe('bronze');
+  });
+});
+
+describe('featureOffer', () => {
+  const plans = offeredPlans(
+    plansResponseSchema.parse({ plans: buildPlans() }).plans,
+  );
+  const exports = (plan: Plan) => plan.canExportReports;
+  const essential = {
+    id: planIds.essential,
+    slug: 'esencial',
+    name: 'Esencial',
+  };
+  const corporate = {
+    id: planIds.corporate,
+    slug: 'corporativo',
+    name: 'Corporativo',
+  };
+  const active = (overrides: Parameters<typeof buildSubscription>[0] = {}) =>
+    subscription({
+      status: 'ACTIVE',
+      plan: essential,
+      price: usd(1500),
+      incompleteExpiresAt: null,
+      ...overrides,
+    });
+
+  it('offers the cheapest plan above the current one that has the feature', () => {
+    expect(featureOffer(exports, plans, active())).toMatchObject({
+      kind: 'upgrade',
+      plan: { slug: 'profesional' },
+    });
+  });
+
+  it('offers the cheapest plan with the feature to someone without one', () => {
+    expect(featureOffer(exports, plans, null)).toMatchObject({
+      kind: 'subscribe',
+      plan: { slug: 'profesional' },
+    });
+    expect(
+      featureOffer(exports, plans, active({ status: 'CANCELED' })),
+    ).toMatchObject({ kind: 'subscribe', plan: { slug: 'profesional' } });
+  });
+
+  it('asks to pay first what is owed, and says when paying is enough', () => {
+    expect(
+      featureOffer(exports, plans, subscription({ status: 'INCOMPLETE' })),
+    ).toEqual({ kind: 'pay', owed: 'plan', planName: 'Profesional' });
+    expect(
+      featureOffer(
+        exports,
+        plans,
+        active({
+          pendingUpgrade: { plan: corporate, invoiceId: invoiceIds.upgrade },
+        }),
+      ),
+    ).toEqual({ kind: 'pay', owed: 'upgrade', planName: 'Corporativo' });
+    expect(
+      featureOffer(exports, plans, active({ status: 'PAST_DUE' })),
+    ).toEqual({ kind: 'pay', owed: 'debt', planName: 'Esencial' });
+  });
+
+  it('changes nothing of a cancelled plan still running', () => {
+    expect(
+      featureOffer(
+        exports,
+        plans,
+        active({ cancelAtPeriodEnd: true, endsAt: periodEnd }),
+      ),
+    ).toEqual({ kind: 'ending', endsAt: periodEnd });
+  });
+
+  it('never offers the same plan, nor a cheaper one', () => {
+    expect(
+      featureOffer(
+        exports,
+        plans,
+        active({ plan: corporate, price: usd(6000) }),
+      ),
+    ).toEqual({ kind: 'unavailable' });
+    expect(featureOffer(() => false, plans, active())).toEqual({
+      kind: 'unavailable',
+    });
+  });
+});
+
+describe('canChangePlan', () => {
+  it('is the app’s rule: active, not cancelled, no upgrade waiting', () => {
+    const active = { status: 'ACTIVE' as const, incompleteExpiresAt: null };
+
+    expect(canChangePlan(subscription(active))).toBe(true);
+    expect(
+      canChangePlan(subscription({ ...active, cancelAtPeriodEnd: true })),
+    ).toBe(false);
+    expect(
+      canChangePlan(
+        subscription({
+          ...active,
+          pendingUpgrade: {
+            plan: {
+              id: planIds.corporate,
+              slug: 'corporativo',
+              name: 'Corporativo',
+            },
+            invoiceId: invoiceIds.upgrade,
+          },
+        }),
+      ),
+    ).toBe(false);
+    expect(canChangePlan(subscription({ status: 'PAST_DUE' }))).toBe(false);
+  });
+});
+
+describe('changing plan', () => {
+  it('reads the preview, an unknown kind kept inert', () => {
+    const preview = planChangePreviewSchema.parse({
+      kind: 'SIDEGRADE',
+      lines: [
+        { type: 'PLAN', description: 'Plan Profesional', amount: usd(3000) },
+      ],
+      total: usd(3000),
+      effectiveAt: null,
+      discountEffect: 'ENDS',
+      courtesyCovered: false,
+    });
+
+    expect(preview.kind).toBe('UNKNOWN');
+    expect(preview.discountEffect).toBe('ENDS');
+  });
+
+  it('reads a downgrade with no receipt as none', () => {
+    const changed = planChangeResponseSchema.parse({
+      kind: 'DOWNGRADE',
+      subscription: buildSubscription({ status: 'ACTIVE' }),
+      prorationInvoice: null,
+      effectiveAt: '2026-11-12T03:59:59.999Z',
+    });
+
+    expect(changed.prorationInvoice).toBeNull();
+    expect(changed.kind).toBe('DOWNGRADE');
   });
 });
 

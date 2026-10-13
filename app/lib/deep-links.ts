@@ -22,12 +22,14 @@ export type UniversalLinkComponent = {
 
 /**
  * What the app opens, as published in
- * /.well-known/apple-app-site-association and in its order (a test keeps the
- * two equal): the short links people share, everything under `/panel/` (the
+ * /.well-known/apple-app-site-association and, as dynamic rules, in
+ * /.well-known/assetlinks.json, in their order (a test keeps the three
+ * equal): the short links people share, everything under `/panel/` (the
  * specialist's panel; `/panel` itself is the web's) and its internal paths.
- * iOS reads them from there, first match first; Android from the app's
- * manifest. The one exception under `/panel/` is the payment page: the app
- * cannot charge (the stores forbid it), so a link to pay must reach this
+ * iOS and Android 15+ read them from there, first match first, and leave
+ * what none matches to the browser; an older Android reads only the app's
+ * manifest. The one exception under `/panel/` is the payment page: neither
+ * app may charge (the stores forbid it), so a link to pay must reach this
  * web even on a phone with the app. A new page under `/panel/` needs no
  * change here: only the app's router. The Spanish names of before
  * 2026-10-12 are only redirects now (next.config.ts).

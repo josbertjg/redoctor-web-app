@@ -5,6 +5,7 @@ import {
   couponSchema,
   couponValidationBodySchema,
   paymentReportBodySchema,
+  planChangeBodySchema,
   startPaymentBodySchema,
   subscribeBodySchema,
 } from '@/app/lib/schemas/billing';
@@ -14,6 +15,7 @@ import {
   buildInvoiceDetail,
   buildIntent,
   buildPlans,
+  buildProrationInvoice,
   buildSavedCoupons,
   buildStartedPayment,
   buildSubscription,
@@ -21,6 +23,7 @@ import {
   intentIds,
   invoiceIds,
   knownCoupons,
+  periodEnd,
   planIds,
   savedCouponId,
   usd,
@@ -115,6 +118,105 @@ function couponResponse(code: string, planId: string | undefined) {
   return null;
 }
 
+/**
+ * `GET …/change-plan/preview` and `POST …/change-plan`, as the API answers
+ * them for an active subscription to `from` (the essential plan): up to a
+ * pricier plan with the receipt of the difference, down to a cheaper one
+ * at the period's end. `refusal` answers both with that conflict; a coupon
+ * that `ENDS` with the change refuses it until its loss is accepted.
+ */
+export function planChangeHandlers({
+  from = planIds.essential,
+  discountEffect = 'NONE',
+  refusal = null,
+}: {
+  from?: string;
+  discountEffect?: 'KEEPS' | 'ENDS' | 'NONE';
+  refusal?: { code: string; message: string } | null;
+} = {}) {
+  const offered = (planId: string | null) =>
+    buildPlans().find(
+      (plan) => plan.id === planId && plan.status === 'ACTIVE' && plan.price,
+    );
+  const current = offered(from);
+  const currentPrice = current?.price?.amount.amount ?? 0;
+  const subscriptionOn = (overrides: Partial<SubscriptionPayload>) =>
+    buildSubscription({
+      status: 'ACTIVE',
+      incompleteExpiresAt: null,
+      ...(current?.price
+        ? {
+            plan: { id: current.id, slug: current.slug, name: current.name },
+            price: current.price.amount,
+          }
+        : {}),
+      ...overrides,
+    });
+
+  return [
+    http.get(
+      apiUrl('/billing/me/subscription/change-plan/preview'),
+      ({ request }) => {
+        if (isStranger(request)) return unauthorized();
+        if (refusal) return conflict(refusal.code, refusal.message);
+        const plan = offered(new URL(request.url).searchParams.get('planId'));
+        if (!plan?.price) return conflict('ERR_5074', 'Plan unavailable');
+        const upgrade = plan.price.amount.amount > currentPrice;
+        const receipt = buildProrationInvoice();
+        return HttpResponse.json({
+          kind: upgrade ? 'UPGRADE' : 'DOWNGRADE',
+          lines: upgrade ? receipt.lines : [],
+          total: upgrade ? receipt.total : usd(0),
+          effectiveAt: upgrade ? null : periodEnd,
+          discountEffect,
+          courtesyCovered: false,
+        });
+      },
+    ),
+
+    http.post(
+      apiUrl('/billing/me/subscription/change-plan'),
+      async ({ request }) => {
+        if (isStranger(request)) return unauthorized();
+        const body = planChangeBodySchema.safeParse(await request.json());
+        if (!body.success) return badRequest();
+        if (refusal) return conflict(refusal.code, refusal.message);
+        if (
+          discountEffect === 'ENDS' &&
+          body.data.acceptDiscountLoss !== true
+        ) {
+          return conflict('ERR_5108', 'Discount loss not accepted');
+        }
+        const plan = offered(body.data.planId);
+        if (!plan?.price) return conflict('ERR_5074', 'Plan unavailable');
+        const target = { id: plan.id, slug: plan.slug, name: plan.name };
+        if (plan.price.amount.amount > currentPrice) {
+          return HttpResponse.json({
+            kind: 'UPGRADE',
+            subscription: subscriptionOn({
+              pendingUpgrade: { plan: target, invoiceId: invoiceIds.upgrade },
+            }),
+            prorationInvoice: buildProrationInvoice(),
+            effectiveAt: null,
+          });
+        }
+        return HttpResponse.json({
+          kind: 'DOWNGRADE',
+          subscription: subscriptionOn({
+            scheduledChange: {
+              plan: target,
+              price: plan.price.amount,
+              effectiveAt: periodEnd,
+            },
+          }),
+          prorationInvoice: null,
+          effectiveAt: periodEnd,
+        });
+      },
+    ),
+  ];
+}
+
 /*
  * The specialist's billing (M13): the plans, the subscription and its
  * receipts, the payment attempt with Redoctor's accounts, the report and
@@ -133,6 +235,8 @@ export const billingHandlers = [
   invoicesHandler([]),
 
   invoiceDetailHandler(buildInvoice()),
+
+  ...planChangeHandlers(),
 
   http.post(apiUrl('/billing/me/subscription'), async ({ request }) => {
     if (isStranger(request)) return unauthorized();

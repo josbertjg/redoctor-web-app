@@ -33,6 +33,8 @@ export type AnalyticsEvents = {
   web_review_submitted: { comment: boolean };
   /** A specialist took a plan on the web (M13): with a coupon or not, and whether it covered the month whole. */
   web_subscription_created: { coupon: boolean; free: boolean };
+  /** A specialist changed plan on the web: up, paying the difference, or down at the period's end. */
+  web_subscription_plan_changed: { kind: 'upgrade' | 'downgrade' };
   /** A payment reported on the web (M13): how it was paid. Never the amount or the reference. */
   web_payment_reported: { method: 'mobile_payment' | 'bank_transfer' };
 };

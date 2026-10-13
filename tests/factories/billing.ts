@@ -204,6 +204,36 @@ export function buildInvoice(
   };
 }
 
+/**
+ * The receipt of an upgrade from the essential plan ($ 15) to the
+ * professional one ($ 30) on 14 October: the new plan for the days left,
+ * less what the essential plan leaves unused.
+ */
+export function buildProrationInvoice(
+  overrides: Partial<InvoicePayload> = {},
+): InvoicePayload {
+  return buildInvoice({
+    id: invoiceIds.upgrade,
+    number: 'R-2026-000124',
+    kind: 'PRORATION',
+    total: usd(1355),
+    pending: usd(1355),
+    lines: [
+      {
+        type: 'PRORATION_CHARGE',
+        description: 'Plan Profesional · 14 oct – 11 nov 2026',
+        amount: usd(2710),
+      },
+      {
+        type: 'PRORATION_CREDIT',
+        description: 'Tiempo sin usar del plan Esencial',
+        amount: usd(-1355),
+      },
+    ],
+    ...overrides,
+  });
+}
+
 /** An attempt to pay that receipt: $ 30 are Bs 1.198,39 at the day's rate. */
 export function buildIntent(
   overrides: Partial<IntentPayload> = {},

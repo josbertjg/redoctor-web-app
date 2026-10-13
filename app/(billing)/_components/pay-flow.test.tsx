@@ -17,6 +17,7 @@ import {
   buildSubscription,
   intentIds,
   planIds,
+  usd,
   ves,
 } from '@/tests/factories/billing';
 import { renderWithPageMessages } from '@/tests/render';
@@ -28,6 +29,7 @@ import { buildSpecialistMeResponse } from '../../../tests/factories/identity';
 import { apiUrl, errorEnvelope } from '../../../tests/msw/api-url';
 import {
   invoicesHandler,
+  planChangeHandlers,
   subscriptionHandler,
 } from '../../../tests/msw/handlers/billing';
 import { validToken } from '../../../tests/msw/handlers/identity';
@@ -66,13 +68,13 @@ const queryClient = () =>
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
 
-function renderPay() {
+function renderPay(wantedPlan: string | null = null) {
   return renderWithPageMessages(
     <QueryClientProvider client={queryClient()}>
       <SessionContext.Provider value={signedIn}>
         {/* As the page renders it: inside its main landmark. */}
         <main>
-          <PayFlow />
+          <PayFlow wantedPlan={wantedPlan} />
         </main>
       </SessionContext.Provider>
       <Toaster regionLabel="Notificaciones" closeLabel="Cerrar" />
@@ -525,5 +527,214 @@ describe('PayFlow', () => {
       'href',
       '/panel',
     );
+  });
+});
+
+describe('PayFlow, changing plan (?plan=)', () => {
+  const essential = {
+    id: planIds.essential,
+    slug: 'esencial',
+    name: 'Esencial',
+  };
+  const corporate = {
+    id: planIds.corporate,
+    slug: 'corporativo',
+    name: 'Corporativo',
+  };
+  const activeOn = (
+    plan: { id: string; slug: string; name: string },
+    price: number,
+    overrides: Parameters<typeof buildSubscription>[0] = {},
+  ) =>
+    subscriptionHandler(
+      buildSubscription({
+        status: 'ACTIVE',
+        incompleteExpiresAt: null,
+        plan,
+        price: usd(price),
+        ...overrides,
+      }),
+    );
+
+  it('upgrades to the plan a link asks for, then pays the difference', async () => {
+    server.use(activeOn(essential, 1500));
+    const changes = recordBodies('/change-plan');
+    const intents = recordBodies('/payment-intents');
+    const { container } = renderPay('profesional');
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Cambiar al plan Profesional',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Ahora pagas solo la parte del mes que te queda/),
+    ).toBeInTheDocument();
+    const today = screen.getByRole('region', { name: 'Lo que vas a pagar' });
+    expect(
+      within(today).getByText('Tiempo sin usar del plan Esencial'),
+    ).toBeInTheDocument();
+    expect(within(today).getByText('- $ 13,55')).toBeInTheDocument();
+    expect(within(today).getAllByText('$ 13,55')).toHaveLength(1);
+    expect(
+      screen.getByText(/Hoy tienes el plan Esencial\./),
+    ).toBeInTheDocument();
+    expect(await axe(container)).toHaveNoViolations();
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Cambiar y pagar' }),
+    );
+
+    // The difference is paid as any receipt: the payment's two steps.
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: '¿Cómo vas a pagar?',
+      }),
+    ).toBeInTheDocument();
+    expect(changes).toEqual([{ planId: planIds.professional }]);
+    expect(screen.getByText('Plan Profesional')).toBeInTheDocument();
+    expect(screen.getByText('Total a pagar')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Pago móvil' }));
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Realiza el pago',
+      }),
+    ).toBeInTheDocument();
+    expect(intents).toEqual([{ method: 'MOBILE_PAYMENT' }]);
+  });
+
+  it('asks to accept the coupon’s loss before changing', async () => {
+    server.use(
+      activeOn(essential, 1500, {
+        discount: {
+          code: 'REDOCTOR20',
+          couponName: 'Bienvenida 2026',
+          discountType: 'PERCENT',
+          percentOff: 20,
+          amountOff: null,
+          duration: 'FOREVER',
+          remainingCycles: null,
+          status: 'ACTIVE',
+        },
+      }),
+      ...planChangeHandlers({ discountEffect: 'ENDS' }),
+    );
+    const changes = recordBodies('/change-plan');
+    renderPay('profesional');
+
+    expect(
+      await screen.findByText(
+        'Tu cupón REDOCTOR20 deja de aplicarse con el cambio.',
+      ),
+    ).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Cambiar y pagar' }),
+    );
+    expect(
+      await screen.findByText('Marca la casilla para confirmar el cambio.'),
+    ).toBeInTheDocument();
+    expect(changes).toEqual([]);
+
+    await userEvent.click(
+      screen.getByRole('checkbox', { name: 'Entiendo que pierdo mi cupón' }),
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Cambiar y pagar' }),
+    );
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: '¿Cómo vas a pagar?',
+      }),
+    ).toBeInTheDocument();
+    expect(changes).toEqual([
+      { planId: planIds.professional, acceptDiscountLoss: true },
+    ]);
+  });
+
+  it('says why the API will not change the plan now', async () => {
+    server.use(
+      activeOn(essential, 1500),
+      ...planChangeHandlers({
+        refusal: { code: 'ERR_5077', message: 'Plan change not allowed' },
+      }),
+    );
+    renderPay('profesional');
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'No puedes cambiar de plan ahora',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Ese cambio de plan no está disponible en este momento.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('schedules a downgrade for the end of the period', async () => {
+    server.use(
+      activeOn(corporate, 6000),
+      ...planChangeHandlers({ from: planIds.corporate }),
+    );
+    renderPay('profesional');
+
+    expect(
+      await screen.findByText(
+        /^Pasarás al plan Profesional el .+\. Hasta entonces/,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('region', { name: 'Lo que vas a pagar' }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Programar el cambio' }),
+    );
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: /^Pasarás al plan Profesional el /,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps the plan, back to the subscription', async () => {
+    server.use(activeOn(essential, 1500));
+    renderPay('profesional');
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Mantener mi plan' }),
+    );
+    expect(router.push).toHaveBeenCalledWith('/panel/subscription');
+  });
+
+  it('opens the plans with the asked one chosen when there is no plan', async () => {
+    renderPay('profesional');
+
+    expect(
+      await screen.findByRole('radio', { name: /Profesional/ }),
+    ).toBeChecked();
+  });
+
+  it('starts with the receipt owed, whatever plan a link asks for', async () => {
+    server.use(...unpaidSubscription());
+    renderPay('corporativo');
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: '¿Cómo vas a pagar?',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: /Cambiar al plan/ }),
+    ).not.toBeInTheDocument();
   });
 });

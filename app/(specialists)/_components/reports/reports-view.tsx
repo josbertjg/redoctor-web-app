@@ -190,6 +190,7 @@ function Reports({ user }: { user: SessionUser }) {
         </div>
         {report ? (
           <ReportExport
+            user={user}
             report={report}
             officeName={officeName}
             onPrint={() => {

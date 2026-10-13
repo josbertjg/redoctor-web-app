@@ -110,8 +110,9 @@ export const pageNamespaces = {
   panelHome: ['apiErrors', 'billing', 'appointments', 'panel'],
   // The agenda and the history of the specialist's appointments (M14).
   agenda: ['apiErrors', 'appointments', 'panel', 'identityDocument'],
-  // The statistics (M14): the filters, the four reports, the downloads.
-  reports: ['apiErrors', 'reports', 'panel', 'appBridge', 'appAccess'],
+  // The statistics (M14): the filters, the four reports, the downloads
+  // and, when the plan lacks them, the plan that has them.
+  reports: ['apiErrors', 'reports', 'panel', 'appBridge'],
   // The specialist's subscription (M13): where the plan stands, its notice.
   subscription: ['apiErrors', 'billing'],
   // The payment (M13): the plans, the coupon sheet and the two steps of the

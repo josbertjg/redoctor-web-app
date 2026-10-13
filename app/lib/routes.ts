@@ -61,8 +61,15 @@ export const routes = {
   specialistAppointments: () => '/panel/appointments' as const,
   reports: () => '/panel/reports' as const,
   subscription: () => '/panel/subscription' as const,
-  /* The payment (M13; the owner's path of 2026-10-13): never opened by the app, never linked from it. */
-  subscriptionPay: () => '/panel/subscription/pay' as const,
+  /*
+   * The payment (M13; the owner's path of 2026-10-13): never opened by the
+   * app, never linked from it. `plan` (a slug) is the plan to take, or to
+   * change to: what a feature the plan lacks invites to.
+   */
+  subscriptionPay: (plan?: string) =>
+    plan
+      ? (`/panel/subscription/pay?plan=${encodeURIComponent(plan)}` as const)
+      : ('/panel/subscription/pay' as const),
 
   /* Legal (M10). */
   privacy: () => '/privacy' as const,

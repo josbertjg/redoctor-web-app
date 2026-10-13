@@ -16,27 +16,52 @@ import {
   withoutOrigin,
 } from './deep-links';
 
+type PublishedComponent = { '/': string; exclude?: boolean };
+
+const readWellKnown = (name: string): unknown =>
+  JSON.parse(
+    readFileSync(join(process.cwd(), 'public/.well-known', name), 'utf8'),
+  );
+
+const asComponents = (published: readonly PublishedComponent[]) =>
+  published.map((component) =>
+    component.exclude
+      ? { path: component['/'], exclude: component.exclude }
+      : { path: component['/'] },
+  );
+
 describe('universalLinkComponents', () => {
   it('matches the components published in the AASA file, in order', () => {
-    const aasa = JSON.parse(
-      readFileSync(
-        join(process.cwd(), 'public/.well-known/apple-app-site-association'),
-        'utf8',
-      ),
-    ) as {
-      applinks: {
-        details: { components: { '/': string; exclude?: boolean }[] }[];
-      };
+    const aasa = readWellKnown('apple-app-site-association') as {
+      applinks: { details: { components: PublishedComponent[] }[] };
     };
-    const published = aasa.applinks.details.flatMap((detail) =>
-      detail.components.map((component) =>
-        component.exclude
-          ? { path: component['/'], exclude: component.exclude }
-          : { path: component['/'] },
-      ),
-    );
 
-    expect(published).toEqual([...universalLinkComponents]);
+    expect(
+      asComponents(
+        aasa.applinks.details.flatMap((detail) => detail.components),
+      ),
+    ).toEqual([...universalLinkComponents]);
+  });
+
+  it('matches the dynamic rules published for Android, in order', () => {
+    const statements = readWellKnown('assetlinks.json') as {
+      relation_extensions?: Record<
+        string,
+        { dynamic_app_link_components?: PublishedComponent[] } | undefined
+      >;
+    }[];
+
+    // One list for the site and the app: Android takes any of two at random.
+    expect(
+      asComponents(
+        statements.flatMap(
+          (statement) =>
+            statement.relation_extensions?.[
+              'delegate_permission/common.handle_all_urls'
+            ]?.dynamic_app_link_components ?? [],
+        ),
+      ),
+    ).toEqual([...universalLinkComponents]);
   });
 });
 

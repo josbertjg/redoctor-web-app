@@ -21,8 +21,12 @@ import { EmptyState } from '@/app/ui/empty-state';
 import { Icon } from '@/app/ui/icons';
 import { Skeleton } from '@/app/ui/skeleton';
 
+import { planBenefits } from './plan-benefits';
+
 type PlansViewProps = {
   user: SessionUser;
+  /** The plan to come chosen (`?plan=`, a slug), when it is on offer. */
+  preferredSlug?: string | null;
   onSelect: (plan: OfferedPlan) => void;
   onBack: () => void;
 };
@@ -30,11 +34,16 @@ type PlansViewProps = {
 /*
  * The plans on offer, to take one (the app's SubscriptionPlansScreen):
  * each card names the plan, its monthly price and what it includes, behind
- * «Ver beneficios»; the first comes chosen so the button always has a plan
- * to take, and «Seleccionar plan» goes on to pay. Changing from one plan to
- * another is not here yet: that stays in the app.
+ * «Ver beneficios»; the one a link asks for, or else the first, comes
+ * chosen so the button always has a plan to take, and «Seleccionar plan»
+ * goes on to pay. Changing an active plan is the change view's.
  */
-export function PlansView({ user, onSelect, onBack }: PlansViewProps) {
+export function PlansView({
+  user,
+  preferredSlug = null,
+  onSelect,
+  onBack,
+}: PlansViewProps) {
   const t = useTranslations('billing');
   const tRoot = useTranslations();
   const plans = useQuery(plansQueryOptions(user));
@@ -43,21 +52,11 @@ export function PlansView({ user, onSelect, onBack }: PlansViewProps) {
   const groupName = useId();
 
   const list = plans.data ?? [];
-  const chosen = list.find((plan) => plan.id === chosenId) ?? list[0] ?? null;
-
-  const benefitsOf = (plan: OfferedPlan): string[] => {
-    const clinics =
-      plan.maxActiveClinics == null
-        ? t('plans.benefits.unlimitedClinics')
-        : plan.maxActiveClinics === 1
-          ? t('plans.benefits.oneClinic')
-          : t('plans.benefits.manyClinics', { count: plan.maxActiveClinics });
-    return [
-      t('plans.benefits.search'),
-      clinics,
-      ...(plan.canExportReports ? [t('plans.benefits.exportReports')] : []),
-    ];
-  };
+  const chosen =
+    list.find((plan) => plan.id === chosenId) ??
+    list.find((plan) => plan.slug === preferredSlug) ??
+    list[0] ??
+    null;
 
   return (
     <div className="flex w-full flex-col gap-4">
@@ -128,7 +127,7 @@ export function PlansView({ user, onSelect, onBack }: PlansViewProps) {
                   groupName={groupName}
                   selected={selected}
                   expanded={open}
-                  benefits={benefitsOf(plan)}
+                  benefits={planBenefits(t, plan)}
                   onSelect={() => {
                     setChosenId(plan.id);
                   }}

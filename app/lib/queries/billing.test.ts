@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildInvoice,
   buildIntent,
+  buildProrationInvoice,
   buildReported,
   buildSubscription,
   intentIds,
@@ -15,8 +16,10 @@ import {
 } from '@/tests/factories/billing';
 
 import {
+  changePlan,
   couponRejectionKey,
   payableInvoiceQueryOptions,
+  planChangePreviewQueryOptions,
   plansQueryOptions,
   reportPayment,
   resolvePayable,
@@ -27,6 +30,7 @@ import { apiUrl, errorEnvelope } from '../../../tests/msw/api-url';
 import {
   invoiceDetailHandler,
   invoicesHandler,
+  planChangeHandlers,
   subscriptionHandler,
 } from '../../../tests/msw/handlers/billing';
 import { validToken } from '../../../tests/msw/handlers/identity';
@@ -208,6 +212,118 @@ describe('subscribe', () => {
         free: false,
       }),
     ).rejects.toMatchObject({ code: 'ERR_5074' });
+  });
+});
+
+describe('changing plan', () => {
+  const essential = {
+    id: planIds.essential,
+    slug: 'esencial',
+    name: 'Esencial',
+  };
+  const professional = {
+    id: planIds.professional,
+    slug: 'profesional',
+    name: 'Profesional',
+  };
+
+  it('previews an upgrade: the difference to pay today', async () => {
+    const preview = await new QueryClient().query(
+      planChangePreviewQueryOptions(user, planIds.professional),
+    );
+
+    expect(preview.kind).toBe('UPGRADE');
+    expect(preview.total).toEqual(usd(1355));
+  });
+
+  it('upgrades and gets the receipt of the difference to pay', async () => {
+    const changed = await changePlan(user, {
+      planId: planIds.professional,
+      acceptDiscountLoss: false,
+    });
+
+    expect(changed.kind).toBe('UPGRADE');
+    expect(changed.subscription.pendingUpgrade?.plan.slug).toBe('profesional');
+    expect(changed.invoice?.id).toBe(invoiceIds.upgrade);
+    expect(changed.invoice?.pending).toEqual(usd(1355));
+  });
+
+  it('schedules a downgrade for the period’s end, nothing to pay', async () => {
+    server.use(...planChangeHandlers({ from: planIds.corporate }));
+
+    const changed = await changePlan(user, {
+      planId: planIds.professional,
+      acceptDiscountLoss: false,
+    });
+
+    expect(changed.kind).toBe('DOWNGRADE');
+    expect(changed.invoice).toBeNull();
+    expect(changed.effectiveAt).toBe('2026-11-12T03:59:59.999Z');
+  });
+
+  it('sends the coupon’s loss only once accepted', async () => {
+    server.use(...planChangeHandlers({ discountEffect: 'ENDS' }));
+
+    await expect(
+      changePlan(user, {
+        planId: planIds.professional,
+        acceptDiscountLoss: false,
+      }),
+    ).rejects.toMatchObject({ code: 'ERR_5108' });
+    await expect(
+      changePlan(user, {
+        planId: planIds.professional,
+        acceptDiscountLoss: true,
+      }),
+    ).resolves.toMatchObject({ kind: 'UPGRADE' });
+  });
+
+  it('counts a conflict as done when this same upgrade is already waiting', async () => {
+    server.use(
+      ...planChangeHandlers({
+        refusal: { code: 'ERR_5075', message: 'Outstanding debt' },
+      }),
+      subscriptionHandler(
+        buildSubscription({
+          status: 'ACTIVE',
+          plan: essential,
+          price: usd(1500),
+          incompleteExpiresAt: null,
+          pendingUpgrade: { plan: professional, invoiceId: invoiceIds.upgrade },
+        }),
+      ),
+      invoiceDetailHandler(buildProrationInvoice()),
+    );
+
+    const changed = await changePlan(user, {
+      planId: planIds.professional,
+      acceptDiscountLoss: false,
+    });
+
+    expect(changed.kind).toBe('UPGRADE');
+    expect(changed.invoice?.id).toBe(invoiceIds.upgrade);
+  });
+
+  it('passes on a conflict that is not this change', async () => {
+    server.use(
+      ...planChangeHandlers({
+        refusal: { code: 'ERR_5075', message: 'Outstanding debt' },
+      }),
+      subscriptionHandler(
+        buildSubscription({
+          status: 'PAST_DUE',
+          plan: essential,
+          price: usd(1500),
+        }),
+      ),
+    );
+
+    await expect(
+      changePlan(user, {
+        planId: planIds.professional,
+        acceptDiscountLoss: false,
+      }),
+    ).rejects.toMatchObject({ code: 'ERR_5075' });
   });
 });
 
