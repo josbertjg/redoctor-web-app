@@ -24,23 +24,29 @@ export type UniversalLinkComponent = {
  * What the app opens, as published in
  * /.well-known/apple-app-site-association and, as dynamic rules, in
  * /.well-known/assetlinks.json, in their order (a test keeps the three
- * equal): the short links people share, everything under `/panel/` (the
- * specialist's panel; `/panel` itself is the web's) and its internal paths.
- * iOS and Android 15+ read them from there, first match first, and leave
+ * equal): the short links people share, the specialist's pages the app
+ * shows — one by one, the same list as the app's Android manifest — and
+ * its internal paths. iOS and Android 15+ read them from there and leave
  * what none matches to the browser; an older Android reads only the app's
- * manifest. The one exception under `/panel/` is the payment page: neither
- * app may charge (the stores forbid it), so a link to pay must reach this
- * web even on a phone with the app. A new page under `/panel/` needs no
- * change here: only the app's router. The Spanish names of before
- * 2026-10-12 are only redirects now (next.config.ts).
+ * manifest. So a page of the web's alone, under `/panel/` too (`/panel`
+ * itself, the receipts), opens in the browser with no change here. A page
+ * both have is added once the app's build that shows it is published:
+ * before that, an iPhone with an older build would open the app at its
+ * home. The payment (`/pay`) is never listed: neither app may charge (the
+ * stores forbid it). The Spanish names of before 2026-10-12 are only
+ * redirects now (next.config.ts).
  */
 export const universalLinkComponents = [
   { path: '/s/*' },
   { path: '/i/*' },
   { path: '/a/*' },
-  { path: '/panel/subscription/pay', exclude: true },
-  { path: '/panel/subscription/pay/*', exclude: true },
-  { path: '/panel/*' },
+  { path: '/panel/subscription' },
+  { path: '/panel/agenda' },
+  { path: '/panel/agenda/*' },
+  { path: '/panel/appointments' },
+  { path: '/panel/reports' },
+  { path: '/panel/specialties' },
+  { path: '/panel/profile' },
   { path: '/home/*' },
 ] as const satisfies readonly UniversalLinkComponent[];
 
@@ -51,8 +57,9 @@ const matches = (pattern: string, path: string) =>
 
 /**
  * Whether the app opens a site path, reading the patterns as iOS does: the
- * first that matches decides, and `*` covers the rest of the path, so
- * `/panel/*` takes `/panel/agenda` and leaves `/panel` to the web.
+ * first that matches decides, a pattern without `*` is that path alone, and
+ * `*` covers the rest of the path — so `/panel/agenda/*` takes
+ * `/panel/agenda/2026-10-08`, and `/panel/agenda` needs a line of its own.
  */
 export function isAppOwnedPath(path: string): boolean {
   const pathname = path.split(/[?#]/, 1)[0] ?? path;

@@ -1,3 +1,5 @@
+import { originParameter } from './deep-links';
+
 /*
  * Every route path of the web is built here and nowhere else (the app has
  * `AppRoutes` for the same reason). The builders return literal and template
@@ -7,10 +9,11 @@
  *
  * URL segments are English (owner, 2026-10-12). What the path says is who
  * it is for: the short links people share at the top (`/s`, `/i`, `/a`),
- * and the specialist's panel under `/panel/`, which the app opens on a
- * phone where it is installed — all but the payment page, kept out of the
- * app's paths on purpose (AGENTS.md §6). A renamed path keeps answering
- * with a redirect (next.config.ts).
+ * the specialist's panel under `/panel/`, and the payment at `/pay`, out
+ * of the panel's paths so that no app ever opens it. The app opens only
+ * the pages it lists, one by one (`universalLinkComponents`, AGENTS.md §6):
+ * a page of the web's alone, under `/panel/` too, needs nothing there. A
+ * renamed path keeps answering with a redirect (next.config.ts).
  */
 
 const segment = (value: string) => encodeURIComponent(value);
@@ -72,20 +75,22 @@ export const routes = {
   subscriptionBalance: () => '/panel/subscription/balance' as const,
   /** «Mis cupones»: the codes kept for later, and the personal ones. */
   subscriptionCoupons: () => '/panel/subscription/coupons' as const,
+
   /*
-   * The payment (M13; the owner's path of 2026-10-13): never opened by the
-   * app, never linked from it. `plan` (a slug) is the plan to take, or to
-   * change to: what a feature the plan lacks invites to.
+   * The payment (M13): `/pay`, out of `/panel/` on purpose (the owner,
+   * 2026-10-13), so no app lists it and none ever opens it; the app never
+   * links to it either. `plan` (a slug) is the plan to take, or to change
+   * to: what a feature the plan lacks invites to.
    */
   subscriptionPay: (plan?: string) =>
     plan
-      ? (`/panel/subscription/pay?plan=${encodeURIComponent(plan)}` as const)
-      : ('/panel/subscription/pay' as const),
+      ? (`/pay?plan=${encodeURIComponent(plan)}` as const)
+      : ('/pay' as const),
   /** The plans, to change from the one in force (or to take one). */
-  subscriptionPlans: () => '/panel/subscription/pay?view=plans' as const,
+  subscriptionPlans: () => '/pay?view=plans' as const,
   /** One receipt to pay, the one its page shows. */
   subscriptionPayInvoice: (invoiceId: string) =>
-    `/panel/subscription/pay?invoice=${encodeURIComponent(invoiceId)}` as const,
+    `/pay?invoice=${encodeURIComponent(invoiceId)}` as const,
 
   /* Legal (M10). */
   privacy: () => '/privacy' as const,
@@ -105,6 +110,28 @@ export const routes = {
   dailySummaryOptOut: (token: string) =>
     `/daily-summary/unsubscribe?token=${encodeURIComponent(token)}` as const,
 };
+
+/**
+ * The query parameter of a search box (the panel's history): what a person
+ * typed — a patient's name, document, phone or email —, so it never
+ * travels further than its own page (`returnPath`).
+ */
+export const searchParameter = 'q';
+
+/**
+ * The way back to a page after signing in: its path and its query — the
+ * plan a link asks for, a list's filters —, minus what must not travel: a
+ * search box's text and the channel tag `?origin=`. The sign-in page's own
+ * address reaches Firebase's sign-in window whole (its `redirectUrl`), so
+ * nothing a person typed rides in it.
+ */
+export function returnPath(pathname: string, search: string): string {
+  const params = new URLSearchParams(search);
+  params.delete(searchParameter);
+  params.delete(originParameter);
+  const query = params.toString();
+  return query ? `${pathname}?${query}` : pathname;
+}
 
 /**
  * A `redirect` value is honored only when it is a same-origin path, so a

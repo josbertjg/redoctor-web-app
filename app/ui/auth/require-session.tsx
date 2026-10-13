@@ -7,7 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 
 import { useTranslations } from 'next-intl';
 
-import { routes } from '@/app/lib/routes';
+import { returnPath, routes } from '@/app/lib/routes';
 import {
   canUseSpecialistArea,
   needsSignUp,
@@ -28,7 +28,7 @@ type RequireSessionProps = {
   facet?: SessionFacet;
   /** The segment's skeleton, shown until the person is known (never a flash of the wrong UI). */
   fallback: ReactNode;
-  /** Where to come back after signing in; the page's path by default (a page whose query matters passes it whole). */
+  /** Where to come back after signing in; by default the page's address, its query too, but for what must not travel (`returnPath`). */
   returnTo?: string | undefined;
   /** The sign-up page itself: an account with no sign-up behind it is who it is for, so it gets in instead of being sent there. */
   allowUnregistered?: boolean;
@@ -66,7 +66,6 @@ export function RequireSession({
     session.status === 'signed-in' &&
     session.account !== null &&
     needsSignUp(session.account);
-  const back = returnTo ?? pathname;
   // A patient's page is no place for a specialist: they stay in their panel
   // (owner, 2026-10-13). One who is also a patient keeps their own.
   const toPanel =
@@ -76,10 +75,13 @@ export function RequireSession({
     canUseSpecialistArea(session.account);
 
   useEffect(() => {
+    // The address is read as the page leaves: the plan a link asks for, a
+    // list's filters, come back too.
+    const back = returnTo ?? returnPath(pathname, window.location.search);
     if (signedOut) router.replace(routes.signIn(back));
     else if (mustSignUp) router.replace(routes.signUp(back));
     else if (toPanel) router.replace(routes.specialistHome());
-  }, [signedOut, mustSignUp, toPanel, back, router]);
+  }, [signedOut, mustSignUp, toPanel, returnTo, pathname, router]);
 
   if (session.status !== 'signed-in') return fallback;
 

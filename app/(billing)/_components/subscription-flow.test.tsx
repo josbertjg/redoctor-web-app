@@ -89,7 +89,7 @@ const unpaidSubscription = () => [
 /*
  * «Mi suscripción» (`/panel/subscription`): where the plan stands, the
  * notice with what to do, and the way to the payment page — a link, since
- * paying is a page of its own (`/panel/subscription/pay`).
+ * paying is a page of its own (`/pay`).
  */
 describe('SubscriptionFlow', () => {
   it('tells an unpaid subscription where it stands and leads to pay it', async () => {
@@ -111,7 +111,7 @@ describe('SubscriptionFlow', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Pagar ahora' })).toHaveAttribute(
       'href',
-      '/panel/subscription/pay',
+      '/pay',
     );
     expect(await axe(container)).toHaveNoViolations();
   });
@@ -127,7 +127,7 @@ describe('SubscriptionFlow', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Ver planes' })).toHaveAttribute(
       'href',
-      '/panel/subscription/pay',
+      '/pay',
     );
   });
 
@@ -182,7 +182,7 @@ describe('SubscriptionFlow', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Pagar ahora' })).toHaveAttribute(
       'href',
-      '/panel/subscription/pay',
+      '/pay',
     );
   });
 
@@ -250,7 +250,7 @@ describe('SubscriptionFlow', () => {
     expect(screen.getByText('Pago vencido')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Pagar ahora' })).toHaveAttribute(
       'href',
-      '/panel/subscription/pay',
+      '/pay',
     );
   });
 
@@ -329,7 +329,7 @@ describe('SubscriptionFlow, changing plan', () => {
 
     expect(
       await screen.findByRole('link', { name: /Cambiar de plan/ }),
-    ).toHaveAttribute('href', '/panel/subscription/pay?view=plans');
+    ).toHaveAttribute('href', '/pay?view=plans');
   });
 
   it('offers no change while an upgrade waits for its payment', async () => {

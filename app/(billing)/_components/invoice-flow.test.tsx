@@ -139,10 +139,7 @@ describe('InvoiceFlow', () => {
 
     expect(
       await screen.findByRole('link', { name: 'Pagar ahora' }),
-    ).toHaveAttribute(
-      'href',
-      `/panel/subscription/pay?invoice=${invoiceIds.unpaid}`,
-    );
+    ).toHaveAttribute('href', `/pay?invoice=${invoiceIds.unpaid}`);
     expect(
       screen.getByText('Por pagar', { selector: 'span' }),
     ).toBeInTheDocument();

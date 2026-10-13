@@ -18,9 +18,13 @@
           { "/": "/s/*" },
           { "/": "/i/*" },
           { "/": "/a/*" },
-          { "/": "/panel/subscription/pay", "exclude": true },
-          { "/": "/panel/subscription/pay/*", "exclude": true },
-          { "/": "/panel/*" },
+          { "/": "/panel/subscription" },
+          { "/": "/panel/agenda" },
+          { "/": "/panel/agenda/*" },
+          { "/": "/panel/appointments" },
+          { "/": "/panel/reports" },
+          { "/": "/panel/specialties" },
+          { "/": "/panel/profile" },
           { "/": "/home/*" }
         ]
       }

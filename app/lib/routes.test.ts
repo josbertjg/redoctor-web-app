@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { isAppOwnedPath } from './deep-links';
-import { isSafeRedirect, routes } from './routes';
+import { isSafeRedirect, returnPath, routes } from './routes';
 
 describe('routes', () => {
   it('builds the paths shared with the app', () => {
@@ -18,13 +18,13 @@ describe('routes', () => {
     expect(routes.specialistAppointments()).toBe('/panel/appointments');
     expect(routes.reports()).toBe('/panel/reports');
     expect(routes.subscription()).toBe('/panel/subscription');
-    expect(routes.subscriptionPay()).toBe('/panel/subscription/pay');
-    expect(routes.subscriptionPay('profesional')).toBe(
-      '/panel/subscription/pay?plan=profesional',
-    );
-    expect(routes.subscriptionPlans()).toBe(
-      '/panel/subscription/pay?view=plans',
-    );
+  });
+
+  it('builds the payment, out of the panel’s paths', () => {
+    expect(routes.subscriptionPay()).toBe('/pay');
+    expect(routes.subscriptionPay('profesional')).toBe('/pay?plan=profesional');
+    expect(routes.subscriptionPlans()).toBe('/pay?view=plans');
+    expect(routes.subscriptionPayInvoice('in 1')).toBe('/pay?invoice=in%201');
   });
 
   it('builds the bridges', () => {
@@ -45,20 +45,56 @@ describe('routes', () => {
     expect(routes.signUp('/i/tok')).toBe('/sign-up?redirect=%2Fi%2Ftok');
   });
 
-  it('keeps the payment page out of the app paths, and the rest of the panel in', () => {
-    expect(isAppOwnedPath(routes.subscriptionPay())).toBe(false);
-    expect(isAppOwnedPath(routes.subscriptionPay('profesional'))).toBe(false);
-    expect(isAppOwnedPath(routes.subscriptionPlans())).toBe(false);
+  it('lets the app open the pages it shows, never the payment nor the web’s own', () => {
     expect(isAppOwnedPath(routes.subscription())).toBe(true);
+    expect(isAppOwnedPath(routes.agenda())).toBe(true);
     expect(isAppOwnedPath(routes.agenda('2026-10-01'))).toBe(true);
     expect(isAppOwnedPath(routes.specialistAppointments())).toBe(true);
     expect(isAppOwnedPath(routes.reports())).toBe(true);
+    expect(isAppOwnedPath(routes.specialtiesBridge())).toBe(true);
+    expect(isAppOwnedPath(routes.profileBridge())).toBe(true);
+
+    expect(isAppOwnedPath(routes.subscriptionPay())).toBe(false);
+    expect(isAppOwnedPath(routes.subscriptionPay('profesional'))).toBe(false);
+    expect(isAppOwnedPath(routes.subscriptionPlans())).toBe(false);
+    expect(isAppOwnedPath(routes.subscriptionPayInvoice('in-1'))).toBe(false);
+
+    // The web's own: the panel's home, and the receipts' pages until a
+    // published build of the app shows them.
     expect(isAppOwnedPath(routes.specialistHome())).toBe(false);
+    expect(isAppOwnedPath(routes.subscriptionInvoices())).toBe(false);
+    expect(isAppOwnedPath(routes.subscriptionInvoice('in-1'))).toBe(false);
+    expect(isAppOwnedPath(routes.subscriptionBalance())).toBe(false);
+    expect(isAppOwnedPath(routes.subscriptionCoupons())).toBe(false);
   });
 
   it('encodes the opt-out token', () => {
     expect(routes.dailySummaryOptOut('a+b/c')).toBe(
       '/daily-summary/unsubscribe?token=a%2Bb%2Fc',
+    );
+  });
+});
+
+describe('returnPath', () => {
+  it('keeps the query that brings the person back to the same view', () => {
+    expect(returnPath('/pay', '?plan=profesional')).toBe(
+      '/pay?plan=profesional',
+    );
+    expect(
+      returnPath('/panel/appointments', '?status=CONFIRMED&from=2026-10-01'),
+    ).toBe('/panel/appointments?status=CONFIRMED&from=2026-10-01');
+    expect(returnPath('/panel', '')).toBe('/panel');
+  });
+
+  it('never carries what was typed in a search box, nor the channel tag', () => {
+    expect(
+      returnPath('/panel/appointments', '?q=Ana+P%C3%A9rez&status=CONFIRMED'),
+    ).toBe('/panel/appointments?status=CONFIRMED');
+    expect(returnPath('/panel/appointments', '?q=12345678')).toBe(
+      '/panel/appointments',
+    );
+    expect(returnPath('/panel/subscription', '?origin=email-4')).toBe(
+      '/panel/subscription',
     );
   });
 });

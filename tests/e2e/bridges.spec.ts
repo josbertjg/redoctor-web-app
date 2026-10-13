@@ -92,7 +92,6 @@ const renamed = [
     '/daily-summary/unsubscribe?token=forged-in-e2e',
   ],
   ['/citas/invitacion/forged-in-e2e', '/i/forged-in-e2e'],
-  ['/pay', '/panel/subscription/pay'],
 ] as const;
 
 for (const [from, to] of renamed) {

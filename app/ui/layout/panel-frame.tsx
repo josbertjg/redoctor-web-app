@@ -22,7 +22,8 @@ type PanelFrameProps = {
  * The specialist's panel around each of its sections (M14): the bar with
  * the account, the sections' navigation, and the page under the guard —
  * the specialist facet, or an admin's account (AGENTS.md §1). Used by every
- * layout under `/panel`, whichever module the section belongs to.
+ * layout under `/panel`, whichever module the section belongs to, and by
+ * the payment's at `/pay`, out of the app's paths (AGENTS.md §6).
  */
 export async function PanelFrame({
   fallback,

@@ -175,8 +175,8 @@ type SheetKind = 'action' | 'coupon' | 'account';
  * the receipts are issued to, undoing a scheduled change, dropping a
  * subscription never paid, cancelling; then the balance and the latest
  * receipts. Paying, taking a plan again or choosing the new one is the
- * payment page's (`/panel/subscription/pay`). What comes and goes as the
- * subscription moves unfolds and folds in place.
+ * payment page's (`/pay`). What comes and goes as the subscription moves
+ * unfolds and folds in place.
  */
 export function SubscriptionView({
   user,

@@ -154,7 +154,7 @@ describe('ReportsView', () => {
     });
     expect(
       await within(sheet).findByRole('link', { name: 'Mejorar plan' }),
-    ).toHaveAttribute('href', '/panel/subscription/pay?plan=profesional');
+    ).toHaveAttribute('href', '/pay?plan=profesional');
     expect(
       within(sheet).getByText(
         'Tu plan actual no incluye descargar tus reportes. Cambia al plan Profesional para descargarlos en PDF y en hoja de cálculo.',
@@ -181,7 +181,7 @@ describe('ReportsView', () => {
     });
     expect(
       await within(sheet).findByRole('link', { name: 'Ver planes' }),
-    ).toHaveAttribute('href', '/panel/subscription/pay?plan=profesional');
+    ).toHaveAttribute('href', '/pay?plan=profesional');
   });
 
   it('asks to pay first what is owed', async () => {
@@ -199,7 +199,7 @@ describe('ReportsView', () => {
     });
     expect(
       await within(sheet).findByRole('link', { name: 'Pagar ahora' }),
-    ).toHaveAttribute('href', '/panel/subscription/pay');
+    ).toHaveAttribute('href', '/pay');
     expect(
       within(sheet).getByText(
         'Tu plan Profesional todavía no está activo. Completa su pago para descargar tus reportes.',

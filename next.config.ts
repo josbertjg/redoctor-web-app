@@ -110,13 +110,10 @@ const nextConfig: NextConfig = {
         destination: '/i/:token',
         permanent: true,
       },
-      // The payment moved into the panel (owner, 2026-10-13); REDOC-357 and
-      // the emails' examples named /pay first.
-      {
-        source: '/pay',
-        destination: '/panel/subscription/pay',
-        permanent: true,
-      },
+      // No rule for /panel/subscription/pay, on purpose (owner, 2026-10-13):
+      // the payment's address for a few hours (v0.19.0–v0.22.0) before it
+      // went back to /pay, out of the app's paths. No link that leaves the
+      // web ever named it, so it answers a plain 404 (AGENTS.md §6).
     ]);
   },
   headers() {

@@ -49,7 +49,7 @@ describe('the panel’s home', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Ver planes' })).toHaveAttribute(
       'href',
-      '/panel/subscription/pay',
+      '/pay',
     );
     expect(await screen.findByText('3 pacientes hoy')).toBeInTheDocument();
     expect(await axe(container)).toHaveNoViolations();
@@ -69,7 +69,7 @@ describe('the panel’s home', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Pagar ahora' })).toHaveAttribute(
       'href',
-      '/panel/subscription/pay',
+      '/pay',
     );
     expect(
       screen.getByRole('heading', { name: 'Profesional' }),

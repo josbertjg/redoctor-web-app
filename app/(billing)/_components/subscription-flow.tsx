@@ -30,8 +30,8 @@ import { SubscriptionView } from './subscription-view';
  * specialist's plan stands and everything about it — the plan, its state,
  * the notice with what to do, the period, what can be done with it, the
  * balance and the receipts. Paying or taking a plan is the payment page's
- * (`/panel/subscription/pay`). On a phone with the app, the same link
- * opens the app's «Mi suscripción».
+ * (`/pay`). On a phone with the app, the same link opens the app's «Mi
+ * suscripción».
  */
 export function SubscriptionFlow() {
   const { user } = useSession();

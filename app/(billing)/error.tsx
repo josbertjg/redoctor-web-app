@@ -1,4 +1,5 @@
 'use client';
 
-// The root error state, for what fails above the subscription's frame (its layout).
-export { default } from '../error';
+// The error state inside the panel's frame (the module's layout), under the
+// bar; what fails in the frame itself reaches the root error.
+export { PageError as default } from '@/app/ui/page-error';

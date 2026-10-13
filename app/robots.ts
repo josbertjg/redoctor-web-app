@@ -15,7 +15,7 @@ import { absoluteUrl, isIndexable } from '@/app/lib/site';
  * link appears somewhere public. They answer `X-Robots-Tag: noindex` instead
  * (next.config.ts).
  */
-const privatePaths = ['/appointments', '/account', '/panel', '/home/'];
+const privatePaths = ['/appointments', '/account', '/panel', '/pay', '/home/'];
 
 export default function robots(): MetadataRoute.Robots {
   if (!isIndexable) {

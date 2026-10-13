@@ -7,13 +7,13 @@
           { "/": "/s/*" },
           { "/": "/i/*" },
           { "/": "/a/*" },
-          {
-            "/": "/panel/subscription/pay",
-            "exclude": true,
-            "comment": "The payment stays in the browser: the app cannot charge."
-          },
-          { "/": "/panel/subscription/pay/*", "exclude": true },
-          { "/": "/panel/*" },
+          { "/": "/panel/subscription" },
+          { "/": "/panel/agenda" },
+          { "/": "/panel/agenda/*" },
+          { "/": "/panel/appointments" },
+          { "/": "/panel/reports" },
+          { "/": "/panel/specialties" },
+          { "/": "/panel/profile" },
           { "/": "/home/*" }
         ]
       }

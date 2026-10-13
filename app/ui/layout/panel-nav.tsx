@@ -49,7 +49,10 @@ const sections: readonly Section[] = [
     key: 'subscription',
     href: routes.subscription(),
     icon: WorkspacePremium,
-    isCurrent: (pathname) => pathname.startsWith(routes.subscription()),
+    // The payment belongs to it, though its path is out of `/panel/`.
+    isCurrent: (pathname) =>
+      pathname.startsWith(routes.subscription()) ||
+      pathname === routes.subscriptionPay(),
   },
 ];
 

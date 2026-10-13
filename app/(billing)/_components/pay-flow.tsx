@@ -102,7 +102,7 @@ function startingView(
 }
 
 /*
- * `/panel/subscription/pay` (M13, the owner's split of 2026-10-13): paying,
+ * `/pay` (M13, apart from «Mi suscripción» since 2026-10-13): paying,
  * choosing a plan and changing it. Where the plan stands decides where it
  * starts — the plans when there is none to pay, the receipt a receipt's
  * page asks to pay (`?invoice=`), the receipt owed when there is one, the

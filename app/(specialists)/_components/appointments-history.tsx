@@ -18,7 +18,7 @@ import { formatAppointmentDay } from '@/app/lib/format/appointment-time';
 import { specialistAppointmentsQueryOptions } from '@/app/lib/queries/appointments';
 import { myOfficesQueryOptions } from '@/app/lib/queries/offices';
 import { isCalendarDay } from '@/app/lib/reports/period';
-import { routes } from '@/app/lib/routes';
+import { routes, searchParameter } from '@/app/lib/routes';
 import {
   appointmentStatuses,
   statusChips,
@@ -60,7 +60,7 @@ function readFilters(params: URLSearchParams): Filters {
   const from = params.get('from') ?? '';
   const to = params.get('to') ?? '';
   return {
-    q: params.get('q')?.trim() ?? '',
+    q: params.get(searchParameter)?.trim() ?? '',
     status: (appointmentStatuses as readonly string[]).includes(status)
       ? (status as AppointmentStatus)
       : null,
@@ -72,7 +72,7 @@ function readFilters(params: URLSearchParams): Filters {
 
 function toQuery(filters: Filters): string {
   const params = new URLSearchParams();
-  if (filters.q) params.set('q', filters.q);
+  if (filters.q) params.set(searchParameter, filters.q);
   if (filters.status) params.set('status', filters.status);
   if (filters.from) params.set('from', filters.from);
   if (filters.to) params.set('to', filters.to);

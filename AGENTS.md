@@ -81,7 +81,7 @@ transactional emails the API sends.
 | M9 Landing | Designed by the designer; copy in the doc «Landing de Redoctor» |
 | M10 Legal and account | Privacy, terms, account deletion (texts from the lawyer) |
 | M11 Bridges | `/panel/specialties`, `/panel/profile`, `/home/*` (pages that only open the app) and `/daily-summary/unsubscribe` (daily-summary email opt-out); `/panel/subscription` and `/panel/agenda` were bridges until M14 made them pages |
-| M13 Specialist payment | `/panel/subscription` («Mi suscripción»: the plan, its state and its notice) and `/panel/subscription/pay` (the payment, never opened by the app; the owner's split of 2026-10-13, `/pay` before): choose a plan with a coupon, Pago Móvil and transfer data in Bs from the API, report the payment, see it in review; changing plan — from «Mi suscripción» (`?view=plans`) or from a missing feature's invitation (`?plan=`) — and undoing a scheduled change (2026-10-13); and the rest of the app's «Mi suscripción» the same day (§13, Decided): cancelling and resuming, dropping an unpaid subscription, a coupon on the plan in force, the billing data, the receipts (`/panel/subscription/invoices[/{id}]`, each one payable from its page), the balance (`/panel/subscription/balance`) and «Mis cupones» (`/panel/subscription/coupons`) |
+| M13 Specialist payment | `/panel/subscription` («Mi suscripción»: the plan, its state and its notice) and `/pay` (the payment, out of the paths the app opens, since no app may charge; the owner's split of 2026-10-13): choose a plan with a coupon, Pago Móvil and transfer data in Bs from the API, report the payment, see it in review; changing plan — from «Mi suscripción» (`?view=plans`) or from a missing feature's invitation (`?plan=`) — and undoing a scheduled change (2026-10-13); and the rest of the app's «Mi suscripción» the same day (§13, Decided): cancelling and resuming, dropping an unpaid subscription, a coupon on the plan in force, the billing data, the receipts (`/panel/subscription/invoices[/{id}]`, each one payable from its page), the balance (`/panel/subscription/balance`) and «Mis cupones» (`/panel/subscription/coupons`) |
 | M14 Specialist panel | `/panel` and its sections (2026-10-13): the home (the plan and its notice, today's patients, the statistics, what stays in the app), the day's agenda `/panel/agenda[/{date}]` and the history `/panel/appointments` (read only, each appointment opening `/a/{id}`), the statistics `/panel/reports` (the app's summary and four reports, PDF and CSV when the plan allows), the subscription (M13); a specialist stays in it until signing out |
 | M12 Release | PostHog funnel by origin, tests on real phones from WhatsApp and Gmail, domain cutover |
 
@@ -232,11 +232,11 @@ app/                                  # The application: routes, UI and logic
     account/layout.tsx · page.tsx     #   /account — layout = <RequireSession>
     privacy/page.tsx · terms/page.tsx · delete-account/page.tsx
   (billing)/                          # module: specialist payment (M13)
-    error.tsx                         #   the root error, for what fails above the subscription's frame
-    panel/subscription/layout.tsx · page.tsx · error.tsx   # /panel/subscription — layout = <PanelFrame width="narrow">; its error inside the frame
+    layout.tsx · error.tsx            #   <PanelFrame width="narrow"> around every page below, kept as the person moves between them; the error inside it
+    panel/subscription/page.tsx       #   /panel/subscription — «Mi suscripción»
     panel/subscription/invoices/page.tsx · [invoiceId]/page.tsx   # the receipts (`?status=`) and a receipt
     panel/subscription/balance/page.tsx · coupons/page.tsx        # the balance; «Mis cupones»
-    panel/subscription/pay/page.tsx   #   /panel/subscription/pay[?plan=|?view=plans|?invoice=] — the payment, the plans and the change of plan, never opened by the app (§6); /pay redirects here
+    pay/page.tsx                      #   /pay[?plan=|?view=plans|?invoice=] — the payment, the plans and the change of plan; out of `/panel/`, listed by no app (§6)
     _components/                      #   subscription-flow, subscription-view (+ entitlements-card, subscription-sections, subscription-action-sheet, apply-coupon-sheet, billing-account-sheet, collapse), subscription-load-error, invoices-flow, invoice-flow, invoice-card, balance-flow, balance-pieces, coupons-flow, coupon-pieces, paged-list-foot, list-notice, section-header, back-link, pay-flow, plans-view, plan-benefits, change-plan-view, pay-view, method-step, payment-step, payment-totals, coupon-sheet, bank-picker, different-amount-sheet, payment-done, copy-button, detail-list, pay-skeleton
   (bridges)/                          # module: pages that only open the app, noindex (M11)
     layout.tsx
@@ -467,40 +467,51 @@ docs point here instead of copying it.
 | `/a/{appointmentId}` | patient (and specialist in the app) | Full appointment experience (M5); its specialist reads it, with the patient in full and the way back to the agenda | the app (reminders, confirmation); emails 11–13 and 15 |
 | `/panel/subscription` | specialist | «Mi suscripción» (M13): the plan, its state, its notice and the way to pay | billing emails 01–05 and 07–09 (REDOC-356) |
 | `/panel/agenda`, `/panel/agenda/{YYYY-MM-DD}` | specialist | The day's agenda (M14), read only; a malformed date is today, as in the app | the daily summary, email 10 (REDOC-359) |
-| `/panel/appointments` | specialist | The appointments history (M14); the app should open its «Citas» | the panel |
-| `/panel/reports` | specialist | The statistics (M14); the app should open its «Estadísticas» | the panel |
-| `/panel/subscription/invoices[/{id}]`, `/panel/subscription/balance`, `/panel/subscription/coupons` | specialist | The receipts, a receipt, the balance and «Mis cupones» (M13); the app should open its «Recibos», «Recibo», «Saldo a favor» and «Mis cupones» | «Mi suscripción» on the web (no email sends them) |
+| `/panel/appointments` | specialist | The appointments history (M14); the app opens its «Citas» (since its v0.169.1; an older build, its home) | the panel |
+| `/panel/reports` | specialist | The statistics (M14); the app opens its «Estadísticas» (since its v0.169.1; an older build, its home) | the panel |
 | `/panel/specialties` | specialist | Bridge (a mirror is planned) | email 16 (REDOC-360) |
 | `/panel/profile` | specialist | Bridge (a mirror is planned) | email 18 (REDOC-360) |
 | `/home/*` | app internals | Bridge to the home / store; not a web route | the app's own paths |
 
-The specialist's pages live under `/panel/`, and the app opens
-**everything** there but the payment page: one entry (`/panel/*`, after
-the payment's exclusion) in the AASA and in `assetlinks.json`'s dynamic
-rules and, on Android, a line per page in the app's filter (never the
-whole prefix: Android 14 and older read only the manifest, and the
-payment page must stay out). `/panel` itself is the web's home of the
-panel (M14). So a new specialist page under `/panel/` needs the web's
-page, the app's router and its Android line (until then iOS opens the
-app's home and Android the web's page): no AASA, no `assetlinks.json`, no
-wait for Apple's CDN. In the app these links need a
-specialist's session (without one it asks to sign in; another role stays
-on its home). "Abrir en la app" uses the same path:
-`redoctor://redoctorapp.com/panel/agenda/2026-10-08`.
+The specialist's pages live under `/panel/`, but the app opens only the
+ones it shows, **one by one** (the owner, 2026-10-13): the same list in
+`universalLinkComponents`, the AASA, `assetlinks.json`'s dynamic rules
+(Android 15 and later) and the app's Android manifest (all that Android 14
+and older read). The rule:
+
+- **A page of the web's alone is not listed**, under `/panel/` too: it
+  opens in the browser, with the app or without it, and needs nothing on
+  the app's side. So do `/panel` itself (the web's home of the panel,
+  M14) and the receipts, a receipt, the balance and «Mis cupones»
+  (`/panel/subscription/invoices[/{id}]`, `/panel/subscription/balance`,
+  `/panel/subscription/coupons`, M13): no link leaves the web with them,
+  and moving between the web's pages never opens the app.
+- **A page both have** goes into the app's manifest in the build that
+  brings it, and into this list once that build is published: listed
+  before, it would open an older build at its home on an iPhone. Then
+  Apple's CDN must pick the AASA up (below).
+- **The payment (`/pay`) is never listed** (below).
+
+In the app these links need a specialist's session (without one it asks to
+sign in; another role stays on its home). "Abrir en la app" uses the same
+path: `redoctor://redoctorapp.com/panel/agenda/2026-10-08`.
 
 Paths only the web serves that others write: the daily-summary opt-out
 `/daily-summary/unsubscribe?token=…` (the API's `url_baja`, REDOC-359), the
-payment `/panel/subscription/pay` (the admin's `webPaymentUrl`, REDOC-357;
-`/pay` redirects there) and the home page (`/?origin=email-14`). Push
-notifications carry ids, not links.
+payment `/pay` (the admin's `webPaymentUrl`, REDOC-357) and the home page
+(`/?origin=email-14`). Push notifications carry ids, not links.
 
 **A renamed path never dies.** Until 2026-10-12 the specialist's paths were
 Spanish (`/suscripcion`, `/agenda[/…]`, `/especialidades`, `/perfil`), the
 opt-out was `/resumen/baja`, and the API's `invitationUrl` still points at
 `/citas/invitacion/{token}` (REDOC-255), a path nobody served. The web
 redirects every old name for good (`next.config.ts`, 308, query kept); the
-AASA lists only the current paths since the app learned `/panel/*`
-(2026-10-12).
+AASA lists none of them. One exception, on the owner's word (2026-10-13):
+`/panel/subscription/pay`, the payment's address for a few hours
+(v0.19.0–v0.22.0) before it went back to `/pay`, answers 404 — no link
+that leaves the web ever named it (the emails, REDOC-354, 356 and 357 and
+the app say `/pay`; REDOC-357's `webPaymentUrl` refuses any `/panel/`
+path; without CORS nobody could pay there).
 
 Reserved for the app's internal paths: `/home`. Patient web routes
 therefore live under `/appointments` and `/account`, never under those
@@ -508,47 +519,45 @@ segments.
 
 #### Adding or renaming a public link
 
-1. **Web:** the page or bridge and its builder in `app/lib/routes.ts`;
-   outside `/panel/`, `universalLinkComponents`, the AASA and
-   `assetlinks.json`'s dynamic rules too (a test keeps the three equal); a
+1. **Web:** the page or bridge and its builder in `app/lib/routes.ts`; a
    renamed path gets its redirect in `next.config.ts`; `robots.ts`; the
-   e2e.
-2. **App** (`redoctor-mobile-app`): `AppDeepLinks.resolve` and its test,
-   and the path's line in the Android manifest (under `/panel/` too: it
-   lists each page).
-3. **API:** the email templates (the app repo's `emails/`, zipped to
+   e2e. A page of the web's alone ends here.
+2. **App** (`redoctor-mobile-app`), for a page it shows too:
+   `AppDeepLinks.resolve` and its test, and the path's line in the Android
+   manifest (it lists each page).
+3. **Web, once that build of the app is published:** the path in
+   `universalLinkComponents`, the AASA and `assetlinks.json`'s dynamic
+   rules (a test keeps the three equal), and Apple's CDN checked (below).
+4. **API:** the email templates (the app repo's `emails/`, zipped to
    REDOC-354) and any link it builds in code (`invitationUrl`, `url_baja`).
-4. **The table above.**
-5. **In that order:** a copy of the app from before does not know a new
-   path, so the emails switch last.
+5. **The table above.**
+6. **In that order:** a copy of the app from before does not know a new
+   path, so the list waits for the build that knows it, and the emails
+   switch last.
 
 ### The payment page is NOT an app path
 
-The specialist pays on the web (M13) at `/panel/subscription/pay` (the
-owner's path of 2026-10-13; `/pay` before, redirected for good). Charging
-on the web is allowed and wanted; what the stores forbid is an **app**
-charging, or pointing to a charge — neither the iOS app nor the Android
-one may (owner, 2026-10-13). So a link to pay must reach this web even on
-a phone where the app is installed, on both systems:
+The specialist pays on the web (M13) at `/pay`, out of `/panel/` on
+purpose (the owner, 2026-10-13, after reviewing the panel with the app's
+agent): what is the web's alone, and above all paying, must not hang on
+exceptions inside the paths the app claims. Charging on the web is allowed
+and wanted; what the stores forbid is an **app** charging, or pointing to
+a charge — neither the iOS app nor the Android one may (owner,
+2026-10-13). So a link to pay must reach this web even on a phone where
+the app is installed, and it does on every system with no exception
+anywhere: no AASA, no dynamic rule and no app manifest lists `/pay`, and
+unit tests keep it out of `isAppOwnedPath`. (For a few hours the page was
+`/panel/subscription/pay`, excluded before a `/panel/*`; Apple's CDN still
+served the AASA without that exclusion that evening, so an iPhone with the
+app would have opened the app there.)
 
-- **iOS:** the AASA **excludes** the page before its `/panel/*`
-  (`"exclude": true`, first match wins; unit tests keep it out of
-  `isAppOwnedPath`). A phone keeps the AASA it read when the app was
-  installed: after a change, Apple's CDN must have the new copy and the
-  testers reinstall.
-- **Android 15 and later:** the same components, the exclusion included,
-  are `assetlinks.json`'s dynamic rules (below), which the device reads
-  from time to time: what no rule matches stays in the browser.
-- **Android 14 and older** read only the app's manifest, so its filter
-  must not match the page: it lists the `/panel/` paths it opens instead
-  of the whole prefix.
-- **Pending in the app (2026-10-13):** its filter still claims
-  `/panel/.*`, and its prod flavor still sells on Android
-  (`InAppPurchases.android`, set on 2026-10-08 to try real payments).
+- **Pending in the app (2026-10-13):** every flavor (dev, staging, prod)
+  still sells on Android (`InAppPurchases.android`, set on 2026-10-08 to
+  try real payments).
 
-The app never links to the page; `/pay`, the old name, is claimed by no
-app. The billing emails offer it only when the API's `webPaymentUrl` has
-a value.
+The app never links to the page. The billing emails offer it only when
+the API's `webPaymentUrl` has a value (REDOC-357: `https://redoctorapp.com/pay`
+once CORS is in production; it refuses any path the app could open).
 
 ### The `.well-known` files (served from `public/`, byte-exact)
 
@@ -566,13 +575,13 @@ a value.
           { "/": "/s/*" },
           { "/": "/i/*" },
           { "/": "/a/*" },
-          {
-            "/": "/panel/subscription/pay",
-            "exclude": true,
-            "comment": "The payment stays in the browser: the app cannot charge."
-          },
-          { "/": "/panel/subscription/pay/*", "exclude": true },
-          { "/": "/panel/*" },
+          { "/": "/panel/subscription" },
+          { "/": "/panel/agenda" },
+          { "/": "/panel/agenda/*" },
+          { "/": "/panel/appointments" },
+          { "/": "/panel/reports" },
+          { "/": "/panel/specialties" },
+          { "/": "/panel/profile" },
           { "/": "/home/*" }
         ]
       }
@@ -582,8 +591,9 @@ a value.
 ```
 
 `app/lib/deep-links.ts` (`universalLinkComponents`) lists the same
-components in the same order, exclusions included, and a unit test fails
-if the AASA or `assetlinks.json`'s dynamic rules drift from it.
+components in the same order, and a unit test fails if the AASA or
+`assetlinks.json`'s dynamic rules drift from it. The specialist's lines are
+the `/panel/` lines of the app's Android manifest, one each.
 
 `/.well-known/assetlinks.json` — package `com.redoctor.mobileapp`, relation
 `delegate_permission/common.handle_all_urls`, and the SHA-256 fingerprints
@@ -595,16 +605,16 @@ statement also carries the dynamic rules of Android 15+ (Google's
 "Dynamic App Links"): `relation_extensions` →
 `delegate_permission/common.handle_all_urls` →
 `dynamic_app_link_components`, the AASA's components in the AASA's order
-(`{ "/": "/s/*" }` … `{ "/": "/panel/subscription/pay", "exclude": true }`
-…), with only the keys Google documents (`/`, `exclude`: no comments),
-and one list per site and app. They narrow what the manifest claims and
+(`{ "/": "/s/*" }` … `{ "/": "/panel/subscription" }` …), with only the
+keys Google documents (`/`, and `exclude` should one ever be needed: no
+comments), and one list per site and app. They narrow what the manifest claims and
 never widen it; a malformed one makes Android fall back to the manifest.
 
 Rules: Android verifies the domain from `assetlinks.json`; its routes live
 in the app's manifest, narrowed on Android 15+ by the dynamic rules; iOS
-reads the **routes from the AASA**, so a new
-path outside `/panel/` needs the AASA updated **and** Apple's CDN to pick it
-up (`https://app-site-association.cdn-apple.com/a/v1/redoctorapp.com`) —
+reads the **routes from the AASA**, so every new path the app opens needs
+the AASA updated **and** Apple's CDN to pick it up
+(`https://app-site-association.cdn-apple.com/a/v1/redoctorapp.com`) —
 verify with `curl` after deploying, and expect a reinstall of the app on the
 test iPhone. Both files are versioned here and have an e2e test that fetches
 them and checks status, content type and content.
@@ -882,7 +892,11 @@ accent / neutral / warning / error tones), `Avatar`, `StarsRating`,
   a flash of the wrong UI), facet guards (the facets `toAccount` derives
   from `profiles`, or from `role` and `registrationStatus` when `profiles`
   does not mark one, §5; an admin passes the specialist gate), "return to
-  where you were" through a same-origin `redirect` query only. Signing in
+  where you were" through a same-origin `redirect` query only — the whole
+  address, its query too (the plan a link asks for, a list's filters), but
+  never a search box's text nor `?origin=` (`returnPath`, 2026-10-13):
+  Firebase's sign-in window receives the sign-in page's address whole (its
+  `redirectUrl`), so nothing a person typed rides in it. Signing in
   opens the provider's window (`signInWithPopup`: Safari and iOS are fine
   with it; the redirect flow waits for the `/__/auth/*` proxy of §6).
   Inside Instagram's or Facebook's browser the buttons give way to the
@@ -1401,7 +1415,8 @@ written out in full, or Next.js does not inline it).
   without a session, the component tests (MSW) the rest.
 
 - **The payment (M13) as built (2026-10-12; split into `/panel/subscription`
-  and `/panel/subscription/pay` on 2026-10-13, M14):** `/pay` (the owner's name;
+  and the payment on 2026-10-13, M14, the payment at `/pay` again the same
+  evening):** `/pay` (the owner's name;
   the provisional `NEXT_PUBLIC_PAYMENT_PATH` is gone, the route is a
   literal) needs the specialist facet (`RequireSession facet="specialist"`;
   an account the billing API refuses with a 403 — an admin's — is told the
@@ -1609,16 +1624,16 @@ written out in full, or Next.js does not inline it).
     office-limit words). Drawn with boxes, no chart library; each drawing
     carries its table for screen readers.
   - **Suscripción:** «Mi suscripción» at `/panel/subscription` and the
-    payment at `/panel/subscription/pay` (the owner's split): the payment
-    page starts where the plan stands — the plans without one, the receipt
-    owed when there is one, «Tu plan está al día» otherwise — and keeps
-    that start while the payment changes the subscription underneath. The
-    AASA excludes it, and `assetlinks.json` for Android 15+ (§6).
+    payment apart (the owner's split; at `/pay`, out of the app's paths,
+    since the same evening, below): the payment page starts where the plan
+    stands — the plans without one, the receipt owed when there is one,
+    «Tu plan está al día» otherwise — and keeps that start while the
+    payment changes the subscription underneath. No app lists it (§6).
   - **Changing plan (same day, the owner's «continúa con lo del cambiar de
     plan»), as the app does it, its `billing.*` words:** while the plan can
     change (the app's `canChangePlan`: active, not cancelled, no upgrade
     waiting), «Mi suscripción» offers «Cambiar de plan» (and so does «Tu
-    plan está al día»): `/panel/subscription/pay?view=plans`, the plans in
+    plan está al día»): `/pay?view=plans`, the plans in
     the app's change mode — the plan in force chosen and marked «Tu plan»,
     a scheduled one «Próximo mes», «Cambiar a este plan» only for another
     plan, fading in place. A plan chosen there, or the one a missing
@@ -1656,7 +1671,8 @@ written out in full, or Next.js does not inline it).
     payment page stays out on Android 14 and older, sell on no system
     (prod's `InAppPurchases` back to `none`), never link to the payment,
     and the deep-link fixes found reading its router (signed-out `/a`, a
-    specialist's own `/s`, the review wall swallowing links).
+    specialist's own `/s`, the review wall swallowing links). All in its
+    v0.169.1 but the selling, still on in every flavor (§6).
 
 - **The rest of the payment (2026-10-13, the owner's «adelante con lo que
   falta del resto del pago»), as the app's «Mi suscripción» does it, its
@@ -1727,15 +1743,41 @@ written out in full, or Next.js does not inline it).
     consultorios activos»); a receipt's address that holds no id says
     «No encontramos este recibo» on the page (a `notFound()` under the
     panel's frame answers 200, §4).
-  - **For the app:** map these pages to its «Recibos», «Recibo», «Saldo a
-    favor» and «Mis cupones», each with its Android line (§6); nothing
-    links to them from outside yet.
+  - **For the app:** nothing. These are the web's own pages and no app
+    lists them (§6, the owner's rule of the same evening): no link leaves
+    the web with them. The app's «Recibos», «Recibo», «Saldo a favor» and
+    «Mis cupones» would claim them only if one ever did.
 - **The web's version in the landing's footer (2026-10-13, the owner's
   ask):** «Versión: 0.22.0», as the app writes its own (the catalog's
   `version`), beside the copyright, so the live deploy can be told at a
   glance. It comes from `package.json` (`app/lib/app-version.ts`, server
   only: the whole manifest never travels to the browser); every commit
   bumps it (§0).
+- **The payment back at `/pay`, and the app's paths one by one
+  (2026-10-13, evening; the owner, after reviewing v0.19.0 with the app's
+  agent).** What is the web's alone, and above all paying, must not hang
+  on exceptions inside the paths the app claims:
+  - **The payment is `/pay` again**, out of `/panel/`, with the panel's
+    frame and guard all the same: the `(billing)` group's layout frames
+    «Mi suscripción», its pages and the payment, and stays as the person
+    moves between them. «Suscripción» stays marked in the panel's
+    sections on `/pay`, and `robots.ts` keeps `/pay` out again.
+    `/panel/subscription/pay` answers 404, on the owner's word (§6, «A
+    renamed path never dies»).
+  - **The app claims only the pages it shows** (§6): `/s/*`, `/i/*`,
+    `/a/*`, `/panel/subscription`, `/panel/agenda`, `/panel/agenda/*`,
+    `/panel/appointments`, `/panel/reports`, `/panel/specialties`,
+    `/panel/profile` and `/home/*`, in `universalLinkComponents`, the AASA
+    and `assetlinks.json`'s dynamic rules — the `/panel/` lines of the
+    app's Android manifest since its v0.169.1, which shows them all — with
+    no `/panel/*` and no exclusion. `/panel`, the receipts, the balance and
+    «Mis cupones» open in the browser even with the app. The one exception
+    to the rule: `/panel/appointments` and `/panel/reports` went in before
+    the build that shows them was published, which changes nothing for an
+    older build (it already took them through `/panel/*`, to its home).
+  - **Nothing changed in Jira, the API or the emails:** they always said
+    `https://redoctorapp.com/pay`, and `webPaymentUrl` stays empty until
+    CORS (REDOC-362) is in production.
 
 ### Improvements noted (not scheduled)
 

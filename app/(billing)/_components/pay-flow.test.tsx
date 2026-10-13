@@ -40,7 +40,7 @@ import { server } from '../../../tests/msw/server';
 const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
 vi.mock('next/navigation', () => ({
   useRouter: () => router,
-  usePathname: () => '/panel/subscription/pay',
+  usePathname: () => '/pay',
 }));
 
 const user = {

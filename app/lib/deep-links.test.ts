@@ -66,21 +66,28 @@ describe('universalLinkComponents', () => {
 });
 
 describe('isAppOwnedPath', () => {
-  it('recognizes the paths the app opens', () => {
+  it('recognizes the pages the app shows, one by one', () => {
     expect(isAppOwnedPath('/s/123')).toBe(true);
     expect(isAppOwnedPath('/panel/subscription')).toBe(true);
-    expect(isAppOwnedPath('/panel/agenda/2026-10-01')).toBe(true);
+    expect(isAppOwnedPath('/panel/agenda')).toBe(true);
+    expect(isAppOwnedPath('/panel/agenda/2026-10-08')).toBe(true);
     expect(isAppOwnedPath('/panel/reports')).toBe(true);
     expect(isAppOwnedPath('/home/home/my-subscription')).toBe(true);
   });
 
-  it('leaves the payment page to the browser, whatever follows it', () => {
+  it('leaves the rest of the panel to the browser, the web’s own pages included', () => {
+    expect(isAppOwnedPath('/panel')).toBe(false);
+    expect(isAppOwnedPath('/panel/invoices')).toBe(false);
+    expect(isAppOwnedPath('/panel/subscription/invoices')).toBe(false);
+  });
+
+  it('never takes the payment, at its address or at the one it had', () => {
+    expect(isAppOwnedPath('/pay')).toBe(false);
+    expect(isAppOwnedPath('/pay?plan=profesional')).toBe(false);
     expect(isAppOwnedPath('/panel/subscription/pay')).toBe(false);
     expect(isAppOwnedPath('/panel/subscription/pay?origin=email-4')).toBe(
       false,
     );
-    expect(isAppOwnedPath('/panel/subscription/pay/')).toBe(false);
-    expect(isAppOwnedPath('/panel/subscription/payments')).toBe(true);
   });
 
   it('no longer claims the Spanish names, which only redirect now', () => {
@@ -88,9 +95,7 @@ describe('isAppOwnedPath', () => {
     expect(isAppOwnedPath('/agenda/2026-10-01')).toBe(false);
   });
 
-  it('leaves web-only paths alone, /panel itself included', () => {
-    expect(isAppOwnedPath('/panel')).toBe(false);
-    expect(isAppOwnedPath('/pay')).toBe(false);
+  it('leaves the patient’s pages alone', () => {
     expect(isAppOwnedPath('/appointments')).toBe(false);
     expect(isAppOwnedPath('/')).toBe(false);
   });

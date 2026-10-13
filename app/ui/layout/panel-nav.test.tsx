@@ -52,7 +52,7 @@ describe('PanelNav', () => {
   });
 
   it('keeps the subscription marked on its payment page', () => {
-    renderNav('/panel/subscription/pay');
+    renderNav('/pay');
 
     expect(screen.getByRole('link', { name: 'Suscripción' })).toHaveAttribute(
       'aria-current',

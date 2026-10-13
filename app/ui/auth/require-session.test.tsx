@@ -1,6 +1,6 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { meResponseSchema, toAccount } from '@/app/lib/schemas/identity';
 
@@ -18,10 +18,16 @@ import {
 } from '../../../tests/factories/identity';
 
 const router = vi.hoisted(() => ({ replace: vi.fn(), push: vi.fn() }));
+const address = vi.hoisted(() => ({ pathname: '/panel' }));
 vi.mock('next/navigation', () => ({
   useRouter: () => router,
-  usePathname: () => '/panel',
+  usePathname: () => address.pathname,
 }));
+
+afterEach(() => {
+  address.pathname = '/panel';
+  window.history.replaceState(null, '', '/');
+});
 
 const user = {
   id: 'uid-1',
@@ -63,6 +69,17 @@ describe('RequireSession', () => {
 
     expect(screen.getByText('Esqueleto')).toBeInTheDocument();
     expect(router.replace).toHaveBeenCalledWith('/sign-in?redirect=%2Fpanel');
+  });
+
+  it('comes back to the whole address, never with what was typed in a search', () => {
+    address.pathname = '/pay';
+    window.history.replaceState(null, '', '/pay?plan=profesional&q=Ana');
+
+    renderGuard(session({ status: 'signed-out' }));
+
+    expect(router.replace).toHaveBeenCalledWith(
+      '/sign-in?redirect=%2Fpay%3Fplan%3Dprofesional',
+    );
   });
 
   it('shows the skeleton until the person is known', () => {
