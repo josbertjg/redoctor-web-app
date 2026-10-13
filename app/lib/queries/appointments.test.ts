@@ -91,3 +91,23 @@ describe('an office’s free time', () => {
     expect(slots.slots.length).toBeGreaterThan(0);
   });
 });
+
+describe('appointmentsQueryOptions', () => {
+  it('lists every appointment of the patient', async () => {
+    const { appointmentsQueryOptions } = await import('./appointments');
+    const { knownUserId } = await import('@/tests/factories/identity');
+    const appointments = await new QueryClient().query(
+      appointmentsQueryOptions(user),
+    );
+
+    expect(appointments.length).toBeGreaterThan(5);
+    expect(
+      appointments.every(
+        (appointment) => appointment.patientUserId === knownUserId,
+      ),
+    ).toBe(true);
+    expect(appointments.map((appointment) => appointment.id)).not.toContain(
+      appointmentIds.someoneElse,
+    );
+  });
+});

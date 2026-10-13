@@ -56,6 +56,7 @@ Git hooks (Husky): lint-staged on commit, typecheck and tests on push.
 | `/sign-up?redirect=`                                                                                                    | The sign-up (M3): patients sign up here; a specialist is shown the way to the app (support while it is in testing, the store's QR once published)                                                                                |
 | `/i/{token}`                                                                                                            | The invitation (M4): the appointment a specialist booked for a patient with no account, claimed right there after signing in (and finishing the sign-up first when it is open), for oneself or for someone in one's care         |
 | `/a/{appointmentId}`                                                                                                    | The appointment (M5): its state and details for its patient, who confirms it inside its window, reschedules it to another free hour, cancels it or adds it to a calendar; a specialist sees it read-only, with «Abrir en la app» |
+| `/appointments`                                                                                                         | My appointments (M6): the patient's «Próximas» and «Pasadas», each card opening its appointment; a finished consultation not rated yet holds the page with its review first (M7)                                                 |
 | `/daily-summary/unsubscribe?token=…`                                                                                    | Daily-summary opt-out from the API's email (a Server Action)                                                                                                                                                                     |
 | `/.well-known/apple-app-site-association`, `/.well-known/assetlinks.json`                                               | Universal Links and App Links of the mobile app, byte-exact                                                                                                                                                                      |
 
@@ -63,8 +64,8 @@ Every path is English and says who it is for: the specialist's pages that
 the app opens live under `/panel/`. The old Spanish names redirect for good
 (AGENTS.md §6, the one list of public links).
 
-Next: the patient's appointments (M6) and the rest of AGENTS.md §1, one
-module at a time.
+Next: legal and account (M10) and the rest of AGENTS.md §1, one module at a
+time.
 
 ## Layout
 

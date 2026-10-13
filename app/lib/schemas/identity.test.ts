@@ -43,13 +43,89 @@ describe('meResponseSchema', () => {
     expect(parsed.profiles?.patient?.id).toBe('patient-1');
   });
 
-  it('reads a missing facet as one that does not exist', () => {
-    const parsed = meResponseSchema.parse({ ...base, profiles: null });
+  it('reads a facet `profiles` does not mark from the role, as the app does', () => {
+    // The API does not mark a PATIENT account's patient facet (2026-10-12).
+    const unmarked = toAccount(
+      meResponseSchema.parse({
+        ...base,
+        profiles: { patient: { exists: false }, specialist: { exists: false } },
+      }),
+    );
+    expect(unmarked.patient).toMatchObject({
+      exists: true,
+      status: 'completed',
+      isComplete: true,
+    });
+    expect(unmarked.specialist.exists).toBe(false);
 
-    const account = toAccount(parsed);
-    expect(account.patient.exists).toBe(false);
-    expect(account.specialist.exists).toBe(false);
-    expect(hasNoFacet(account)).toBe(true);
+    const silent = toAccount(
+      meResponseSchema.parse({ ...base, profiles: null }),
+    );
+    expect(silent.patient.isComplete).toBe(true);
+    expect(hasNoFacet(silent)).toBe(false);
+  });
+
+  it('lets `profiles` say where a facet it marks stands', () => {
+    const account = toAccount(
+      meResponseSchema.parse({
+        ...base,
+        registrationStatus: 'COMPLETED',
+        profiles: {
+          patient: { exists: true, id: 'p', status: 'PENDING_PERSONAL_DATA' },
+          specialist: { exists: false },
+        },
+      }),
+    );
+    expect(account.patient).toMatchObject({
+      id: 'p',
+      status: 'pendingPersonalData',
+      isIncomplete: true,
+    });
+  });
+
+  it('reads an unmarked specialist facet from the account’s status too', () => {
+    const specialist = (registrationStatus: string) =>
+      toAccount(
+        meResponseSchema.parse({
+          ...base,
+          role: 'SPECIALIST',
+          registrationStatus,
+          profiles: null,
+        }),
+      ).specialist;
+
+    expect(specialist('PENDING_KYC')).toMatchObject({
+      exists: true,
+      status: 'pendingKyc',
+      isIncomplete: true,
+    });
+    expect(specialist('PENDING_COMPLETE_SPECIALIST').status).toBe(
+      'pendingSpecialties',
+    );
+    expect(specialist('COMPLETED').isComplete).toBe(true);
+    expect(specialist('PENDING_COMPLETE_PATIENT').status).toBe('unknown');
+  });
+
+  it('gives a brand-new account no facet at all', () => {
+    const fresh = toAccount(
+      meResponseSchema.parse({
+        ...base,
+        role: null,
+        registrationStatus: 'PENDING_REGISTRATION',
+        profiles: null,
+      }),
+    );
+    expect(hasNoFacet(fresh)).toBe(true);
+
+    // A role with no sign-up behind it is not a facet either.
+    const halfway = toAccount(
+      meResponseSchema.parse({
+        ...base,
+        registrationStatus: 'PENDING_REGISTRATION',
+        profiles: null,
+      }),
+    );
+    expect(hasNoFacet(halfway)).toBe(true);
   });
 });
 

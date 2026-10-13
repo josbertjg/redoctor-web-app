@@ -8,7 +8,9 @@ import { documentTypes } from '../format/identity-document';
  * own sign-up: `profiles.patient` and `profiles.specialist` say whether the
  * facet exists, where its sign-up stands and what the API expects next.
  * `role` describes the specialist facet when both exist, so the web guards
- * by facet, never by role alone (the app's AccountProfiles).
+ * by facet, never by role alone (the app's AccountProfiles). A facet
+ * `profiles` does not mark is read from `role` and `registrationStatus`,
+ * as the app does (`facetFromAccount`).
  *
  * Only what the UI needs reaches the DTO: no document, no phone, no address.
  */
@@ -175,19 +177,75 @@ function toRole(raw: string | null | undefined): AccountRole {
   }
 }
 
+/**
+ * Where a facet's sign-up stands when only the account's own status speaks
+ * for it: the patient's two steps, and the specialist's road (the app reads
+ * `PENDING_COMPLETE_SPECIALIST` as the specialties step). Anything else is
+ * `unknown`, inert on purpose.
+ */
+const facetStatusByRegistration: Record<
+  'patient' | 'specialist',
+  Partial<Record<RegistrationStatus, FacetStatus>>
+> = {
+  patient: {
+    pendingCompletePatient: 'pendingPersonalData',
+    completed: 'completed',
+  },
+  specialist: {
+    pendingPhoneVerification: 'pendingPhoneVerification',
+    pendingKyc: 'pendingKyc',
+    pendingKycDataVerification: 'pendingKycDataVerification',
+    pendingCompleteSpecialist: 'pendingSpecialties',
+    waitingAdminReview: 'waitingAdminReview',
+    completed: 'completed',
+  },
+};
+
+/**
+ * A facet `profiles` does not mark, read from the account's own words:
+ * `role` says who the person is and `registrationStatus` where that
+ * sign-up stands. The app reads them the same way — its screens gate by
+ * role, and `profiles` only refines a facet it marks — and the API does not
+ * mark a PATIENT account's patient facet (seen 2026-10-12), so trusting
+ * `profiles.*.exists` alone locked patients out of their own pages.
+ */
+function facetFromAccount(
+  facet: 'patient' | 'specialist',
+  role: AccountRole,
+  registration: RegistrationStatus,
+): AccountFacet {
+  if (role !== facet || registration === 'pendingRegistration') return noFacet;
+  const status = facetStatusByRegistration[facet][registration] ?? 'unknown';
+  return {
+    exists: true,
+    id: null,
+    status,
+    nextStep: null,
+    isComplete: status === 'completed',
+    isIncomplete: status !== 'completed' && status !== 'unknown',
+  };
+}
+
 const blank = (value: string | null | undefined) =>
   value === undefined || value === null || value.trim() === '' ? null : value;
 
 export function toAccount(me: MeResponse): Account {
+  const role = toRole(me.role);
+  const registration = toRegistrationStatus(me.registrationStatus);
+  const facet = (name: 'patient' | 'specialist'): AccountFacet => {
+    const marked = toFacet(me.profiles?.[name]);
+    return marked.exists ? marked : facetFromAccount(name, role, registration);
+  };
+
   return {
     id: me.id,
     email: blank(me.email),
     name: blank(me.displayName),
     photo: blank(me.photoUrl),
-    role: toRole(me.role),
-    registration: toRegistrationStatus(me.registrationStatus),
-    patient: toFacet(me.profiles?.patient),
-    specialist: toFacet(me.profiles?.specialist),
+    role,
+    registration,
+    patient: facet('patient'),
+    specialist: facet('specialist'),
   };
 }
 

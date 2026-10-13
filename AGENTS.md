@@ -193,8 +193,8 @@ app/                                  # The application: routes, UI and logic
   (appointments)/                     # module: appointments (M5, M6, M7)
     layout.tsx · error.tsx            #   the bar with the account; the error under it
     a/[appointmentId]/page.tsx        #   /a/{id} — read in the browser with the patient's session
-    appointments/layout.tsx · page.tsx · loading.tsx      # /appointments (M6) — layout = <RequireSession>
-    _components/                      #   appointment-flow, -view, -actions, -record; cancel-sheet, reschedule-sheet, month-calendar, calendar-menu
+    appointments/layout.tsx · page.tsx · loading.tsx      # /appointments (M6, M7) — layout = <RequireSession facet="patient">
+    _components/                      #   appointment-flow, -view, -actions, -record; cancel-sheet, reschedule-sheet, month-calendar, calendar-menu; appointments-flow, -list, -skeleton, appointment-card; review-wall, review-form
   (specialists)/                      # module: public profile (M8) and the specialist's own page (M2)
     s/[specialistId]/page.tsx · loading.tsx · not-found.tsx · opengraph-image.tsx   # /s/{id}
     panel/layout.tsx · page.tsx · loading.tsx        # /panel — layout = <RequireSession facet="specialist">
@@ -212,7 +212,7 @@ app/                                  # The application: routes, UI and logic
     daily-summary/unsubscribe/page.tsx   # daily-summary opt-out — a Server Action
   api/                                # route handlers only when the browser must not call the API (none yet)
   ui/                                 # ALL shared UI
-    button.tsx · text-field.tsx · checkbox.tsx · choice-cards.tsx · field-error.tsx · sheet.tsx · skeleton.tsx · toast.tsx · empty-state.tsx · status-card.tsx · avatar.tsx …
+    button.tsx · text-field.tsx · text-area.tsx · checkbox.tsx · choice-cards.tsx · stars-input.tsx · tabs.tsx · field-error.tsx · sheet.tsx · skeleton.tsx · toast.tsx · empty-state.tsx · status-card.tsx · avatar.tsx …
     messages-scope.tsx                #   a page's own client messages (§9)
     layout/                           #   site-header, site-footer, page-frame, bottom-actions
     auth/                             #   session-provider, session-button, require-session, sign-in-buttons, in-app-browser-help, provider-logos
@@ -354,7 +354,12 @@ Every route path is built from one place, `app/lib/routes.ts` (the app has
   `SUPER_ADMIN | ADMIN | SPECIALIST | PATIENT`. `GET /identity/me` returns
   `profiles.patient` and `profiles.specialist` (`exists`, `id`, `status`,
   `nextStep`): one account can be both, and `role` describes the specialist
-  facet when both exist. Guard by facet, not only by `role`.
+  facet when both exist. Guard by facet, not only by `role` — but the
+  facet as `toAccount` derives it: `profiles` where it marks the facet, and
+  `role` + `registrationStatus` otherwise, as the app reads them (its
+  screens gate by role). The API does not mark a PATIENT account's patient
+  facet (2026-10-12); trusting `profiles.*.exists` alone locked patients
+  out of `/appointments`.
 - Public endpoints used by SSR: `GET /specialists/{id}/public-profile`,
   `GET /specialties/tree`. Everything about an appointment or an invitation
   needs a session, except reading an invitation by its token (the token is
@@ -766,8 +771,9 @@ accent / neutral / warning / error tones), `Avatar`, `StarsRating`,
   stored by the web (`app/lib/auth/token.ts` asks Firebase for a fresh one),
   `/identity/me` through TanStack Query keyed by uid, resolved **before**
   the first paint of any authenticated route (the segment's skeleton; never
-  a flash of the wrong UI), facet guards (`profiles.patient` /
-  `profiles.specialist`, an admin passes the specialist gate), "return to
+  a flash of the wrong UI), facet guards (the facets `toAccount` derives
+  from `profiles`, or from `role` and `registrationStatus` when `profiles`
+  does not mark one, §5; an admin passes the specialist gate), "return to
   where you were" through a same-origin `redirect` query only. Signing in
   opens the provider's window (`signInWithPopup`: Safari and iOS are fine
   with it; the redirect flow waits for the `/__/auth/*` proxy of §6).
@@ -1240,6 +1246,49 @@ written out in full, or Next.js does not inline it).
   hour never broken across lines (no-break spaces), the calendar's days
   44 px tall, and `renderWithPageMessages` (§9), which found the five
   namespaces `/a` was not sending.
+
+- **My appointments (M6) and the review (M7) as built (2026-10-12):**
+  `/appointments` needs the patient facet (`RequireSession facet="patient"`:
+  an account with no sign-up behind it goes to `/sign-up` and comes back; a
+  specialist without the facet gets the way out) and reads two things in
+  the browser: `GET /reviews/pending` and `GET /scheduling/appointments`
+  (no filters; the API paginates nothing here). While a finished
+  consultation waits for its rating, the page is the review wall, as the
+  app's `/pending-review`: the oldest first, «Califica tu consulta» with
+  «1 de N», the consultation (the headline of M4/M5, then the reason, the
+  office and «Asistió {name}» when it was for someone in one's care),
+  «¿Cómo calificarías la cita?» with five stars, «Comentario (opcional)»
+  with its count out of 1000, the two notices (final; published with the
+  name) and «Enviar calificación», never disabled: without a star it says
+  «Toca una estrella para poder continuar.» and sends nothing.
+  `POST /reviews/appointments/{id}` goes through the write-once guard: a
+  409, or a lost answer, counts as done once the consultation has left the
+  pending list — what the app does too (it reloads pending and moves on).
+  If the pending list cannot be read, the list shows (the app lets the
+  person in as well). Then «Mis citas»: two tabs with their counts,
+  «Próximas» (not over by status and not ended by the clock, the soonest
+  first; one under way stays here until it ends) and «Pasadas» (the latest
+  first); a patient with nothing ahead lands on «Pasadas»; with nothing at
+  all, the page says how appointments reach them in the pilot. Each card
+  (the app's: when, the state's bar and chip, who, why, where) opens
+  `/a/{id}`, whose patient view gained «Ver mis citas»; the account menu
+  gained «Mis citas» for anyone with the patient facet. Where the web
+  differs from the app, on purpose and to confirm: the two tabs instead of
+  the app's «Más recientes» (one list, the furthest ahead first) with
+  «Calendario» and filters (status, Hoy/Mañana, dates) — a pilot patient
+  has one or two appointments and the web books nothing (owner's pick,
+  2026-10-12); the wall does not lock the bar (the app's only exit is
+  signing out) and has no «Más tarde», as the app; a failed list shows an
+  error state with «Refrescar» (the app shows an alert over an empty
+  list); «1 estrella» in the singular (the app says «1 estrellas»); the
+  cards' dates carry the year. The notice keeps the app's words, «junto a
+  tu nombre»: the API decides anonymity by specialty (REDOC-251) and offers
+  no choice, and M8 publishes «María P.». With M6–M7: `Tabs` (promoted
+  from the profile's TrainingTabs), `StarsInput` and `TextArea` in
+  `app/ui`; `RequireSession` sends an account with no sign-up to
+  `/sign-up` (before, it showed «Esta página es para…», on `/panel` too).
+  Production needs the API's CORS (REDOC-362): the e2e covers the page
+  without a session, the component tests (MSW) the rest.
 
 ### Improvements noted (not scheduled)
 

@@ -11,6 +11,7 @@ import { SessionContext, type Session } from '@/app/hooks/use-session';
 import { RequireSession } from './require-session';
 import {
   buildMeResponse,
+  buildNewAccountMeResponse,
   buildSpecialistMeResponse,
 } from '../../../tests/factories/identity';
 
@@ -109,6 +110,47 @@ describe('RequireSession', () => {
       '/',
     );
     expect(screen.queryByText('Contenido privado')).not.toBeInTheDocument();
+  });
+
+  it('sends an account with no sign-up behind it to sign up, with the way back', () => {
+    renderGuard(
+      session({
+        status: 'signed-in',
+        user,
+        account: toAccount(meResponseSchema.parse(buildNewAccountMeResponse())),
+        accountStatus: 'ready',
+      }),
+      'patient',
+    );
+
+    expect(screen.getByText('Esqueleto')).toBeInTheDocument();
+    expect(router.replace).toHaveBeenCalledWith('/sign-up?redirect=%2Fpanel');
+    expect(
+      screen.queryByRole('heading', { name: 'Esta página es para pacientes' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('lets a patient in whose facet the API does not mark', () => {
+    renderGuard(
+      session({
+        status: 'signed-in',
+        user,
+        account: toAccount(
+          meResponseSchema.parse(
+            buildMeResponse({
+              profiles: {
+                patient: { exists: false },
+                specialist: { exists: false },
+              },
+            }),
+          ),
+        ),
+        accountStatus: 'ready',
+      }),
+      'patient',
+    );
+
+    expect(screen.getByText('Contenido privado')).toBeInTheDocument();
   });
 
   it('lets the right facet in', () => {

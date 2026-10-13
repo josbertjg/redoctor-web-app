@@ -70,6 +70,7 @@ export function SessionButton({
   }
 
   const name = user.name ?? user.email ?? t('menu.label');
+  const patientArea = account?.patient.exists ?? false;
   const specialistArea = account !== null && canUseSpecialistArea(account);
   const onSignOut = () => {
     void signOut();
@@ -79,6 +80,11 @@ export function SessionButton({
     return (
       <div className={cn('flex flex-col gap-1', className)}>
         <p className="px-3 py-2 text-label-md text-text-secondary">{name}</p>
+        {patientArea ? (
+          <Link href={routes.appointments()} className={itemClass}>
+            {t('menu.appointments')}
+          </Link>
+        ) : null}
         {specialistArea ? (
           <Link href={routes.specialistHome()} className={itemClass}>
             {t('menu.specialistHome')}
@@ -114,6 +120,13 @@ export function SessionButton({
           <DropdownMenu.Label className="px-3 py-2 text-label-md text-text-secondary">
             {name}
           </DropdownMenu.Label>
+          {patientArea ? (
+            <DropdownMenu.Item asChild>
+              <Link href={routes.appointments()} className={itemClass}>
+                {t('menu.appointments')}
+              </Link>
+            </DropdownMenu.Item>
+          ) : null}
           {specialistArea ? (
             <DropdownMenu.Item asChild>
               <Link href={routes.specialistHome()} className={itemClass}>

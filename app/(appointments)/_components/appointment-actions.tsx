@@ -57,6 +57,10 @@ export function AppointmentActionsCard({
   const key = appointmentKeys.detail(user.id, appointment.id);
   const show = (response: AppointmentResponse) => {
     queryClient.setQueryData(key, { kind: 'found', appointment: response });
+    // The list (M6) reads it again next time it shows.
+    void queryClient.invalidateQueries({
+      queryKey: appointmentKeys.list(user.id),
+    });
   };
 
   const confirm = useMutation({

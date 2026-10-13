@@ -4,6 +4,7 @@ import { z } from 'zod';
 import {
   appointmentFor,
   appointmentIds,
+  buildAppointmentList,
   slotAt,
   takenStartTime,
 } from '../../factories/appointments';
@@ -47,12 +48,28 @@ function lookUp(request: Request, id: string) {
 }
 
 /*
- * One appointment (M5), built from the factories: the read, the three
- * writes with the API's rules — confirmation only inside its window, no
- * change to a terminal appointment, a slot someone else just took — and an
- * office's free days and slots.
+ * The patient's appointments, built from the factories: the list with the
+ * API's filters (M6); one appointment (M5), its three writes with the API's
+ * rules — confirmation only inside its window, no change to a terminal
+ * appointment, a slot someone else just took — and an office's free days
+ * and slots.
  */
 export const appointmentsHandlers = [
+  http.get(apiUrl('/scheduling/appointments'), ({ request }) => {
+    if (isStranger(request)) return unauthorized();
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get('status');
+    const from = searchParams.get('from');
+    const to = searchParams.get('to');
+    const appointments = buildAppointmentList().filter(
+      (appointment) =>
+        (status === null || appointment.status === status) &&
+        (from === null || appointment.slot.date >= from) &&
+        (to === null || appointment.slot.date <= to),
+    );
+    return HttpResponse.json({ appointments });
+  }),
+
   http.get(
     apiUrl('/scheduling/appointments/:appointmentId'),
     ({ request, params }) => {

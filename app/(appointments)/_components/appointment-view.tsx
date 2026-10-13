@@ -2,6 +2,8 @@
 
 import { useState, type ReactNode } from 'react';
 
+import Link from 'next/link';
+
 import Stethoscope from '@material-symbols/svg-400/rounded/stethoscope.svg?svgr';
 import { useTranslations } from 'next-intl';
 
@@ -21,6 +23,7 @@ import {
   type PatientFact,
 } from '@/app/ui/appointments/appointment-details';
 import { AppointmentHeadline } from '@/app/ui/appointments/appointment-headline';
+import { Button } from '@/app/ui/button';
 import { StateChip } from '@/app/ui/state-chip';
 import { StatusCard } from '@/app/ui/status-card';
 
@@ -80,6 +83,19 @@ export function AppointmentView({
         patient={usePatient(appointment)}
       />
       <AppointmentRecord appointment={appointment} />
+      {readOnly ? null : (
+        // The patient's other appointments (M6); a specialist's live in the app.
+        <Button
+          asChild
+          variant="white"
+          shape="soft"
+          className="animate-fade-up"
+        >
+          <Link href={routes.appointments()}>
+            {t('appointments.detail.seeMine')}
+          </Link>
+        </Button>
+      )}
     </AppointmentFrame>
   );
 }

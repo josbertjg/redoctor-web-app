@@ -14,6 +14,7 @@ import { LinkOriginTracker } from '@/app/ui/analytics/link-origin-tracker';
 import { OpenInAppButton } from '@/app/ui/app-bridge/open-in-app-button';
 import { BottomActions } from '@/app/ui/layout/bottom-actions';
 import { SiteHeader } from '@/app/ui/layout/site-header';
+import { Tabs } from '@/app/ui/tabs';
 
 import { CertificationList } from '../../_components/certification-list';
 import { Gallery } from '../../_components/gallery';
@@ -27,7 +28,6 @@ import { ReviewsSkeleton } from '../../_components/profile-skeletons';
 import { ReviewsSection } from '../../_components/reviews-section';
 import { ShowMoreText } from '../../_components/show-more-text';
 import { SpecialtyList } from '../../_components/specialty-list';
-import { TrainingTabs } from '../../_components/training-tabs';
 
 /*
  * The public profile (M8): what the app's specialist screen shows, read-only,
@@ -141,16 +141,22 @@ export default async function SpecialistProfilePage({
             )}
           </ProfileSection>
 
-          <TrainingTabs
+          <Tabs
             label={t('specialists.trainingLabel', { name: profile.name })}
-            labels={{
-              education: t('education'),
-              certifications: t('certifications'),
-            }}
-            education={<SpecialtyList specialties={profile.specialties} />}
-            certifications={
-              <CertificationList certifications={profile.certifications} />
-            }
+            items={[
+              {
+                value: 'education',
+                label: t('education'),
+                content: <SpecialtyList specialties={profile.specialties} />,
+              },
+              {
+                value: 'certifications',
+                label: t('certifications'),
+                content: (
+                  <CertificationList certifications={profile.certifications} />
+                ),
+              },
+            ]}
           />
         </div>
 

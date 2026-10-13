@@ -5,7 +5,7 @@ import { knownUserId } from './identity';
 import type { z } from 'zod';
 
 /** As the API sends it: the contract's fields, plus the ones the web drops. */
-type AppointmentPayload = z.input<typeof appointmentSchema> &
+export type AppointmentPayload = z.input<typeof appointmentSchema> &
   Record<string, unknown>;
 
 /** The ids the handlers know: each one a case of `/a/{id}`. */
@@ -28,7 +28,25 @@ export const appointmentIds = {
   someoneElse: '99999999-9999-4999-8999-999999999999',
   /** No appointment has it: 404. */
   missing: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  /** Finished ten days ago, for someone in the patient's care, with another specialist. */
+  completedDependent: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+  /** Finished and rated already: the API refuses a second review (409). */
+  reviewed: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
 } as const;
+
+/** The appointments the patient holds: every known case but another account's. */
+const ownAppointmentIds = [
+  appointmentIds.upcoming,
+  appointmentIds.confirmable,
+  appointmentIds.confirmed,
+  appointmentIds.cancelled,
+  appointmentIds.completed,
+  appointmentIds.started,
+  appointmentIds.dependent,
+  appointmentIds.rescheduled,
+  appointmentIds.completedDependent,
+  appointmentIds.reviewed,
+];
 
 export const officeId = 'b1b2b3b4-0000-4000-8000-000000000001';
 
@@ -172,7 +190,54 @@ export function appointmentFor(
         { id, isRescheduled: true },
         hoursFromNow(120, now),
       );
+    case appointmentIds.completedDependent:
+      return buildAppointment(
+        {
+          id,
+          status: 'COMPLETED',
+          forSelf: false,
+          terceroId: 'c0c0c0c0-0000-4000-8000-000000000001',
+          attendee: {
+            firstName: 'Sofía',
+            lastName: 'Pérez',
+            dateOfBirth: '2019-03-01',
+            sex: 'FEMALE',
+          },
+          specialistId: '7d1f3a2b-9c4e-4b8a-8f6d-2e5c1a0b9d73',
+          specialistName: 'Dr. Luis Gómez',
+          specialistSpecialties: [
+            {
+              id: 'a0000000-0000-4000-8000-000000000021',
+              name: 'Medicina general',
+            },
+          ],
+          officeName: 'Centro Médico La Floresta',
+          officeAddress: 'Av. Principal de La Floresta, Caracas',
+          officeDescription: null,
+          reasonName: 'Dolor de garganta',
+        },
+        hoursFromNow(-240, now),
+      );
+    case appointmentIds.reviewed:
+      return buildAppointment(
+        { id, status: 'COMPLETED' },
+        hoursFromNow(-480, now),
+      );
     default:
       return undefined;
   }
+}
+
+const defined = <T>(value: T | undefined): value is T => value !== undefined;
+
+/** What `GET /scheduling/appointments` lists for the patient: every case of theirs. */
+export function buildAppointmentList(now = new Date()): AppointmentPayload[] {
+  return ownAppointmentIds.map((id) => appointmentFor(id, now)).filter(defined);
+}
+
+/** What `GET /reviews/pending` lists: the finished consultations not rated yet. */
+export function buildPendingReviews(now = new Date()): AppointmentPayload[] {
+  return [appointmentIds.completed, appointmentIds.completedDependent]
+    .map((id) => appointmentFor(id, now))
+    .filter(defined);
 }

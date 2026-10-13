@@ -29,6 +29,8 @@ export type AnalyticsEvents = {
   web_appointment_cancelled: Record<string, never>;
   web_appointment_rescheduled: Record<string, never>;
   web_appointment_calendar_added: { calendar: 'google' | 'ics' };
+  /** A finished consultation rated (M7): with a comment or stars alone. */
+  web_review_submitted: { comment: boolean };
 };
 
 export type AnalyticsEventName = keyof AnalyticsEvents;

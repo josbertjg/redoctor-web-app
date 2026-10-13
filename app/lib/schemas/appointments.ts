@@ -100,6 +100,11 @@ export const appointmentResponseSchema = z.object({
   appointment: appointmentSchema,
 });
 
+/** `GET /scheduling/appointments` and `GET /reviews/pending` answer a list of them. */
+export const appointmentListResponseSchema = z.object({
+  appointments: z.array(appointmentSchema),
+});
+
 export type AppointmentResponse = z.infer<typeof appointmentSchema>;
 
 /** What a page shows of an appointment: who, when, where, how much, why. */
@@ -296,4 +301,48 @@ export function appointmentActions(
     confirm = { kind: 'later', opensAt };
 
   return { confirm, change: ahead, calendar: ahead };
+}
+
+/** An instant as a number to compare; something that is not one sorts first. */
+const instant = (iso: string | null) => {
+  const time = iso === null ? NaN : new Date(iso).getTime();
+  return Number.isNaN(time) ? 0 : time;
+};
+
+/**
+ * Whether the appointment is still to come: not over by its status, and not
+ * ended by the clock — one under way stays ahead until it ends.
+ */
+export function isAppointmentAhead(
+  appointment: AppointmentSummary,
+  now: Date = new Date(),
+): boolean {
+  if (terminalStatuses.has(appointment.status)) return false;
+  return instant(appointment.endsAt ?? appointment.startsAt) > now.getTime();
+}
+
+export type AppointmentGroups = {
+  /** Still to come, the soonest first. */
+  upcoming: AppointmentSummary[];
+  /** Over — ended, cancelled, finished or missed —, the latest first. */
+  past: AppointmentSummary[];
+};
+
+/**
+ * The patient's appointments as `/appointments` lists them (M6): «Próximas»
+ * and «Pasadas». The app shows one list, the furthest ahead first, with
+ * filters and a calendar; the web splits it in two (owner, 2026-10-12).
+ */
+export function groupAppointments(
+  appointments: readonly AppointmentSummary[],
+  now: Date = new Date(),
+): AppointmentGroups {
+  const upcoming: AppointmentSummary[] = [];
+  const past: AppointmentSummary[] = [];
+  for (const appointment of appointments) {
+    (isAppointmentAhead(appointment, now) ? upcoming : past).push(appointment);
+  }
+  upcoming.sort((a, b) => instant(a.startsAt) - instant(b.startsAt));
+  past.sort((a, b) => instant(b.startsAt) - instant(a.startsAt));
+  return { upcoming, past };
 }

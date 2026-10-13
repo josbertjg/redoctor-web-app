@@ -92,6 +92,54 @@ export function shortPatientName(names: {
   return second ? `${first} ${initialOf(second)}` : first;
 }
 
+/* ---------- The patient's own review (M7) --------------------------------- */
+
+/** The API's bounds: one to five stars, a comment of up to 1000 characters. */
+export const reviewRatingMin = 1;
+export const reviewRatingMax = 5;
+export const reviewCommentMaxLength = 1000;
+
+/**
+ * `POST /reviews/appointments/{appointmentId}`: strict, as the API refuses
+ * what it does not expect; a blank comment is not sent, as the app does.
+ */
+export const reviewBodySchema = z.strictObject({
+  rating: z.number().int().min(reviewRatingMin).max(reviewRatingMax),
+  comment: z.string().trim().min(1).max(reviewCommentMaxLength).optional(),
+});
+
+export type ReviewBody = z.infer<typeof reviewBodySchema>;
+
+/** The body from what the form holds: the comment trimmed, dropped when blank. */
+export function toReviewBody(input: {
+  rating: number;
+  comment?: string | null | undefined;
+}): ReviewBody {
+  const comment = input.comment?.trim();
+  return reviewBodySchema.parse({
+    rating: input.rating,
+    ...(comment ? { comment } : {}),
+  });
+}
+
+/** What the API answers with the review it created (201). */
+export const createdReviewResponseSchema = z.object({
+  review: z.object({
+    id: z.string(),
+    appointmentId: z.string(),
+    specialistId: z.string().nullish(),
+    rating: z.number().int(),
+    comment: z.string().nullish(),
+    /** Published without a name under a sensitive specialty (REDOC-251). */
+    isAnonymous: z.boolean().nullish(),
+    createdAt: z.string().nullish(),
+  }),
+});
+
+export type CreatedReview = z.infer<
+  typeof createdReviewResponseSchema
+>['review'];
+
 export function toSpecialistReviews(
   response: SpecialistReviewsResponse,
 ): SpecialistReviews {

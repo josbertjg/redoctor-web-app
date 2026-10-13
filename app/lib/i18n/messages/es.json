@@ -264,7 +264,8 @@
     "termsOfUseAndPrivacy": "Términos de uso y políticas de privacidad",
     "menu": {
       "label": "Tu cuenta",
-      "specialistHome": "Mis herramientas"
+      "specialistHome": "Mis herramientas",
+      "appointments": "Mis citas"
     },
     "inAppBrowser": {
       "title": "Abre este enlace en tu navegador",
@@ -465,6 +466,27 @@
   },
   "reviews": {
     "title": "Opiniones",
+    "gate": {
+      "title": "Califica tu consulta",
+      "description": "Cuéntanos qué tal fue tu experiencia, tu opinión es valiosa y ayuda a otros pacientes dentro de Redoctor.",
+      "descriptionMany": "Te quedan {count} consultas por calificar. Tu opinión es valiosa y ayuda a otros pacientes dentro de Redoctor.",
+      "step": "{current} de {total}",
+      "attendee": "Asistió {name}"
+    },
+    "rate": {
+      "question": "¿Cómo calificarías la cita?",
+      "starLabel": "{count, plural, one {# estrella} other {# estrellas}}",
+      "ratingRequired": "Toca una estrella para poder continuar.",
+      "commentLabel": "Comentario (opcional)",
+      "commentHint": "Cuenta cómo fue tu experiencia",
+      "commentTooLong": "El comentario puede tener hasta {max} caracteres.",
+      "isFinal": "Tu calificación es definitiva: no podrás editarla ni eliminarla después.",
+      "isPublic": "Tu reseña se publicará en el perfil del especialista, junto a tu nombre.",
+      "submit": "Enviar calificación",
+      "thanks": "Gracias por calificar a {name}",
+      "thanksNoName": "Gracias por calificar tu consulta",
+      "failed": "No pudimos enviar tu calificación. Inténtalo de nuevo en un momento."
+    },
     "list": {
       "overall": "Calificación general",
       "countOne": "{count} opinión",
@@ -605,7 +627,24 @@
       "calendarEventDescription": "Tu cita en Redoctor: {url}",
       "metaTitle": "Tu cita en Redoctor",
       "metaDescription": "Mira los detalles de tu cita y confírmala en Redoctor.",
-      "cancelledAt": "Fecha de cancelación"
+      "cancelledAt": "Fecha de cancelación",
+      "seeMine": "Ver mis citas"
+    },
+    "list": {
+      "metaTitle": "Mis citas",
+      "title": "Mis citas",
+      "tabsLabel": "Tus citas",
+      "upcoming": "Próximas",
+      "past": "Pasadas",
+      "withCount": "{label} ({count})",
+      "empty": "Aún no tienes citas",
+      "emptyDescription": "Cuando tu especialista te agende una cita, te enviará el enlace por WhatsApp o correo y aparecerá aquí.",
+      "noUpcoming": "No tienes citas próximas",
+      "noUpcomingDescription": "Las citas que te agende tu especialista aparecerán aquí.",
+      "noPast": "Aún no tienes citas pasadas",
+      "noPastDescription": "Aquí quedarán tus consultas terminadas y las citas canceladas.",
+      "loadError": "No pudimos cargar tus citas",
+      "loadErrorDescription": "Puede ser tu conexión o un problema de nuestro lado. Inténtalo de nuevo en un momento."
     },
     "status": {
       "title": "Estado",

@@ -1,10 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildReview, buildReviewsResponse } from '@/tests/factories/reviews';
+import {
+  buildCreatedReview,
+  buildReview,
+  buildReviewsResponse,
+} from '@/tests/factories/reviews';
 
 import {
+  createdReviewResponseSchema,
+  reviewBodySchema,
   shortPatientName,
   specialistReviewsResponseSchema,
+  toReviewBody,
   toSpecialistReviews,
 } from './reviews';
 
@@ -49,5 +56,38 @@ describe('toSpecialistReviews', () => {
     expect(reviews.reviews[1]?.comment).toBeNull();
     expect(reviews.total).toBe(2);
     expect(reviews.distribution[5]).toEqual({ count: 2, percent: 100 });
+  });
+});
+
+describe('toReviewBody', () => {
+  it('sends the stars and a trimmed comment, or no comment at all', () => {
+    expect(toReviewBody({ rating: 5, comment: '  Muy puntual.  ' })).toEqual({
+      rating: 5,
+      comment: 'Muy puntual.',
+    });
+    expect(toReviewBody({ rating: 4, comment: '   ' })).toEqual({ rating: 4 });
+    expect(toReviewBody({ rating: 3 })).toEqual({ rating: 3 });
+  });
+
+  it('refuses what the API would refuse', () => {
+    expect(() => toReviewBody({ rating: 0 })).toThrow();
+    expect(() => toReviewBody({ rating: 6 })).toThrow();
+    expect(() => toReviewBody({ rating: 4.5 })).toThrow();
+    expect(() =>
+      toReviewBody({ rating: 5, comment: 'a'.repeat(1001) }),
+    ).toThrow();
+    expect(
+      reviewBodySchema.safeParse({ rating: 5, anonymous: true }).success,
+    ).toBe(false);
+  });
+});
+
+describe('createdReviewResponseSchema', () => {
+  it('reads the review the API created', () => {
+    const { review } = createdReviewResponseSchema.parse({
+      review: buildCreatedReview({ rating: 4, comment: 'Bien.' }),
+    });
+    expect(review.rating).toBe(4);
+    expect(review.comment).toBe('Bien.');
   });
 });

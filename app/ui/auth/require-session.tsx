@@ -8,7 +8,11 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
 import { routes } from '@/app/lib/routes';
-import { canUseSpecialistArea, type Account } from '@/app/lib/schemas/identity';
+import {
+  canUseSpecialistArea,
+  needsSignUp,
+  type Account,
+} from '@/app/lib/schemas/identity';
 
 import { Button } from '@/app/ui/button';
 import { EmptyState } from '@/app/ui/empty-state';
@@ -36,8 +40,9 @@ function isAllowed(account: Account, facet: SessionFacet | undefined) {
 /*
  * Wraps the layout of a segment that needs a session (AGENTS.md §3, §9):
  * `/me` resolves before anything of the segment paints; without a session
- * the person goes to sign in and comes back here afterwards; the wrong
- * facet gets a way out instead of a page that is not theirs.
+ * the person goes to sign in and comes back here afterwards; an account with
+ * no sign-up behind it goes to sign up first (M3), the same way back; the
+ * wrong facet gets a way out instead of a page that is not theirs.
  */
 export function RequireSession({
   facet,
@@ -50,11 +55,16 @@ export function RequireSession({
   const router = useRouter();
   const pathname = usePathname();
   const signedOut = session.status === 'signed-out';
+  const mustSignUp =
+    session.status === 'signed-in' &&
+    session.account !== null &&
+    needsSignUp(session.account);
   const back = returnTo ?? pathname;
 
   useEffect(() => {
     if (signedOut) router.replace(routes.signIn(back));
-  }, [signedOut, back, router]);
+    else if (mustSignUp) router.replace(routes.signUp(back));
+  }, [signedOut, mustSignUp, back, router]);
 
   if (session.status !== 'signed-in') return fallback;
 
@@ -75,7 +85,7 @@ export function RequireSession({
   }
 
   const { account } = session;
-  if (account === null) return fallback;
+  if (account === null || needsSignUp(account)) return fallback;
 
   if (!isAllowed(account, facet)) {
     const area = facet === 'specialist' ? 'specialist' : 'patient';

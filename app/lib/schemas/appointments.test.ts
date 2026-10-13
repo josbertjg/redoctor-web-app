@@ -10,6 +10,8 @@ import {
 import {
   appointmentActions,
   appointmentSchema,
+  groupAppointments,
+  isAppointmentAhead,
   statusChips,
   toAppointmentSummary,
 } from './appointments';
@@ -138,6 +140,47 @@ describe('appointmentActions', () => {
       change: true,
       calendar: true,
     });
+  });
+});
+
+describe('groupAppointments', () => {
+  const at = (id: string) => summary(appointmentFor(id, now));
+
+  it('splits what is to come from what is over, each in its order', () => {
+    const groups = groupAppointments(
+      [
+        appointmentIds.completed,
+        appointmentIds.upcoming,
+        appointmentIds.cancelled,
+        appointmentIds.confirmable,
+        appointmentIds.started,
+      ].map(at),
+      now,
+    );
+
+    // The soonest first, the one under way included.
+    expect(groups.upcoming.map((appointment) => appointment.id)).toEqual([
+      appointmentIds.started,
+      appointmentIds.confirmable,
+      appointmentIds.upcoming,
+    ]);
+    // The latest first: the cancelled one is in two days, over by its status.
+    expect(groups.past.map((appointment) => appointment.id)).toEqual([
+      appointmentIds.cancelled,
+      appointmentIds.completed,
+    ]);
+  });
+
+  it('keeps one under way among the ones to come, until it ends', () => {
+    expect(isAppointmentAhead(at(appointmentIds.started), now)).toBe(true);
+
+    const ended = summary(
+      buildAppointment(
+        { status: 'CONFIRMED' },
+        new Date(now.getTime() - 40 * 60_000),
+      ),
+    );
+    expect(isAppointmentAhead(ended, now)).toBe(false);
   });
 });
 

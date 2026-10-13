@@ -102,6 +102,26 @@ describe('SessionButton', () => {
     expect(await axe(container)).toHaveNoViolations();
   });
 
+  it('leads a patient to their appointments', () => {
+    renderWithSession(
+      session({
+        status: 'signed-in',
+        user,
+        account: toAccount(meResponseSchema.parse(buildMeResponse())),
+        accountStatus: 'ready',
+      }),
+      <SessionButton layout="list" />,
+    );
+
+    expect(screen.getByRole('link', { name: 'Mis citas' })).toHaveAttribute(
+      'href',
+      '/appointments',
+    );
+    expect(
+      screen.queryByRole('link', { name: 'Mis herramientas' }),
+    ).not.toBeInTheDocument();
+  });
+
   it('leads a specialist to their page', () => {
     renderWithSession(
       session({
@@ -116,6 +136,9 @@ describe('SessionButton', () => {
     expect(
       screen.getByRole('link', { name: 'Mis herramientas' }),
     ).toHaveAttribute('href', '/panel');
+    expect(
+      screen.queryByRole('link', { name: 'Mis citas' }),
+    ).not.toBeInTheDocument();
   });
 
   it('wears the avatar as the menu button in a bar', () => {

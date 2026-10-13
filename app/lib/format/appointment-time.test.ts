@@ -50,3 +50,12 @@ describe('calendar headings', () => {
     expect(weekdayInitials()).toEqual(['L', 'M', 'M', 'J', 'V', 'S', 'D']);
   });
 });
+
+describe('formatAppointmentDayShort', () => {
+  it('writes the day short, as a list does, never shifted', async () => {
+    const { formatAppointmentDayShort } = await import('./appointment-time');
+    expect(formatAppointmentDayShort('2026-10-15')).toBe('jue 15 oct. 2026');
+    expect(formatAppointmentDayShort('2026-09-03')).toBe('jue 3 sept. 2026');
+    expect(formatAppointmentDayShort('hoy')).toBe('hoy');
+  });
+});

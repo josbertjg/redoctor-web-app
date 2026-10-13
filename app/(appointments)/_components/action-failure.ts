@@ -1,18 +1,21 @@
 import { isApiError, type ApiErrorMessageKey } from '@/app/lib/api/errors';
 
+type FallbackKey = 'appointments.detail.actionFailed' | 'reviews.rate.failed';
+
 /**
- * What to say in place when a change of the appointment fails, or null
- * when the failure is the connection's: that one is announced once, for the
- * whole page (app/providers.tsx). A code the person can meet says what it
- * knows; anything else is a plain «No pudimos guardar el cambio».
+ * What to say in place when a write fails, or null when the failure is the
+ * connection's: that one is announced once, for the whole page
+ * (app/providers.tsx). A code the person can meet says what it knows;
+ * anything else is the flow's plain «No pudimos…» (`fallback`).
  */
-export function actionFailure(
+export function actionFailure<Fallback extends FallbackKey>(
   error: unknown,
-): ApiErrorMessageKey | 'appointments.detail.actionFailed' | null {
-  if (!isApiError(error)) return 'appointments.detail.actionFailed';
+  fallback: Fallback = 'appointments.detail.actionFailed' as Fallback,
+): ApiErrorMessageKey | Fallback | null {
+  if (!isApiError(error)) return fallback;
   if (error.isConnectivityProblem) return null;
   const key = error.messageKey;
   return key.startsWith('apiErrors.') && key !== 'apiErrors.unexpected'
     ? key
-    : 'appointments.detail.actionFailed';
+    : fallback;
 }

@@ -10,7 +10,6 @@ import { CertificationList } from './certification-list';
 import { OfficeList } from './office-list';
 import { ShowMoreText } from './show-more-text';
 import { SpecialtyList } from './specialty-list';
-import { TrainingTabs } from './training-tabs';
 
 const profile = buildSpecialistProfile();
 
@@ -104,26 +103,5 @@ describe('ShowMoreText', () => {
       'true',
     );
     expect(screen.getByText(/Fin\./)).toBeVisible();
-  });
-});
-
-describe('TrainingTabs', () => {
-  it('switches between education and certifications', async () => {
-    const { container } = render(
-      <TrainingTabs
-        label="Formación de Ana Pérez"
-        labels={{ education: 'Educación', certifications: 'Certificaciones' }}
-        education={<p>Especialidades</p>}
-        certifications={<p>Diplomados</p>}
-      />,
-    );
-
-    expect(screen.getByText('Especialidades')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('tab', { name: 'Certificaciones' }));
-    expect(screen.getByText('Diplomados')).toBeInTheDocument();
-    expect(
-      screen.getByRole('tab', { name: 'Certificaciones' }),
-    ).toHaveAttribute('aria-selected', 'true');
-    expect(await axe(container)).toHaveNoViolations();
   });
 });

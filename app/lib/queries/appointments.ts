@@ -4,25 +4,28 @@ import { apiFetch } from '../api/client';
 import { isApiError } from '../api/errors';
 import { createWriteOnceGuard } from '../api/write-once';
 import {
+  appointmentListResponseSchema,
   appointmentResponseSchema,
   type AppointmentResponse,
 } from '../schemas/appointments';
 import { availableDaysSchema, daySlotsSchema } from '../schemas/availability';
 
 /*
- * One appointment, read and changed in the browser with the patient's token
- * (M5, AGENTS.md §4): the page behind `/a/{id}` and its actions — confirm
- * (from 24 h before), cancel and reschedule to another slot of the same
- * office. Every write goes through the write-once guard (§5).
+ * The patient's appointments, read and changed in the browser with their
+ * token (AGENTS.md §4): the list behind `/appointments` (M6), the page
+ * behind `/a/{id}` and its actions (M5) — confirm (from 24 h before), cancel
+ * and reschedule to another slot of the same office. Every write goes
+ * through the write-once guard (§5).
  */
 
-type TokenHolder = {
+export type TokenHolder = {
   /** Firebase's uid: the cache is per person. */
   id: string;
   getToken: () => Promise<string>;
 };
 
 export const appointmentKeys = {
+  list: (userId: string) => ['appointments', userId] as const,
   detail: (userId: string, appointmentId: string) =>
     ['appointment', userId, appointmentId] as const,
   availableDays: (officeId: string, month: string) =>
@@ -62,6 +65,23 @@ async function readAppointment(
     }
     throw error;
   }
+}
+
+/** Every appointment where the person is the patient, as the API lists them. */
+export function appointmentsQueryOptions(user: TokenHolder) {
+  return queryOptions({
+    queryKey: appointmentKeys.list(user.id),
+    queryFn: async ({ signal }) => {
+      const { appointments } = await apiFetch({
+        path: '/scheduling/appointments',
+        token: await user.getToken(),
+        schema: appointmentListResponseSchema,
+        signal,
+      });
+      return appointments;
+    },
+    staleTime: 30_000,
+  });
 }
 
 export function appointmentQueryOptions(

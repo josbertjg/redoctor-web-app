@@ -1,13 +1,41 @@
 import {
   specialistReviewsResponseSchema,
   toSpecialistReviews,
+  type createdReviewResponseSchema,
   type SpecialistReviews,
 } from '@/app/lib/schemas/reviews';
+
+import { appointmentIds } from './appointments';
+import { knownUserId } from './identity';
 
 import type { z } from 'zod';
 
 type ReviewsInput = z.input<typeof specialistReviewsResponseSchema>;
 type ReviewInput = ReviewsInput['reviews'][number];
+
+/** As the API answers a review it created: the contract's fields, plus the ones the web drops. */
+type CreatedReviewInput = z.input<
+  typeof createdReviewResponseSchema
+>['review'] &
+  Record<string, unknown>;
+
+export function buildCreatedReview(
+  overrides: Partial<CreatedReviewInput> = {},
+): CreatedReviewInput {
+  return {
+    id: 'd1d2d3d4-0000-4000-8000-000000000001',
+    appointmentId: appointmentIds.completed,
+    specialistId: '5b8e2c14-3f1a-4d7e-9c2b-7a1e0f6d4b92',
+    patientUserId: knownUserId,
+    patientName: 'Ana Pérez',
+    isAnonymous: false,
+    rating: 5,
+    comment: null,
+    createdAt: '2026-10-12T12:00:00.000Z',
+    updatedAt: '2026-10-12T12:00:00.000Z',
+    ...overrides,
+  };
+}
 
 export function buildReview(overrides: Partial<ReviewInput> = {}): ReviewInput {
   return {
