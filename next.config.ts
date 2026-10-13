@@ -115,6 +115,18 @@ const nextConfig: NextConfig = {
   headers() {
     return [
       { source: '/:path*', headers: securityHeaders },
+      // Links that carry a credential or an appointment are never indexed,
+      // even by a crawler that reads no HTML (robots.ts lets them be fetched).
+      ...[
+        '/i/:path*',
+        '/a/:path*',
+        '/daily-summary/:path*',
+        '/sign-in',
+        '/sign-up',
+      ].map((source) => ({
+        source,
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+      })),
       {
         // The AASA has no extension: without this it would be served as a
         // binary stream and iOS would ignore it (AGENTS.md §6).

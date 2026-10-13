@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useLayoutEffect, useRef, type ReactNode } from 'react';
 
 import Close from '@material-symbols/svg-400/rounded/close.svg?svgr';
 import { useTranslations } from 'next-intl';
@@ -36,6 +36,10 @@ const closeSpeed = 600;
  * fixed footer, so the primary action never leaves the screen, keyboard
  * open included (dvh). A flow with several steps changes them inside the
  * same sheet: one sheet at a time.
+ *
+ * The sheets are controlled, with no Radix trigger, so Radix cannot give the
+ * focus back on closing: the sheet remembers what had it when it opened —
+ * the button that opened it — and returns it there.
  */
 export function Sheet({
   open,
@@ -49,6 +53,16 @@ export function Sheet({
   const t = useTranslations();
   const drag = useDragControls();
   const reduced = useReducedMotion();
+  const opener = useRef<HTMLElement | null>(null);
+
+  // Before Radix moves the focus inside (its effect runs after this one).
+  useLayoutEffect(() => {
+    if (!open) return;
+    opener.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+  }, [open]);
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -58,6 +72,14 @@ export function Sheet({
           <Dialog.Content
             asChild
             {...(description ? {} : { 'aria-describedby': undefined })}
+            onCloseAutoFocus={(event) => {
+              const target = opener.current;
+              opener.current = null;
+              if (target?.isConnected) {
+                event.preventDefault();
+                target.focus();
+              }
+            }}
           >
             <m.div
               drag={reduced ? false : 'y'}

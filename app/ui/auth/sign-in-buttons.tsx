@@ -14,9 +14,11 @@ import type { AuthErrorKey, SessionUser } from '@/app/lib/firebase/client';
 import { cn } from '@/app/lib/utils';
 
 import { Button } from '@/app/ui/button';
+import { Skeleton } from '@/app/ui/skeleton';
 
 import { useDevice } from '@/app/hooks/use-device';
 import { useInAppBrowser } from '@/app/hooks/use-in-app-browser';
+import { useSession } from '@/app/hooks/use-session';
 
 import { InAppBrowserHelp } from './in-app-browser-help';
 import { AppleLogo, GoogleLogo } from './provider-logos';
@@ -39,6 +41,11 @@ const onServer = () => null;
  * disables anything (AGENTS.md §8.3); a closed window is not an error, a
  * failure says what happened under the buttons. Inside Instagram's or
  * Facebook's browser the buttons give way to the way out.
+ *
+ * Until the browser and the session are known, a placeholder of the same
+ * size holds their place: the order depends on the device (the buttons
+ * would swap under the finger after hydrating), and a tap before Firebase
+ * has loaded waits too long for Safari to allow the provider's window.
  */
 export function SignInButtons({ onSignedIn, className }: SignInButtonsProps) {
   const t = useTranslations('auth');
@@ -46,29 +53,55 @@ export function SignInButtons({ onSignedIn, className }: SignInButtonsProps) {
   const device = useDevice();
   const inApp = useInAppBrowser();
   const last = useSyncExternalStore(subscribe, readLastProvider, onServer);
+  const { status } = useSession();
   const [busy, setBusy] = useState<AuthProvider | null>(null);
   const [failure, setFailure] = useState<AuthErrorKey | null>(null);
+  const [seenStatus, setSeenStatus] = useState(status);
+
+  // A session these buttons opened was closed again (the API refused it):
+  // they are ready for another try instead of staying busy.
+  if (status !== seenStatus) {
+    setSeenStatus(status);
+    if (seenStatus === 'signed-in' && status === 'signed-out') setBusy(null);
+  }
 
   if (inApp !== null) {
     return <InAppBrowserHelp app={inApp} className={className} />;
   }
 
-  const providers = orderProviders(last, device?.isIOS ?? false);
+  if (device === null || status === 'resolving') {
+    return (
+      <div className={cn('flex flex-col gap-3', className)} aria-busy="true">
+        <Skeleton className="h-control-lg w-full" />
+        <Skeleton className="h-control-lg w-full" />
+        <div className="min-h-5" />
+      </div>
+    );
+  }
+
+  const providers = orderProviders(last, device.isIOS);
 
   const signIn = async (provider: AuthProvider) => {
     if (busy !== null) return;
     setBusy(provider);
     setFailure(null);
-    const { signInWith } = await import('@/app/lib/firebase/client');
-    const outcome = await signInWith(provider);
-    if (outcome.status === 'signed-in') {
-      rememberLastProvider(provider);
-      // Stays busy: the page is about to move on.
-      onSignedIn(outcome.user, provider);
-      return;
+    try {
+      const { signInWith } = await import('@/app/lib/firebase/client');
+      const outcome = await signInWith(provider);
+      if (outcome.status === 'signed-in') {
+        rememberLastProvider(provider);
+        // Stays busy: the page is about to move on.
+        onSignedIn(outcome.user, provider);
+        return;
+      }
+      setBusy(null);
+      if (outcome.status === 'failed') setFailure(outcome.reason);
+    } catch {
+      // Firebase itself could not load (the connection dropped, a blocked
+      // script): the buttons are ready for another try.
+      setBusy(null);
+      setFailure('unknownAuth');
     }
-    setBusy(null);
-    if (outcome.status === 'failed') setFailure(outcome.reason);
   };
 
   return (

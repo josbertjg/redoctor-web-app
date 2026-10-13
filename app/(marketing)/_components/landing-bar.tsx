@@ -111,35 +111,58 @@ export function LandingBar({
  * the truth follows before paint, and an IntersectionObserver watching the
  * hero's search against the strip under the bar's bottom edge keeps it
  * current.
+ *
+ * The line is the bar's bottom edge *at rest*: docked, the bar rises to the
+ * top, and a line measured then would move with it (the 20 px jump after
+ * the first undock). The store is made once, so it is not subscribed again
+ * — and the bar measured again — on every render.
  */
 function useDocked(bar: RefObject<HTMLElement | null>): boolean {
-  const past = () => {
-    const search = document.getElementById(heroSearchId);
-    const box = bar.current;
-    if (!search || !box) return false;
-    return (
-      search.getBoundingClientRect().bottom <=
-      box.getBoundingClientRect().bottom
-    );
-  };
-  const subscribe = (onChange: () => void) => {
-    const search = document.getElementById(heroSearchId);
-    const box = bar.current;
-    if (!search || !box || typeof IntersectionObserver === 'undefined') {
-      return () => undefined;
-    }
-    const observer = new IntersectionObserver(onChange, {
-      rootMargin: `-${String(Math.round(box.getBoundingClientRect().bottom))}px 0px 0px 0px`,
-      threshold: 0,
-    });
-    observer.observe(search);
-    window.addEventListener('resize', onChange);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener('resize', onChange);
+  const [store] = useState(() => {
+    let restBottom: number | null = null;
+    const measure = () => {
+      const box = bar.current;
+      if (box && !box.hasAttribute('data-docked')) {
+        restBottom = box.getBoundingClientRect().bottom;
+      }
+      return restBottom;
     };
-  };
-  return useSyncExternalStore(subscribe, past, () => false);
+    return {
+      subscribe: (onChange: () => void) => {
+        const search = document.getElementById(heroSearchId);
+        if (!search || typeof IntersectionObserver === 'undefined') {
+          return () => undefined;
+        }
+        let observer: IntersectionObserver | undefined;
+        const observe = () => {
+          observer?.disconnect();
+          const line = measure() ?? 0;
+          observer = new IntersectionObserver(onChange, {
+            rootMargin: `-${String(Math.round(line))}px 0px 0px 0px`,
+            threshold: 0,
+          });
+          observer.observe(search);
+        };
+        const onResize = () => {
+          observe();
+          onChange();
+        };
+        observe();
+        window.addEventListener('resize', onResize);
+        return () => {
+          observer?.disconnect();
+          window.removeEventListener('resize', onResize);
+        };
+      },
+      getSnapshot: () => {
+        const search = document.getElementById(heroSearchId);
+        const line = restBottom ?? measure();
+        if (!search || line === null) return false;
+        return search.getBoundingClientRect().bottom <= line;
+      },
+    };
+  });
+  return useSyncExternalStore(store.subscribe, store.getSnapshot, () => false);
 }
 
 /*

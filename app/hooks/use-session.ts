@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react';
 
+import type { Account } from '@/app/lib/auth/account';
 import type { SessionUser } from '@/app/lib/firebase/client';
-import type { Account } from '@/app/lib/schemas/identity';
 
 /*
  * The session as every client component sees it (AGENTS.md §9): who is
@@ -28,6 +28,8 @@ export type Session = {
   account: Account | null;
   accountStatus: AccountStatus;
   accountError: unknown;
+  /** The account is being read again after a failure: the retry shows it is busy. */
+  accountRetrying: boolean;
   retryAccount: () => void;
   signOut: () => Promise<void>;
 };
@@ -39,6 +41,7 @@ export const noSession: Session = {
   account: null,
   accountStatus: 'idle',
   accountError: null,
+  accountRetrying: false,
   retryAccount: () => undefined,
   signOut: () => Promise.resolve(),
 };

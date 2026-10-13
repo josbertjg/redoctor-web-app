@@ -1,4 +1,6 @@
-import { screen } from '@testing-library/react';
+import { useState } from 'react';
+
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { describe, expect, it, vi } from 'vitest';
@@ -49,5 +51,39 @@ describe('Sheet', () => {
     onOpenChange.mockClear();
     await userEvent.keyboard('{Escape}');
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('gives the focus back to the button that opened it', async () => {
+    function Opener() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <Button
+            onClick={() => {
+              setOpen(true);
+            }}
+          >
+            Cancelar
+          </Button>
+          <Sheet
+            open={open}
+            onOpenChange={setOpen}
+            title="¿Cancelar esta cita?"
+          >
+            <p>Tu cita será cancelada.</p>
+          </Sheet>
+        </>
+      );
+    }
+    renderWithIntl(<Opener />);
+    const opener = screen.getByRole('button', { name: 'Cancelar' });
+
+    await userEvent.click(opener);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    await userEvent.keyboard('{Escape}');
+
+    await waitFor(() => {
+      expect(opener).toHaveFocus();
+    });
   });
 });

@@ -11,7 +11,8 @@ import { isApiError } from './errors';
  * Each flow only provides how to look (`findLanded`).
  *
  * Doubts are kept per `intent`, the identity of the operation, so the lost
- * confirmation of one appointment is never mistaken for another's.
+ * confirmation of one appointment is never mistaken for another's. Two runs
+ * of one intent at the same time share the first one's outcome.
  */
 
 type WriteOnceRequest<T> = {
@@ -21,15 +22,27 @@ type WriteOnceRequest<T> = {
   findLanded: () => Promise<T | null>;
 };
 
-const isLostAnswer = (error: unknown) =>
-  isApiError(error) && error.kind === 'uncertain';
+/*
+ * Whether the write may have landed although it failed: its answer was lost;
+ * the server answered 2xx with a body that breaks the contract (it landed);
+ * or a gateway failed (5xx) between the server and us. The app's payment
+ * report counts every failure but a business refusal this way.
+ */
+const mayHaveLanded = (error: unknown) =>
+  isApiError(error) &&
+  (error.kind === 'uncertain' ||
+    error.kind === 'invalid-response' ||
+    (error.kind === 'http' &&
+      error.status !== undefined &&
+      error.status >= 500));
 
 export function createWriteOnceGuard<T>(
-  isUncertain: (error: unknown) => boolean = isLostAnswer,
+  isUncertain: (error: unknown) => boolean = mayHaveLanded,
 ) {
   const unresolved = new Map<string, () => Promise<T | null>>();
+  const inFlight = new Map<string, Promise<T>>();
 
-  return async function run({
+  async function attempt({
     intent,
     send,
     findLanded,
@@ -60,5 +73,15 @@ export function createWriteOnceGuard<T>(
       unresolved.delete(intent);
       return landed;
     }
+  }
+
+  return function run(request: WriteOnceRequest<T>): Promise<T> {
+    const running = inFlight.get(request.intent);
+    if (running) return running;
+    const outcome = attempt(request).finally(() => {
+      inFlight.delete(request.intent);
+    });
+    inFlight.set(request.intent, outcome);
+    return outcome;
   };
 }

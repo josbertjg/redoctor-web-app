@@ -15,6 +15,8 @@ type TextFieldProps = Omit<ComponentProps<'input'>, 'prefix'> & {
    * its own (the document type), which brings its own accessible name.
    */
   leading?: ReactNode;
+  /** A line under the box that helps fill it, read together with the field. */
+  hint?: ReactNode;
   className?: string;
 };
 
@@ -28,14 +30,22 @@ export function TextField({
   label,
   error,
   leading,
+  hint,
   className,
   id,
+  'aria-describedby': describedBy,
   ...props
 }: TextFieldProps) {
   const generatedId = useId();
   const inputId = id ?? generatedId;
   const errorId = `${inputId}-error`;
+  const hintId = `${inputId}-hint`;
   const invalid = error !== undefined;
+  const descriptions = [
+    describedBy,
+    hint === undefined ? undefined : hintId,
+    invalid ? errorId : undefined,
+  ].filter((value) => value !== undefined);
 
   return (
     <div className={cn('flex flex-col gap-2', className)}>
@@ -53,11 +63,18 @@ export function TextField({
         <input
           id={inputId}
           aria-invalid={invalid || undefined}
-          aria-describedby={invalid ? errorId : undefined}
+          aria-describedby={
+            descriptions.length > 0 ? descriptions.join(' ') : undefined
+          }
           className="h-full min-w-0 flex-1 bg-transparent px-3 text-body-xs text-text-primary outline-none placeholder:text-grey-400"
           {...props}
         />
       </div>
+      {hint === undefined ? null : (
+        <p id={hintId} className="text-body-sm text-text-secondary">
+          {hint}
+        </p>
+      )}
       <FieldError id={errorId} message={error} />
     </div>
   );

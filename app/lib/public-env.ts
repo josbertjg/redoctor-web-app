@@ -14,6 +14,8 @@ const optional = (value: string | undefined) =>
 
 export const publicEnv = {
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? '',
+  /** The API's base URL; the API client runs on both sides (app/lib/api/client.ts). */
+  apiUrl: process.env.NEXT_PUBLIC_API_URL ?? '',
   androidPackage: process.env.NEXT_PUBLIC_ANDROID_PACKAGE ?? '',
   appStoreId: optional(process.env.NEXT_PUBLIC_APP_STORE_ID),
   playStoreId: optional(process.env.NEXT_PUBLIC_PLAY_STORE_ID),

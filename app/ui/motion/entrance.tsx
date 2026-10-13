@@ -60,6 +60,9 @@ export function Entrance({
   const hidden = { ...settled, opacity: 0, ...offsets[from] };
   return (
     <m.div
+      // Its first frame is in the HTML: globals.css shows it settled when
+      // motion is reduced or JavaScript never runs.
+      data-entrance
       className={className}
       initial={hidden}
       animate={play ? settled : hidden}

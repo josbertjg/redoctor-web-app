@@ -44,7 +44,7 @@ export function SpecialtyChips({
               {/* TODO(search): opens the search for this specialty. */}
               <button
                 type="button"
-                className="inline-flex min-h-touch items-center gap-1.5 rounded-lg bg-pure-white px-5 text-label-lg text-primary shadow-md transition-[transform,box-shadow] duration-fast ease-house outline-none hover:-translate-y-0.5 hover:shadow-lg focus-visible:ring-3 focus-visible:ring-white-50/70"
+                className="inline-flex min-h-touch items-center gap-1.5 rounded-lg bg-pure-white px-5 text-label-lg text-primary shadow-md transition-[translate,box-shadow] duration-fast ease-house outline-none hover:-translate-y-0.5 hover:shadow-lg focus-visible:ring-3 focus-visible:ring-white-50/70"
               >
                 <Icon icon={chip.icon} size={16} />
                 {chip.name}

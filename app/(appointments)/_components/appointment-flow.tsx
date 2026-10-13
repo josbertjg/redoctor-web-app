@@ -1,7 +1,5 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-
 import CloudOff from '@material-symbols/svg-400/rounded/cloud_off.svg?svgr';
 import EventBusy from '@material-symbols/svg-400/rounded/event_busy.svg?svgr';
 import Login from '@material-symbols/svg-400/rounded/login.svg?svgr';
@@ -9,19 +7,20 @@ import NoAccounts from '@material-symbols/svg-400/rounded/no_accounts.svg?svgr';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
-import { track } from '@/app/lib/analytics/track';
-import type { AuthProvider } from '@/app/lib/auth/last-provider';
 import type { SessionUser } from '@/app/lib/firebase/client';
 import { appointmentQueryOptions } from '@/app/lib/queries/appointments';
 import { toAppointmentSummary } from '@/app/lib/schemas/appointments';
 import { canUseSpecialistArea, type Account } from '@/app/lib/schemas/identity';
 
+import { AccountErrorState } from '@/app/ui/auth/account-error-state';
 import { SignInButtons } from '@/app/ui/auth/sign-in-buttons';
+import { SignInLegalNote } from '@/app/ui/auth/sign-in-legal-note';
 import { Button } from '@/app/ui/button';
 import { EmptyState } from '@/app/ui/empty-state';
 import { StatusCard } from '@/app/ui/status-card';
 
 import { useSession } from '@/app/hooks/use-session';
+import { useSignInTracking } from '@/app/hooks/use-sign-in-tracking';
 
 import { AppointmentSkeleton } from './appointment-skeleton';
 import { AppointmentFrame, AppointmentView } from './appointment-view';
@@ -35,15 +34,8 @@ import { AppointmentFrame, AppointmentView } from './appointment-view';
 export function AppointmentFlow({ appointmentId }: { appointmentId: string }) {
   const t = useTranslations();
   const session = useSession();
-  const [provider, setProvider] = useState<AuthProvider | null>(null);
-  const signInTracked = useRef(false);
+  const onSignedIn = useSignInTracking();
   const { account, user } = session;
-
-  useEffect(() => {
-    if (account === null || provider === null || signInTracked.current) return;
-    signInTracked.current = true;
-    track('web_signin_completed', { provider, role: account.role });
-  }, [account, provider]);
 
   const switchAccount = () => {
     void session.signOut();
@@ -59,18 +51,8 @@ export function AppointmentFlow({ appointmentId }: { appointmentId: string }) {
           title={t('appointments.detail.signIn')}
           description={t('appointments.detail.signInDescription')}
         >
-          <SignInButtons
-            onSignedIn={(_user, chosen) => {
-              setProvider(chosen);
-            }}
-          />
-          {/* TODO(M10): link the legal pages once they exist. */}
-          <p className="text-center text-body-sm text-text-secondary">
-            {t('auth.byLoggingInAcceptsOur')}
-            <span className="font-semibold">
-              {t('auth.termsOfUseAndPrivacy')}
-            </span>
-          </p>
+          <SignInButtons onSignedIn={onSignedIn} />
+          <SignInLegalNote />
         </StatusCard>
       </AppointmentFrame>
     );
@@ -79,22 +61,7 @@ export function AppointmentFlow({ appointmentId }: { appointmentId: string }) {
   if (session.accountStatus === 'error') {
     return (
       <AppointmentFrame>
-        <EmptyState
-          tone="error"
-          icon={CloudOff}
-          title={t('auth.accountError.title')}
-          description={t('auth.accountError.description')}
-          action={
-            <>
-              <Button shape="soft" onClick={session.retryAccount}>
-                {t('retry')}
-              </Button>
-              <Button variant="white" shape="soft" onClick={switchAccount}>
-                {t('auth.switchAccount')}
-              </Button>
-            </>
-          }
-        />
+        <AccountErrorState canSwitchAccount />
       </AppointmentFrame>
     );
   }
@@ -127,7 +94,9 @@ function SignedInAppointment({
 
   if (query.isPending) return <AppointmentSkeleton />;
 
-  if (query.isError) {
+  // Only when there is nothing to show: a failed re-read after a write keeps
+  // the appointment on screen (the connection notice already said why).
+  if (query.isLoadingError) {
     return (
       <AppointmentFrame>
         <EmptyState
@@ -143,7 +112,7 @@ function SignedInAppointment({
                 void query.refetch();
               }}
             >
-              {t('refresh')}
+              {t('retry')}
             </Button>
           }
         />

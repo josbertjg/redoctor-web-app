@@ -104,7 +104,7 @@ export function PlansView({ user, onSelect, onBack }: PlansViewProps) {
                 void plans.refetch();
               }}
             >
-              {tRoot('refresh')}
+              {tRoot('retry')}
             </Button>
           }
         />

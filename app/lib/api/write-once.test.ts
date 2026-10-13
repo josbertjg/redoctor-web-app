@@ -83,6 +83,58 @@ describe('createWriteOnceGuard', () => {
     expect(otherFind).not.toHaveBeenCalled();
   });
 
+  it('looks for a write whose answer broke the contract, or failed at a gateway', async () => {
+    const run = createWriteOnceGuard<string>();
+    const broken = new ApiError({
+      kind: 'invalid-response',
+      method: 'POST',
+      path: '/claim',
+      status: 201,
+    });
+    const gateway = new ApiError({
+      kind: 'http',
+      method: 'POST',
+      path: '/claim',
+      status: 502,
+    });
+
+    await expect(
+      run({
+        intent: 'a',
+        send: () => Promise.reject(broken),
+        findLanded: () => Promise.resolve('landed'),
+      }),
+    ).resolves.toBe('landed');
+    await expect(
+      run({
+        intent: 'b',
+        send: () => Promise.reject(gateway),
+        findLanded: () => Promise.resolve('landed'),
+      }),
+    ).resolves.toBe('landed');
+  });
+
+  it('shares one write between two taps at the same time', async () => {
+    const run = createWriteOnceGuard<string>();
+    const send = vi.fn(
+      () =>
+        new Promise<string>((resolve) => {
+          setTimeout(() => {
+            resolve('sent');
+          }, 10);
+        }),
+    );
+
+    const first = run({ intent: 'a', send, findLanded: vi.fn() });
+    const second = run({ intent: 'a', send, findLanded: vi.fn() });
+
+    await expect(Promise.all([first, second])).resolves.toEqual([
+      'sent',
+      'sent',
+    ]);
+    expect(send).toHaveBeenCalledOnce();
+  });
+
   it('lets other failures through untouched', async () => {
     const run = createWriteOnceGuard<string>();
     const conflict = new ApiError({

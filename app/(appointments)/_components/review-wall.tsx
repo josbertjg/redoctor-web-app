@@ -39,7 +39,11 @@ export function ReviewWall({
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-headline-sm text-text-primary">{t('title')}</h1>
           {total > 1 ? (
-            <p className="shrink-0 text-label-md text-text-secondary">
+            // Read aloud as it moves on: «2 de 3».
+            <p
+              aria-live="polite"
+              className="shrink-0 text-label-md text-text-secondary"
+            >
               {t('step', { current: done + 1, total })}
             </p>
           ) : null}

@@ -6,12 +6,8 @@ import { cn } from '@/app/lib/utils';
 
 type RevealProps = {
   children: ReactNode;
-  /** A beat after a sibling that reveals at the same time. */
-  delay?: 'none' | 'short' | 'long';
   className?: string;
 };
-
-const delayClass = { none: '', short: 'delay-100', long: 'delay-200' };
 
 /*
  * Content below the fold slides up as it scrolls into view (AGENTS.md §8.2).
@@ -20,7 +16,7 @@ const delayClass = { none: '', short: 'delay-100', long: 'delay-200' };
  * screen, reduced-motion users and environments without an observer never
  * see a hidden state, so nothing depends on JavaScript to be readable.
  */
-export function Reveal({ children, delay = 'none', className }: RevealProps) {
+export function Reveal({ children, className }: RevealProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -61,8 +57,8 @@ export function Reveal({ children, delay = 'none', className }: RevealProps) {
       ref={ref}
       data-reveal="idle"
       className={cn(
-        'transition-[opacity,transform] duration-entrance ease-entrance data-[reveal=pending]:translate-y-6 data-[reveal=pending]:opacity-0',
-        delayClass[delay],
+        // `translate`, not `transform`: Tailwind's translate-y sets that property.
+        'transition-[opacity,translate] duration-entrance ease-entrance data-[reveal=pending]:translate-y-6 data-[reveal=pending]:opacity-0',
         className,
       )}
     >

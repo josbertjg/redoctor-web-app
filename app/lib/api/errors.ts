@@ -19,6 +19,15 @@ export type ApiErrorKind =
   /** The caller cancelled the request. */
   | 'aborted';
 
+/** Why a coupon is no good, in the app's words (M13). */
+export type CouponRejectionKey = `billing.couponRejection.${
+  | 'invalid'
+  | 'expired'
+  | 'usageLimit'
+  | 'firstSubscriptionOnly'
+  | 'wrongPlan'
+  | 'unavailable'}`;
+
 /** i18n keys of the API errors the web shows (app/lib/i18n/messages/es.json). */
 export type ApiErrorMessageKey =
   | 'apiErrors.network'
@@ -40,8 +49,18 @@ export type ApiErrorMessageKey =
       | 'discountActive'
       | 'discountLossNotAccepted'
       | 'subscriptionRequired'}`
-  | `billing.couponRejection.${
-      'invalid' | 'expired' | 'usageLimit' | 'wrongPlan' | 'unavailable'}`;
+  | CouponRejectionKey;
+
+/** The coupon refusals by code; the coupon's own reading goes by `details.reason` first (app/lib/queries/billing.ts). */
+export const couponRejectionByCode: Readonly<
+  Record<string, CouponRejectionKey>
+> = {
+  ERR_5101: 'billing.couponRejection.invalid',
+  ERR_5103: 'billing.couponRejection.expired',
+  ERR_5104: 'billing.couponRejection.usageLimit',
+  ERR_5105: 'billing.couponRejection.wrongPlan',
+  ERR_5109: 'billing.couponRejection.unavailable',
+};
 
 /** Codes whose message the person can meet on the web, with our copy. */
 export const messageKeysByCode: Readonly<Record<string, ApiErrorMessageKey>> = {
@@ -57,11 +76,7 @@ export const messageKeysByCode: Readonly<Record<string, ApiErrorMessageKey>> = {
   ERR_5085: 'apiErrors.billingErrors.noExchangeRate',
   ERR_5106: 'apiErrors.billingErrors.discountActive',
   ERR_5108: 'apiErrors.billingErrors.discountLossNotAccepted',
-  ERR_5101: 'billing.couponRejection.invalid',
-  ERR_5103: 'billing.couponRejection.expired',
-  ERR_5104: 'billing.couponRejection.usageLimit',
-  ERR_5105: 'billing.couponRejection.wrongPlan',
-  ERR_5109: 'billing.couponRejection.unavailable',
+  ...couponRejectionByCode,
   // Daily-summary opt-out link (M11).
   ERR_8004: 'apiErrors.notificationErrors.invalidUnsubscribeLink',
 };
@@ -80,6 +95,12 @@ export const forbiddenMessageKeysByCode: Readonly<
 const expectedCodes = new Set([
   // Not found (e.g. a specialist profile that does not exist).
   'ERR_3030',
+  // The hour was just taken: the reschedule sheet says so and reloads it.
+  'ERR_4002',
+  // Outside the confirmation window: the appointment page says when it opens.
+  'ERR_4013',
+  // A SELF claim the API refuses, with its reason explained in place (M4).
+  'ERR_4014',
 ]);
 
 type ApiErrorInit = {
@@ -165,4 +186,23 @@ export class ApiError extends Error {
 
 export function isApiError(error: unknown): error is ApiError {
   return error instanceof ApiError;
+}
+
+/**
+ * What to say in place when a write fails, or null when the failure is the
+ * connection's: that one is announced once, for the whole page
+ * (app/providers.tsx). A code the person can meet says what it knows; a lost
+ * answer says to check whether it landed; anything else is the flow's plain
+ * «No pudimos…» (`fallback`).
+ */
+export function failureMessageKey<Fallback extends string>(
+  error: unknown,
+  fallback: Fallback,
+): ApiErrorMessageKey | Fallback | null {
+  if (!isApiError(error)) return fallback;
+  if (error.isConnectivityProblem) return null;
+  const key = error.messageKey;
+  return key.startsWith('apiErrors.') && key !== 'apiErrors.unexpected'
+    ? key
+    : fallback;
 }

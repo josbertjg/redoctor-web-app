@@ -15,11 +15,21 @@ type FieldErrorProps = {
  * The error line under a field (AGENTS.md §8.2): it unfolds in the base
  * duration and folds back keeping its last text, so nothing pops. Read
  * aloud as it changes. Color is never the only signal: the words say it.
+ *
+ * The text kept for folding back is hidden from screen readers, so it is
+ * never read as a current error; and each time the error comes back the line
+ * is drawn anew, so the same error is announced again.
  */
 export function FieldError({ id, message, className }: FieldErrorProps) {
-  const [last, setLast] = useState(message);
-  if (message !== undefined && message !== last) setLast(message);
   const open = message !== undefined;
+  const [last, setLast] = useState(message);
+  const [wasOpen, setWasOpen] = useState(open);
+  const [shown, setShown] = useState(open ? 1 : 0);
+  if (message !== undefined && message !== last) setLast(message);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setShown((times) => times + 1);
+  }
 
   return (
     <div
@@ -31,7 +41,11 @@ export function FieldError({ id, message, className }: FieldErrorProps) {
         className,
       )}
     >
-      <p className="overflow-hidden text-body-sm text-error-700">
+      <p
+        key={shown}
+        aria-hidden={open ? undefined : true}
+        className="overflow-hidden text-body-sm text-error-700"
+      >
         {open ? message : last}
       </p>
     </div>

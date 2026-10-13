@@ -21,9 +21,13 @@ if (sentryDsn) {
 }
 
 const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
-// Same default as app/lib/env.ts.
+// Same default as app/lib/env.ts, which also takes an empty value as unset:
+// an empty host would send the events to this site instead.
+const configuredHost = process.env.NEXT_PUBLIC_POSTHOG_HOST;
 const posthogHost =
-  process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://us.i.posthog.com';
+  configuredHost === undefined || configuredHost === ''
+    ? 'https://us.i.posthog.com'
+    : configuredHost;
 
 if (posthogKey) {
   import('./app/lib/analytics/posthog')

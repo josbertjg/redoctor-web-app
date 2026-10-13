@@ -40,3 +40,17 @@ describe('person names', () => {
     expect(cleanPersonName('D’Ambrosio')).toBe("D'Ambrosio");
   });
 });
+
+describe('names as people type and paste them', () => {
+  it('takes a pasted name whose accents come as separate marks', () => {
+    const decomposed = 'José';
+    expect(cleanPersonName(decomposed)).toBe('José');
+    expect(personNameProblem(decomposed)).toBeNull();
+  });
+
+  it('leaves the title out of the initials', () => {
+    expect(initialsOf('Dra. María González')).toBe('MG');
+    expect(initialsOf('Dr José Pérez')).toBe('JP');
+    expect(initialsOf('Dra.')).toBe('D');
+  });
+});

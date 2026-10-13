@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   backoffDelay,
+  isOffline,
   isReplayable,
   isTransientStatus,
   neverReachedServer,
@@ -57,9 +58,32 @@ describe('neverReachedServer', () => {
     expect(neverReachedServer(new TypeError('Failed to fetch'))).toBe(false);
   });
 
-  it('is true while the browser is offline', () => {
+  it('is true when the browser was offline before sending', () => {
+    expect(neverReachedServer(new TypeError('Failed to fetch'), true)).toBe(
+      true,
+    );
+  });
+
+  it('does not take going offline after sending as proof', () => {
+    // The request left, then the connection dropped: its answer was lost.
     vi.stubGlobal('navigator', { onLine: false });
-    expect(neverReachedServer(new TypeError('Failed to fetch'))).toBe(true);
+    expect(neverReachedServer(new TypeError('Failed to fetch'))).toBe(false);
+  });
+});
+
+describe('isOffline', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('only counts an explicit offline browser', () => {
+    vi.stubGlobal('navigator', { onLine: false });
+    expect(isOffline()).toBe(true);
+    vi.stubGlobal('navigator', { onLine: true });
+    expect(isOffline()).toBe(false);
+    // Node's navigator has no onLine.
+    vi.stubGlobal('navigator', {});
+    expect(isOffline()).toBe(false);
   });
 });
 

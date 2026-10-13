@@ -16,9 +16,11 @@ import { routes } from '@/app/lib/routes';
 import { isApplePrivateRelayEmail } from '@/app/lib/schemas/identity';
 import { personalDataFrom, toInvitation } from '@/app/lib/schemas/invitations';
 
+import { RequireSession } from '@/app/ui/auth/require-session';
 import { Button } from '@/app/ui/button';
 import { toast } from '@/app/ui/toast';
 
+import { useFocusHeading } from '@/app/hooks/use-focus-heading';
 import { useSession } from '@/app/hooks/use-session';
 
 import { PatientSignUpForm } from './patient-sign-up-form';
@@ -42,14 +44,64 @@ type SignUpFlowProps = {
  * sign-up happens. Done, the person goes back to where they were going.
  * Claiming an invitation that is theirs (M4: `/i/{token}?for=self`), the
  * form starts from the invitation's data, as the app's prefill does.
+ *
+ * The session guard lives here, not in the page, so every test of the flow
+ * goes through it: an account with no sign-up behind it is who this page is
+ * for, and the guard sends such an account here from everywhere else.
  */
-export function SignUpFlow({ redirect, joinApp, finishApp }: SignUpFlowProps) {
+export function SignUpFlow(props: SignUpFlowProps) {
+  return (
+    <RequireSession
+      fallback={<SignUpSkeleton />}
+      returnTo={routes.signUp(props.redirect ?? undefined)}
+      allowUnregistered
+    >
+      <SignUpSteps {...props} />
+    </RequireSession>
+  );
+}
+
+function SignUpSteps(props: SignUpFlowProps) {
+  const [role, setRole] = useState<SignUpRole | null>(null);
+  const [finished, setFinished] = useState(false);
+  // Each step the person takes (a role, back, done) brings the focus to its
+  // title; loading never moves it.
+  const step = useFocusHeading(`${String(role)}:${String(finished)}`);
+
+  return (
+    // `contents`: a handle for the focus, no box of its own.
+    <div ref={step} className="contents">
+      <SignUpStep
+        {...props}
+        role={role}
+        onRole={setRole}
+        finished={finished}
+        onFinished={() => {
+          setFinished(true);
+        }}
+      />
+    </div>
+  );
+}
+
+function SignUpStep({
+  redirect,
+  joinApp,
+  finishApp,
+  role,
+  onRole: setRole,
+  finished,
+  onFinished,
+}: SignUpFlowProps & {
+  role: SignUpRole | null;
+  onRole: (role: SignUpRole | null) => void;
+  finished: boolean;
+  onFinished: () => void;
+}) {
   const t = useTranslations();
   const router = useRouter();
   const session = useSession();
   const { account, user } = session;
-  const [role, setRole] = useState<SignUpRole | null>(null);
-  const [finished, setFinished] = useState(false);
 
   const claim = invitationOf(redirect);
   const invitation = useQuery({
@@ -157,7 +209,7 @@ export function SignUpFlow({ redirect, joinApp, finishApp }: SignUpFlowProps) {
           submitLabel={parts.personalData ? t('finish') : t('continue')}
           onDone={() => {
             if (parts.personalData) {
-              setFinished(true);
+              onFinished();
               return;
             }
             // The fresh account leaves this page by itself (`leaving`).

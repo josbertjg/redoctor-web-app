@@ -69,10 +69,11 @@ describe('formatBillingAmount', () => {
   const usd = (amount: number) => ({ amount, currency: 'USD' });
   const ves = (amount: number) => ({ amount, currency: 'VES' });
 
-  it('writes dollars from cents with the point, whole ones without decimals', () => {
+  it('writes dollars from cents with the comma, whole ones without decimals', () => {
     expect(formatBillingAmount(usd(3000))).toBe('$\u00a030');
-    expect(formatBillingAmount(usd(3699))).toBe('$\u00a036.99');
-    expect(formatBillingAmount(usd(750))).toBe('$\u00a07.50');
+    expect(formatBillingAmount(usd(3699))).toBe('$\u00a036,99');
+    expect(formatBillingAmount(usd(750))).toBe('$\u00a07,50');
+    expect(formatBillingAmount(usd(123450))).toBe('$\u00a01.234,50');
   });
 
   it('writes bolívares as Venezuela does', () => {
@@ -113,5 +114,25 @@ describe('bolívares for the bank', () => {
     expect(parseBolivares('0')).toBe(0);
     expect(parseBolivares('')).toBeNull();
     expect(parseBolivares('abc')).toBeNull();
+  });
+
+  it('takes the ways an amount is written, the «Bs» and a spaced thousand included', () => {
+    expect(parseBolivares('Bs. 1.198,39')).toBe(119839);
+    expect(parseBolivares('Bs.S 1.198,39')).toBe(119839);
+    expect(parseBolivares('1 198,39')).toBe(119839);
+    expect(parseBolivares('1.198.398,39')).toBe(119839839);
+  });
+
+  it('refuses what is not one amount instead of guessing one', () => {
+    expect(parseBolivares('-1198,39')).toBeNull();
+    expect(parseBolivares('12a34')).toBeNull();
+    expect(parseBolivares('12o0,50')).toBeNull();
+    expect(parseBolivares('1e3')).toBeNull();
+    // A third decimal is not a thousands group.
+    expect(parseBolivares('1198.390')).toBeNull();
+    expect(parseBolivares('0,001')).toBeNull();
+    // Two amounts pasted together.
+    expect(parseBolivares('1198,39 1198,39')).toBeNull();
+    expect(parseBolivares(',5')).toBeNull();
   });
 });

@@ -1,19 +1,26 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 import Link from 'next/link';
 
 import Stethoscope from '@material-symbols/svg-400/rounded/stethoscope.svg?svgr';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
 import type { SessionUser } from '@/app/lib/firebase/client';
 import { formatBirthDate } from '@/app/lib/format/date-of-birth';
 import { formatIdentityDocument } from '@/app/lib/format/identity-document';
+import { appointmentKeys } from '@/app/lib/queries/appointments';
+import {
+  pendingReviewsQueryOptions,
+  reviewKeys,
+} from '@/app/lib/queries/reviews';
 import { routes } from '@/app/lib/routes';
 import {
   appointmentActions,
   statusChips,
+  type AppointmentResponse,
   type AppointmentSummary,
 } from '@/app/lib/schemas/appointments';
 
@@ -27,8 +34,11 @@ import { Button } from '@/app/ui/button';
 import { StateChip } from '@/app/ui/state-chip';
 import { StatusCard } from '@/app/ui/status-card';
 
+import { useFocusHeading } from '@/app/hooks/use-focus-heading';
+
 import { AppointmentActionsCard } from './appointment-actions';
 import { AppointmentRecord } from './appointment-record';
+import { ReviewForm } from './review-form';
 
 type AppointmentViewProps = {
   appointment: AppointmentSummary;
@@ -48,13 +58,35 @@ export function AppointmentView({
   readOnly,
 }: AppointmentViewProps) {
   const t = useTranslations();
-  // What can be done is decided once per page: an action brings a fresh
-  // appointment, and the page is opened again to see a later moment.
-  const [now] = useState(() => new Date());
+  const queryClient = useQueryClient();
+  const [now, setNow] = useState(() => new Date());
   const chip = statusChips[appointment.status];
+  // After a change (confirmed, moved, cancelled) the focus goes to the page's
+  // heading: the button that was pressed may be gone.
+  const frame = useFocusHeading(appointment.status);
+
+  // What can be done changes at two moments: when the confirmation window
+  // opens and when the appointment starts (nothing changes after it, as
+  // REDOC-308 asks). The page follows at that very moment, without polling:
+  // it reads the appointment again, since whether it can be confirmed is the
+  // API's to say.
+  useEffect(() => {
+    const next = nextChange(appointment, now);
+    if (next === null) return;
+    const timer = window.setTimeout(() => {
+      setNow(new Date());
+      void queryClient.invalidateQueries({
+        queryKey: appointmentKeys.detail(user.id, appointment.id),
+      });
+    }, next);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [appointment, now, queryClient, user.id]);
 
   return (
     <AppointmentFrame
+      ref={frame}
       chip={
         <StateChip tone={chip.tone}>
           {t(`appointments.status.${chip.label}`)}
@@ -72,11 +104,14 @@ export function AppointmentView({
           <OpenInAppButton path={routes.appointment(appointment.id)} />
         </StatusCard>
       ) : (
-        <AppointmentActionsCard
-          appointment={appointment}
-          actions={appointmentActions(appointment, now)}
-          user={user}
-        />
+        <>
+          <PendingReview appointment={appointment} user={user} />
+          <AppointmentActionsCard
+            appointment={appointment}
+            actions={appointmentActions(appointment, now)}
+            user={user}
+          />
+        </>
       )}
       <AppointmentDetails
         appointment={appointment}
@@ -97,6 +132,55 @@ export function AppointmentView({
         </Button>
       )}
     </AppointmentFrame>
+  );
+}
+
+/*
+ * A finished consultation still to rate, on its own page: the email that
+ * asks for the rating (15, «Dejar mi reseña») leads here, so the stars are
+ * here too, first on the page. It never holds the page (AGENTS.md §1: a
+ * page reached through a link is never blocked); once sent, it goes.
+ */
+function PendingReview({
+  appointment,
+  user,
+}: {
+  appointment: AppointmentSummary;
+  user: SessionUser;
+}) {
+  const t = useTranslations('reviews.gate');
+  const queryClient = useQueryClient();
+  const finished = appointment.status === 'COMPLETED';
+  const pending = useQuery({
+    ...pendingReviewsQueryOptions(user),
+    enabled: finished,
+  });
+  const toRate =
+    finished &&
+    (pending.data ?? []).some((candidate) => candidate.id === appointment.id);
+  if (!toRate) return null;
+
+  return (
+    <section
+      aria-label={t('title')}
+      className="flex animate-fade-up flex-col gap-3"
+    >
+      <h2 className="text-title-lg text-text-primary">{t('title')}</h2>
+      <ReviewForm
+        appointment={appointment}
+        user={user}
+        withConsultation={false}
+        onSubmitted={() => {
+          queryClient.setQueryData<AppointmentResponse[]>(
+            reviewKeys.pending(user.id),
+            (current) =>
+              (current ?? []).filter(
+                (candidate) => candidate.id !== appointment.id,
+              ),
+          );
+        }}
+      />
+    </section>
   );
 }
 
@@ -146,17 +230,33 @@ function usePatient(appointment: AppointmentSummary) {
   };
 }
 
+/** The longest wait a browser timer takes (about 24.8 days). */
+const maxTimer = 2 ** 31 - 1;
+
+/** Milliseconds until what can be done changes next, or null when nothing will. */
+function nextChange(appointment: AppointmentSummary, now: Date): number | null {
+  const moments = [appointment.confirmationOpensAt, appointment.startsAt]
+    .map((instant) =>
+      instant ? new Date(instant).getTime() - now.getTime() : NaN,
+    )
+    .filter((wait) => Number.isFinite(wait) && wait > 0);
+  if (moments.length === 0) return null;
+  return Math.min(Math.min(...moments) + 50, maxTimer);
+}
+
 /** The page's column: its heading with the state, then the cards. */
 export function AppointmentFrame({
   chip,
   children,
+  ref,
 }: {
   chip?: ReactNode;
   children: ReactNode;
+  ref?: React.Ref<HTMLDivElement>;
 }) {
   const t = useTranslations('appointments.detail');
   return (
-    <div className="flex w-full flex-col gap-4">
+    <div ref={ref} className="flex w-full flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-headline-sm text-text-primary">{t('title')}</h1>
         {chip}

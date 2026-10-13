@@ -9,6 +9,9 @@ import type { AnimationSequence, DOMKeyframesDefinition } from 'framer-motion';
 
 type HiddenStates = Record<string, DOMKeyframesDefinition>;
 
+/** A piece of a choreographed box, by the `data-piece` name its markup gives it. */
+export const piece = (name: string) => `[data-piece="${name}"]`;
+
 type ChoreographedProps = {
   /**
    * Each piece's state before it enters, by selector inside the box — or a
@@ -46,12 +49,19 @@ export function Choreographed({
     const reducesMotion = window.matchMedia(
       '(prefers-reduced-motion: reduce)',
     ).matches;
+    const rect = box.getBoundingClientRect();
+    // A box taller than the screen can never show 30 % of itself (a column of
+    // plans on a small phone, any section in landscape): the share asked is
+    // the one it can reach, never more than 80 % of the screen's height.
+    const share =
+      rect.height > 0
+        ? Math.min(amount, (0.8 * window.innerHeight) / rect.height)
+        : amount;
     // Already on screen means enough of it to count as seen — the same
     // share that would start the entrance; a sliver of its edge does not.
-    const rect = box.getBoundingClientRect();
     const visible =
       Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
-    const onScreen = rect.height > 0 && visible / rect.height >= amount;
+    const onScreen = rect.height > 0 && visible / rect.height >= share;
     if (
       reducesMotion ||
       onScreen ||
@@ -69,7 +79,7 @@ export function Choreographed({
         observer.disconnect();
         void animate(sequence);
       },
-      { threshold: amount },
+      { threshold: share },
     );
     observer.observe(box);
     return () => {

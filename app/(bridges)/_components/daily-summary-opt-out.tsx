@@ -15,6 +15,8 @@ import {
 import { Button } from '@/app/ui/button';
 import { EmptyState } from '@/app/ui/empty-state';
 
+import { useFocusHeading } from '@/app/hooks/use-focus-heading';
+
 type ViewCopy = { title: string; description: string; action: string };
 
 /** Already translated on the server (i18n: `dailySummary.*`). */
@@ -37,7 +39,8 @@ const icons = {
 /*
  * Nothing changes until the specialist says so: mail scanners open links on
  * their own, so a visit never unsubscribes anyone. Each answer replaces the
- * view with a fade (a new key); a failure keeps it and says what to do.
+ * view with a fade (a new key) and takes the focus to its title, so it is
+ * heard too; a failure keeps the view and says what to do.
  */
 export function DailySummaryOptOut({
   token,
@@ -50,61 +53,71 @@ export function DailySummaryOptOut({
     changeDailySummary,
     initialState,
   );
+  const container = useFocusHeading(state.view);
 
-  if (token === undefined || state.view === 'invalid-link') {
+  return (
+    // `contents`: a handle for the focus, no box of its own.
+    <div ref={container} className="contents">
+      {content()}
+    </div>
+  );
+
+  function content() {
+    if (token === undefined || state.view === 'invalid-link') {
+      return (
+        <EmptyState
+          key="invalid-link"
+          headingLevel={1}
+          tone="error"
+          icon={LinkOff}
+          title={labels.invalidLink.title}
+          description={labels.invalidLink.description}
+        />
+      );
+    }
+
+    const { view } = state;
+    const copy = labels[view];
+    const isUnsubscribed = view === 'unsubscribed';
+
     return (
       <EmptyState
-        key="invalid-link"
+        key={view}
         headingLevel={1}
-        tone="error"
-        icon={LinkOff}
-        title={labels.invalidLink.title}
-        description={labels.invalidLink.description}
+        icon={icons[view]}
+        title={copy.title}
+        description={copy.description}
+        action={
+          <form
+            action={formAction}
+            className="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:items-center"
+          >
+            <input type="hidden" name="token" value={token} />
+            <input
+              type="hidden"
+              name="intent"
+              value={isUnsubscribed ? 'subscribe' : 'unsubscribe'}
+            />
+            <Button
+              type="submit"
+              block
+              variant={isUnsubscribed ? 'white' : 'primary'}
+              loading={pending}
+              className="sm:w-auto"
+            >
+              {copy.action}
+            </Button>
+            {state.failed ? (
+              <p
+                role="alert"
+                className="animate-fade-in text-body-sm text-error-700"
+              >
+                {labels.failed}
+              </p>
+            ) : null}
+          </form>
+        }
       />
     );
   }
-
-  const { view } = state;
-  const copy = labels[view];
-  const isUnsubscribed = view === 'unsubscribed';
-
-  return (
-    <EmptyState
-      key={view}
-      headingLevel={1}
-      icon={icons[view]}
-      title={copy.title}
-      description={copy.description}
-      action={
-        <form
-          action={formAction}
-          className="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:items-center"
-        >
-          <input type="hidden" name="token" value={token} />
-          <input
-            type="hidden"
-            name="intent"
-            value={isUnsubscribed ? 'subscribe' : 'unsubscribe'}
-          />
-          <Button
-            type="submit"
-            block
-            variant={isUnsubscribed ? 'white' : 'primary'}
-            loading={pending}
-            className="sm:w-auto"
-          >
-            {copy.action}
-          </Button>
-          {state.failed ? (
-            <p
-              role="alert"
-              className="animate-fade-in text-body-sm text-error-700"
-            >
-              {labels.failed}
-            </p>
-          ) : null}
-        </form>
-      }
-    />
-  );
 }

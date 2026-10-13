@@ -26,8 +26,9 @@ type PaymentTotalsProps = {
   onCoupon: (() => void) | null;
 };
 
+/** A touch target tall (§8.5); the negative margin keeps the row's height. */
 const linkClass =
-  'rounded-sm text-label-lg text-primary outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50';
+  '-my-3 inline-flex min-h-touch items-center rounded-sm text-label-lg text-primary outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50';
 
 /*
  * What is being paid, in dollars (the app's PaymentTotals). Before taking a

@@ -32,6 +32,7 @@ function session(overrides: Partial<Session>): Session {
     account: null,
     accountStatus: 'idle',
     accountError: null,
+    accountRetrying: false,
     retryAccount: vi.fn(),
     signOut: vi.fn(() => Promise.resolve()),
     ...overrides,

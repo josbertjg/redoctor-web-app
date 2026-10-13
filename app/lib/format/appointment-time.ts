@@ -105,3 +105,12 @@ export function weekdayInitials(): string[] {
     format.format(new Date(Date.UTC(2026, 9, 5 + index))).toUpperCase(),
   );
 }
+
+/**
+ * Spanish says «a la 1:30» but «a las 3:30»: the article agrees with the
+ * hour, and one o'clock is the only singular one. For a message's
+ * `{hour, select, one {a la} other {a las}}`, given the time as written.
+ */
+export function hourAgreement(time: string): 'one' | 'other' {
+  return time.trim().startsWith('1:') ? 'one' : 'other';
+}

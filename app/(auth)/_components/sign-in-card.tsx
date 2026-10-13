@@ -13,9 +13,9 @@ import { track } from '@/app/lib/analytics/track';
 import { destinationAfterSignIn } from '@/app/lib/auth/destination';
 import type { AuthProvider } from '@/app/lib/auth/last-provider';
 
+import { AccountErrorState } from '@/app/ui/auth/account-error-state';
 import { SignInButtons } from '@/app/ui/auth/sign-in-buttons';
-import { Button } from '@/app/ui/button';
-import { EmptyState } from '@/app/ui/empty-state';
+import { SignInLegalNote } from '@/app/ui/auth/sign-in-legal-note';
 import { Icon } from '@/app/ui/icons';
 import { Skeleton } from '@/app/ui/skeleton';
 
@@ -35,7 +35,6 @@ type SignInCardProps = {
  */
 export function SignInCard({ redirect }: SignInCardProps) {
   const t = useTranslations('auth');
-  const common = useTranslations();
   const router = useRouter();
   const session = useSession();
   const headingId = useId();
@@ -54,27 +53,9 @@ export function SignInCard({ redirect }: SignInCardProps) {
 
   if (status === 'signed-in' && accountStatus === 'error') {
     return (
-      <EmptyState
+      <AccountErrorState
         headingLevel={1}
-        tone="error"
-        title={t('accountError.title')}
-        description={t('accountError.description')}
-        action={
-          <>
-            <Button shape="soft" onClick={session.retryAccount}>
-              {common('retry')}
-            </Button>
-            <Button
-              shape="soft"
-              variant="white"
-              onClick={() => {
-                void session.signOut();
-              }}
-            >
-              {t('switchAccount')}
-            </Button>
-          </>
-        }
+        canSwitchAccount
         className="max-w-md"
       />
     );
@@ -114,11 +95,7 @@ export function SignInCard({ redirect }: SignInCardProps) {
           }}
         />
       )}
-      {/* TODO(M10): link the legal pages once they exist. */}
-      <p className="mt-6 text-center text-body-sm text-text-secondary">
-        {t('byLoggingInAcceptsOur')}
-        <span className="font-semibold">{t('termsOfUseAndPrivacy')}</span>
-      </p>
+      <SignInLegalNote className="mt-6" />
     </section>
   );
 }

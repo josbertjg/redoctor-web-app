@@ -68,3 +68,26 @@ describe('an account with no sign-up behind it', () => {
     expect(destinationAfterSignIn(brandNew, '//evil.example')).toBe('/sign-up');
   });
 });
+
+describe('destinationAfterSignIn, coming back from an auth page', () => {
+  const brandNew = toAccount(
+    meResponseSchema.parse({ id: 'u', role: 'PATIENT' }),
+  );
+
+  it('unwraps a sign-up page instead of wrapping it again', () => {
+    const fromSignUp = '/sign-up?redirect=%2Fi%2Ftok%3Ffor%3Dself';
+
+    expect(destinationAfterSignIn(brandNew, fromSignUp)).toBe(
+      '/sign-up?redirect=%2Fi%2Ftok%3Ffor%3Dself',
+    );
+    expect(
+      destinationAfterSignIn(account('PATIENT', true, false), fromSignUp),
+    ).toBe('/i/tok?for=self');
+  });
+
+  it('goes on as if there were no way back when the page named none', () => {
+    expect(
+      destinationAfterSignIn(account('SPECIALIST', false, true), '/sign-in'),
+    ).toBe('/panel');
+  });
+});

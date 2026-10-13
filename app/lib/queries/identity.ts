@@ -1,5 +1,6 @@
 import { queryOptions } from '@tanstack/react-query';
 
+import { identityKeys } from './identity-keys';
 import { apiFetch } from '../api/client';
 import { isApiError } from '../api/errors';
 import { createWriteOnceGuard } from '../api/write-once';
@@ -14,6 +15,8 @@ import {
   type PatientRegistrationBody,
 } from '../schemas/identity';
 
+import type { TokenHolder } from '../api/types';
+
 /*
  * The signed-in person's account, read in the browser with their Firebase
  * token (AGENTS.md §4, §9). Keyed by the Firebase uid, so a different person
@@ -21,16 +24,10 @@ import {
  * clears the whole cache on sign-out anyway.
  */
 
-export const identityKeys = {
-  me: (userId: string) => ['identity', 'me', userId] as const,
-};
+export { identityKeys } from './identity-keys';
 
-type TokenHolder = {
-  id: string;
-  getToken: () => Promise<string>;
-};
-
-async function readAccount(
+/** The signed-in person's account (`GET /identity/me`). */
+export async function readAccount(
   user: TokenHolder,
   signal?: AbortSignal,
 ): Promise<Account> {
@@ -39,6 +36,9 @@ async function readAccount(
     path: '/identity/me',
     token,
     schema: meResponseSchema,
+    // How the API closes a session: the provider signs out and says so.
+    expected: (error) =>
+      error.status === 401 || error.status === 403 || error.status === 404,
     ...(signal ? { signal } : {}),
   });
   return toAccount(me);
@@ -98,6 +98,7 @@ export function registerPatient(
           token,
           body,
           schema: meResponseSchema,
+          expected: (error) => error.status === 409,
         });
         return toAccount(me);
       } catch (error) {
@@ -126,6 +127,7 @@ export function completePatientRegistration(
           token,
           body,
           schema: meResponseSchema,
+          expected: (error) => error.status === 403,
         });
         return toAccount(me);
       } catch (error) {

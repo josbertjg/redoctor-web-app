@@ -10,6 +10,8 @@ type StatusCardProps = {
   description?: ReactNode;
   /** Actions or a form under the words (sign-in buttons, «Ver mi cita»…). */
   children?: ReactNode;
+  /** The news of its view: the title takes the focus when the view changes (app/hooks/use-focus-heading.ts). */
+  viewHeading?: boolean;
   className?: string;
 };
 
@@ -24,6 +26,7 @@ export function StatusCard({
   title,
   description,
   children,
+  viewHeading = false,
   className,
 }: StatusCardProps) {
   const headingId = useId();
@@ -40,7 +43,11 @@ export function StatusCard({
           <Icon icon={icon} size={24} />
         </span>
         <div className="flex flex-col gap-1">
-          <h2 id={headingId} className="text-title-md text-text-primary">
+          <h2
+            id={headingId}
+            data-view-heading={viewHeading || undefined}
+            className="text-title-md text-text-primary"
+          >
             {title}
           </h2>
           {description ? (

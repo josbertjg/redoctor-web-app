@@ -107,6 +107,8 @@ export function StaggeredText({
       </span>
       <m.span
         aria-hidden="true"
+        // Hidden in the HTML until the entrance: see globals.css.
+        data-entrance
         initial="hidden"
         animate={play ? 'shown' : 'hidden'}
         variants={container}
@@ -119,6 +121,7 @@ export function StaggeredText({
             {wordIndex > 0 && ' '}
             {by === 'word' ? (
               <m.span
+                data-entrance
                 variants={piece}
                 transition={transition}
                 className="inline-block"
@@ -135,6 +138,7 @@ export function StaggeredText({
                   letters(run.text).map((char, index) => (
                     <m.span
                       key={`${String(runIndex)}-${String(index)}`}
+                      data-entrance
                       variants={piece}
                       transition={transition}
                       className={cn('inline-block', run.className)}

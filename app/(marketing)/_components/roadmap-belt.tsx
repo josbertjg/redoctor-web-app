@@ -8,7 +8,6 @@ import { cn } from '@/app/lib/utils';
 import {
   m,
   readDuration,
-  useAnimationFrame,
   useCoarsePointer,
   useMotionValue,
   useReducedMotion,
@@ -20,6 +19,11 @@ function wrap(min: number, max: number, value: number): number {
   const range = max - min;
   return ((((value - min) % range) + range) % range) + min;
 }
+
+/** The screens where the ribbon stands still: the `touch:` variant's and reduced motion's. */
+const standsStill = () =>
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+  window.matchMedia('(hover: none) and (pointer: coarse)').matches;
 
 /** The horizontal shift of a computed `transform` (a 2D matrix), in px. */
 function shiftOf(transform: string): number {
@@ -56,6 +60,8 @@ export function RoadmapBelt({ label, children }: RoadmapBeltProps) {
   const [driven, setDriven] = useState(false);
   const dragging = useRef(false);
   const pace = useRef(0);
+  /** The copy's width for the frame loop, which must not restart when it changes. */
+  const copyWidth = useRef(0);
   const base = useMotionValue(0);
   const x = useTransform(base, (value) =>
     copy > 0 ? wrap(-2 * copy, -copy, value) : value,
@@ -64,7 +70,9 @@ export function RoadmapBelt({ label, children }: RoadmapBeltProps) {
   useEffect(() => {
     const element = track.current;
     const first = element?.firstElementChild;
-    if (!element || !(first instanceof HTMLElement) || still) return;
+    // Read again here: during hydration `still` is the server's guess (false).
+    if (!element || !(first instanceof HTMLElement) || still || standsStill())
+      return;
     const measure = () =>
       first.getBoundingClientRect().width +
       (parseFloat(getComputedStyle(element).columnGap) || 0);
@@ -76,12 +84,14 @@ export function RoadmapBelt({ label, children }: RoadmapBeltProps) {
     element.style.animation = 'none';
     element.style.transform = `translateX(${String(-width + rolled)}px)`;
     pace.current = width / readDuration('marquee');
+    copyWidth.current = width;
     setCopy(width);
     setDriven(true);
     if (typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver(() => {
       const next = measure();
       pace.current = next / readDuration('marquee');
+      copyWidth.current = next;
       setCopy(next);
     });
     observer.observe(first);
@@ -92,12 +102,45 @@ export function RoadmapBelt({ label, children }: RoadmapBeltProps) {
 
   // Rolls unless a pointer rests on the ribbon or the keyboard focuses it
   // (the same pause the CSS phase has; a drag's click focuses it too, so
-  // only a visible focus counts), or a hand holds it.
-  useAnimationFrame((_, delta) => {
-    if (!driven || still || dragging.current || copy === 0) return;
-    if (region.current?.matches(':hover, :focus-visible')) return;
-    base.set(base.get() - pace.current * (delta / 1000));
-  });
+  // only a visible focus counts), or a hand holds it. The frame loop runs
+  // only while JavaScript drives the ribbon and it is on screen: off screen,
+  // nothing wakes the page every frame.
+  useEffect(() => {
+    const element = region.current;
+    if (!driven || still || !element) return;
+    let frame = 0;
+    let last: number | null = null;
+    const tick = (time: number) => {
+      const delta = last === null ? 0 : time - last;
+      last = time;
+      frame = requestAnimationFrame(tick);
+      if (dragging.current || copyWidth.current === 0) return;
+      if (element.matches(':hover, :focus-visible')) return;
+      base.set(base.get() - pace.current * (delta / 1000));
+    };
+    const start = () => {
+      if (frame !== 0) return;
+      last = null;
+      frame = requestAnimationFrame(tick);
+    };
+    const stop = () => {
+      cancelAnimationFrame(frame);
+      frame = 0;
+    };
+    if (typeof IntersectionObserver === 'undefined') {
+      start();
+      return stop;
+    }
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry?.isIntersecting) start();
+      else stop();
+    });
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      stop();
+    };
+  }, [base, driven, still]);
 
   return (
     <div

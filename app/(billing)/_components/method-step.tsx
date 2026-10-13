@@ -111,14 +111,18 @@ export function MethodStep({
       ) : (
         <>
           {noRate ? (
-            <p className="flex animate-fade-in items-start gap-3 rounded-lg bg-warning-50 p-3 text-body-md text-warning-800">
+            // Said aloud as it appears: the tap that raised it gave no other answer.
+            <p
+              role="status"
+              className="flex animate-fade-in items-start gap-3 rounded-lg bg-warning-50 p-3 text-body-md text-warning-800"
+            >
               <Icon icon={Schedule} size={24} className="shrink-0" />
               {t(
                 noRate === 'subscribed' ? 'pay.noRateSubscribed' : 'pay.noRate',
               )}
             </p>
           ) : null}
-          <ul className="flex flex-col gap-3">
+          <ul className="flex animate-fade-in flex-col gap-3">
             {methods.map(({ method, icon }) => {
               const starting = startingMethod === method;
               return (

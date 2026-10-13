@@ -92,12 +92,23 @@ export function Pricing() {
                       </div>
                       <p className="flex items-baseline gap-2.5">
                         <span className="text-title-xxl font-bold">
-                          $&nbsp;
-                          <span data-piece={`amount-${plan.key}`}>
+                          {/* The figure counts up from zero as the card lands:
+                              readers hear the price, never the count. */}
+                          <span className="sr-only">
+                            $&nbsp;
                             {format.number(plan.price, {
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2,
                             })}
+                          </span>
+                          <span aria-hidden="true">
+                            $&nbsp;
+                            <span data-piece={`amount-${plan.key}`}>
+                              {format.number(plan.price, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </span>
                           </span>
                         </span>
                         <span

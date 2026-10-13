@@ -1,5 +1,7 @@
 'use client';
 
+import { useRef } from 'react';
+
 import ChevronLeft from '@material-symbols/svg-400/rounded/chevron_left.svg?svgr';
 import ChevronRight from '@material-symbols/svg-400/rounded/chevron_right.svg?svgr';
 import { useTranslations } from 'next-intl';
@@ -64,6 +66,7 @@ export function MonthCalendar({
   const t = useTranslations('appointments.detail');
   const cells = monthCells(month);
   const canGoBack = month > today.slice(0, 7);
+  const next = useRef<HTMLButtonElement>(null);
 
   return (
     <div className="flex flex-col gap-2">
@@ -80,7 +83,11 @@ export function MonthCalendar({
               type="button"
               aria-label={t('previousMonth')}
               onClick={() => {
-                onMonthChange(shiftMonth(month, -1));
+                const previous = shiftMonth(month, -1);
+                onMonthChange(previous);
+                // Back on today's month this button goes: the focus stays
+                // on the calendar's other arrow instead of the page's start.
+                if (previous <= today.slice(0, 7)) next.current?.focus();
               }}
               className="flex size-touch items-center justify-center rounded-full text-primary outline-none hover:bg-white-200 focus-visible:ring-3 focus-visible:ring-ring/50"
             >
@@ -88,6 +95,7 @@ export function MonthCalendar({
             </button>
           ) : null}
           <button
+            ref={next}
             type="button"
             aria-label={t('nextMonth')}
             onClick={() => {
@@ -122,7 +130,11 @@ export function MonthCalendar({
             <button
               key={date}
               type="button"
-              aria-label={formatAppointmentDay(date)}
+              aria-label={
+                freeDays.has(date) && date >= today
+                  ? formatAppointmentDay(date)
+                  : t('dayWithoutSlots', { day: formatAppointmentDay(date) })
+              }
               aria-pressed={selected === date}
               onClick={() => {
                 onSelect(date);

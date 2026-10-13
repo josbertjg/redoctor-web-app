@@ -50,10 +50,14 @@ export function invitationOf(
   const url = new URL(redirect, 'https://redoctorapp.invalid');
   const token = /^\/i\/([^/]+)$/.exec(url.pathname)?.[1];
   if (token === undefined) return null;
-  return {
-    token: decodeURIComponent(token),
-    forSelf: url.searchParams.get('for') === 'self',
-  };
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(token);
+  } catch {
+    // A link cut in the middle of an escape: there is no invitation to name.
+    return null;
+  }
+  return { token: decoded, forSelf: url.searchParams.get('for') === 'self' };
 }
 
 export function planSignUp(

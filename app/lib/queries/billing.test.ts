@@ -318,7 +318,7 @@ describe('coupons', () => {
         new ApiError({
           kind: 'http',
           method: 'POST',
-          path: '/x',
+          path: '/billing/me/subscription',
           status: 409,
           code: 'ERR_5104',
           details: { reason: 'FIRST_SUBSCRIPTION_ONLY' },
@@ -330,12 +330,23 @@ describe('coupons', () => {
         new ApiError({
           kind: 'http',
           method: 'POST',
-          path: '/x',
+          path: '/billing/me/coupons/validate',
           status: 409,
           code: 'ERR_5109',
         }),
       ),
     ).toBe('billing.couponRejection.unavailable');
+    // A receipt or an attempt that is gone says nothing of the coupon.
+    expect(
+      couponRejectionKey(
+        new ApiError({
+          kind: 'http',
+          method: 'POST',
+          path: '/billing/me/invoices/:invoiceId/payment-intents',
+          status: 404,
+        }),
+      ),
+    ).toBeNull();
     expect(
       couponRejectionKey(
         new ApiError({ kind: 'network', method: 'POST', path: '/x' }),

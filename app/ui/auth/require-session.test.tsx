@@ -38,6 +38,7 @@ function session(overrides: Partial<Session>): Session {
     account: null,
     accountStatus: 'idle',
     accountError: null,
+    accountRetrying: false,
     retryAccount: vi.fn(),
     signOut: vi.fn(() => Promise.resolve()),
     ...overrides,
@@ -128,6 +129,29 @@ describe('RequireSession', () => {
     expect(
       screen.queryByRole('heading', { name: 'Esta página es para pacientes' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('lets an account with no sign-up behind it into the sign-up page itself', () => {
+    router.replace.mockClear();
+    renderWithIntl(
+      <SessionContext.Provider
+        value={session({
+          status: 'signed-in',
+          user,
+          account: toAccount(
+            meResponseSchema.parse(buildNewAccountMeResponse()),
+          ),
+          accountStatus: 'ready',
+        })}
+      >
+        <RequireSession fallback={<p>Esqueleto</p>} allowUnregistered>
+          <p>Formulario de registro</p>
+        </RequireSession>
+      </SessionContext.Provider>,
+    );
+
+    expect(screen.getByText('Formulario de registro')).toBeInTheDocument();
+    expect(router.replace).not.toHaveBeenCalled();
   });
 
   it('lets a patient in whose facet the API does not mark', () => {

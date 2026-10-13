@@ -54,12 +54,18 @@ test('the link is a credential: never indexed, never a referrer, a preview with 
   page,
 }) => {
   await answerInvitation(page, buildInvitationResponse());
-  await page.goto(`/i/${token}`);
+  const response = await page.goto(`/i/${token}`);
 
+  // Even for a crawler that reads no HTML (robots.txt lets it fetch the page).
+  expect(response?.headers()['x-robots-tag']).toBe('noindex, nofollow');
   await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute(
     'content',
     /noindex/,
   );
+  // The site's own card: a page that sets its Open Graph keeps the image.
+  await expect(
+    page.locator('meta[property="og:image"]').first(),
+  ).toHaveAttribute('content', /\/opengraph-image/);
   await expect(page.locator('meta[name="referrer"]')).toHaveAttribute(
     'content',
     'no-referrer',

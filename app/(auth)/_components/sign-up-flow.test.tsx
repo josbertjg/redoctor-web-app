@@ -21,7 +21,10 @@ import {
 import { validToken } from '../../../tests/msw/handlers/identity';
 
 const router = vi.hoisted(() => ({ replace: vi.fn(), push: vi.fn() }));
-vi.mock('next/navigation', () => ({ useRouter: () => router }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => router,
+  usePathname: () => '/sign-up',
+}));
 
 const user = {
   id: 'uid-1',
@@ -40,6 +43,7 @@ function session(me: Parameters<typeof meResponseSchema.parse>[0]): Session {
     account: toAccount(meResponseSchema.parse(me)),
     accountStatus: 'ready',
     accountError: null,
+    accountRetrying: false,
     retryAccount: vi.fn(),
     signOut: vi.fn(() => Promise.resolve()),
   };

@@ -51,6 +51,14 @@ describe('scrubText', () => {
       scrubText('Failed to load https://redoctorapp.com/i/abc?origin=x now'),
     ).toBe('Failed to load https://redoctorapp.com/i/[token] now');
   });
+
+  it('masks a path inside quotes or brackets, and only the /i route', () => {
+    expect(scrubText('Cannot read "/i/abc123" (id)')).toBe(
+      'Cannot read "/i/[token]" (id)',
+    );
+    expect(scrubText("at ('/i/abc123')")).toBe("at ('/i/[token]')");
+    expect(scrubText('/sign-up/i/abc')).toBe('/sign-up/i/abc');
+  });
 });
 
 describe('scrubBreadcrumb', () => {
@@ -122,6 +130,38 @@ describe('scrubEvent', () => {
       breadcrumbs: [{ category: 'navigation', data: { to: '/i/[token]' } }],
     });
   });
+
+  it('cleans the request path the SDKs keep in contexts and extras', () => {
+    const event = scrubEvent({
+      contexts: {
+        nextjs: {
+          request_path: '/daily-summary/unsubscribe?token=secret',
+          router_kind: 'App Router',
+        },
+        trace: { links: ['/i/abc123?origin=email-12'] },
+      },
+      extra: { url: 'https://redoctorapp.com/i/abc123' },
+    });
+
+    expect(event).toEqual({
+      contexts: {
+        nextjs: {
+          request_path: '/daily-summary/unsubscribe',
+          router_kind: 'App Router',
+        },
+        trace: { links: ['/i/[token]'] },
+      },
+      extra: { url: 'https://redoctorapp.com/i/[token]' },
+    });
+  });
+
+  it('keeps the user agent however the SDK spells it', () => {
+    expect(
+      scrubEvent({
+        request: { headers: { 'User-Agent': 'Safari', Referer: '/i/abc' } },
+      }).request.headers,
+    ).toEqual({ 'user-agent': 'Safari' });
+  });
 });
 
 describe('scrubAnalyticsEvent', () => {
@@ -145,5 +185,26 @@ describe('scrubAnalyticsEvent', () => {
       $set_once: { $initial_current_url: 'https://redoctorapp.com/a/1' },
     });
     expect(scrubAnalyticsEvent(null)).toBe(null);
+  });
+
+  it('cleans every URL property by its name, the session entry included', () => {
+    expect(
+      scrubAnalyticsEvent({
+        properties: {
+          $session_entry_url:
+            'https://redoctorapp.com/i/abc?origin=whatsapp-invitation',
+          $session_entry_pathname: '/i/abc',
+          $session_entry_referrer: '$direct',
+          $referring_domain: 'l.instagram.com',
+        },
+      }),
+    ).toEqual({
+      properties: {
+        $session_entry_url: 'https://redoctorapp.com/i/[token]',
+        $session_entry_pathname: '/i/[token]',
+        $session_entry_referrer: '$direct',
+        $referring_domain: 'l.instagram.com',
+      },
+    });
   });
 });

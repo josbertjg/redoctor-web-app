@@ -30,6 +30,7 @@ async function failure(promise: Promise<unknown>): Promise<ApiError> {
 
 afterEach(() => {
   setApiErrorReporter(undefined);
+  vi.unstubAllGlobals();
 });
 
 describe('buildApiUrl', () => {
@@ -230,6 +231,80 @@ describe('apiFetch', () => {
         kind: 'invalid-response',
       },
     ]);
+  });
+
+  it('does not report an answer the flow expects', async () => {
+    const reports: unknown[] = [];
+    setApiErrorReporter((report) => reports.push(report));
+    server.use(
+      http.get(apiUrl('/gone'), () =>
+        HttpResponse.json(errorEnvelope('ERR_9002', 'gone'), { status: 404 }),
+      ),
+    );
+
+    const error = await failure(
+      apiFetch({
+        path: '/gone',
+        schema: pingSchema,
+        expected: (candidate) => candidate.status === 404,
+      }),
+    );
+
+    expect(error).toMatchObject({ kind: 'http', status: 404 });
+    expect(reports).toEqual([]);
+  });
+
+  it('takes a 2xx body that is not JSON as a broken contract', async () => {
+    server.use(
+      http.get(
+        apiUrl('/html'),
+        () =>
+          new HttpResponse('<html>gateway</html>', {
+            status: 200,
+            headers: { 'Content-Type': 'text/html' },
+          }),
+      ),
+    );
+
+    const error = await failure(
+      apiFetch({ path: '/html', schema: pingSchema }),
+    );
+    expect(error).toMatchObject({ kind: 'invalid-response', status: 200 });
+  });
+
+  it('retries a write sent while offline: it never left', async () => {
+    vi.stubGlobal('navigator', { onLine: false });
+    let calls = 0;
+    server.use(
+      http.post(apiUrl('/offline'), () => {
+        calls += 1;
+        return HttpResponse.error();
+      }),
+    );
+
+    const error = await failure(
+      apiFetch({ method: 'POST', path: '/offline', schema: pingSchema }),
+    );
+    expect(error.kind).toBe('network');
+    expect(calls).toBe(3);
+  });
+
+  it('keeps the doubt of a write whose connection dropped after it left', async () => {
+    let calls = 0;
+    server.use(
+      http.post(apiUrl('/reschedule'), () => {
+        calls += 1;
+        // The phone loses its signal while the answer is on its way.
+        vi.stubGlobal('navigator', { onLine: false });
+        return HttpResponse.error();
+      }),
+    );
+
+    const error = await failure(
+      apiFetch({ method: 'POST', path: '/reschedule', schema: pingSchema }),
+    );
+    expect(error.kind).toBe('uncertain');
+    expect(calls).toBe(1);
   });
 
   it('stops when the caller cancels', async () => {

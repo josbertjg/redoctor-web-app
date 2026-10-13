@@ -17,9 +17,30 @@ export function destinationAfterSignIn(
   account: Account,
   redirect: string | null | undefined,
 ): string {
-  const back = redirect && isSafeRedirect(redirect) ? redirect : undefined;
+  const back = unwrapAuthPages(
+    redirect && isSafeRedirect(redirect) ? redirect : undefined,
+  );
   if (needsSignUp(account)) return routes.signUp(back);
   if (back) return back;
   if (canUseSpecialistArea(account)) return routes.specialistHome();
   return routes.home();
+}
+
+/**
+ * A way back that is itself the sign-in or the sign-up page (someone signed
+ * out on the sign-up page, then in again) leads where that page would have
+ * led: never one auth page wrapped in another.
+ */
+function unwrapAuthPages(back: string | undefined): string | undefined {
+  let current = back;
+  // A few levels at most: each one is a page that could only have wrapped one.
+  for (let level = 0; current !== undefined && level < 4; level += 1) {
+    const url = new URL(current, 'https://redoctorapp.invalid');
+    if (url.pathname !== routes.signIn() && url.pathname !== routes.signUp()) {
+      return current;
+    }
+    const inner = url.searchParams.get('redirect');
+    current = inner !== null && isSafeRedirect(inner) ? inner : undefined;
+  }
+  return current;
 }

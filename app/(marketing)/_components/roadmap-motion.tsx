@@ -6,6 +6,8 @@ import type { ReactNode } from 'react';
 import {
   arcTo,
   Choreographed,
+  houseTransition,
+  piece,
   readDuration,
   readEase,
   stagger,
@@ -14,9 +16,6 @@ import type {
   AnimationSequence,
   DOMKeyframesDefinition,
 } from '@/app/ui/motion';
-
-/** The section's pieces, as roadmap.tsx marks them. */
-const piece = (name: string) => `[data-piece="${name}"]`;
 
 /** Seconds between two cards that land one after the other. */
 const cardBeat = 0.1;
@@ -34,10 +33,7 @@ const launchPad = { x: -1.5, y: 1 };
  */
 export function RoadmapMotion({ children }: { children: ReactNode }) {
   const { hidden, sequence } = useMemo(() => {
-    const step = {
-      duration: readDuration('entrance'),
-      ease: readEase('entrance'),
-    };
+    const step = houseTransition('entrance');
     const flight = arcTo({ from: launchPad, control: { x: -0.9, y: -0.35 } });
     const hidden: Record<string, DOMKeyframesDefinition> = {
       [piece('rocket')]: {

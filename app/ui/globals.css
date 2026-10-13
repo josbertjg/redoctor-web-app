@@ -35,7 +35,8 @@
   --animate-fade-out: fade-out var(--duration-fast) var(--ease-house) both;
   /* The sheet on phones (app/ui/sheet.tsx): up from the bottom edge, and
      down from wherever a drag left it (no `from`: it starts where it is). */
-  --animate-sheet-up: sheet-up var(--duration-base) var(--ease-house) both;
+  /* Backwards only: once in, the sheet's transform is Motion's to drag. */
+  --animate-sheet-up: sheet-up var(--duration-base) var(--ease-house) backwards;
   --animate-sheet-down: sheet-down var(--duration-fast) var(--ease-house) both;
   /* A ribbon of cards that moves by itself: the track holds the list twice
      and slides one list's width, so the loop never shows a seam. */
@@ -184,5 +185,26 @@
   body {
     background-color: var(--color-background);
     color: var(--color-text-primary);
+    /* A long word or a pasted link wraps instead of widening the page
+       sideways on a phone (AGENTS.md §8.5). */
+    overflow-wrap: break-word;
+  }
+
+  /* An entrance's first frame is written into the HTML (Motion's
+     `initial`, app/ui/motion): under reduced motion every piece shows where
+     it settles, from the first paint — the server cannot know the setting.
+     The landing repeats this in a <noscript> for browsers without
+     JavaScript. */
+  @media (prefers-reduced-motion: reduce) {
+    [data-entrance] {
+      opacity: 1 !important;
+      transform: none !important;
+    }
+  }
+
+  /* A view's heading takes the focus when the view changes
+     (app/hooks/use-focus-heading.ts): it is not a control, so no ring. */
+  :is(h1, h2)[tabindex='-1']:focus {
+    outline: none;
   }
 }

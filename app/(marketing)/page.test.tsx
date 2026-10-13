@@ -10,6 +10,7 @@ import HomePage from './page';
 // The splash has played this session: the page is the landing alone.
 vi.mock('next/headers', () => ({
   cookies: () => Promise.resolve({ has: () => true }),
+  headers: () => Promise.resolve(new Headers()),
 }));
 
 const renderHome = async () => renderWithIntl(await HomePage());

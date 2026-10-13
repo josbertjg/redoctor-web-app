@@ -27,3 +27,11 @@ describe('identity documents', () => {
     expect(formatIdentityDocument('E', '81.234.567')).toBe('E-81234567');
   });
 });
+
+describe('documentNumberProblem, with letters', () => {
+  it('asks for the digits instead of dropping the letters', () => {
+    expect(documentNumberProblem('AT123456')).toBe('onlyDigits');
+    expect(documentNumberProblem('12.345.678')).toBeNull();
+    expect(documentNumberProblem('12 345-678')).toBeNull();
+  });
+});

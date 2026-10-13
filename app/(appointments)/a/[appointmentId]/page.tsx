@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 
 import { pageNamespaces } from '@/app/lib/i18n/client-messages';
+import { brandOpenGraph } from '@/app/lib/site';
 
 import { LinkOriginTracker } from '@/app/ui/analytics/link-origin-tracker';
 import { MessagesScope } from '@/app/ui/messages-scope';
@@ -18,12 +19,20 @@ import { AppointmentFlow } from '../../_components/appointment-flow';
  */
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations('appointments.detail');
+  const [t, site] = await Promise.all([
+    getTranslations('appointments.detail'),
+    getTranslations('metadata'),
+  ]);
   return {
     title: t('metaTitle'),
     description: t('metaDescription'),
     robots: { index: false, follow: false },
-    openGraph: { title: t('metaTitle'), description: t('metaDescription') },
+    openGraph: brandOpenGraph({
+      title: t('metaTitle'),
+      description: t('metaDescription'),
+      siteName: site('siteName'),
+      imageAlt: site('ogImageAlt'),
+    }),
   };
 }
 

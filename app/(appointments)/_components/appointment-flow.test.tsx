@@ -9,7 +9,10 @@ import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 import { meResponseSchema, toAccount } from '@/app/lib/schemas/identity';
 
 import { Toaster } from '@/app/ui/toast';
-import { appointmentIds } from '@/tests/factories/appointments';
+import {
+  appointmentIds,
+  buildPendingReviews,
+} from '@/tests/factories/appointments';
 import { renderWithPageMessages } from '@/tests/render';
 
 import {
@@ -25,6 +28,7 @@ import {
 } from '../../../tests/factories/identity';
 import { apiUrl, errorEnvelope } from '../../../tests/msw/api-url';
 import { validToken } from '../../../tests/msw/handlers/identity';
+import { pendingReviewsHandler } from '../../../tests/msw/handlers/reviews';
 import { server } from '../../../tests/msw/server';
 
 const user = {
@@ -44,6 +48,7 @@ function signedIn(me = buildMeResponse()): Session {
     account: toAccount(meResponseSchema.parse(me)),
     accountStatus: 'ready',
     accountError: null,
+    accountRetrying: false,
     retryAccount: vi.fn(),
     signOut: vi.fn(() => Promise.resolve()),
   };
@@ -338,6 +343,37 @@ describe('AppointmentFlow', () => {
     ).toBeVisible();
     expect(
       screen.queryByRole('button', { name: 'Reprogramar' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('lets the patient rate a finished consultation on its own page, as email 15 promises', async () => {
+    server.use(pendingReviewsHandler(buildPendingReviews()));
+    renderAppointment(appointmentIds.completed);
+
+    expect(
+      await screen.findByRole('heading', { name: 'Califica tu consulta' }),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('radio', { name: '5 estrellas' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Enviar calificación' }),
+    );
+
+    expect(
+      await screen.findByText(/Gracias por calificar a/),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('heading', { name: 'Califica tu consulta' }),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it('asks for no rating when the consultation was rated already', async () => {
+    renderAppointment(appointmentIds.completed);
+
+    expect(await status('Finalizada')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Califica tu consulta' }),
     ).not.toBeInTheDocument();
   });
 });

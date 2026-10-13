@@ -30,10 +30,22 @@ export function isTransientStatus(status: number): boolean {
 }
 
 /*
+ * The browser hides why a request failed, so only being offline proves it
+ * never left — and only when the browser was offline *before* sending: going
+ * offline after the request left (a write whose answer was lost) proves
+ * nothing. Node also has a `navigator`, without `onLine`: only an explicit
+ * `false` counts.
+ */
+export function isOffline(): boolean {
+  // Typed as unknown on purpose: the DOM types promise a boolean, Node has none.
+  const onLine: unknown =
+    typeof navigator === 'undefined' ? undefined : navigator.onLine;
+  return onLine === false;
+}
+
+/*
  * Node (server-side fetch, undici) tells why a connection failed: these codes
- * happen before a single byte is sent. The browser hides the reason, so there
- * only being offline proves the request never left. Node also has a
- * `navigator`, without `onLine`: only an explicit `false` counts.
+ * happen before a single byte is sent.
  */
 const connectFailureCodes = new Set([
   'ECONNREFUSED',
@@ -44,11 +56,15 @@ const connectFailureCodes = new Set([
   'UND_ERR_CONNECT_TIMEOUT',
 ]);
 
-export function neverReachedServer(error: unknown): boolean {
-  // Typed as unknown on purpose: the DOM types promise a boolean, Node has none.
-  const onLine: unknown =
-    typeof navigator === 'undefined' ? undefined : navigator.onLine;
-  if (onLine === false) return true;
+/**
+ * Whether a failed request certainly never reached the server: the browser
+ * was offline when it was sent, or the connection itself failed.
+ */
+export function neverReachedServer(
+  error: unknown,
+  offlineWhenSent = false,
+): boolean {
+  if (offlineWhenSent) return true;
   const cause =
     error instanceof Error && typeof error.cause === 'object'
       ? (error.cause as { code?: unknown } | null)

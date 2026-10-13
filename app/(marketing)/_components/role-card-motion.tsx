@@ -5,17 +5,15 @@ import type { ReactNode } from 'react';
 
 import {
   Choreographed,
+  houseTransition,
+  piece,
   readDuration,
-  readEase,
   stagger,
 } from '@/app/ui/motion';
 import type {
   AnimationSequence,
   DOMKeyframesDefinition,
 } from '@/app/ui/motion';
-
-/** The card's pieces, as how-it-works.tsx marks them. */
-const piece = (name: string) => `[data-piece="${name}"]`;
 
 /** Seconds between two steps that enter one after the other. */
 const stepBeat = 0.1;
@@ -36,10 +34,7 @@ type RoleCardMotionProps = {
  */
 export function RoleCardMotion({ delay = 0, children }: RoleCardMotionProps) {
   const { hidden, sequence } = useMemo(() => {
-    const step = {
-      duration: readDuration('entrance'),
-      ease: readEase('entrance'),
-    };
+    const step = houseTransition('entrance');
     const at = (seconds: number) => delay + seconds;
     const hidden: Record<string, DOMKeyframesDefinition> = {
       [piece('card')]: { opacity: 0, y: 32 },

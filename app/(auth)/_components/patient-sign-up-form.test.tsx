@@ -11,7 +11,10 @@ import { latestAdultBirthDate } from '@/app/lib/format/date-of-birth';
 import { renderWithIntl } from '@/tests/render';
 
 import { PatientSignUpForm, type SignUpParts } from './patient-sign-up-form';
-import { takenDocumentNumber } from '../../../tests/factories/identity';
+import {
+  buildNewAccountMeResponse,
+  takenDocumentNumber,
+} from '../../../tests/factories/identity';
 import { apiUrl } from '../../../tests/msw/api-url';
 import { validToken } from '../../../tests/msw/handlers/identity';
 import { server } from '../../../tests/msw/server';
@@ -234,6 +237,10 @@ describe('PatientSignUpForm', () => {
           { code: 'ERR_9999', message: 'Boom' },
           { status: 500 },
         ),
+      ),
+      // A 5xx may hide a write that landed: the account says it did not.
+      http.get(apiUrl('/identity/me'), () =>
+        HttpResponse.json(buildNewAccountMeResponse()),
       ),
     );
     const { onDone } = renderForm({ register: true, personalData: false });

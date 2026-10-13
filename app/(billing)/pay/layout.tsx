@@ -4,9 +4,10 @@ import { routes } from '@/app/lib/routes';
 
 import { RequireSession } from '@/app/ui/auth/require-session';
 import { SessionButton } from '@/app/ui/auth/session-button';
+import { PageFrame } from '@/app/ui/layout/page-frame';
 import { SiteHeader } from '@/app/ui/layout/site-header';
 
-import { PayPageSkeleton } from '../_components/pay-skeleton';
+import { PaySkeleton } from '../_components/pay-skeleton';
 
 /*
  * `/pay` (M13) is the specialist's own page, so the session comes first
@@ -22,9 +23,11 @@ export default async function PayLayout({ children }: LayoutProps<'/pay'>) {
       <SiteHeader homeLabel={t('homeLabel')}>
         <SessionButton redirect={routes.payment()} />
       </SiteHeader>
-      <RequireSession facet="specialist" fallback={<PayPageSkeleton />}>
-        {children}
-      </RequireSession>
+      <PageFrame>
+        <RequireSession facet="specialist" fallback={<PaySkeleton />}>
+          {children}
+        </RequireSession>
+      </PageFrame>
     </>
   );
 }

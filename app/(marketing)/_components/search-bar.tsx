@@ -7,6 +7,8 @@ import { cn } from '@/app/lib/utils';
 
 import { Icon, type IconComponent } from '@/app/ui/icons';
 
+import { SearchForm } from './search-form';
+
 /*
  * The search bar (Figma): in the hero, a white pill, 56 px tall, with the
  * specialty and the city side by side, one short line between them and
@@ -57,7 +59,7 @@ export function SearchBar({
   const style = variants[variant];
 
   return (
-    <form
+    <SearchForm
       role="search"
       aria-label={label ?? t('label')}
       className={cn(
@@ -90,7 +92,7 @@ export function SearchBar({
         <Icon icon={Search} size={24} />
         <span className={style.label}>{t('submit')}</span>
       </button>
-    </form>
+    </SearchForm>
   );
 }
 

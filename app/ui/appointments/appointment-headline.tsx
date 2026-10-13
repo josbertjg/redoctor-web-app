@@ -37,7 +37,7 @@ export function AppointmentHeadline({
       className="flex animate-fade-up flex-col gap-4 rounded-2xl bg-pure-white p-5 shadow-md"
     >
       <div className="flex items-center gap-3">
-        <Avatar name={name} src={specialist.photo} size="lg" />
+        <Avatar name={name} src={specialist.photo} size="lg" decorative />
         <div className="flex min-w-0 flex-col gap-0.5">
           <h2 id={headingId} className="text-title-md text-text-primary">
             {name}
@@ -47,9 +47,10 @@ export function AppointmentHeadline({
               {specialist.specialties.join(' · ')}
             </p>
           ) : null}
+          {/* A touch target tall (§8.5); the negative margin keeps the line where it was. */}
           <Link
             href={routes.specialist(specialist.id)}
-            className="self-start rounded-sm text-label-lg text-primary outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="-my-3 inline-flex min-h-touch items-center self-start rounded-sm text-label-lg text-primary outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             {t('seeProfile')}
           </Link>

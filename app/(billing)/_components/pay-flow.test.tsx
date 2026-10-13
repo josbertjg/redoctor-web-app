@@ -53,6 +53,7 @@ const signedIn: Session = {
   account: toAccount(meResponseSchema.parse(buildSpecialistMeResponse())),
   accountStatus: 'ready',
   accountError: null,
+  accountRetrying: false,
   retryAccount: vi.fn(),
   signOut: vi.fn(() => Promise.resolve()),
 };
@@ -612,7 +613,7 @@ describe('PayFlow', () => {
       }),
     ).toBeInTheDocument();
     server.use(subscriptionHandler(null));
-    await userEvent.click(screen.getByRole('button', { name: 'Refrescar' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
     expect(
       await screen.findByRole('heading', {
         level: 1,

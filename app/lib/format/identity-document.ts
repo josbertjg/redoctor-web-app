@@ -12,7 +12,8 @@ export type DocumentType = (typeof documentTypes)[number];
 
 export const documentNumberLength = { min: 6, max: 8 } as const;
 
-export type DocumentNumberProblem = 'empty' | 'minLength' | 'maxLength';
+export type DocumentNumberProblem =
+  'empty' | 'onlyDigits' | 'minLength' | 'maxLength';
 
 /** The digits alone: «12.345.678» is 12345678. */
 export function cleanDocumentNumber(value: string): string {
@@ -24,6 +25,9 @@ export function documentNumberProblem(
 ): DocumentNumberProblem | null {
   const digits = cleanDocumentNumber(value);
   if (digits === '') return 'empty';
+  // Dots, spaces and hyphens are how people write it; a letter (a passport's
+  // «AT…») is not a digit the API takes, and dropping it would save another number.
+  if (/[^\d.\s-]/.test(value.trim())) return 'onlyDigits';
   if (digits.length < documentNumberLength.min) return 'minLength';
   if (digits.length > documentNumberLength.max) return 'maxLength';
   return null;

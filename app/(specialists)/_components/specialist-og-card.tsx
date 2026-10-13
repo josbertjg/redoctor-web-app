@@ -97,7 +97,17 @@ export function SpecialistOgCard({
               {verifiedLabel}
             </div>
           ) : null}
-          <div style={{ fontSize: 64, fontWeight: 700, lineHeight: 1.1 }}>
+          {/* At most two lines, a size down for a long name: the specialties
+              and the accent bars below must stay on the card. */}
+          <div
+            style={{
+              display: 'block',
+              fontSize: name.length > 36 ? 52 : 64,
+              fontWeight: 700,
+              lineHeight: 1.1,
+              lineClamp: 2,
+            }}
+          >
             {name}
           </div>
           {specialties ? (

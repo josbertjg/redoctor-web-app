@@ -1,7 +1,11 @@
 import { queryOptions } from '@tanstack/react-query';
 
 import { apiFetch } from '../api/client';
-import { isApiError } from '../api/errors';
+import {
+  couponRejectionByCode,
+  type CouponRejectionKey,
+  isApiError,
+} from '../api/errors';
 import { createWriteOnceGuard } from '../api/write-once';
 import {
   couponResponseSchema,
@@ -33,7 +37,7 @@ import {
   type Subscription,
 } from '../schemas/billing';
 
-import type { TokenHolder } from './appointments';
+import type { TokenHolder } from '../api/types';
 
 /*
  * The specialist's billing, read and written in the browser with their
@@ -47,6 +51,8 @@ export const billingKeys = {
   plans: () => ['billing', 'plans'] as const,
   subscription: (userId: string) =>
     ['billing', 'subscription', userId] as const,
+  /** Every receipt owed by the person's subscriptions, to read them all again. */
+  payables: (userId: string) => ['billing', 'payable', userId] as const,
   payable: (userId: string, subscriptionId: string) =>
     ['billing', 'payable', userId, subscriptionId] as const,
   savedCoupons: (userId: string) => ['billing', 'coupons', userId] as const,
@@ -106,8 +112,12 @@ async function readInvoice(
   return invoice;
 }
 
-/** The open receipts of a subscription fit in the first page. */
-const openInvoicesPageSize = 20;
+/**
+ * The open receipts, as many as the API gives in one page: the oldest of
+ * them is the one owed, so a page that leaves some out could pick a newer
+ * one (or none). More than a hundred open at once does not happen.
+ */
+const openInvoicesPageSize = 100;
 
 /**
  * The receipt left to pay, with its attempts: what tells «you have to pay»
@@ -193,14 +203,6 @@ export async function validateCoupon(
   return coupon;
 }
 
-export type CouponRejectionKey = `billing.couponRejection.${
-  | 'invalid'
-  | 'expired'
-  | 'usageLimit'
-  | 'firstSubscriptionOnly'
-  | 'wrongPlan'
-  | 'unavailable'}`;
-
 const rejectionByReason: Readonly<Record<string, CouponRejectionKey>> = {
   CODE_NOT_FOUND: 'billing.couponRejection.invalid',
   CODE_INACTIVE: 'billing.couponRejection.invalid',
@@ -213,13 +215,11 @@ const rejectionByReason: Readonly<Record<string, CouponRejectionKey>> = {
   PLAN_NOT_ELIGIBLE: 'billing.couponRejection.wrongPlan',
 };
 
-const rejectionByCode: Readonly<Record<string, CouponRejectionKey>> = {
-  ERR_5101: 'billing.couponRejection.invalid',
-  ERR_5103: 'billing.couponRejection.expired',
-  ERR_5104: 'billing.couponRejection.usageLimit',
-  ERR_5105: 'billing.couponRejection.wrongPlan',
-  ERR_5109: 'billing.couponRejection.unavailable',
-};
+/** The writes a coupon rides on: a 404 elsewhere (a receipt, an attempt) says nothing of the coupon. */
+const couponPaths: ReadonlySet<string> = new Set([
+  '/billing/me/coupons/validate',
+  '/billing/me/subscription',
+]);
 
 /**
  * Why a coupon is no good, in the app's words, or null when the failure is
@@ -229,6 +229,7 @@ const rejectionByCode: Readonly<Record<string, CouponRejectionKey>> = {
  */
 export function couponRejectionKey(error: unknown): CouponRejectionKey | null {
   if (!isApiError(error) || error.kind !== 'http') return null;
+  if (!couponPaths.has(error.path)) return null;
   if (error.status === 404) return 'billing.couponRejection.invalid';
   const reason = error.details?.reason;
   if (typeof reason === 'string') {
@@ -237,7 +238,7 @@ export function couponRejectionKey(error: unknown): CouponRejectionKey | null {
   }
   return error.code === undefined
     ? null
-    : (rejectionByCode[error.code] ?? null);
+    : (couponRejectionByCode[error.code] ?? null);
 }
 
 /** What taking a plan left: the subscription and, when it must be paid, its receipt. */

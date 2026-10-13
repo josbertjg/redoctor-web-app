@@ -45,7 +45,9 @@ export type DayPart = 'morning' | 'afternoon' | 'evening';
 
 /** The app's parts of the day: before 12:00, until 17:59, and from 18:00. */
 export function dayPartOf(time: string): DayPart {
-  const hours = Number(time.slice(0, 2));
+  // «9:00» and «09:00» alike: the hour is what comes before the colon.
+  const hours = Number(/^(\d{1,2}):/.exec(time)?.[1] ?? NaN);
+  if (Number.isNaN(hours)) return 'morning';
   if (hours < 12) return 'morning';
   if (hours < 18) return 'afternoon';
   return 'evening';

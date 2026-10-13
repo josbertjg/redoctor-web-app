@@ -8,7 +8,7 @@ import { Button } from '@/app/ui/button';
 
 /*
  * The reviews could not load (the rest of the profile did): say so and offer
- * «Refrescar», which renders the page again on the server. The button stays
+ * «Reintentar», which renders the page again on the server. The button stays
  * live and shows its busy state meanwhile (AGENTS.md §8.3).
  */
 export function ReviewsLoadError({

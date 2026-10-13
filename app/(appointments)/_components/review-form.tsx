@@ -14,7 +14,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { track } from '@/app/lib/analytics/track';
-import { isApiError } from '@/app/lib/api/errors';
+import { failureMessageKey, isApiError } from '@/app/lib/api/errors';
 import type { SessionUser } from '@/app/lib/firebase/client';
 import { reviewKeys, submitReview } from '@/app/lib/queries/reviews';
 import type { AppointmentSummary } from '@/app/lib/schemas/appointments';
@@ -31,8 +31,6 @@ import { StarsInput } from '@/app/ui/stars-input';
 import { TextArea } from '@/app/ui/text-area';
 import { toast } from '@/app/ui/toast';
 
-import { actionFailure } from './action-failure';
-
 type ReviewValues = {
   /** The radio's value, «1» to «5»; nothing chosen until the person chooses. */
   rating: string;
@@ -43,6 +41,8 @@ type ReviewFormProps = {
   appointment: AppointmentSummary;
   user: SessionUser;
   onSubmitted: () => void;
+  /** The consultation above the stars; off where the page already shows it (`/a/{id}`). */
+  withConsultation?: boolean;
 };
 
 /*
@@ -56,6 +56,7 @@ export function ReviewForm({
   appointment,
   user,
   onSubmitted,
+  withConsultation = true,
 }: ReviewFormProps) {
   const t = useTranslations();
   const queryClient = useQueryClient();
@@ -109,9 +110,14 @@ export function ReviewForm({
       onSubmitted();
     },
     onError: (error) => {
-      // Rated meanwhile, or gone: the pending list says so and the wall
-      // moves on, as the app does.
-      if (isApiError(error) && (error.status === 404 || error.status === 409)) {
+      // Rated meanwhile, gone, or refused: whenever the API answered, the
+      // pending list says whether this one is still to rate, and the wall
+      // moves on if not — insisting would lock the person in, as the app
+      // warns. A lost connection is not an answer.
+      if (
+        isApiError(error) &&
+        (error.kind === 'http' || error.kind === 'invalid-response')
+      ) {
         void queryClient.invalidateQueries({
           queryKey: reviewKeys.pending(user.id),
         });
@@ -120,7 +126,7 @@ export function ReviewForm({
   });
 
   const failureKey = submit.error
-    ? actionFailure(submit.error, 'reviews.rate.failed')
+    ? failureMessageKey(submit.error, 'reviews.rate.failed')
     : null;
   const { attendee, forDependent } = appointment;
 
@@ -135,9 +141,12 @@ export function ReviewForm({
         })(event);
       }}
     >
-      <AppointmentHeadline appointment={appointment} />
+      {withConsultation ? (
+        <AppointmentHeadline appointment={appointment} />
+      ) : null}
 
-      {appointment.reason || appointment.office.name || forDependent ? (
+      {withConsultation &&
+      (appointment.reason || appointment.office.name || forDependent) ? (
         <section className="flex animate-fade-up flex-col gap-2 rounded-2xl bg-pure-white p-5 shadow-md">
           {appointment.reason ? (
             <Fact icon={Stethoscope}>{appointment.reason}</Fact>
@@ -205,7 +214,7 @@ function Fact({
   return (
     <p className="flex items-center gap-2 text-body-md text-text-secondary">
       <Icon icon={icon} size={20} className="shrink-0 text-primary" />
-      {children}
+      <span className="min-w-0">{children}</span>
     </p>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -14,7 +14,7 @@ import {
 import { setTokenSource } from '@/app/lib/auth/token';
 import type { SessionUser } from '@/app/lib/firebase/client';
 import { reportPerson } from '@/app/lib/observability/report';
-import { meQueryOptions } from '@/app/lib/queries/identity';
+import { identityKeys } from '@/app/lib/queries/identity-keys';
 
 import { toast } from '@/app/ui/toast';
 
@@ -37,6 +37,10 @@ import {
  * on `/me` means this session is not valid, so the web signs out and says
  * so. Any other failure — no network, the API down, a broken answer — only
  * means the account could not be read, and that offers a retry.
+ *
+ * Firebase can also end a session on its own — signed out in another tab, a
+ * revoked or disabled account — or hand over to another person: whenever the
+ * person changes, what was theirs is forgotten here too.
  */
 
 type SessionState = { status: SessionStatus; user: SessionUser | null };
@@ -75,6 +79,8 @@ export function SessionProvider({
     status: 'resolving',
     user: null,
   });
+  /** Whose session the page last saw (Firebase's uid), to notice a change of person. */
+  const lastPerson = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -86,6 +92,13 @@ export function SessionProvider({
           setTokenSource(user ? user.getToken : null);
           if (user) rememberSessionHint();
           else forgetSessionHint();
+          const previous = lastPerson.current;
+          lastPerson.current = user?.id ?? null;
+          if (previous !== null && previous !== lastPerson.current) {
+            forgetPerson();
+            reportPerson(null);
+            queryClient.clear();
+          }
           setState({ status: user ? 'signed-in' : 'signed-out', user });
         });
       })
@@ -98,12 +111,20 @@ export function SessionProvider({
       cancelled = true;
       stop?.();
     };
-  }, []);
+  }, [queryClient]);
 
   const { user } = state;
   const query = useQuery({
-    ...meQueryOptions(user ?? nobody),
+    queryKey: identityKeys.me((user ?? nobody).id),
+    queryFn: async ({ signal }) => {
+      // The account's reader — zod and the API's contract — loads with the
+      // first signed-in page, not with every visitor's landing (§8.10).
+      const { readAccount } = await import('@/app/lib/queries/identity');
+      return readAccount(user ?? nobody, signal);
+    },
     enabled: user !== null,
+    // Facets change in the app, rarely while the web is open.
+    staleTime: 5 * 60_000,
   });
   const account = user !== null && query.data !== undefined ? query.data : null;
 
@@ -115,14 +136,19 @@ export function SessionProvider({
   }, [account]);
 
   const signOut = async () => {
-    const { signOutUser } = await import('@/app/lib/firebase/client');
-    await signOutUser();
-    setTokenSource(null);
-    forgetSessionHint();
-    forgetPerson();
-    reportPerson(null);
+    // Counted for the person leaving, before analytics forgets them.
     track('web_signout', {});
-    queryClient.clear();
+    try {
+      const { signOutUser } = await import('@/app/lib/firebase/client');
+      await signOutUser();
+    } finally {
+      // Even when Firebase could not be reached, nothing of the person stays.
+      setTokenSource(null);
+      forgetSessionHint();
+      forgetPerson();
+      reportPerson(null);
+      queryClient.clear();
+    }
   };
 
   const rejected = user !== null && rejectsSession(query.error);
@@ -150,7 +176,10 @@ export function SessionProvider({
     account,
     accountStatus,
     accountError: query.error,
+    accountRetrying: query.isError && query.isFetching,
     retryAccount: () => {
+      // Another tap while it is on its way would cancel it and start over.
+      if (query.isFetching) return;
       void query.refetch();
     },
     signOut,

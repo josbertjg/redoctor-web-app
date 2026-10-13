@@ -197,3 +197,29 @@ describe('statusChips', () => {
     expect(statusChips.NO_SHOW.label).toBe('noShow');
   });
 });
+
+describe('appointmentSchema, with values this version does not know', () => {
+  it('reads an unknown status as the stored one, else as pending', () => {
+    const base = buildAppointment();
+    expect(
+      appointmentSchema.parse({
+        ...base,
+        status: 'IN_PROGRESS',
+        persistedStatus: 'CONFIRMED',
+      }).status,
+    ).toBe('CONFIRMED');
+    expect(
+      appointmentSchema.parse({ ...base, status: 'IN_PROGRESS' }).status,
+    ).toBe('PENDING_CONFIRMATION');
+  });
+
+  it('reads an unknown price type as no price', () => {
+    const base = buildAppointment();
+    expect(
+      appointmentSchema.parse({
+        ...base,
+        price: { ...base.price, type: 'PER_MINUTE' },
+      }).price?.type,
+    ).toBeNull();
+  });
+});

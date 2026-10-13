@@ -40,17 +40,17 @@ export function BankPicker({
 }: BankPickerProps) {
   const t = useTranslations('billing.acquire.bank');
   const [query, setQuery] = useState('');
+  const [wasOpen, setWasOpen] = useState(open);
+  // Each opening starts from the whole list; cleared on opening, not on
+  // closing, so the list does not change while the sheet slides away.
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setQuery('');
+  }
   const results = searchBanks(query);
 
   return (
-    <Sheet
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) setQuery('');
-        onOpenChange(next);
-      }}
-      title={t('title')}
-    >
+    <Sheet open={open} onOpenChange={onOpenChange} title={t('title')}>
       <div className="flex flex-col gap-3">
         <TextField
           label={t('search')}

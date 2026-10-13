@@ -9,9 +9,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
 import { track } from '@/app/lib/analytics/track';
-import { isApiError } from '@/app/lib/api/errors';
+import { failureMessageKey, isApiError } from '@/app/lib/api/errors';
 import type { SessionUser } from '@/app/lib/firebase/client';
-import { formatInstant } from '@/app/lib/format/appointment-time';
+import {
+  formatInstant,
+  hourAgreement,
+} from '@/app/lib/format/appointment-time';
 import {
   appointmentKeys,
   confirmAppointment,
@@ -26,7 +29,6 @@ import { Button } from '@/app/ui/button';
 import { Icon } from '@/app/ui/icons';
 import { toast } from '@/app/ui/toast';
 
-import { actionFailure } from './action-failure';
 import { CalendarMenu } from './calendar-menu';
 import { CancelSheet } from './cancel-sheet';
 import { RescheduleSheet } from './reschedule-sheet';
@@ -78,70 +80,83 @@ export function AppointmentActionsCard({
           description: t('appointments.detail.confirmWindowClosedDescription'),
         });
       } else {
-        const failure = actionFailure(error);
+        const failure = failureMessageKey(
+          error,
+          'appointments.detail.actionFailed',
+        );
         if (failure) toast.error(t(failure));
       }
       void queryClient.invalidateQueries({ queryKey: key });
     },
   });
 
-  if (!actions.confirm && !actions.change && !actions.calendar) return null;
+  // The sheets stay mounted when the card goes (an appointment just
+  // cancelled has nothing left to do): they close with their animation.
+  const visible =
+    actions.confirm !== null || actions.change || actions.calendar;
   const opens =
     actions.confirm?.kind === 'later'
       ? formatInstant(actions.confirm.opensAt)
       : null;
 
   return (
-    <div className="flex animate-fade-up flex-col gap-3 rounded-2xl bg-pure-white p-5 shadow-md">
-      {opens ? (
-        <p className="flex items-start gap-2 text-body-md text-text-secondary">
-          <Icon
-            icon={Schedule}
-            size={20}
-            className="mt-0.5 shrink-0 text-primary"
-          />
-          {t('appointments.detail.confirmWindowOpensAt', opens)}
-        </p>
-      ) : null}
-      {actions.confirm?.kind === 'now' ? (
-        <Button
-          block
-          shape="soft"
-          loading={confirm.isPending}
-          onClick={() => {
-            if (!confirm.isPending) confirm.mutate();
-          }}
-        >
-          {t('appointments.detail.confirmAppointment')}
-        </Button>
-      ) : null}
-      {actions.change ? (
-        <div className="grid grid-cols-2 gap-3">
-          <Button
-            variant="white"
-            shape="soft"
-            onClick={() => {
-              setRescheduleRound((round) => round + 1);
-              setSheet('reschedule');
-            }}
-          >
-            <Icon icon={Autorenew} size={20} />
-            {t('appointments.detail.reschedule')}
-          </Button>
-          <Button
-            variant="white"
-            shape="soft"
-            className="text-error-700"
-            onClick={() => {
-              setSheet('cancel');
-            }}
-          >
-            <Icon icon={Close} size={20} />
-            {t('cancel')}
-          </Button>
+    <>
+      {visible ? (
+        <div className="flex animate-fade-up flex-col gap-3 rounded-2xl bg-pure-white p-5 shadow-md">
+          {opens ? (
+            <p className="flex items-start gap-2 text-body-md text-text-secondary">
+              <Icon
+                icon={Schedule}
+                size={20}
+                className="mt-0.5 shrink-0 text-primary"
+              />
+              {t('appointments.detail.confirmWindowOpensAt', {
+                ...opens,
+                hour: hourAgreement(opens.time),
+              })}
+            </p>
+          ) : null}
+          {actions.confirm?.kind === 'now' ? (
+            <Button
+              block
+              shape="soft"
+              loading={confirm.isPending}
+              onClick={() => {
+                if (!confirm.isPending) confirm.mutate();
+              }}
+            >
+              {t('appointments.detail.confirmAppointment')}
+            </Button>
+          ) : null}
+          {actions.change ? (
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                variant="white"
+                shape="soft"
+                onClick={() => {
+                  setRescheduleRound((round) => round + 1);
+                  setSheet('reschedule');
+                }}
+              >
+                <Icon icon={Autorenew} size={20} />
+                {t('appointments.detail.reschedule')}
+              </Button>
+              <Button
+                variant="white"
+                shape="soft"
+                className="text-error-700"
+                onClick={() => {
+                  setSheet('cancel');
+                }}
+              >
+                <Icon icon={Close} size={20} />
+                {t('cancel')}
+              </Button>
+            </div>
+          ) : null}
+          {actions.calendar ? <CalendarMenu appointment={appointment} /> : null}
         </div>
       ) : null}
-      {actions.calendar ? <CalendarMenu appointment={appointment} /> : null}
 
       <CancelSheet
         open={sheet === 'cancel'}
@@ -162,6 +177,6 @@ export function AppointmentActionsCard({
         user={user}
         onRescheduled={show}
       />
-    </div>
+    </>
   );
 }

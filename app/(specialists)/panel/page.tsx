@@ -26,20 +26,18 @@ export default async function SpecialistHomePage() {
   const t = await getTranslations('specialistHome');
 
   return (
-    <main className="mx-auto w-full max-w-content flex-1 px-gutter pt-4 pb-16">
-      <SpecialistHomeSwitch
-        ready={
-          <>
-            <h1 className="text-headline-md text-text-primary">{t('title')}</h1>
-            <p className="mt-2 text-body-md text-text-secondary">
-              {t('description')}
-            </p>
-            <AdminNote message={t('adminNote')} className="mt-4" />
-            <SpecialistOptions className="mt-6" />
-          </>
-        }
-        pending={<AppAccess variant="finish" className="mx-auto mt-6" />}
-      />
-    </main>
+    <SpecialistHomeSwitch
+      ready={
+        <>
+          <h1 className="text-headline-md text-text-primary">{t('title')}</h1>
+          <p className="mt-2 text-body-md text-text-secondary">
+            {t('description')}
+          </p>
+          <AdminNote message={t('adminNote')} className="mt-4" />
+          <SpecialistOptions className="mt-6" />
+        </>
+      }
+      pending={<AppAccess variant="finish" className="mx-auto mt-6" />}
+    />
   );
 }

@@ -16,11 +16,22 @@ export function useLinkOrigin(link: LinkKind): void {
     const raw = url.searchParams.get(originParameter);
     if (raw === null) return;
 
-    const origin = parseLinkOrigin(raw);
-    if (origin) track('web_link_opened', { origin, link });
-
     url.searchParams.delete(originParameter);
-    // Next.js syncs its router with native replaceState calls.
-    window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+    // Next.js syncs its router with replaceState calls through the method it
+    // patches — in its own effect, which on a first load runs after this one.
+    // Waiting a tick lets it learn the clean URL (and keep its state for this
+    // history entry, which Back needs) instead of being bypassed.
+    const timer = window.setTimeout(() => {
+      const origin = parseLinkOrigin(raw);
+      if (origin) track('web_link_opened', { origin, link });
+      window.history.replaceState(
+        null,
+        '',
+        url.pathname + url.search + url.hash,
+      );
+    }, 0);
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [link]);
 }

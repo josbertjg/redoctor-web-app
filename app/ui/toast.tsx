@@ -53,13 +53,15 @@ export function Toaster({ regionLabel, closeLabel }: ToasterProps) {
           icon: 'mt-0.5 flex shrink-0 items-center',
           content: 'flex min-w-0 flex-1 flex-col gap-1',
           title: 'text-label-lg',
-          description: 'text-body-md text-text-secondary',
+          // grey-700: the secondary grey reads 4.4:1 on the toast's surface, under AA.
+          description: 'text-body-md text-grey-700',
           actionButton:
             'h-control text-label-md bg-primary text-on-primary ml-2 shrink-0 rounded-full px-4',
           cancelButton:
             'h-control text-label-md bg-surface-variant text-text-primary ml-2 shrink-0 rounded-full px-4',
           closeButton:
-            'min-h-touch min-w-touch text-text-secondary hover:bg-surface-variant focus-visible:ring-ring/50 -my-2 -mr-2 ml-auto flex shrink-0 items-center justify-center rounded-full transition-colors duration-fast ease-house outline-none focus-visible:ring-3',
+            // Sonner renders the button first; `order-last` puts it at the end.
+            'order-last min-h-touch min-w-touch text-text-secondary hover:bg-surface-variant focus-visible:ring-ring/50 -my-2 -mr-2 ml-auto flex shrink-0 items-center justify-center rounded-full transition-colors duration-fast ease-house outline-none focus-visible:ring-3',
         },
       }}
     />

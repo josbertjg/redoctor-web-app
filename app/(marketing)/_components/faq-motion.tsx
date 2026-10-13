@@ -5,17 +5,14 @@ import type { ReactNode } from 'react';
 
 import {
   Choreographed,
-  readDuration,
-  readEase,
+  houseTransition,
+  piece,
   stagger,
 } from '@/app/ui/motion';
 import type {
   AnimationSequence,
   DOMKeyframesDefinition,
 } from '@/app/ui/motion';
-
-/** The section's pieces, as faq.tsx and faq-accordion.tsx mark them. */
-const piece = (name: string) => `[data-piece="${name}"]`;
 
 /** Seconds between two questions that enter one after the other. */
 const rowBeat = 0.07;
@@ -32,10 +29,7 @@ const firstRow = 0.4;
  */
 export function FaqMotion({ children }: { children: ReactNode }) {
   const { hidden, sequence } = useMemo(() => {
-    const step = {
-      duration: readDuration('entrance'),
-      ease: readEase('entrance'),
-    };
+    const step = houseTransition('entrance');
     const hidden: Record<string, DOMKeyframesDefinition> = {
       [piece('chip')]: { opacity: 0, scale: 0.6 },
       [piece('title')]: { opacity: 0, y: 24 },

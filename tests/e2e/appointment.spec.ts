@@ -41,8 +41,9 @@ test('a stranger is asked to sign in, and nothing of the appointment is read', a
 test('never indexed, and a preview with nothing of the appointment', async ({
   page,
 }) => {
-  await page.goto(`/a/${id}`);
+  const response = await page.goto(`/a/${id}`);
 
+  expect(response?.headers()['x-robots-tag']).toBe('noindex, nofollow');
   await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute(
     'content',
     /noindex/,
@@ -51,6 +52,9 @@ test('never indexed, and a preview with nothing of the appointment', async ({
     'content',
     'Tu cita en Redoctor',
   );
+  await expect(
+    page.locator('meta[property="og:image"]').first(),
+  ).toHaveAttribute('content', /\/opengraph-image/);
   const preview = await page
     .locator('meta[property^="og:"], meta[name^="twitter:"]')
     .evaluateAll((tags) =>

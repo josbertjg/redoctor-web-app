@@ -101,3 +101,9 @@ describe('invitationOf', () => {
     expect(invitationOf(null)).toBeNull();
   });
 });
+
+describe('invitationOf, with a broken link', () => {
+  it('names no invitation when the token is cut mid-escape', () => {
+    expect(invitationOf('/i/%E0%A4%A')).toBeNull();
+  });
+});

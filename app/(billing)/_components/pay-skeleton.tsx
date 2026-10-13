@@ -13,10 +13,3 @@ export function PaySkeleton() {
 }
 
 /** The same, standing for the whole page before the person is known. */
-export function PayPageSkeleton() {
-  return (
-    <main className="mx-auto flex w-full max-w-lg flex-1 flex-col px-gutter pt-6 pb-16">
-      <PaySkeleton />
-    </main>
-  );
-}

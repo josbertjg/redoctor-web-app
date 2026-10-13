@@ -45,6 +45,7 @@ function signedIn(me = buildMeResponse()): Session {
     account: toAccount(meResponseSchema.parse(me)),
     accountStatus: 'ready',
     accountError: null,
+    accountRetrying: false,
     retryAccount: vi.fn(),
     signOut: vi.fn(() => Promise.resolve()),
   };

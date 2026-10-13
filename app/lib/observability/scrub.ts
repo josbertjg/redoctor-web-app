@@ -7,9 +7,19 @@
  * Sentry and PostHog plug them in without app/lib depending on either.
  */
 
+/*
+ * A token ends where a URL or a quoted path does: at a slash, a space, the
+ * query, or the quote or bracket around it in a message.
+ */
 const credentialSegments: readonly [RegExp, string][] = [
-  [/(^|\s|\/\/[^/\s]+)\/i\/[^/\s?#]+/g, '$1/i/[token]'],
-  [/\/scheduling\/invitations\/[^/\s?#]+/g, '/scheduling/invitations/[token]'],
+  // An absolute URL: https://redoctorapp.com/i/{token}.
+  [/(\/\/[^/\s"'`()<>]+)\/i\/[^/\s?#"'`()<>]+/g, '$1/i/[token]'],
+  // A path on its own, also inside quotes or brackets: "/i/{token}".
+  [/(?<![\w%.~/-])\/i\/[^/\s?#"'`()<>]+/g, '/i/[token]'],
+  [
+    /\/scheduling\/invitations\/[^/\s?#"'`()<>]+/g,
+    '/scheduling/invitations/[token]',
+  ],
 ];
 
 const queryOrFragment = /[?#][^\s]*/g;
@@ -58,7 +68,24 @@ type EventLike = {
     | undefined;
   exception?: { values?: { value?: string | undefined }[] | undefined };
   breadcrumbs?: BreadcrumbLike[] | undefined;
+  /** Where the SDKs put the request path (`contexts.nextjs.request_path`, query included). */
+  contexts?: Record<string, unknown> | undefined;
+  extra?: Record<string, unknown> | undefined;
 };
+
+/** Every string inside a context, scrubbed in place; deep enough for the SDKs' shapes. */
+function scrubStrings(value: unknown, depth = 0): unknown {
+  if (typeof value === 'string') return scrubText(value);
+  if (depth > 4 || value === null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) {
+    return value.map((item: unknown) => scrubStrings(item, depth + 1));
+  }
+  const record = value as Record<string, unknown>;
+  for (const [key, inner] of Object.entries(record)) {
+    record[key] = scrubStrings(inner, depth + 1);
+  }
+  return record;
+}
 
 const urlDataKeys = ['url', 'from', 'to'];
 
@@ -83,11 +110,16 @@ export function scrubEvent<E extends EventLike>(event: E): E {
     delete request.query_string;
     delete request.cookies;
     delete request.data;
-    // Referer and friends carry full URLs; the user agent is enough.
-    const userAgent = request.headers?.['user-agent'];
+    // Referer and friends carry full URLs; the user agent is enough. The
+    // browser SDK writes it `User-Agent`, the server one `user-agent`.
+    const userAgent = Object.entries(request.headers ?? {}).find(
+      ([name]) => name.toLowerCase() === 'user-agent',
+    )?.[1];
     request.headers =
       userAgent === undefined ? {} : { 'user-agent': userAgent };
   }
+  if (event.contexts) scrubStrings(event.contexts);
+  if (event.extra) scrubStrings(event.extra);
   if (event.transaction !== undefined) {
     event.transaction = scrubText(event.transaction);
   }
@@ -108,21 +140,24 @@ export function scrubEvent<E extends EventLike>(event: E): E {
 
 /* ---------- PostHog ----------------------------------------------------- */
 
-const analyticsUrlKeys = [
-  '$current_url',
-  '$pathname',
-  '$referrer',
-  '$initial_current_url',
-  '$initial_referrer',
-  '$initial_pathname',
-  '$prev_pageview_pathname',
-];
+/*
+ * PostHog names every URL it attaches by what it is — `$current_url`,
+ * `$pathname`, `$referrer`, their `$initial_` and `$session_entry_` copies,
+ * `$prev_pageview_pathname` — so the name, not a list that falls behind the
+ * library, says which to clean. `$direct` and plain domains carry no path.
+ */
+const urlProperty = /(?:url|pathname|referrer)$/i;
 
 function scrubUrlProperties(properties: Record<string, unknown> | undefined) {
   if (!properties) return;
-  for (const key of analyticsUrlKeys) {
-    const value = properties[key];
-    if (typeof value === 'string') properties[key] = scrubUrl(value);
+  for (const [key, value] of Object.entries(properties)) {
+    if (
+      typeof value === 'string' &&
+      urlProperty.test(key) &&
+      value.includes('/')
+    ) {
+      properties[key] = scrubUrl(value);
+    }
   }
 }
 

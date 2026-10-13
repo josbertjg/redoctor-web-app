@@ -1,4 +1,4 @@
-import { renderHook } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { track } from '@/app/lib/analytics/track';
@@ -16,32 +16,36 @@ afterEach(() => {
 });
 
 describe('useLinkOrigin', () => {
-  it('tags the link with its origin, then takes the tag off the URL', () => {
+  it('tags the link with its origin, then takes the tag off the URL', async () => {
     visit('/s/abc?origin=whatsapp-invitation&utm=1#reviews');
 
     renderHook(() => {
       useLinkOrigin('specialist');
     });
 
+    await waitFor(() => {
+      expect(window.location.pathname + window.location.search).toBe(
+        '/s/abc?utm=1',
+      );
+    });
     expect(track).toHaveBeenCalledWith('web_link_opened', {
       origin: 'whatsapp-invitation',
       link: 'specialist',
     });
-    expect(window.location.pathname + window.location.search).toBe(
-      '/s/abc?utm=1',
-    );
     expect(window.location.hash).toBe('#reviews');
   });
 
-  it('drops an unknown origin without sending it anywhere', () => {
+  it('drops an unknown origin without sending it anywhere', async () => {
     visit('/s/abc?origin=someone%40example.com');
 
     renderHook(() => {
       useLinkOrigin('specialist');
     });
 
+    await waitFor(() => {
+      expect(window.location.search).toBe('');
+    });
     expect(track).not.toHaveBeenCalled();
-    expect(window.location.search).toBe('');
   });
 
   it('does nothing for a link without an origin', () => {

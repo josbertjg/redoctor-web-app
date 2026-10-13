@@ -74,6 +74,8 @@ afterEach(() => {
   // to the next Toaster that mounts: one test's toast must not reach another.
   toast.dismiss();
   server.resetHandlers();
+  // A test that listened to the requests (to read their bodies) stops here.
+  server.events.removeAllListeners();
 });
 
 afterAll(() => {

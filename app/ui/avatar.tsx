@@ -35,6 +35,8 @@ type AvatarProps = VariantProps<typeof avatarVariants> & {
   name: string;
   src?: string | null;
   preload?: boolean;
+  /** The name is read right beside it (a heading): the picture adds nothing to hear. */
+  decorative?: boolean;
   className?: string;
 };
 
@@ -47,6 +49,7 @@ export function Avatar({
   src,
   size,
   preload = false,
+  decorative = false,
   className,
 }: AvatarProps) {
   const [status, setStatus] = useState<'loading' | 'loaded' | 'failed'>(
@@ -59,8 +62,9 @@ export function Avatar({
 
   return (
     <span
-      role="img"
-      aria-label={name}
+      {...(decorative
+        ? { 'aria-hidden': true }
+        : { role: 'img', 'aria-label': name })}
       data-slot="avatar"
       data-size={sizeKey}
       className={cn(avatarVariants({ size }), className)}

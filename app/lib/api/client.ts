@@ -1,14 +1,15 @@
-import { env } from '../env';
 import { ApiError, type ApiErrorKind } from './errors';
 import {
   backoffDelay,
   DEFAULT_MAX_RETRIES,
+  isOffline,
   isReplayable,
   isTransientStatus,
   neverReachedServer,
   retryAfterDelay,
 } from './retry';
 import { reportApiError } from '../observability/report';
+import { publicEnv } from '../public-env';
 import { apiErrorEnvelopeSchema } from '../schemas/api-error';
 
 import type { HttpMethod } from './types';
@@ -18,7 +19,9 @@ import type { z } from 'zod';
  * The one way the web talks to the API (AGENTS.md §5): typed requests,
  * responses parsed with the zod contract, the app's retry policy and
  * failures as `ApiError`. Works on the server (SSR, Server Actions) and in
- * the browser (authenticated flows with the Firebase ID token).
+ * the browser (authenticated flows with the Firebase ID token). It reads the
+ * API's address from public-env, not env.ts: the session provider loads this
+ * file on every page, and t3-env must stay out of the browser (§8.10).
  */
 
 /** Same budget as the app's Dio client (8 s connect / 8 s receive). */
@@ -43,6 +46,12 @@ export type ApiRequest<T> = {
   schema: z.ZodType<T>;
   /** A POST or DELETE that is safe to send twice (e.g. a read over POST). */
   idempotent?: boolean;
+  /**
+   * Answers the flow handles as part of its normal course — a link that
+   * leads nowhere, another account's appointment, a refusal it explains in
+   * place —: they are not reported. Reports are for what nobody expected.
+   */
+  expected?: (error: ApiError) => boolean;
   /** Server-side Data Cache options (revalidate, tags). */
   next?: RequestInit['next'];
   cache?: RequestCache;
@@ -61,7 +70,7 @@ function apiBaseUrl(): string {
   if (inBrowser && process.env.NODE_ENV === 'development') {
     return `${window.location.origin}/api-proxy`;
   }
-  return env.NEXT_PUBLIC_API_URL;
+  return publicEnv.apiUrl;
 }
 
 export function buildApiUrl(
@@ -81,9 +90,16 @@ export function buildApiUrl(
   return url.toString();
 }
 
-const sleep = (ms: number) =>
+/** Waits between attempts; a cancelled caller does not wait for nothing. */
+const sleep = (ms: number, signal: AbortSignal | undefined) =>
   new Promise<void>((resolve) => {
-    setTimeout(resolve, ms);
+    const timer = setTimeout(done, ms);
+    function done() {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', done);
+      resolve();
+    }
+    signal?.addEventListener('abort', done, { once: true });
   });
 
 /** Aborts when the caller cancels or the time budget runs out. */
@@ -135,8 +151,11 @@ async function errorFromResponse(
   });
 }
 
-function report(error: ApiError): ApiError {
-  if (error.isReportable) {
+function report(
+  error: ApiError,
+  expected: ApiRequest<unknown>['expected'],
+): ApiError {
+  if (error.isReportable && !expected?.(error)) {
     reportApiError({
       method: error.method,
       path: error.path,
@@ -148,9 +167,19 @@ function report(error: ApiError): ApiError {
   return error;
 }
 
+/** A transport failure: what it means depends on whether it may have landed. */
+function transportKind(
+  replayable: boolean,
+  sentNothing: boolean,
+  timedOut: boolean,
+): ApiErrorKind {
+  if (!replayable && !sentNothing) return 'uncertain';
+  return timedOut ? 'timeout' : 'network';
+}
+
 export async function apiFetch<T>(request: ApiRequest<T>): Promise<T> {
   const method = request.method ?? 'GET';
-  const { path } = request;
+  const { path, expected } = request;
   const url = buildApiUrl(path, request.params, request.query);
   const maxRetries = request.maxRetries ?? DEFAULT_MAX_RETRIES;
   const replayable = isReplayable(method, request.idempotent);
@@ -162,71 +191,102 @@ export async function apiFetch<T>(request: ApiRequest<T>): Promise<T> {
   if (request.token) headers.set('Authorization', `Bearer ${request.token}`);
 
   for (let attempt = 0; ; attempt += 1) {
+    const retriesLeft = attempt < maxRetries;
     const timeout = requestSignal(
       request.timeoutMs ?? DEFAULT_TIMEOUT_MS,
       request.signal,
     );
-    let response: Response;
+    // Offline before sending proves the request never left; offline after a
+    // failure proves nothing (it may have left before the connection dropped).
+    const offlineWhenSent = isOffline();
     try {
-      response = await fetch(url, {
-        method,
-        headers,
-        signal: timeout.signal,
-        ...(request.body === undefined
-          ? {}
-          : { body: JSON.stringify(request.body) }),
-        ...(request.cache === undefined ? {} : { cache: request.cache }),
-        ...(request.next === undefined ? {} : { next: request.next }),
-      });
-    } catch (cause) {
-      timeout.dispose();
-      if (request.signal?.aborted) {
-        throw new ApiError({ kind: 'aborted', method, path, cause });
-      }
-      const sentNothing = neverReachedServer(cause);
-      if (attempt < maxRetries && (replayable || sentNothing)) {
-        await sleep(backoffDelay(attempt));
-        continue;
-      }
-      const kind: ApiErrorKind =
-        !replayable && !sentNothing
-          ? 'uncertain'
-          : timeout.timedOut()
-            ? 'timeout'
-            : 'network';
-      throw new ApiError({ kind, method, path, cause });
-    }
-    timeout.dispose();
-
-    if (!response.ok) {
-      if (
-        attempt < maxRetries &&
-        replayable &&
-        isTransientStatus(response.status)
-      ) {
-        await sleep(
-          retryAfterDelay(response.headers.get('Retry-After')) ??
-            backoffDelay(attempt),
-        );
-        continue;
-      }
-      throw report(await errorFromResponse(response, method, path));
-    }
-
-    const body: unknown =
-      response.status === 204 ? undefined : await response.json();
-    const parsed = request.schema.safeParse(body);
-    if (!parsed.success) {
-      throw report(
-        new ApiError({
-          kind: 'invalid-response',
+      let response: Response;
+      try {
+        response = await fetch(url, {
           method,
-          path,
-          status: response.status,
-          cause: parsed.error,
-        }),
-      );
+          headers,
+          signal: timeout.signal,
+          ...(request.body === undefined
+            ? {}
+            : { body: JSON.stringify(request.body) }),
+          ...(request.cache === undefined ? {} : { cache: request.cache }),
+          ...(request.next === undefined ? {} : { next: request.next }),
+        });
+      } catch (cause) {
+        if (request.signal?.aborted) {
+          throw new ApiError({ kind: 'aborted', method, path, cause });
+        }
+        const sentNothing = neverReachedServer(cause, offlineWhenSent);
+        if (retriesLeft && (replayable || sentNothing)) {
+          await sleep(backoffDelay(attempt), request.signal);
+          continue;
+        }
+        const kind = transportKind(replayable, sentNothing, timeout.timedOut());
+        throw new ApiError({ kind, method, path, cause });
+      }
+
+      if (!response.ok) {
+        if (retriesLeft && replayable && isTransientStatus(response.status)) {
+          // Frees the connection now instead of when the body is collected.
+          await response.body?.cancel().catch(() => undefined);
+          await sleep(
+            retryAfterDelay(response.headers.get('Retry-After')) ??
+              backoffDelay(attempt),
+            request.signal,
+          );
+          continue;
+        }
+        throw report(await errorFromResponse(response, method, path), expected);
+      }
+
+      // The body is read inside the time budget: an answer whose headers
+      // arrive and whose body stalls must not hang the page.
+      let body: unknown;
+      try {
+        body = response.status === 204 ? undefined : await response.json();
+      } catch (cause) {
+        if (request.signal?.aborted) {
+          throw new ApiError({ kind: 'aborted', method, path, cause });
+        }
+        // A whole body that is not JSON: the contract broke, the write landed.
+        if (cause instanceof SyntaxError) {
+          throw report(
+            new ApiError({
+              kind: 'invalid-response',
+              method,
+              path,
+              status: response.status,
+              cause,
+            }),
+            expected,
+          );
+        }
+        // The body was cut off: the server answered, so a write landed but its
+        // answer was lost; a read may be asked again.
+        if (retriesLeft && replayable) {
+          await sleep(backoffDelay(attempt), request.signal);
+          continue;
+        }
+        const kind = transportKind(replayable, false, timeout.timedOut());
+        throw new ApiError({ kind, method, path, cause });
+      }
+
+      const parsed = request.schema.safeParse(body);
+      if (!parsed.success) {
+        throw report(
+          new ApiError({
+            kind: 'invalid-response',
+            method,
+            path,
+            status: response.status,
+            cause: parsed.error,
+          }),
+          expected,
+        );
+      }
+      return parsed.data;
+    } finally {
+      timeout.dispose();
     }
-    return parsed.data;
   }
 }

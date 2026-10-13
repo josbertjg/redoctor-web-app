@@ -5,17 +5,15 @@ import type { ReactNode } from 'react';
 
 import {
   Choreographed,
+  houseTransition,
+  piece,
   readDuration,
-  readEase,
   stagger,
 } from '@/app/ui/motion';
 import type {
   AnimationSequence,
   DOMKeyframesDefinition,
 } from '@/app/ui/motion';
-
-/** The section's pieces, as trust.tsx marks them. */
-const piece = (name: string) => `[data-piece="${name}"]`;
 
 /** Seconds between two cards that enter one after the other. */
 const cardBeat = 0.1;
@@ -36,10 +34,7 @@ const firstCard = 0.3;
  */
 export function TrustMotion({ children }: { children: ReactNode }) {
   const { hidden, sequence } = useMemo(() => {
-    const step = {
-      duration: readDuration('entrance'),
-      ease: readEase('entrance'),
-    };
+    const step = houseTransition('entrance');
     const hidden = (box: HTMLElement) => {
       const states: Record<string, DOMKeyframesDefinition> = {
         [piece('chip')]: { opacity: 0, scale: 0.6 },

@@ -30,6 +30,9 @@ export default defineConfig({
     include: ['app/**/*.test.{ts,tsx}', 'tests/**/*.test.{ts,tsx}'],
     exclude: ['tests/e2e/**', 'node_modules/**', '.next/**'],
     restoreMocks: true,
+    // `restoreMocks` restores spies only: a hoisted `vi.fn()` (the router)
+    // would keep the calls of earlier tests.
+    clearMocks: true,
     unstubEnvs: true,
     css: false,
   },

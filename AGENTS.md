@@ -197,14 +197,14 @@ app/                                  # The application: routes, UI and logic
     _components/                      #   appointment-flow, -view, -actions, -record; cancel-sheet, reschedule-sheet, month-calendar, calendar-menu; appointments-flow, -list, -skeleton, appointment-card; review-wall, review-form
   (specialists)/                      # module: public profile (M8) and the specialist's own page (M2)
     s/[specialistId]/page.tsx · loading.tsx · not-found.tsx · opengraph-image.tsx   # /s/{id}
-    panel/layout.tsx · page.tsx · loading.tsx        # /panel — layout = <RequireSession facet="specialist">
+    panel/layout.tsx · page.tsx · loading.tsx · error.tsx   # /panel — layout = <PageFrame><RequireSession facet="specialist">
     _components/
   (account)/                          # module: account and legal (M10)
     account/layout.tsx · page.tsx     #   /account — layout = <RequireSession>
     privacy/page.tsx · terms/page.tsx · delete-account/page.tsx
   (billing)/                          # module: specialist payment (M13)
-    error.tsx                         #   the root error under the bar
-    pay/layout.tsx · page.tsx · loading.tsx      # /pay — layout = <RequireSession facet="specialist">
+    error.tsx                         #   the root error, for what fails above /pay's frame
+    pay/layout.tsx · page.tsx · loading.tsx · error.tsx   # /pay — layout = <PageFrame><RequireSession facet="specialist">; its error inside the frame, under the bar
     _components/                      #   pay-flow, subscription-view, notice-panel, plans-view, pay-view, method-step, payment-step, payment-totals, coupon-sheet, bank-picker, different-amount-sheet, payment-done, copy-button, detail-list, pay-skeleton
   (bridges)/                          # module: pages that only open the app, noindex (M11)
     layout.tsx
@@ -216,8 +216,8 @@ app/                                  # The application: routes, UI and logic
   ui/                                 # ALL shared UI
     button.tsx · text-field.tsx · text-area.tsx · checkbox.tsx · choice-cards.tsx · stars-input.tsx · tabs.tsx · field-error.tsx · sheet.tsx · skeleton.tsx · toast.tsx · empty-state.tsx · status-card.tsx · avatar.tsx …
     messages-scope.tsx                #   a page's own client messages (§9)
-    layout/                           #   site-header, site-footer, page-frame, bottom-actions
-    auth/                             #   session-provider, session-button, require-session, sign-in-buttons, in-app-browser-help, provider-logos
+    layout/                           #   site-header, page-frame (a page's column and its main, in the guarded layouts), bottom-actions
+    auth/                             #   session-provider, session-button, require-session, sign-in-buttons, sign-in-legal-note, account-error-state, in-app-browser-help, provider-logos
     app-bridge/                       #   open-in-app-button, store-badges, app-access (a specialist's way to the app), store-qr
     appointments/ · specialists/ · billing/ · reviews/   # domain components used by two or more modules (appointments/: headline, details)
     analytics/ · og/                  #   link-origin-tracker; the Open Graph brand card (next/og)
@@ -231,14 +231,14 @@ app/                                  # The application: routes, UI and logic
     queries/                          #   TanStack queryOptions + mutation functions per domain (client)
     actions/                          #   Server Actions — only where no user token is needed
     firebase/                         #   client.ts: Firebase Auth, loaded on demand (client-only)
-    auth/                             #   session-hint (the cookie), last-provider, token (the bearer's source), destination, sign-up (the plan)
+    auth/                             #   account (the account's model and rules, no zod), session-hint (the cookie), last-provider, token (the bearer's source), destination, sign-up (the plan)
     format/                           #   names, phone (+58), identity-document, date-of-birth — the forms' rules; money, appointment-time, dates — prices and billing amounts, days and hours
     billing/                          #   banks.ts: the app's list of Venezuelan banks (the API publishes none)
     analytics/ · i18n/
     observability/                    #   report.ts (the seam), scrub.ts (what never leaves), sentry.ts
     security/                         #   csp.ts (the nonce policy proxy.ts sends)
     env.ts · public-env.ts · routes.ts · deep-links.ts · site.ts · support.ts · utils.ts · calendar.ts (.ics, Google Calendar)
-  hooks/                              # shared client hooks: use-session, use-link-origin, use-device, use-in-app-browser
+  hooks/                              # shared client hooks: use-session, use-sign-in-tracking, use-focus-heading, use-link-origin, use-device, use-in-app-browser
 tests/                                # setup.ts · msw/ (server + handlers per domain) · factories/ · e2e/ (Playwright)
 public/                               # .well-known/ (§6) · brand/ (logo.svg, logo-white.svg, icons) · illustrations/ · animations/ (the app's splash_logo.riv)
 proxy.ts                              # Next 16's name for middleware: the CSP nonce per request, /.well-known excluded — nothing else
@@ -371,14 +371,23 @@ Every route path is built from one place, `app/lib/routes.ts` (the app has
   `ApiError`; translate known codes to our copy (e.g. `ERR_2010` registration
   incomplete, `ERR_5052` subscription required, billing `ERR_50xx/51xx`);
   unknown codes get a generic message **and** a Sentry event with method,
-  path, status and code — never the body.
+  path, status and code — never the body. An answer a flow handles as part
+  of its course (a 404 on a wrong link, another account's appointment, a
+  409 explained in place) is declared `expected` in its `apiFetch` call and
+  never reported. In place, a failed write says what `failureMessageKey`
+  (`app/lib/api/errors.ts`) finds: nothing for a connectivity problem (the
+  global notice says it), the code's copy, or the flow's plain «No pudimos…».
 - **Retry policy** (mirror of the app): GET/PUT/PATCH retry twice with
   backoff on timeouts, network errors, 408, 429 and 5xx; POST/DELETE retry
-  only when the request never reached the server. A POST/DELETE that went
-  out and got no answer is an **uncertain outcome**: writes that must not
-  land twice (claim, confirm, cancel, reschedule, review, report payment,
-  subscribe) go through a write-once guard that looks for what the write
-  would have left before re-sending.
+  only when the request never reached the server (offline *before*
+  sending, or a connection that failed to open — going offline after the
+  request left proves nothing). The body is read inside the time budget. A
+  POST/DELETE that went out and got no answer is an **uncertain outcome**:
+  writes that must not land twice (claim, confirm, cancel, reschedule,
+  review, report payment, subscribe) go through a write-once guard that
+  looks for what the write would have left before re-sending — after a lost
+  answer, a 2xx whose body breaks the contract, or a 5xx alike — and shares
+  one run between two taps at the same time.
 - **Network failures** are reported once, globally and throttled (one
   neutral notice), never once per widget. Business errors are shown where
   they happen, by code.
@@ -396,7 +405,9 @@ Every route path is built from one place, `app/lib/routes.ts` (the app has
   configuration endpoint with `webPaymentUrl` and support phones (REDOC-357),
   services inside the public profile (REDOC-367), invitation hardening
   (REDOC-314/315/316), anonymous reviews (REDOC-251), account deletion
-  `DELETE /identity/me` (REDOC-352), daily-summary opt-out endpoints.
+  `DELETE /identity/me` (REDOC-352). The daily-summary opt-out endpoints
+  exist (`POST /notifications/daily-summary/unsubscribe|subscribe`) and
+  the web's action calls them.
 
 ---
 
@@ -581,6 +592,9 @@ under Safari's tracking protection). Register
 `https://redoctorapp.com/__/auth/handler` in the Google OAuth client and in
 the Apple Services ID. Inside in-app browsers that block OAuth, show the
 "open in Chrome/Safari" steps (§1) instead of attempting the redirect.
+When the proxy is built, exclude `/__/auth/` from `X-Frame-Options: DENY`
+(next.config.ts) and from the `proxy.ts` matcher (`frame-ancestors 'none'`):
+Firebase frames `/__/auth/iframe`, and sign-in would break.
 
 ---
 
@@ -708,7 +722,12 @@ primitive in `app/ui` that takes size and color from the tokens.
 7. **Copy is design material.** Spanish, warm and direct, from the user's
    side («Tu cita», «Confirmar mi cita»). Buttons say what happens. Errors
    say what went wrong and how to fix it. No developer vocabulary on screen.
-   Urbanist draws the ordinal «º» as «o»: write «N.°».
+   Urbanist draws the ordinal «º» as «o»: write «N.°». An hour takes its
+   article: «a la 1:30», «a las 3:30» (`hourAgreement`, through a select in
+   the message). The button that tries a failed read again says
+   «Reintentar», everywhere (owner, 2026-10-13). Dollars are written the
+   locale's way on every page: «$ 36,99», «$ 1.234,50», «$ 30» when whole
+   (owner, 2026-10-13).
 8. **Sheets and dialogs** go through one `Sheet` primitive
    (`app/ui/sheet.tsx`, since M5: Radix's dialog, dragged down from its
    handle through Motion): bottom sheet on mobile, centered dialog on
@@ -742,12 +761,18 @@ primitive in `app/ui` that takes size and color from the tokens.
     of view hides after hydration until it enters, as `Reveal` does.
     Nothing imports `framer-motion` elsewhere (lint). CSS keeps what CSS does well: hover,
     the accordion, the menu; the marquee rolls by CSS until JavaScript takes
-    it over where it stands, to make it draggable (`RoadmapBelt`). Above the fold only what makes
-    its entrance on purpose starts hidden (the hero's words and cursor);
-    the picture, the search and the chips paint on the first frame. Under
-    reduced motion everything is plain content, no entrance. Animated text
-    goes through `StaggeredText`: assistive technology reads the sentence,
-    the letters are hidden from it.
+    it over where it stands, to make it draggable (`RoadmapBelt`, whose
+    frame loop runs only while it drives the ribbon on screen). Above the
+    fold the hero's pieces enter after the splash; their first frame is
+    written into the HTML (`Entrance`, `StaggeredText`), so each carries
+    `data-entrance`, and a rule in globals.css shows them settled under
+    reduced motion from the first paint — the server cannot know the
+    setting — and the landing repeats it in a `<noscript>`. Under reduced
+    motion everything is plain content, no entrance. A box taller than the
+    screen enters at the share of it the screen can show (`Choreographed`).
+    Animated text goes through `StaggeredText`: assistive technology reads
+    the sentence, the letters are hidden from it; a price that counts up is
+    read whole, never mid-count.
 
 Composites to mirror from the app (names first, then build when a module
 needs them): `Button` (primary / secondary / white / error; small / large;
@@ -786,7 +811,11 @@ accent / neutral / warning / error tones), `Avatar`, `StarsRating`,
   renders a placeholder instead of «Entrar» until Firebase answers. The
   last provider used wears «Última vez» and goes first (localStorage).
   Sign-out clears the Query cache, the hint, the PostHog identity and
-  Sentry's user.
+  Sentry's user — also when Firebase ends the session by itself (another
+  tab, a revoked account) or another person signs in. The `/me` reader
+  (zod and the contract) loads on demand, with the first signed-in page;
+  the account's rules live apart, without zod (`app/lib/auth/account.ts`).
+  «Entrar» in a page's bar brings the person back to that page.
 - **i18n**: next-intl, locale `es`, messages in
   `app/lib/i18n/messages/es.json` with **dot keys that mirror the app's
   `assets/translations/es.json`** (e.g. `appointments.confirm.title`) so
@@ -836,8 +865,9 @@ pnpm check          # typecheck + lint + format:check + test + build
   each Vercel preview (`preview.yml`, on `deployment_status`; Lighthouse
   blocks third parties so CI traffic never reaches analytics or Sentry);
   `pnpm audit` every Monday (`audit.yml`); Renovate weekly (`renovate.json`,
-  majors wait for approval). Background servers started by hand (`next
-  start`) must be stopped: Playwright reuses whatever listens on :3000.
+  majors wait for approval). Locally Playwright builds and serves the app
+  on :3300, never on :3000 (`pnpm dev`'s, which it would otherwise reuse);
+  a server started by hand on :3300 must be stopped.
 - **Tests**: domain logic, mappers and zod schemas (unit); `app/ui`
   primitives (component + axe); every API call behind MSW; e2e for the
   critical patient path (open `/i/{token}` → sign in (mocked) → claim →
@@ -1333,8 +1363,9 @@ written out in full, or Next.js does not inline it).
   «Estamos verificando tu pago» with the summary (amount, bank, method,
   day), or «¡Tu plan ha sido activado!», and «Ir al inicio» to `/panel`,
   whose «Suscripción» card now leads here (the bridge `/panel/subscription`
-  stays for the app and the emails). Money as the app writes it (`$ 36.99`,
-  `Bs 1.198,39`, the rate `Bs 39,95`), the dates in words. Where the web
+  stays for the app and the emails). Money as the web writes it
+  everywhere (`$ 36,99` — the owner's call of 2026-10-13 over the app's
+  `$ 36.99` —, `Bs 1.198,39`, the rate `Bs 39,95`), the dates in words. Where the web
   differs from the app, on purpose and to confirm: two steps instead of
   seven pages; no «Pegar» button for the reference (the keyboard pastes);
   the day is a date field instead of «Hoy / Ayer / Otra fecha»; the phone
@@ -1350,7 +1381,107 @@ written out in full, or Next.js does not inline it).
   Production needs the API's CORS (REDOC-362): the e2e covers the page
   without a session, the component tests (MSW) the rest.
 
+### Decided (2026-10-13)
+
+- **The deep review (2026-10-13, owner's request: «busca errores… y aplica
+  las soluciones»).** Nine reviews over the whole web; what they found was
+  fixed where it was a defect and kept the flows, and the product calls
+  were left to the owner (memory, «what is pending»). What a person can
+  now see or hear differently:
+  - **Sign-up:** a brand-new account reached `/sign-up` and was sent there
+    again in a loop (since v0.17.0, when the guard began sending accounts
+    with no sign-up there): the guard lives in the flow now and lets the
+    sign-up page's own account in (`allowUnregistered`).
+  - **Email 15 («Dejar mi reseña» → `/a/{id}`):** a finished consultation
+    still to rate shows the stars first on its page; it never holds the
+    page (pages reached by a link are never blocked, §1).
+  - **The appointment page** follows the clock without polling: at the hour
+    its confirmation opens it reads the appointment again (the API says
+    whether it can be confirmed), at its start the changes go. A failed
+    re-read after a write keeps the appointment on screen (the same on
+    `/i`, `/appointments` and `/pay`). After cancelling, the sheet closes
+    with its animation; «Hemos notificado al especialista» only when the
+    patient cancelled.
+  - **Rescheduling:** the chosen day is judged by its own month (browsing
+    another month never hides the choice that will be sent); tapping it
+    again keeps the hour; the days and the hours that fail to load say so
+    with «Reintentar»; the calendar reads «…, sin cupos» to screen readers.
+  - **The invitation:** while the session answers, nothing of a claimed
+    invitation shows (REDOC-315); its heading is there from the first
+    frame; «…y tu asistencia está confirmada» and `web_invitation_claimed`
+    say what the API did, not what was asked; claiming refreshes «Mis
+    citas»; the previews of `/i` and `/a` keep the brand image.
+  - **Session:** a sign-in whose `/me` the API refuses leaves the buttons
+    ready for another try; the buttons hold their place until the device
+    and the session are known (they no longer swap under the finger); a
+    sign-out made by Firebase (another tab, a revoked account) forgets the
+    person here too; «Entrar» brings back to the page; «Reintentar» shows
+    it is busy; names accept accents pasted as separate marks; a document
+    with letters is refused with «Escribe solo los números de la cédula,
+    sin letras.» instead of losing them.
+  - **The payment (M13):** an approved payment no longer leaves «Estamos
+    verificando tu pago» beside an active plan; ERR_5071 refreshes and,
+    for another plan unpaid, says the app's `acquire.otherUnpaid`; an
+    expired amount renewed at the same figure is reported again by itself
+    (another figure: the warning, as before), and a renewal that fails
+    says why; reference and account take pasted dashes and spaces (only
+    the digits travel); the report validates on blur (§9); the amount is
+    read strictly (`parseBolivares`: no letters, signs, third decimals or
+    two amounts pasted together); «Copiar» falls back to the old way and,
+    if refused too, says to copy by hand (`billing.pay.copyFailed`); the
+    coupon sheet starts clean each time it opens and refuses a code of an
+    impossible length in place; a 404 from a receipt is no coupon refusal;
+    the open receipts are read 100 at a time.
+  - **`/panel`:** an admin's account without the specialist facet does not
+    see «Suscripción» (`/pay` is not for it). Errors on `/pay` and
+    `/panel` keep the bar (`PageFrame` and `PageError`).
+  - **Public profile:** the name takes up to two lines; the OG card's name
+    two at most, a size down when long; one read of the profile per
+    request (React `cache`).
+  - **Accessibility:** closing a sheet gives the focus back to what opened
+    it, and dragging it down moves it on phones (the entrance no longer
+    holds its transform); each step a person takes (sign-up, payment,
+    review wall, claim, opt-out) takes the focus to its title
+    (`useFocusHeading`); an error under a field is never read once fixed
+    and is read again when it comes back; hints are tied to their field
+    (`TextField`'s `hint`); toast descriptions grey-700 (4.4:1 → AA), empty
+    stars grey-500 (non-text 3:1), «Elegir el banco» grey-600; the toast's
+    ✕ sits at the end; «Ver perfil» and the coupon links are a touch
+    target tall; the menu returns the focus to its button on Escape; a
+    counting price is read whole.
+  - **The landing:** a section taller than the screen (the plans on a small
+    phone, any section in landscape) enters instead of staying hidden;
+    without JavaScript, or with reduced motion, the hero is there from the
+    first paint (`data-entrance`); a visit asking to save data skips the
+    splash and its download; the veil no longer cuts the logo on a slow
+    start; the search never reloads the page with what was typed in the
+    address (§11); the ribbon's frame loop runs only when it drives the
+    ribbon on screen; the dock line no longer moves after the first undock.
+  - **Weight and privacy:** the message catalog no longer ships with the
+    global error boundary to every page, nor zod and t3-env with the
+    session (the landing's entry JavaScript went from 167 to 134 KB gzip,
+    measured on the build's entry chunks); Sentry's contexts and extras and
+    every URL property PostHog attaches (by name, `$session_entry_*`
+    included) are scrubbed; `/i`, `/a`, the opt-out and the auth pages are
+    no longer in robots.txt, so crawlers read their noindex, and they
+    answer `X-Robots-Tag: noindex, nofollow`.
+  - **Tooling:** Playwright serves its build on :3300; Vitest clears mocks
+    between tests; MSW listeners never leak between tests.
+  - **The owner's calls on the review (same day):** dollars as «$ 36,99» on
+    `/pay` too, like the landing and the prices (§8.7); «a la 1:30» and
+    «antes de la cita» where the copy said «a las 1:30» and «antes a la
+    cita»; «Reintentar» on every retry (it was «Refrescar» on the load
+    errors); the «Última vez» chip stays brand green (2.8:1, accepted like
+    the green trust card). The landing's inert search and buttons are
+    finished bit by bit; the minimum `/panel`, patient search and booking
+    wait for his word (memory).
+
 ### Improvements noted (not scheduled)
+
+- The FAQ's closed answers are not in the HTML (Radix renders them on
+  opening): search engines and Ctrl+F miss five of six. `forceMount` would
+  break the closing animation as Radix measures it; worth a proper look
+  when the landing's SEO is worked on.
 
 - A real 404 for unknown profiles and paths (§4): a check in `proxy.ts`, or
   routes that do not match.

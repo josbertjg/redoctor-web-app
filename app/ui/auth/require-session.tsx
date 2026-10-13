@@ -19,6 +19,8 @@ import { EmptyState } from '@/app/ui/empty-state';
 
 import { useSession } from '@/app/hooks/use-session';
 
+import { AccountErrorState } from './account-error-state';
+
 export type SessionFacet = 'patient' | 'specialist';
 
 type RequireSessionProps = {
@@ -28,6 +30,8 @@ type RequireSessionProps = {
   fallback: ReactNode;
   /** Where to come back after signing in; the page's path by default (a page whose query matters passes it whole). */
   returnTo?: string | undefined;
+  /** The sign-up page itself: an account with no sign-up behind it is who it is for, so it gets in instead of being sent there. */
+  allowUnregistered?: boolean;
   children: ReactNode;
 };
 
@@ -48,6 +52,7 @@ export function RequireSession({
   facet,
   fallback,
   returnTo,
+  allowUnregistered = false,
   children,
 }: RequireSessionProps) {
   const t = useTranslations();
@@ -56,6 +61,7 @@ export function RequireSession({
   const pathname = usePathname();
   const signedOut = session.status === 'signed-out';
   const mustSignUp =
+    !allowUnregistered &&
     session.status === 'signed-in' &&
     session.account !== null &&
     needsSignUp(session.account);
@@ -69,23 +75,11 @@ export function RequireSession({
   if (session.status !== 'signed-in') return fallback;
 
   if (session.accountStatus === 'error') {
-    return (
-      <EmptyState
-        tone="error"
-        headingLevel={1}
-        title={t('auth.accountError.title')}
-        description={t('auth.accountError.description')}
-        action={
-          <Button shape="soft" onClick={session.retryAccount}>
-            {t('retry')}
-          </Button>
-        }
-      />
-    );
+    return <AccountErrorState headingLevel={1} />;
   }
 
   const { account } = session;
-  if (account === null || needsSignUp(account)) return fallback;
+  if (account === null || mustSignUp) return fallback;
 
   if (!isAllowed(account, facet)) {
     const area = facet === 'specialist' ? 'specialist' : 'patient';

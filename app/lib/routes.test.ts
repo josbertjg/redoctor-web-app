@@ -58,3 +58,11 @@ describe('isSafeRedirect', () => {
     expect(isSafeRedirect(null)).toBe(false);
   });
 });
+
+describe('isSafeRedirect, after the browser resolves the path', () => {
+  it('refuses a path that resolves to another host', () => {
+    expect(isSafeRedirect('/..//evil.com')).toBe(false);
+    expect(isSafeRedirect('/./\\evil.com')).toBe(false);
+    expect(isSafeRedirect('/a/../i/tok')).toBe(true);
+  });
+});

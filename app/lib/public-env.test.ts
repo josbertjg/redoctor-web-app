@@ -8,6 +8,7 @@ describe('publicEnv', () => {
   it('says what the validated env says', () => {
     expect(publicEnv).toEqual({
       siteUrl: env.NEXT_PUBLIC_SITE_URL,
+      apiUrl: env.NEXT_PUBLIC_API_URL,
       androidPackage: env.NEXT_PUBLIC_ANDROID_PACKAGE,
       appStoreId: env.NEXT_PUBLIC_APP_STORE_ID,
       playStoreId: env.NEXT_PUBLIC_PLAY_STORE_ID,

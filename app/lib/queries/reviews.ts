@@ -13,7 +13,7 @@ import {
   type ReviewBody,
 } from '../schemas/reviews';
 
-import type { TokenHolder } from './appointments';
+import type { TokenHolder } from '../api/types';
 
 /*
  * The patient's reviews (M7, AGENTS.md §1): the finished consultations still
@@ -103,6 +103,8 @@ export function submitReview(
           body,
           token: await user.getToken(),
           schema: createdReviewResponseSchema,
+          // Already rated, or no longer to rate: the pending list says which.
+          expected: (error) => error.status === 404 || error.status === 409,
         });
         return { appointmentId, review };
       } catch (error) {

@@ -44,6 +44,7 @@ const signedIn: Session = {
   account: toAccount(meResponseSchema.parse(buildMeResponse())),
   accountStatus: 'ready',
   accountError: null,
+  accountRetrying: false,
   retryAccount: vi.fn(),
   signOut: vi.fn(() => Promise.resolve()),
 };
@@ -176,7 +177,7 @@ describe('AppointmentsFlow', () => {
         name: 'No pudimos cargar tus citas',
       }),
     ).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Refrescar' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
     expect(
       await screen.findByRole('heading', { name: 'Aún no tienes citas' }),
     ).toBeInTheDocument();

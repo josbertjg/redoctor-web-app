@@ -1,4 +1,4 @@
-import { Suspense } from 'react';
+import { cache, Suspense } from 'react';
 
 import type { Metadata } from 'next';
 
@@ -7,7 +7,7 @@ import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 
 import { smartAppBanner } from '@/app/lib/app-bridge';
-import { getSpecialistProfile } from '@/app/lib/data/specialists';
+import { getSpecialistProfile as readSpecialistProfile } from '@/app/lib/data/specialists';
 import { routes } from '@/app/lib/routes';
 
 import { LinkOriginTracker } from '@/app/ui/analytics/link-origin-tracker';
@@ -35,6 +35,14 @@ import { SpecialtyList } from '../../_components/specialty-list';
  * availability and prices stay out of the pilot: prices wait for services in
  * the public profile (REDOC-367).
  */
+
+/*
+ * One read of the profile per request, shared by the metadata and the page:
+ * the API client passes an abort signal, which keeps Next from deduplicating
+ * the two fetches by itself, and every server-side call counts against the
+ * API's 100 per minute from Vercel's addresses (AGENTS.md §5).
+ */
+const getSpecialistProfile = cache(readSpecialistProfile);
 
 export async function generateMetadata({
   params,

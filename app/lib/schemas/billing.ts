@@ -12,7 +12,8 @@ import { calendarDaysUntil } from '../format/dates';
 
 export const moneySchema = z.object({
   amount: z.number().int(),
-  currency: z.enum(['USD', 'VES']),
+  // Another currency is written with its code, never a broken page.
+  currency: z.enum(['USD', 'VES']).or(z.string()),
 });
 
 export type Money = z.infer<typeof moneySchema>;
@@ -100,10 +101,10 @@ export const discountDurations = ['ONCE', 'REPEATING', 'FOREVER'] as const;
 const subscriptionDiscountSchema = z.object({
   code: z.string(),
   couponName: z.string().nullish(),
-  discountType: z.enum(discountTypes),
+  discountType: z.enum(discountTypes).or(unknownValue),
   percentOff: z.number().nullish(),
   amountOff: moneySchema.nullish(),
-  duration: z.enum(discountDurations),
+  duration: z.enum(discountDurations).or(unknownValue),
   /** Receipts it still discounts; `null` means for ever. */
   remainingCycles: z.number().int().nullish(),
   status: z.string().nullish(),
@@ -214,7 +215,7 @@ export type PaymentMethod = z.infer<typeof paymentMethodSchema>;
 export const paymentIntentSchema = z.object({
   id: z.string(),
   invoiceId: z.string(),
-  method: paymentMethodSchema,
+  method: paymentMethodSchema.or(unknownValue),
   amountUsd: moneySchema,
   amountVes: moneySchema,
   /** Bolívares per dollar, a text with 8 decimals: shown, never computed with. */
@@ -343,10 +344,10 @@ export const reportedPaymentResponseSchema = z.object({
 export const couponSchema = z.object({
   code: z.string(),
   name: z.string(),
-  discountType: z.enum(discountTypes),
+  discountType: z.enum(discountTypes).or(unknownValue),
   percentOff: z.number().nullish(),
   amountOff: moneySchema.nullish(),
-  duration: z.enum(discountDurations),
+  duration: z.enum(discountDurations).or(unknownValue),
   /** Only with `REPEATING`. */
   durationMonths: z.number().int().nullish(),
   /** Empty: it applies to every plan. */

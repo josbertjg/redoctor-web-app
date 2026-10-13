@@ -1,6 +1,7 @@
 import { RequireSession } from '@/app/ui/auth/require-session';
+import { PageFrame } from '@/app/ui/layout/page-frame';
 
-import { AppointmentsPageSkeleton } from '../_components/appointments-skeleton';
+import { AppointmentsSkeleton } from '../_components/appointments-skeleton';
 
 /*
  * `/appointments` (M6) is the patient's own page, so the session comes first
@@ -12,8 +13,10 @@ export default function PatientAppointmentsLayout({
   children,
 }: LayoutProps<'/appointments'>) {
   return (
-    <RequireSession facet="patient" fallback={<AppointmentsPageSkeleton />}>
-      {children}
-    </RequireSession>
+    <PageFrame>
+      <RequireSession facet="patient" fallback={<AppointmentsSkeleton />}>
+        {children}
+      </RequireSession>
+    </PageFrame>
   );
 }

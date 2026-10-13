@@ -11,13 +11,14 @@ import { useForm, useWatch, type Resolver } from 'react-hook-form';
 import { z } from 'zod';
 
 import { track } from '@/app/lib/analytics/track';
-import { isApiError } from '@/app/lib/api/errors';
+import { failureMessageKey, isApiError } from '@/app/lib/api/errors';
 import type { SessionUser } from '@/app/lib/firebase/client';
 import {
   birthDateProblem,
   earliestBirthDate,
   todayInCaracas,
 } from '@/app/lib/format/date-of-birth';
+import { appointmentKeys } from '@/app/lib/queries/appointments';
 import {
   claimInvitation,
   invitationKeys,
@@ -101,6 +102,9 @@ export function ClaimForm({
   const asksDateOfBirth = invited.dateOfBirth === null;
   const asksSex = invited.sex === null;
   const offersConfirmation = appointment.canConfirmNow && !mustSignUp;
+  // Which account keeps it (AGENTS.md §1): Firebase's address, or the API's
+  // when the provider shared none.
+  const savedUnder = user.email ?? account.email;
 
   const resolver = useClaimResolver({
     asksDependentData: !mustSignUp,
@@ -138,14 +142,26 @@ export function ClaimForm({
   };
 
   const claim = useMutation({
-    mutationFn: ({ body }: { body: ClaimBody; confirmed: boolean }) =>
+    mutationFn: ({ body }: { body: ClaimBody }) =>
       claimInvitation(
         { accountId: account.id, getToken: () => user.getToken() },
         token,
         body,
       ),
-    onSuccess: (response, { body, confirmed }) => {
+    onSuccess: (response, { body }) => {
       queryClient.setQueryData(invitationKeys.detail(token), response);
+      // The appointment is now this account's: «Mis citas» and its page read
+      // it as it is, not as they were before the claim.
+      queryClient.setQueryData(
+        appointmentKeys.detail(user.id, response.appointment.id),
+        { kind: 'found', appointment: response.appointment },
+      );
+      void queryClient.invalidateQueries({
+        queryKey: appointmentKeys.list(user.id),
+      });
+      // What the API did, not what was asked: an earlier claim of this same
+      // account (a second tab, a lost answer) may have left it unconfirmed.
+      const confirmed = response.appointment.status === 'CONFIRMED';
       track('web_invitation_claimed', {
         relationship: body.relationship === 'SELF' ? 'self' : 'dependent',
         confirmed,
@@ -174,14 +190,11 @@ export function ClaimForm({
     },
   });
 
-  const failure =
+  const failureKey =
     claim.error === null || selfClaimRefusalOf(claim.error) !== null
-      ? undefined
-      : isApiError(claim.error) &&
-          claim.error.messageKey.startsWith('apiErrors.') &&
-          claim.error.messageKey !== 'apiErrors.unexpected'
-        ? t(claim.error.messageKey)
-        : t('appointments.invitation.claimFailed');
+      ? null
+      : failureMessageKey(claim.error, 'appointments.invitation.claimFailed');
+  const failure = failureKey === null ? undefined : t(failureKey);
 
   const shownRefusal =
     refusal !== null && refusal.relationship === relationship ? refusal : null;
@@ -206,9 +219,8 @@ export function ClaimForm({
             if (asksDateOfBirth) body.dateOfBirth = values.dateOfBirth;
             if (asksSex && values.sex !== '') body.sex = values.sex;
           }
-          const confirmed = offersConfirmation && values.confirm;
-          if (confirmed) body.confirm = true;
-          claim.mutate({ body, confirmed });
+          if (offersConfirmation && values.confirm) body.confirm = true;
+          claim.mutate({ body });
         })(event);
       }}
       className="flex animate-fade-up flex-col gap-5 rounded-2xl bg-pure-white p-5 shadow-md"
@@ -305,11 +317,11 @@ export function ClaimForm({
       ) : null}
 
       <div className="flex flex-col gap-3">
-        {user.email ? (
-          <div className="flex flex-col items-start gap-1 text-body-md text-text-secondary">
+        <div className="flex flex-col items-start gap-1 text-body-md text-text-secondary">
+          {savedUnder ? (
             <p className="break-all">
               {t.rich('appointments.invitation.savedUnder', {
-                email: user.email,
+                email: savedUnder,
                 strong: (chunks) => (
                   <strong className="font-semibold text-text-primary">
                     {chunks}
@@ -317,15 +329,15 @@ export function ClaimForm({
                 ),
               })}
             </p>
-            <button
-              type="button"
-              onClick={onSwitchAccount}
-              className="min-h-touch rounded-sm text-label-lg text-primary outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
-            >
-              {t('auth.switchAccount')}
-            </button>
-          </div>
-        ) : null}
+          ) : null}
+          <button
+            type="button"
+            onClick={onSwitchAccount}
+            className="min-h-touch rounded-sm text-label-lg text-primary outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+          >
+            {t('auth.switchAccount')}
+          </button>
+        </div>
         {mustSignUp ? (
           <p className="text-body-sm text-text-secondary">
             {t('finishPatientSignup.toClaim')}

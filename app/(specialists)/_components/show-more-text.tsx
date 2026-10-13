@@ -17,7 +17,10 @@ type ShowMoreTextProps = {
 function split(text: string, limit: number) {
   if (text.length <= limit) return null;
   const space = text.lastIndexOf(' ', limit);
-  const at = space > limit * 0.6 ? space : limit;
+  let at = space > limit * 0.6 ? space : limit;
+  // Never between the two halves of an emoji (a UTF-16 surrogate pair).
+  const before = text.charCodeAt(at - 1);
+  if (before >= 0xd800 && before <= 0xdbff) at -= 1;
   return { head: text.slice(0, at).trimEnd(), tail: text.slice(at) };
 }
 

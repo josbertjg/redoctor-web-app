@@ -114,14 +114,15 @@ for (const [from, to] of renamed) {
   });
 }
 
-// The root loading state streams every page, so a notFound() that runs in
-// the page arrives after the 200 is sent: the not-found page renders and
-// Next.js marks it noindex (node_modules/next/dist/docs, not-found.md).
+// No loading state streams the bridges (there is no root loading.tsx), so a
+// notFound() in the page answers a real 404, with the not-found page,
+// noindex (node_modules/next/dist/docs, not-found.md).
 test('an agenda path the app does not know shows the not-found page', async ({
   page,
 }) => {
-  await page.goto('/panel/agenda/2026-10-01/extra');
+  const response = await page.goto('/panel/agenda/2026-10-01/extra');
 
+  expect(response?.status()).toBe(404);
   await expect(
     page.getByRole('heading', { level: 1, name: 'Esta página no existe' }),
   ).toBeVisible();

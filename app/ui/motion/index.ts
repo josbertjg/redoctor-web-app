@@ -26,7 +26,7 @@ export type {
   Variants,
 } from 'framer-motion';
 export { arcTo, type Arc } from './arc';
-export { Choreographed } from './choreographed';
+export { Choreographed, piece } from './choreographed';
 export { useCoarsePointer } from './coarse-pointer';
 export { Entrance } from './entrance';
 export { useReducedMotion } from './reduced-motion';

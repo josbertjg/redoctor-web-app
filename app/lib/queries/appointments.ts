@@ -10,6 +10,8 @@ import {
 } from '../schemas/appointments';
 import { availableDaysSchema, daySlotsSchema } from '../schemas/availability';
 
+import type { TokenHolder } from '../api/types';
+
 /*
  * The patient's appointments, read and changed in the browser with their
  * token (AGENTS.md §4): the list behind `/appointments` (M6), the page
@@ -17,12 +19,6 @@ import { availableDaysSchema, daySlotsSchema } from '../schemas/availability';
  * and reschedule to another slot of the same office. Every write goes
  * through the write-once guard (§5).
  */
-
-export type TokenHolder = {
-  /** Firebase's uid: the cache is per person. */
-  id: string;
-  getToken: () => Promise<string>;
-};
 
 export const appointmentKeys = {
   list: (userId: string) => ['appointments', userId] as const,
@@ -55,6 +51,8 @@ async function readAppointment(
       params: { appointmentId },
       token: await user.getToken(),
       schema: appointmentResponseSchema,
+      expected: (error) =>
+        error.status === 400 || error.status === 403 || error.status === 404,
       ...(signal ? { signal } : {}),
     });
     return { kind: 'found', appointment };
@@ -129,6 +127,9 @@ function change(
           token: await user.getToken(),
           ...(body === undefined ? {} : { body }),
           schema: appointmentResponseSchema,
+          // Refused because it is already so, or explained in place (the
+          // confirmation window, an hour just taken).
+          expected: (error) => error.status === 409,
         });
         return appointment;
       } catch (error) {

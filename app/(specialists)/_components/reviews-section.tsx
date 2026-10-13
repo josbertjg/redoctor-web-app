@@ -30,7 +30,7 @@ export async function ReviewsSection({
     return (
       <ReviewsLoadError
         message={t('reviews.list.loadError')}
-        refreshLabel={t('refresh')}
+        refreshLabel={t('retry')}
       />
     );
   }

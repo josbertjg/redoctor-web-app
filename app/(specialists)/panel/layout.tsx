@@ -4,6 +4,7 @@ import { routes } from '@/app/lib/routes';
 
 import { RequireSession } from '@/app/ui/auth/require-session';
 import { SessionButton } from '@/app/ui/auth/session-button';
+import { PageFrame } from '@/app/ui/layout/page-frame';
 import { SiteHeader } from '@/app/ui/layout/site-header';
 
 import { SpecialistHomeSkeleton } from '../_components/specialist-home-skeleton';
@@ -23,9 +24,14 @@ export default async function SpecialistAreaLayout({
       <SiteHeader homeLabel={t('homeLabel')}>
         <SessionButton redirect={routes.specialistHome()} />
       </SiteHeader>
-      <RequireSession facet="specialist" fallback={<SpecialistHomeSkeleton />}>
-        {children}
-      </RequireSession>
+      <PageFrame width="content">
+        <RequireSession
+          facet="specialist"
+          fallback={<SpecialistHomeSkeleton />}
+        >
+          {children}
+        </RequireSession>
+      </PageFrame>
     </>
   );
 }

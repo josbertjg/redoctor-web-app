@@ -6,10 +6,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
 import { track } from '@/app/lib/analytics/track';
+import { failureMessageKey } from '@/app/lib/api/errors';
 import type { SessionUser } from '@/app/lib/firebase/client';
 import {
   formatAppointmentDay,
   formatAppointmentTime,
+  hourAgreement,
 } from '@/app/lib/format/appointment-time';
 import {
   appointmentKeys,
@@ -24,8 +26,6 @@ import { Button } from '@/app/ui/button';
 import { FieldError } from '@/app/ui/field-error';
 import { Sheet } from '@/app/ui/sheet';
 import { toast } from '@/app/ui/toast';
-
-import { actionFailure } from './action-failure';
 
 type CancelSheetProps = {
   open: boolean;
@@ -56,6 +56,9 @@ export function CancelSheet({
     onSuccess: (response) => {
       onCancelled(response);
       onOpenChange(false);
+      // The specialist may have cancelled it first (the API then refuses this
+      // one): the page shows who did, and nothing claims the patient did.
+      if (response.cancelledBy !== 'PATIENT') return;
       track('web_appointment_cancelled', {});
       toast.success(t('appointments.detail.cancelledTitle'), {
         description: t('appointments.detail.cancelledDescriptionPatient'),
@@ -71,16 +74,24 @@ export function CancelSheet({
 
   const date = formatAppointmentDay(appointment.date);
   const time = formatAppointmentTime(appointment.startTime);
+  const hour = hourAgreement(time);
   const name = appointment.specialist.name;
-  const failureKey = cancel.error ? actionFailure(cancel.error) : null;
+  const failureKey = cancel.error
+    ? failureMessageKey(cancel.error, 'appointments.detail.actionFailed')
+    : null;
   const failureId = useId();
+  // Every way out forgets a failed try: reopened, the sheet starts clean.
+  const close = () => {
+    cancel.reset();
+    onOpenChange(false);
+  };
 
   return (
     <Sheet
       open={open}
       onOpenChange={(next) => {
-        if (!next) cancel.reset();
-        onOpenChange(next);
+        if (next) onOpenChange(true);
+        else close();
       }}
       title={t('appointments.detail.cancelTitle')}
       footer={
@@ -101,14 +112,7 @@ export function CancelSheet({
           >
             {t('appointments.detail.cancelAppointment')}
           </Button>
-          <Button
-            variant="white"
-            block
-            shape="soft"
-            onClick={() => {
-              onOpenChange(false);
-            }}
-          >
+          <Button variant="white" block shape="soft" onClick={close}>
             {t('back')}
           </Button>
         </div>
@@ -116,8 +120,13 @@ export function CancelSheet({
     >
       <p className="text-body-md text-text-secondary">
         {name
-          ? t('appointments.detail.cancelWarningPatient', { name, date, time })
-          : t('appointments.detail.cancelWarning', { date, time })}
+          ? t('appointments.detail.cancelWarningPatient', {
+              name,
+              date,
+              time,
+              hour,
+            })
+          : t('appointments.detail.cancelWarning', { date, time, hour })}
       </p>
     </Sheet>
   );

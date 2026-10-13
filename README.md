@@ -95,8 +95,9 @@ values live in Vercel.
   every API call goes through MSW handlers built from the API's shapes; UI
   primitives run axe.
 - **End-to-end** (`pnpm test:e2e`): a production build on mobile profiles,
-  with axe on every page. The public profile and the opt-out tests reach
-  api-dev for real. To test a deployed preview:
+  with axe on every page, served on :3300 so it never meets `pnpm dev` on
+  :3000. The public profile and the opt-out tests reach api-dev for real.
+  To test a deployed preview:
 
   ```bash
   PLAYWRIGHT_BASE_URL=https://<preview>.vercel.app pnpm test:e2e

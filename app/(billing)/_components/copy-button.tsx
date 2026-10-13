@@ -9,6 +9,7 @@ import { useTranslations } from 'next-intl';
 import { cn } from '@/app/lib/utils';
 
 import { Icon } from '@/app/ui/icons';
+import { toast } from '@/app/ui/toast';
 
 type CopyButtonProps = {
   /** What goes to the clipboard: the figure as the bank wants it, a phone, an account. */
@@ -30,11 +31,37 @@ const variants = {
     'h-control-lg w-full border border-border bg-white-50 px-6 text-label-lg text-primary shadow-sm hover:bg-white-200',
 };
 
+/**
+ * The old way to copy, for browsers that refuse the Clipboard API (some
+ * apps' web views, a page not served over https): a hidden text selected
+ * and copied. False when that is refused too.
+ */
+function copyBySelection(value: string): boolean {
+  const area = document.createElement('textarea');
+  area.value = value;
+  area.setAttribute('readonly', '');
+  area.className = 'fixed top-0 left-0 opacity-0';
+  document.body.append(area);
+  area.select();
+  // iOS selects nothing in a read-only field without an explicit range.
+  area.setSelectionRange(0, value.length);
+  try {
+    // Deprecated, and still the only way left in those browsers.
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
+    return document.execCommand('copy');
+  } catch {
+    return false;
+  } finally {
+    area.remove();
+  }
+}
+
 /*
  * Copies one datum of the payment to the clipboard and says so in place,
  * as the app's «Copiar» does: the words turn into «Copiado» for a moment,
- * read aloud, and the button keeps its size. When the clipboard is refused
- * (a web view), the value stays on screen to be selected by hand.
+ * read aloud, and the button keeps its size. When the browser refuses the
+ * clipboard, the old way is tried; if that fails too, the person is told to
+ * copy it by hand, so nothing stale is pasted in the bank.
  */
 export function CopyButton({
   value,
@@ -58,7 +85,10 @@ export function CopyButton({
     try {
       await navigator.clipboard.writeText(value);
     } catch {
-      return;
+      if (!copyBySelection(value)) {
+        toast.error(t('copyFailed'));
+        return;
+      }
     }
     setCopied(true);
     if (timer.current) clearTimeout(timer.current);

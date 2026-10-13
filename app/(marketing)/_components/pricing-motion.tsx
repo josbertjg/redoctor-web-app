@@ -7,17 +7,14 @@ import { useFormatter } from 'next-intl';
 
 import {
   Choreographed,
+  houseTransition,
   motionValue,
-  readDuration,
-  readEase,
+  piece,
 } from '@/app/ui/motion';
 import type {
   AnimationSequence,
   DOMKeyframesDefinition,
 } from '@/app/ui/motion';
-
-/** The section's pieces, as pricing.tsx marks them. */
-const piece = (name: string) => `[data-piece="${name}"]`;
 
 /** Seconds between two benefits that enter one after the other. */
 const featureBeat = 0.07;
@@ -67,10 +64,7 @@ export function PricingMotion({ plans, children }: PricingMotionProps) {
   }, [plans, amounts, format]);
 
   const { hidden, sequence } = useMemo(() => {
-    const step = {
-      duration: readDuration('entrance'),
-      ease: readEase('entrance'),
-    };
+    const step = houseTransition('entrance');
     const featured = plans.find((plan) => plan.featured) ?? plans[0];
     const hidden = (box: HTMLElement) => {
       const states: Record<string, DOMKeyframesDefinition> = {

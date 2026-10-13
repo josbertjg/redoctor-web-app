@@ -77,16 +77,16 @@ export const pageNamespaces = {
     'sex',
     'male',
     'female',
-    'name',
     'continue',
-    'refresh',
     'specialists',
   ],
   // The appointment (M5): its states, its actions and their sheets (the
-  // reschedule's calendar and slots), and the sign-in it may need.
+  // reschedule's calendar and slots), the sign-in it may need, and the
+  // rating of a finished consultation that email 15 leads to (M7).
   appointment: [
     'apiErrors',
     'appointments',
+    'reviews',
     'priceFormat',
     'price',
     'specialists',
@@ -95,7 +95,6 @@ export const pageNamespaces = {
     'sex',
     'male',
     'female',
-    'refresh',
     'cancel',
     'back',
     'pickADate',
@@ -106,16 +105,8 @@ export const pageNamespaces = {
   ],
   // The patient's appointments (M6) and the review wall before them (M7):
   // the list, the cards and the rating, all read in the browser.
-  appointments: ['apiErrors', 'appointments', 'reviews', 'refresh'],
+  appointments: ['apiErrors', 'appointments', 'reviews'],
   // The specialist's payment (M13): the subscription, the plans, the
   // coupon sheet and the two steps of the payment, all read in the browser.
-  pay: [
-    'apiErrors',
-    'billing',
-    'refresh',
-    'continue',
-    'back',
-    'input',
-    'phoneNumber',
-  ],
+  pay: ['apiErrors', 'billing', 'back', 'input'],
 } as const satisfies Record<string, readonly Namespace[]>;

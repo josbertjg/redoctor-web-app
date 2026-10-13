@@ -23,10 +23,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default function PayPage() {
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-1 flex-col px-gutter pt-6 pb-16">
-      <MessagesScope namespaces={pageNamespaces.pay}>
-        <PayFlow />
-      </MessagesScope>
-    </main>
+    <MessagesScope namespaces={pageNamespaces.pay}>
+      <PayFlow />
+    </MessagesScope>
   );
 }

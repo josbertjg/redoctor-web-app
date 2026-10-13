@@ -22,6 +22,7 @@ import {
 import { Button } from '@/app/ui/button';
 import { EmptyState } from '@/app/ui/empty-state';
 
+import { useFocusHeading } from '@/app/hooks/use-focus-heading';
 import { useSession } from '@/app/hooks/use-session';
 
 import { AppointmentsList } from './appointments-list';
@@ -48,56 +49,71 @@ function PatientAppointments({ user }: { user: SessionUser }) {
   const list = useQuery(appointmentsQueryOptions(user));
   // What is ahead is decided once per page, like the appointment's actions.
   const [now] = useState(() => new Date());
-
-  if (pending.isPending) return <AppointmentsSkeleton />;
-
-  const toRate = pending.data ?? [];
-  if (toRate.length > 0) {
-    return (
-      <ReviewWall
-        appointments={sortPendingReviews(toRate).map(toAppointmentSummary)}
-        user={user}
-        onReviewed={(appointmentId) => {
-          queryClient.setQueryData<AppointmentResponse[]>(
-            reviewKeys.pending(user.id),
-            (current) =>
-              (current ?? []).filter(
-                (appointment) => appointment.id !== appointmentId,
-              ),
-          );
-        }}
-      />
-    );
-  }
-
-  if (list.isPending) return <AppointmentsSkeleton />;
-
-  if (list.isError) {
-    return (
-      <EmptyState
-        tone="error"
-        headingLevel={1}
-        icon={CloudOff}
-        title={t('appointments.list.loadError')}
-        description={t('appointments.list.loadErrorDescription')}
-        action={
-          <Button
-            shape="soft"
-            loading={list.isFetching}
-            onClick={() => {
-              void list.refetch();
-            }}
-          >
-            {t('refresh')}
-          </Button>
-        }
-      />
-    );
-  }
+  // Each rating sent here moves the focus to what comes next — the next
+  // consultation, or the list once the wall is done —: the button pressed is gone.
+  const [reviewed, setReviewed] = useState(0);
+  const view = useFocusHeading(reviewed);
 
   return (
-    <AppointmentsList
-      groups={groupAppointments(list.data.map(toAppointmentSummary), now)}
-    />
+    // `contents`: a handle for the focus, no box of its own.
+    <div ref={view} className="contents">
+      {content()}
+    </div>
   );
+
+  function content() {
+    if (pending.isPending) return <AppointmentsSkeleton />;
+
+    const toRate = pending.data ?? [];
+    if (toRate.length > 0) {
+      return (
+        <ReviewWall
+          appointments={sortPendingReviews(toRate).map(toAppointmentSummary)}
+          user={user}
+          onReviewed={(appointmentId) => {
+            queryClient.setQueryData<AppointmentResponse[]>(
+              reviewKeys.pending(user.id),
+              (current) =>
+                (current ?? []).filter(
+                  (appointment) => appointment.id !== appointmentId,
+                ),
+            );
+            setReviewed((count) => count + 1);
+          }}
+        />
+      );
+    }
+
+    if (list.isPending) return <AppointmentsSkeleton />;
+
+    // Only when there is nothing to show: a failed re-read keeps the list.
+    if (list.isLoadingError) {
+      return (
+        <EmptyState
+          tone="error"
+          headingLevel={1}
+          icon={CloudOff}
+          title={t('appointments.list.loadError')}
+          description={t('appointments.list.loadErrorDescription')}
+          action={
+            <Button
+              shape="soft"
+              loading={list.isFetching}
+              onClick={() => {
+                void list.refetch();
+              }}
+            >
+              {t('retry')}
+            </Button>
+          }
+        />
+      );
+    }
+
+    return (
+      <AppointmentsList
+        groups={groupAppointments(list.data.map(toAppointmentSummary), now)}
+      />
+    );
+  }
 }

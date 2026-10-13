@@ -1,10 +1,13 @@
+import { createTranslator } from 'next-intl';
 import { describe, expect, it } from 'vitest';
 
 import {
   formatAppointmentDay,
   formatAppointmentTime,
   formatInstant,
+  hourAgreement,
 } from './appointment-time';
+import messages from '../i18n/messages/es.json';
 
 // Intl separates «p. m.» with narrow no-break spaces; compare the words.
 const plain = (text: string | undefined) => text?.replace(/[  ]/g, ' ');
@@ -57,5 +60,28 @@ describe('formatAppointmentDayShort', () => {
     expect(formatAppointmentDayShort('2026-10-15')).toBe('jue 15 oct. 2026');
     expect(formatAppointmentDayShort('2026-09-03')).toBe('jue 3 sept. 2026');
     expect(formatAppointmentDayShort('hoy')).toBe('hoy');
+  });
+});
+
+describe('hourAgreement', () => {
+  it('says «a la» for one o’clock and «a las» for every other hour', () => {
+    expect(hourAgreement('1:30 p. m.')).toBe('one');
+    expect(hourAgreement('1:00 a. m.')).toBe('one');
+    expect(hourAgreement('11:30 a. m.')).toBe('other');
+    expect(hourAgreement('12:15 p. m.')).toBe('other');
+    expect(hourAgreement('3:00 p. m.')).toBe('other');
+  });
+
+  it('makes the messages read right', () => {
+    const t = createTranslator({ locale: 'es', messages });
+    const words = (time: string) =>
+      t('appointments.detail.cancelWarning', {
+        date: 'jueves 1 de octubre',
+        time,
+        hour: hourAgreement(time),
+      });
+
+    expect(words('1:30 p. m.')).toContain('a la 1:30 p. m.');
+    expect(words('3:30 p. m.')).toContain('a las 3:30 p. m.');
   });
 });

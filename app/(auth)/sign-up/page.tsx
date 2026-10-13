@@ -3,16 +3,14 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 
 import { pageNamespaces } from '@/app/lib/i18n/client-messages';
-import { isSafeRedirect, routes } from '@/app/lib/routes';
+import { isSafeRedirect } from '@/app/lib/routes';
 
 import { AppAccess } from '@/app/ui/app-bridge/app-access';
-import { RequireSession } from '@/app/ui/auth/require-session';
 import { SessionButton } from '@/app/ui/auth/session-button';
 import { SiteHeader } from '@/app/ui/layout/site-header';
 import { MessagesScope } from '@/app/ui/messages-scope';
 
 import { SignUpFlow } from '../_components/sign-up-flow';
-import { SignUpSkeleton } from '../_components/sign-up-skeleton';
 
 /*
  * `/sign-up?redirect=` (M3): the sign-up of an account that signed in with
@@ -41,16 +39,11 @@ export default async function SignUpPage({
       </SiteHeader>
       <main className="flex flex-1 flex-col items-center justify-center px-gutter pb-16">
         <MessagesScope namespaces={pageNamespaces.signUp}>
-          <RequireSession
-            fallback={<SignUpSkeleton />}
-            returnTo={routes.signUp(target ?? undefined)}
-          >
-            <SignUpFlow
-              redirect={target}
-              joinApp={<AppAccess variant="join" />}
-              finishApp={<AppAccess variant="finish" />}
-            />
-          </RequireSession>
+          <SignUpFlow
+            redirect={target}
+            joinApp={<AppAccess variant="join" />}
+            finishApp={<AppAccess variant="finish" />}
+          />
         </MessagesScope>
       </main>
     </>

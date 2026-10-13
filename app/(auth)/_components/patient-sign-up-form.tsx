@@ -9,7 +9,7 @@ import { useForm, type Resolver } from 'react-hook-form';
 import { z } from 'zod';
 
 import { track } from '@/app/lib/analytics/track';
-import { isApiError } from '@/app/lib/api/errors';
+import { failureMessageKey } from '@/app/lib/api/errors';
 import type { SessionUser } from '@/app/lib/firebase/client';
 import {
   birthDateProblem,
@@ -81,6 +81,20 @@ const emptyValues: SignUpValues = {
 /** Someone else's account already uses the document. */
 class DocumentTaken extends Error {}
 
+/**
+ * A fresh ID token, whose claims carry the registration the API reads. When
+ * it cannot be had right now (the connection dropped just after saving), the
+ * data is saved all the same and Firebase refreshes the token by itself: the
+ * person is not told that saving failed, as in the app.
+ */
+async function refreshToken(user: SessionUser) {
+  try {
+    await user.getToken(true);
+  } catch {
+    // Saved anyway: see above.
+  }
+}
+
 type PatientSignUpFormProps = {
   user: SessionUser;
   parts: SignUpParts;
@@ -141,6 +155,8 @@ function useSignUpResolver(parts: SignUpParts): Resolver<SignUpValues> {
       switch (documentNumberProblem(value)) {
         case 'empty':
           return t('input.empty');
+        case 'onlyDigits':
+          return t('input.identityDocument.onlyDigits');
         case 'minLength':
           return t('input.identityDocument.minLength', {
             minLength: documentNumberLength.min,
@@ -231,6 +247,9 @@ export function PatientSignUpForm({
           role: 'PATIENT',
         });
         track('web_signup_completed', { step: 'register' });
+        // The completion reads the registration from the token's claims, as
+        // the app refreshes it between the two steps.
+        await refreshToken(user);
       }
       if (parts.personalData && values.sex !== '') {
         await completePatientRegistration(user, {
@@ -243,7 +262,7 @@ export function PatientSignUpForm({
         track('web_signup_completed', { step: 'personal_data' });
       }
       // The token's claims carry the registration status the API reads.
-      await user.getToken(true);
+      await refreshToken(user);
       await queryClient.invalidateQueries({
         queryKey: identityKeys.me(user.id),
       });
@@ -260,14 +279,11 @@ export function PatientSignUpForm({
     },
   });
 
-  const failure =
+  const failureKey =
     save.error === null || save.error instanceof DocumentTaken
-      ? undefined
-      : isApiError(save.error) &&
-          save.error.messageKey.startsWith('apiErrors.') &&
-          save.error.messageKey !== 'apiErrors.unexpected'
-        ? t(save.error.messageKey)
-        : t('signUp.saveFailed');
+      ? null
+      : failureMessageKey(save.error, 'signUp.saveFailed');
+  const failure = failureKey === null ? undefined : t(failureKey);
 
   return (
     <form

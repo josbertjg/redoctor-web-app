@@ -39,6 +39,7 @@ export function ProfileHero({ profile }: { profile: SpecialistProfile }) {
       className="flex flex-col items-center rounded-b-2xl bg-primary px-gutter pt-2 pb-8 text-center text-on-primary"
     >
       <Avatar
+        decorative
         name={profile.name}
         // 4x the 110 px avatar: sharp on 3x screens.
         src={profile.photoUrl && sizedPhotoUrl(profile.photoUrl, 440)}
@@ -47,9 +48,10 @@ export function ProfileHero({ profile }: { profile: SpecialistProfile }) {
         className="ring-4 ring-white-50/25"
       />
       <div className="mt-4 flex max-w-full items-center justify-center gap-1">
+        {/* Two lines before cutting: a full name rarely fits one on a phone. */}
         <h1
           id="specialist-name"
-          className="truncate text-headline-sm font-bold"
+          className="line-clamp-2 text-headline-sm font-bold text-balance"
         >
           {profile.name}
         </h1>

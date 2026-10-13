@@ -17,12 +17,12 @@ export async function waitForAnimations(page: Page): Promise<void> {
 }
 
 /**
- * Waits for the page's own content. Every page is dynamic (the CSP nonce),
- * so Next streams it behind the root `loading.tsx` and React reveals it a
- * few hundred ms after `load`: until then the skeleton is what shows and
- * the content sits in a hidden container. Every page of ours renders a
- * `main` landmark, so its visibility is the signal (attached is not: the
- * hidden container is in the DOM from the start).
+ * Waits for the page's own content. Every page is dynamic (the CSP nonce);
+ * a segment with a `loading.tsx` streams behind it, and React reveals the
+ * content a few hundred ms after `load`, while it sits in a hidden
+ * container. Every page of ours renders a `main` landmark, so its
+ * visibility is the signal (attached is not: the hidden container is in the
+ * DOM from the start).
  */
 export async function waitForContent(page: Page): Promise<void> {
   await page.locator('main').first().waitFor({ state: 'visible' });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import Close from '@material-symbols/svg-400/rounded/close.svg?svgr';
 import Menu from '@material-symbols/svg-400/rounded/menu.svg?svgr';
@@ -23,6 +23,7 @@ type LandingNavProps = {
  */
 export function LandingNav({ links, labels }: LandingNavProps) {
   const [open, setOpen] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
 
   return (
     <Collapsible.Root
@@ -30,11 +31,15 @@ export function LandingNav({ links, labels }: LandingNavProps) {
       onOpenChange={setOpen}
       className="lg:hidden"
       onKeyDown={(event) => {
-        if (event.key === 'Escape') setOpen(false);
+        if (event.key !== 'Escape') return;
+        setOpen(false);
+        // The links leave with the menu: the focus goes back to its button.
+        trigger.current?.focus();
       }}
     >
       <Collapsible.Trigger asChild>
         <Button
+          ref={trigger}
           variant="white"
           size="small"
           shape="soft"

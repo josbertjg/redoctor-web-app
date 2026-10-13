@@ -17,7 +17,6 @@ import {
   subscriptionStatusChips,
   type PlanTier,
   type Subscription,
-  type SubscriptionDiscount,
   type SubscriptionNotice,
 } from '@/app/lib/schemas/billing';
 import { cn } from '@/app/lib/utils';
@@ -26,6 +25,7 @@ import { Button } from '@/app/ui/button';
 import { Icon } from '@/app/ui/icons';
 import { StateChip } from '@/app/ui/state-chip';
 
+import { couponDiscountLabel } from './coupon-words';
 import { DetailList, type DetailItem } from './detail-list';
 import { NoticePanel } from './notice-panel';
 
@@ -45,17 +45,6 @@ const emblems: Record<PlanTier, string> = {
 };
 
 type Translate = ReturnType<typeof useTranslations<'billing'>>;
-
-/** «20 % de descuento» or «$ 5 de descuento». */
-function discountLabel(t: Translate, discount: SubscriptionDiscount): string {
-  return discount.discountType === 'PERCENT'
-    ? t('couponTerms.percent', { percent: discount.percentOff ?? 0 })
-    : t('couponTerms.amount', {
-        amount: discount.amountOff
-          ? formatBillingAmount(discount.amountOff)
-          : '',
-      });
-}
 
 /** What the state means for the person, with the deadline that runs. */
 function statusMessage(t: Translate, subscription: Subscription): string {
@@ -130,7 +119,7 @@ function periodRows(t: Translate, subscription: Subscription): DetailItem[] {
     rows.push({
       key: 'coupon',
       label: t('mySubscription.rows.coupon', { code: discount.code }),
-      value: discountLabel(t, discount),
+      value: couponDiscountLabel(t, discount),
     });
     rows.push({
       key: 'couponLeft',

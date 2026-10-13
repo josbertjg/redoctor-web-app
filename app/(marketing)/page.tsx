@@ -2,7 +2,7 @@ import { preload } from 'react-dom';
 
 import type { Metadata } from 'next';
 
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 
 import { MotionProvider } from '@/app/ui/motion/provider';
 
@@ -32,23 +32,37 @@ export const metadata: Metadata = {
  * cookie it leaves says the next visits do not. The hero's words wait for it.
  */
 export default async function HomePage() {
-  const showSplash = !(await cookies()).has(splashCookie);
+  const [cookieStore, headerList] = await Promise.all([cookies(), headers()]);
+  // A visit that asks to save data does without the splash and its ~370 KB
+  // (the veil checks the connection again once it runs).
+  const savesData = headerList.get('save-data') === 'on';
+  const showSplash = !cookieStore.has(splashCookie) && !savesData;
   if (showSplash) {
     // The logo's runtime and file start downloading with the HTML, not after
-    // hydration: the veil shows the entrance sooner.
+    // hydration: the veil shows the entrance sooner. At a low priority, so
+    // they never get ahead of the page's own scripts.
     preload('/animations/rive.wasm', {
       as: 'fetch',
       type: 'application/wasm',
       crossOrigin: 'anonymous',
+      fetchPriority: 'low',
     });
     preload('/animations/splash-logo.riv', {
       as: 'fetch',
       crossOrigin: 'anonymous',
+      fetchPriority: 'low',
     });
   }
 
   return (
     <MotionProvider>
+      {/* Without JavaScript nothing would ever enter: every piece shows
+          where it settles (the same rule globals.css keeps for reduced motion). */}
+      <noscript>
+        <style>
+          {'[data-entrance]{opacity:1!important;transform:none!important}'}
+        </style>
+      </noscript>
       {showSplash && <SplashVeil />}
       {/* The page clips the background shapes at its own edges (`clip` keeps
           the header sticky); the sections never do, so a shape can run from

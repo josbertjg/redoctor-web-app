@@ -22,6 +22,10 @@ export const invitationKeys = {
   detail: (token: string) => ['invitation', token] as const,
 };
 
+/** No invitation answers to that token: a wrong or cut link (a token the API refuses as malformed, too). */
+const leadsNowhere = (error: unknown) =>
+  isApiError(error) && (error.status === 404 || error.status === 400);
+
 /** The invitation, or null when no invitation has that token (a wrong link is no error to report). */
 async function readInvitation(
   token: string,
@@ -32,10 +36,11 @@ async function readInvitation(
       path: '/scheduling/invitations/:token',
       params: { token },
       schema: invitationResponseSchema,
+      expected: leadsNowhere,
       ...(signal ? { signal } : {}),
     });
   } catch (error) {
-    if (isApiError(error) && error.status === 404) return null;
+    if (leadsNowhere(error)) return null;
     throw error;
   }
 }
@@ -84,6 +89,9 @@ export function claimInvitation(
           token: await claimer.getToken(),
           body,
           schema: invitationResponseSchema,
+          // Already claimed (by this account: done; by another: said in place),
+          // or a SELF claim refused with its reason (ERR_4014).
+          expected: (error) => error.status === 409,
         });
       } catch (error) {
         if (isApiError(error) && error.status === 409) {

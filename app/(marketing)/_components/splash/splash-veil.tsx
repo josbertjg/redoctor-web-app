@@ -1,6 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import dynamic from 'next/dynamic';
 
@@ -31,8 +37,24 @@ export function SplashVeil() {
   const reduced = useReducedMotion();
   const slow = useSlowConnection();
   const [phase, setPhase] = useState<Phase>('playing');
+  /** JavaScript leads the veil: the CSS fallback fade is off. */
+  const [driven, setDriven] = useState(false);
+  const veil = useRef<HTMLDivElement>(null);
   // Skipping needs no phase of its own: the veil is simply over.
   const over = phase !== 'playing' || reduced || slow;
+
+  // Once the page runs, the CSS fade (the fallback without JavaScript) must
+  // not cut the logo mid-entrance on a slow start: the timers here take over.
+  // A page that hydrated after that fade had already played out is over.
+  useLayoutEffect(() => {
+    const element = veil.current;
+    if (!element) return;
+    if (getComputedStyle(element).visibility === 'hidden') {
+      setPhase('gone');
+      return;
+    }
+    setDriven(true);
+  }, []);
 
   const finish = useCallback(() => {
     setPhase((current) => (current === 'playing' ? 'leaving' : current));
@@ -75,6 +97,7 @@ export function SplashVeil() {
 
   return (
     <div
+      ref={veil}
       data-splash={phase}
       aria-hidden="true"
       onClick={finish}
@@ -83,10 +106,15 @@ export function SplashVeil() {
       }}
       className={cn(
         'fixed inset-0 z-50 flex items-center justify-center bg-primary motion-reduce:hidden',
-        // Playing: the no-JS fallback, a fade after its delay. Leaving: the
-        // fade now, under another name — the browser would carry on the
-        // first animation, already past its end, instead of restarting it.
-        phase === 'leaving' ? 'animate-fade-out' : 'animate-splash-out',
+        // Playing without JavaScript: the fallback, a fade after its delay.
+        // Leaving: the fade now, under another name — the browser would
+        // carry on the first animation, already past its end, instead of
+        // restarting it.
+        phase === 'leaving'
+          ? 'animate-fade-out'
+          : driven
+            ? null
+            : 'animate-splash-out',
       )}
     >
       <RiveLogo

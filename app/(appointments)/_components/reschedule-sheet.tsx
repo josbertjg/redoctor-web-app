@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
 import { track } from '@/app/lib/analytics/track';
-import { isApiError } from '@/app/lib/api/errors';
+import { failureMessageKey, isApiError } from '@/app/lib/api/errors';
 import type { SessionUser } from '@/app/lib/firebase/client';
 import {
   formatAppointmentDay,
@@ -38,7 +38,6 @@ import { Sheet } from '@/app/ui/sheet';
 import { Skeleton } from '@/app/ui/skeleton';
 import { toast } from '@/app/ui/toast';
 
-import { actionFailure } from './action-failure';
 import { MonthCalendar } from './month-calendar';
 
 type RescheduleSheetProps = {
@@ -95,7 +94,17 @@ export function RescheduleSheet({
     enabled: open && officeId !== '',
   });
   const free = days.data ? freeDays(days.data.days) : new Set<string>();
-  const dayIsFree = day !== null && free.has(day) && day >= today;
+  // The chosen day is judged by its own month, not by the one on screen:
+  // browsing to the next month never hides the choice that will be sent.
+  const ofChosenMonth = useQuery({
+    ...availableDaysQueryOptions(user, officeId, day?.slice(0, 7) ?? month),
+    enabled: open && officeId !== '' && day !== null,
+  });
+  const dayIsFree =
+    day !== null &&
+    day >= today &&
+    ofChosenMonth.data !== undefined &&
+    freeDays(ofChosenMonth.data.days).has(day);
   const slots = useQuery({
     ...daySlotsQueryOptions(user, officeId, day ?? ''),
     enabled: open && officeId !== '' && dayIsFree,
@@ -122,7 +131,10 @@ export function RescheduleSheet({
         });
         return;
       }
-      const failure = actionFailure(error);
+      const failure = failureMessageKey(
+        error,
+        'appointments.detail.actionFailed',
+      );
       setProblem(failure ? t(failure) : null);
       void queryClient.invalidateQueries({
         queryKey: appointmentKeys.detail(user.id, appointment.id),
@@ -131,8 +143,7 @@ export function RescheduleSheet({
   });
 
   const freeSlots = (slots.data?.slots ?? []).filter((slot) => slot.available);
-  const hint =
-    problem ?? (time === null ? t('appointments.detail.rescheduleHint') : null);
+  const showHint = problem === null && time === null;
 
   return (
     <Sheet
@@ -141,17 +152,22 @@ export function RescheduleSheet({
       title={t('appointments.detail.rescheduleTitle')}
       footer={
         <div className="flex flex-col gap-2">
-          {problem ? (
-            <FieldError
-              id={problemId}
-              message={problem}
-              className="text-center"
-            />
-          ) : hint ? (
-            <p className="text-center text-body-sm text-text-secondary">
-              {hint}
-            </p>
-          ) : null}
+          {/* Always mounted: a failure is read aloud as it appears, and the
+              hint fades instead of making the footer jump. */}
+          <FieldError
+            id={problemId}
+            message={problem ?? undefined}
+            className="text-center"
+          />
+          <p
+            aria-hidden={showHint ? undefined : true}
+            className={cn(
+              'text-center text-body-sm text-text-secondary transition-opacity duration-base ease-house',
+              showHint ? 'opacity-100' : 'opacity-0',
+            )}
+          >
+            {t('appointments.detail.rescheduleHint')}
+          </p>
           <Button
             block
             shape="soft"
@@ -202,19 +218,46 @@ export function RescheduleSheet({
             selected={day}
             onMonthChange={setMonth}
             onSelect={(date) => {
+              // The chosen day again keeps the chosen hour, as in the app.
+              if (date === day) return;
               setDay(date);
               setTime(null);
               setProblem(null);
             }}
           />
+          {days.isError ? (
+            <LoadFailure
+              message={t('appointments.detail.daysLoadError')}
+              retrying={days.isFetching}
+              onRetry={() => {
+                void days.refetch();
+              }}
+            />
+          ) : null}
         </section>
 
         {day !== null ? (
-          <section ref={hours} className="flex flex-col gap-3">
+          <section ref={hours} className="flex animate-fade-up flex-col gap-3">
             <h3 className="text-title-sm text-text-primary">
               {t('appointments.detail.selectASlot')}
             </h3>
-            {!dayIsFree ? (
+            {slots.isError || ofChosenMonth.isError ? (
+              <LoadFailure
+                message={t('appointments.detail.slotsLoadError')}
+                retrying={slots.isFetching || ofChosenMonth.isFetching}
+                onRetry={() => {
+                  void (ofChosenMonth.isError
+                    ? ofChosenMonth.refetch()
+                    : slots.refetch());
+                }}
+              />
+            ) : ofChosenMonth.isPending ? (
+              <div aria-busy="true" className="grid grid-cols-3 gap-2">
+                {Array.from({ length: 6 }, (_, index) => (
+                  <Skeleton key={index} className="h-control w-full" />
+                ))}
+              </div>
+            ) : !dayIsFree ? (
               <p className="text-body-md text-text-secondary">
                 {t('no_slots_available')}
               </p>
@@ -242,6 +285,36 @@ export function RescheduleSheet({
         ) : null}
       </div>
     </Sheet>
+  );
+}
+
+/** A read that failed inside the sheet: said in place, with the way to try again. */
+function LoadFailure({
+  message,
+  retrying,
+  onRetry,
+}: {
+  message: string;
+  retrying: boolean;
+  onRetry: () => void;
+}) {
+  const t = useTranslations();
+  return (
+    <div
+      role="alert"
+      className="flex animate-fade-in flex-col items-start gap-2 rounded-lg bg-error-50 px-4 py-3"
+    >
+      <p className="text-body-md text-error-700">{message}</p>
+      <Button
+        variant="white"
+        size="small"
+        shape="soft"
+        loading={retrying}
+        onClick={onRetry}
+      >
+        {t('retry')}
+      </Button>
+    </div>
   );
 }
 

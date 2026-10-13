@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import Link from 'next/link';
 
@@ -13,8 +13,6 @@ import Login from '@material-symbols/svg-400/rounded/login.svg?svgr';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
-import { track } from '@/app/lib/analytics/track';
-import type { AuthProvider } from '@/app/lib/auth/last-provider';
 import { invitationQueryOptions } from '@/app/lib/queries/invitations';
 import { routes } from '@/app/lib/routes';
 import {
@@ -25,12 +23,16 @@ import {
 } from '@/app/lib/schemas/invitations';
 
 import { AppointmentHeadline } from '@/app/ui/appointments/appointment-headline';
+import { AccountErrorState } from '@/app/ui/auth/account-error-state';
 import { SignInButtons } from '@/app/ui/auth/sign-in-buttons';
+import { SignInLegalNote } from '@/app/ui/auth/sign-in-legal-note';
 import { Button } from '@/app/ui/button';
 import { EmptyState } from '@/app/ui/empty-state';
 import { StatusCard } from '@/app/ui/status-card';
 
+import { useFocusHeading } from '@/app/hooks/use-focus-heading';
 import { useSession } from '@/app/hooks/use-session';
+import { useSignInTracking } from '@/app/hooks/use-sign-in-tracking';
 
 import { ClaimForm } from './claim-form';
 import { InvitationDetails } from './invitation-details';
@@ -49,6 +51,10 @@ type InvitationFlowProps = {
  * claim it, one signs in right here, finishes the sign-up if the account
  * has not, and says for whom it is. What a forwarded link shows to a
  * stranger stays minimal (REDOC-315).
+ *
+ * The page's column and its heading stay in place across every state —
+ * loading included —, so nothing jumps and what is already shown does not
+ * appear again; after a claim the focus goes to its news.
  */
 export function InvitationFlow({
   token,
@@ -59,21 +65,30 @@ export function InvitationFlow({
   const query = useQuery(invitationQueryOptions(token));
   /** The claim just made here: its words say so («¡Listo! La cita ya es tuya»). */
   const [claimed, setClaimed] = useState<{ confirmed: boolean } | null>(null);
-  const [provider, setProvider] = useState<AuthProvider | null>(null);
-  const signInTracked = useRef(false);
+  const onSignedIn = useSignInTracking();
 
-  const { account } = session;
-  useEffect(() => {
-    if (account === null || provider === null || signInTracked.current) return;
-    signInTracked.current = true;
-    track('web_signin_completed', { provider, role: account.role });
-  }, [account, provider]);
+  const invitation =
+    query.data === undefined || query.data === null
+      ? null
+      : toInvitation(query.data);
+  const view =
+    invitation === null ? null : planInvitationView(invitation, session);
+  // After a claim made here, the focus goes to its news; loading never moves it.
+  const frame = useFocusHeading(claimed);
 
-  if (query.isPending) return <InvitationSkeleton />;
-
-  if (query.isError) {
+  if (query.isPending) {
     return (
-      <Frame>
+      <Frame ref={frame}>
+        <InvitationSkeleton />
+      </Frame>
+    );
+  }
+
+  // Only when there is nothing to show: a failed re-read after a claim keeps
+  // the invitation on screen (the connection notice already said why).
+  if (query.isLoadingError) {
+    return (
+      <Frame ref={frame}>
         <EmptyState
           tone="error"
           icon={CloudOff}
@@ -87,7 +102,7 @@ export function InvitationFlow({
                 void query.refetch();
               }}
             >
-              {t('refresh')}
+              {t('retry')}
             </Button>
           }
         />
@@ -95,9 +110,9 @@ export function InvitationFlow({
     );
   }
 
-  if (query.data === null) {
+  if (invitation === null || view === null) {
     return (
-      <Frame>
+      <Frame ref={frame}>
         <EmptyState
           icon={LinkOff}
           title={t('appointments.invitation.notFound')}
@@ -107,35 +122,44 @@ export function InvitationFlow({
     );
   }
 
-  const invitation = toInvitation(query.data);
-  const view = planInvitationView(invitation, session);
-  const signIn = (
-    <SignInButtons
-      onSignedIn={(_user, chosen) => {
-        setProvider(chosen);
-      }}
-    />
-  );
+  const signIn = <SignInButtons onSignedIn={onSignedIn} />;
   const switchAccount = () => {
     void session.signOut();
   };
+  // Who, when and where, to those it may concern: never for an invitation
+  // that is over or someone else's (REDOC-315), nor while the session that
+  // would tell whose it is still answers.
+  const headline =
+    view.kind === 'claimed-by-me' ||
+    view.kind === 'sign-in' ||
+    view.kind === 'for-patients' ||
+    view.kind === 'claim' ||
+    (view.kind === 'waiting' && invitation.status === 'pending') ? (
+      <AppointmentHeadline appointment={invitation.appointment} />
+    ) : null;
 
-  switch (view.kind) {
-    case 'expired':
-    case 'cancelled':
-      return (
-        <Frame>
+  return (
+    <Frame ref={frame}>
+      {headline}
+      {viewBody()}
+    </Frame>
+  );
+
+  function viewBody() {
+    if (invitation === null || view === null) return null;
+    switch (view.kind) {
+      case 'expired':
+      case 'cancelled':
+        return (
           <EmptyState
             icon={EventBusy}
             title={t(`appointments.invitation.status.${view.kind}`)}
             description={t('appointments.invitation.expiredDescription')}
           />
-        </Frame>
-      );
+        );
 
-    case 'claimed-by-other':
-      return (
-        <Frame>
+      case 'claimed-by-other':
+        return (
           <EmptyState
             icon={Group}
             title={t('appointments.invitation.claimedByOther')}
@@ -146,12 +170,10 @@ export function InvitationFlow({
               </Button>
             }
           />
-        </Frame>
-      );
+        );
 
-    case 'claimed-signed-out':
-      return (
-        <Frame>
+      case 'claimed-signed-out':
+        return (
           <StatusCard
             icon={Group}
             title={t('appointments.invitation.claimedByOther')}
@@ -161,112 +183,80 @@ export function InvitationFlow({
           >
             {signIn}
           </StatusCard>
-        </Frame>
-      );
+        );
 
-    case 'claimed-by-me':
-      return (
-        <Frame>
-          <AppointmentHeadline appointment={invitation.appointment} />
-          <StatusCard
-            icon={CheckCircle}
-            title={
-              claimed
-                ? t('appointments.invitation.justClaimed')
-                : t('appointments.invitation.alreadyClaimed')
-            }
-            description={
-              claimed?.confirmed
-                ? t('appointments.invitation.justClaimedConfirmed')
-                : t('appointments.invitation.claimedDescription')
-            }
-          >
-            <Button asChild block shape="soft">
-              <Link href={routes.appointment(invitation.appointment.id)}>
-                {t('appointments.invitation.seeAppointment')}
-              </Link>
-            </Button>
-          </StatusCard>
-          <InvitationDetails invitation={invitation} showPrivate />
-        </Frame>
-      );
+      case 'claimed-by-me':
+        return (
+          <>
+            <StatusCard
+              icon={CheckCircle}
+              viewHeading
+              title={
+                claimed
+                  ? t('appointments.invitation.justClaimed')
+                  : t('appointments.invitation.alreadyClaimed')
+              }
+              description={
+                claimed?.confirmed
+                  ? t('appointments.invitation.justClaimedConfirmed')
+                  : t('appointments.invitation.claimedDescription')
+              }
+            >
+              <Button asChild block shape="soft">
+                <Link href={routes.appointment(invitation.appointment.id)}>
+                  {t('appointments.invitation.seeAppointment')}
+                </Link>
+              </Button>
+            </StatusCard>
+            <InvitationDetails invitation={invitation} showPrivate />
+          </>
+        );
 
-    case 'account-error':
-      return (
-        <Frame>
-          <EmptyState
-            tone="error"
-            icon={CloudOff}
-            title={t('auth.accountError.title')}
-            description={t('auth.accountError.description')}
-            action={
-              <>
-                <Button shape="soft" onClick={session.retryAccount}>
-                  {t('retry')}
-                </Button>
-                <Button variant="white" shape="soft" onClick={switchAccount}>
-                  {t('auth.switchAccount')}
-                </Button>
-              </>
-            }
+      case 'account-error':
+        return <AccountErrorState canSwitchAccount />;
+
+      case 'waiting':
+        return <ClaimSkeleton />;
+
+      case 'sign-in':
+        return (
+          <>
+            <StatusCard
+              icon={Login}
+              title={t('appointments.invitation.needsAccount')}
+              description={t('appointments.invitation.needsAccountDescription')}
+            >
+              {signIn}
+              <SignInLegalNote />
+            </StatusCard>
+            <InvitationDetails invitation={invitation} showPrivate={false} />
+          </>
+        );
+
+      case 'for-patients':
+        return (
+          <>
+            <StatusCard
+              icon={Group}
+              title={t('appointments.invitation.forPatients')}
+              description={t('appointments.invitation.forPatientsDescription')}
+            />
+            <InvitationDetails invitation={invitation} showPrivate={false} />
+          </>
+        );
+
+      case 'claim':
+        return (
+          <ClaimView
+            token={token}
+            invitation={invitation}
+            mustSignUp={view.mustSignUp}
+            initialRelationship={initialRelationship}
+            onClaimed={setClaimed}
+            onSwitchAccount={switchAccount}
           />
-        </Frame>
-      );
-
-    case 'waiting':
-      return (
-        <Frame>
-          <AppointmentHeadline appointment={invitation.appointment} />
-          <ClaimSkeleton />
-        </Frame>
-      );
-
-    case 'sign-in':
-      return (
-        <Frame>
-          <AppointmentHeadline appointment={invitation.appointment} />
-          <StatusCard
-            icon={Login}
-            title={t('appointments.invitation.needsAccount')}
-            description={t('appointments.invitation.needsAccountDescription')}
-          >
-            {signIn}
-            {/* TODO(M10): link the legal pages once they exist. */}
-            <p className="text-center text-body-sm text-text-secondary">
-              {t('auth.byLoggingInAcceptsOur')}
-              <span className="font-semibold">
-                {t('auth.termsOfUseAndPrivacy')}
-              </span>
-            </p>
-          </StatusCard>
-          <InvitationDetails invitation={invitation} showPrivate={false} />
-        </Frame>
-      );
-
-    case 'for-patients':
-      return (
-        <Frame>
-          <AppointmentHeadline appointment={invitation.appointment} />
-          <StatusCard
-            icon={Group}
-            title={t('appointments.invitation.forPatients')}
-            description={t('appointments.invitation.forPatientsDescription')}
-          />
-          <InvitationDetails invitation={invitation} showPrivate={false} />
-        </Frame>
-      );
-
-    case 'claim':
-      return (
-        <ClaimView
-          token={token}
-          invitation={invitation}
-          mustSignUp={view.mustSignUp}
-          initialRelationship={initialRelationship}
-          onClaimed={setClaimed}
-          onSwitchAccount={switchAccount}
-        />
-      );
+        );
+    }
   }
 }
 
@@ -286,11 +276,10 @@ function ClaimView({
   onSwitchAccount: () => void;
 }) {
   const { user, account } = useSession();
-  if (user === null || account === null) return <InvitationSkeleton />;
+  if (user === null || account === null) return <ClaimSkeleton />;
 
   return (
-    <Frame>
-      <AppointmentHeadline appointment={invitation.appointment} />
+    <>
       <ClaimForm
         token={token}
         invitation={invitation}
@@ -302,15 +291,21 @@ function ClaimView({
         onSwitchAccount={onSwitchAccount}
       />
       <InvitationDetails invitation={invitation} showPrivate />
-    </Frame>
+    </>
   );
 }
 
 /** The page's column: its heading, then the invitation's cards. */
-function Frame({ children }: { children: ReactNode }) {
+function Frame({
+  children,
+  ref,
+}: {
+  children: ReactNode;
+  ref?: React.Ref<HTMLDivElement>;
+}) {
   const t = useTranslations('appointments.invitation');
   return (
-    <div className="flex w-full flex-col gap-4">
+    <div ref={ref} className="flex w-full flex-col gap-4">
       <h1 className="text-headline-sm text-text-primary">{t('title')}</h1>
       {children}
     </div>

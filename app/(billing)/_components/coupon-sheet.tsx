@@ -7,6 +7,7 @@ import ConfirmationNumber from '@material-symbols/svg-400/rounded/confirmation_n
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
+import { failureMessageKey } from '@/app/lib/api/errors';
 import type { SessionUser } from '@/app/lib/firebase/client';
 import { formatBillingAmount } from '@/app/lib/format/money';
 import {
@@ -15,10 +16,12 @@ import {
   validateCoupon,
 } from '@/app/lib/queries/billing';
 import {
-  couponAppliesTo,
-  couponDiscount,
   type Coupon,
+  couponAppliesTo,
   type CouponChoice,
+  couponCodeMaxLength,
+  couponCodeMinLength,
+  couponDiscount,
   type OfferedPlan,
   type SavedCoupon,
 } from '@/app/lib/schemas/billing';
@@ -28,7 +31,6 @@ import { Icon } from '@/app/ui/icons';
 import { Sheet } from '@/app/ui/sheet';
 import { TextField } from '@/app/ui/text-field';
 
-import { billingFailure } from './billing-failure';
 import { couponSummary } from './coupon-words';
 
 import type { AppliedCoupon } from './payment-types';
@@ -67,8 +69,22 @@ export function CouponSheet({
   const t = useTranslations('billing');
   const tRoot = useTranslations();
   const [code, setCode] = useState(applied?.terms.code ?? '');
-  const [missing, setMissing] = useState(false);
+  /** What is wrong before asking the API: nothing typed, or a length no code has. */
+  const [problem, setProblem] = useState<'missing' | 'length' | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
+  const [wasOpen, setWasOpen] = useState(open);
+
+  // Each opening starts from what is applied: a preview not applied, or a
+  // coupon the API dropped meanwhile, is forgotten. Done on opening, not on
+  // closing, so the sheet does not change while it slides away.
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setPreview(null);
+      setProblem(null);
+      setCode(applied?.terms.code ?? '');
+    }
+  }
   const saved = useQuery({ ...savedCouponsQueryOptions(user), enabled: open });
 
   const validate = useMutation({
@@ -111,20 +127,26 @@ export function CouponSheet({
   const failureKey =
     failedCode === typed
       ? (couponRejectionKey(validate.error) ??
-        billingFailure(validate.error, 'billing.acquire.coupon.failed'))
+        failureMessageKey(validate.error, 'billing.acquire.coupon.failed'))
       : null;
   // Read in the field, not in a toast that would cover the keyboard.
-  const fieldError = missing
-    ? t('acquire.coupon.required')
-    : failureKey
-      ? tRoot(failureKey)
-      : current && !applicable
-        ? t('couponRejection.wrongPlan')
-        : undefined;
+  const fieldError =
+    problem === 'missing'
+      ? t('acquire.coupon.required')
+      : problem === 'length'
+        ? t('couponRejection.invalid')
+        : failureKey
+          ? tRoot(failureKey)
+          : current && !applicable
+            ? t('couponRejection.wrongPlan')
+            : undefined;
 
   const close = () => {
     onOpenChange(false);
   };
+  const lengthIsPossible = (candidate: string) =>
+    candidate.length >= couponCodeMinLength &&
+    candidate.length <= couponCodeMaxLength;
 
   const action: { label: string; run: () => void } =
     typed === '' && applied
@@ -150,7 +172,13 @@ export function CouponSheet({
               run: () => {
                 if (validate.isPending) return;
                 if (typed === '') {
-                  setMissing(true);
+                  setProblem('missing');
+                  return;
+                }
+                // The API takes 3 to 32 characters: a code outside them is no
+                // code, and asking would only answer «try again».
+                if (!lengthIsPossible(typed)) {
+                  setProblem('length');
                   return;
                 }
                 validate.mutate({ code: typed });
@@ -164,16 +192,7 @@ export function CouponSheet({
   return (
     <Sheet
       open={open}
-      onOpenChange={(next) => {
-        if (!next) {
-          // Closed however it was: what was seen and not applied is forgotten.
-          setPreview(null);
-          setMissing(false);
-          validate.reset();
-          setCode(applied?.terms.code ?? '');
-        }
-        onOpenChange(next);
-      }}
+      onOpenChange={onOpenChange}
       title={t('acquire.coupon.title')}
       footer={
         <Button
@@ -211,7 +230,7 @@ export function CouponSheet({
           }
           onChange={(event) => {
             setCode(event.target.value.toUpperCase());
-            setMissing(false);
+            setProblem(null);
           }}
         />
         {applicable ? (
@@ -237,7 +256,7 @@ export function CouponSheet({
           </div>
         ) : null}
         {savedForPlan.length > 0 ? (
-          <div className="flex flex-col gap-2">
+          <div className="flex animate-fade-in flex-col gap-2">
             <p className="text-label-md text-text-secondary">
               {t('acquire.coupon.saved')}
             </p>
@@ -247,8 +266,11 @@ export function CouponSheet({
                   <button
                     type="button"
                     onClick={() => {
+                      // One at a time, as the app: a tap while another is
+                      // being checked would answer for the wrong code.
+                      if (validate.isPending) return;
                       setCode(coupon.code);
-                      setMissing(false);
+                      setProblem(null);
                       validate.mutate({
                         code: coupon.code,
                         savedCoupon: coupon,

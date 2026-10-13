@@ -79,7 +79,8 @@ export function StarsInput({
               icon={star <= lit ? StarFill : Star}
               className={cn(
                 'size-8 transition-[color,transform] duration-fast ease-house',
-                star <= lit ? 'text-warning-500' : 'text-grey-300',
+                // grey-500: an empty star still reads as a star (3:1 at least).
+                star <= lit ? 'text-warning-500' : 'text-grey-500',
                 star <= previewed && 'scale-110',
               )}
             />

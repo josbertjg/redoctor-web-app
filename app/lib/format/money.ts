@@ -48,21 +48,13 @@ const bankFigureFormat = new Intl.NumberFormat(formatLocale, {
   useGrouping: false,
 });
 
-const billingDollarsFormat = new Intl.NumberFormat('en-US', {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
-const wholeBillingDollarsFormat = new Intl.NumberFormat('en-US', {
-  maximumFractionDigits: 0,
-});
-
 export type BillingAmount = { amount: number; currency: string };
 
 /**
- * A billing amount, an integer in cents or céntimos, as the app and the
- * billing emails write it: `$ 36.99` with the point (`$ 15` when whole) and
- * `Bs 1.498,09` as Venezuela writes bolívares, the sign in front when
+ * A billing amount, an integer in cents or céntimos: `$ 36,99` with the
+ * locale's comma, as every price on the web (`$ 15` when whole, `$ 1.234,50`
+ * past a thousand; the owner's call of 2026-10-13, one way to write dollars)
+ * and `Bs 1.498,09` as Venezuela writes bolívares, the sign in front when
  * negative, a plus when `showPlus` and positive (a movement that adds).
  */
 export function formatBillingAmount(
@@ -80,8 +72,8 @@ export function formatBillingAmount(
     return `${sign}Bs${nbsp}${bolivaresFormat.format(value)}`;
   }
   const text = Number.isInteger(value)
-    ? wholeBillingDollarsFormat.format(value)
-    : billingDollarsFormat.format(value);
+    ? amountFormat.format(value)
+    : centsFormat.format(value);
   return `${sign}${symbols[money.currency] ?? money.currency}${nbsp}${text}`;
 }
 
@@ -102,27 +94,39 @@ export function formatRate(rate: string, decimals = 2): string {
 }
 
 /**
- * Céntimos from an amount as a person types it — «1.198,39», «1198,39» or
- * «1198.39» — or null when it is not an amount. Up to two digits after the
- * last separator are the céntimos; three are a thousands group.
+ * Céntimos from an amount as a person types it — «1.198,39», «1198,39»,
+ * «1198.39», «1,198.39», «1 198,39», with «Bs» before it or not — or null
+ * when it is not one amount. Up to two digits after the last separator are
+ * the céntimos; the separators before them group thousands, and must group
+ * them (one to three digits, then threes): a letter, a minus sign, a third
+ * decimal or two amounts pasted together are not an amount to report.
  */
 export function parseBolivares(text: string): number | null {
-  const cleaned = text.replace(/[^\d.,]/g, '');
-  if (cleaned === '') return null;
+  const value = text
+    .trim()
+    .replace(/^bs\.?\s*s?\.?\s*/i, '')
+    // A space between thousands is a separator too: «1 198,39».
+    .replace(/(\d)\s+(?=\d{3}(?!\d))/g, '$1.');
+  if (!/^[\d.,]+$/.test(value)) return null;
+
   const lastSeparator = Math.max(
-    cleaned.lastIndexOf(','),
-    cleaned.lastIndexOf('.'),
+    value.lastIndexOf(','),
+    value.lastIndexOf('.'),
   );
-  let whole = cleaned;
+  let whole = value;
   let fraction = '';
   if (lastSeparator >= 0) {
-    const tail = cleaned.slice(lastSeparator + 1);
+    const tail = value.slice(lastSeparator + 1);
     if (/^\d{1,2}$/.test(tail)) {
-      whole = cleaned.slice(0, lastSeparator);
+      whole = value.slice(0, lastSeparator);
       fraction = tail;
     }
   }
-  whole = whole.replace(/[.,]/g, '');
+  if (/[.,]/.test(whole)) {
+    // Thousands, one kind of separator: «1.198.398», never «1198.390».
+    if (!/^[1-9]\d{0,2}([.,])\d{3}(?:\1\d{3})*$/.test(whole)) return null;
+    whole = whole.replace(/[.,]/g, '');
+  }
   if (!/^\d+$/.test(whole)) return null;
   const cents = Number(whole) * 100 + Number(fraction.padEnd(2, '0'));
   return Number.isSafeInteger(cents) ? cents : null;

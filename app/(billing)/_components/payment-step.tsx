@@ -11,9 +11,10 @@ import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 
 import { track } from '@/app/lib/analytics/track';
-import { isApiError } from '@/app/lib/api/errors';
+import { failureMessageKey, isApiError } from '@/app/lib/api/errors';
 import { bankByCode, bankLabel } from '@/app/lib/billing/banks';
 import type { SessionUser } from '@/app/lib/firebase/client';
+import { hourAgreement } from '@/app/lib/format/appointment-time';
 import { todayInCaracas, yearsBefore } from '@/app/lib/format/date-of-birth';
 import { formatTime } from '@/app/lib/format/dates';
 import {
@@ -49,7 +50,6 @@ import { TextField } from '@/app/ui/text-field';
 import { toast } from '@/app/ui/toast';
 
 import { BankPicker } from './bank-picker';
-import { billingFailure } from './billing-failure';
 import { CopyButton } from './copy-button';
 import { DetailList } from './detail-list';
 import { DifferentAmountSheet } from './different-amount-sheet';
@@ -80,6 +80,9 @@ type ReportValues = {
 
 /** Codes the step answers by itself, not with the line under the button. */
 const handledCodes = new Set(['ERR_5083', 'ERR_5084']);
+
+/** The digits alone: a reference or an account is often pasted with dashes or spaces, as the app takes it. */
+const digitsOf = (value: string) => value.replace(/\D/g, '');
 
 const accountTypeKeys = {
   CORRIENTE: 'acquire.accountType.checking',
@@ -116,6 +119,11 @@ export function PaymentStep({
   const [pendingBody, setPendingBody] = useState<PaymentReportBody | null>(
     null,
   );
+  // What the different-amount sheet says, kept while it closes (AGENTS.md §8.2).
+  const [shownBody, setShownBody] = useState(pendingBody);
+  if (pendingBody !== null && pendingBody !== shownBody) {
+    setShownBody(pendingBody);
+  }
   // A payment is reported almost always just made: the day opens answered.
   const [today] = useState(() => todayInCaracas());
   const earliest = yearsBefore(today, 1);
@@ -124,18 +132,16 @@ export function PaymentStep({
   const schema = useMemo(
     () =>
       z.object({
-        reference: z
-          .string()
-          .trim()
-          .regex(
+        reference: z.string().refine(
+          (value) =>
             new RegExp(
               `^\\d{${String(referenceMinLength)},${String(referenceMaxLength)}}$`,
-            ),
-            t('acquire.reference.hintLength', {
-              min: referenceMinLength,
-              max: referenceMaxLength,
-            }),
-          ),
+            ).test(digitsOf(value)),
+          t('acquire.reference.hintLength', {
+            min: referenceMinLength,
+            max: referenceMaxLength,
+          }),
+        ),
         bankCode: z.string().regex(/^\d{4}$/, t('acquire.bank.required')),
         origin:
           method === 'MOBILE_PAYMENT'
@@ -147,26 +153,27 @@ export function PaymentStep({
                 )
             : z
                 .string()
-                .trim()
-                .regex(
-                  new RegExp(
-                    `^\\d{${String(originMinLength)},${String(originMaxLength)}}$`,
-                  ),
+                .refine(
+                  (value) =>
+                    new RegExp(
+                      `^\\d{${String(originMinLength)},${String(originMaxLength)}}$`,
+                    ).test(digitsOf(value)),
                   t('pay.origin.accountTooShort', { min: originMinLength }),
                 ),
         paidOn: z
           .string()
           .regex(/^\d{4}-\d{2}-\d{2}$/, t('acquire.date.invalid'))
-          .refine(
-            (value) => value <= today && value >= earliest,
-            t('acquire.date.invalid'),
-          ),
+          // Today when it is sent: a page left open past midnight takes the new day.
+          .refine((value) => {
+            const now = todayInCaracas();
+            return value <= now && value >= yearsBefore(now, 1);
+          }, t('acquire.date.invalid')),
         amount: z.string().refine((value) => {
           const cents = parseBolivares(value);
           return cents !== null && cents > 0;
         }, t('pay.amount.invalid')),
       }),
-    [t, tRoot, method, today, earliest],
+    [t, tRoot, method],
   );
 
   const {
@@ -177,7 +184,7 @@ export function PaymentStep({
     formState: { errors },
   } = useForm<ReportValues>({
     resolver: zodResolver(schema),
-    mode: 'onSubmit',
+    mode: 'onBlur',
     reValidateMode: 'onChange',
     defaultValues: {
       reference: '',
@@ -192,15 +199,21 @@ export function PaymentStep({
   const bank = bankCode ? bankByCode(bankCode) : undefined;
 
   // The amount in bolívares expired (ERR_5083): a new one is asked for and
-  // what was typed is kept — if the amount was not changed, it is the one shown.
+  // what was typed is kept.
   const refresh = useMutation({
     mutationFn: () => startPayment(user, invoice.id, method),
-    onSuccess: onPaymentRefreshed,
   });
 
   const report = useMutation({
-    mutationFn: (body: PaymentReportBody) => reportPayment(user, intent, body),
-    onSuccess: (_reported: PaymentIntent, body) => {
+    // The attempt travels with the report: after a renewal it is a new one.
+    mutationFn: ({
+      body,
+      attempt,
+    }: {
+      body: PaymentReportBody;
+      attempt: PaymentIntent;
+    }) => reportPayment(user, attempt, body),
+    onSuccess: (_reported: PaymentIntent, { body }) => {
       track('web_payment_reported', {
         method:
           method === 'MOBILE_PAYMENT' ? 'mobile_payment' : 'bank_transfer',
@@ -216,11 +229,21 @@ export function PaymentStep({
         paidOn: body.paidOn,
       });
     },
-    onError: (error) => {
+    onError: (error, { body, attempt }) => {
       if (!isApiError(error) || error.status !== 409) return;
       if (error.code === 'ERR_5083') {
-        refresh.mutate();
-        toast.warning(t('pay.intentExpired'));
+        refresh.mutate(undefined, {
+          onSuccess: (started) => {
+            onPaymentRefreshed(started);
+            if (started.intent.amountVes.amount === attempt.amountVes.amount) {
+              // The same figure: the report goes again with the fresh
+              // attempt, there is nothing for the person to review.
+              report.mutate({ body, attempt: started.intent });
+            } else {
+              toast.warning(t('pay.intentExpired'));
+            }
+          },
+        });
       } else if (error.code === 'ERR_5084') {
         // Someone else's — another phone: nothing more is sent.
         toast(t('pay.alreadyInReview'));
@@ -229,31 +252,41 @@ export function PaymentStep({
     },
   });
 
+  // A renewal that failed says why — no rate of the day yet, mostly —;
+  // else the report's own failure, unless the step answered it already.
+  const refreshFailureKey =
+    refresh.error === null
+      ? null
+      : isApiError(refresh.error) && refresh.error.code === 'ERR_5085'
+        ? 'billing.pay.noRate'
+        : failureMessageKey(refresh.error, 'billing.acquire.method.failed');
   const failureKey =
-    report.error &&
+    refreshFailureKey ??
+    (report.error &&
     !(isApiError(report.error) && handledCodes.has(report.error.code ?? ''))
-      ? billingFailure(report.error, 'billing.acquire.confirm.failed')
-      : null;
+      ? failureMessageKey(report.error, 'billing.acquire.confirm.failed')
+      : null);
 
   const toBody = (values: ReportValues): PaymentReportBody =>
     paymentReportBodySchema.parse({
-      reference: values.reference.trim(),
+      reference: digitsOf(values.reference),
       bankCode: values.bankCode,
       origin:
         method === 'MOBILE_PAYMENT'
           ? toInternationalPhone(values.origin)
-          : values.origin.trim(),
+          : digitsOf(values.origin),
       paidOn: values.paidOn,
       amountVes: parseBolivares(values.amount) ?? 0,
     });
 
   const send = (body: PaymentReportBody) => {
     if (report.isPending || refresh.isPending) return;
-    report.mutate(body);
+    refresh.reset();
+    report.mutate({ body, attempt: intent });
   };
 
   const bankName = (code: string, name: string) =>
-    code === '' ? name : `(${code}) ${name}`;
+    code === '' ? name : bankLabel({ code, name });
   const details =
     method === 'MOBILE_PAYMENT'
       ? [
@@ -335,7 +368,10 @@ export function PaymentStep({
         {validUntil ? (
           <p className="flex items-center gap-1.5 text-body-sm font-medium text-warning-800">
             <Icon icon={Schedule} size={16} />
-            {t('pay.validUntil', { time: validUntil })}
+            {t('pay.validUntil', {
+              time: validUntil,
+              hour: hourAgreement(validUntil),
+            })}
           </p>
         ) : null}
       </section>
@@ -382,19 +418,15 @@ export function PaymentStep({
           </p>
         </div>
 
-        <div className="flex flex-col gap-1">
-          <TextField
-            label={t('acquire.fields.reference')}
-            inputMode="numeric"
-            autoComplete="off"
-            placeholder={t('acquire.reference.hint')}
-            error={errors.reference?.message}
-            {...register('reference')}
-          />
-          <p className="text-body-sm text-text-secondary">
-            {t('acquire.reference.description')}
-          </p>
-        </div>
+        <TextField
+          label={t('acquire.fields.reference')}
+          inputMode="numeric"
+          autoComplete="off"
+          placeholder={t('acquire.reference.hint')}
+          hint={t('acquire.reference.description')}
+          error={errors.reference?.message}
+          {...register('reference')}
+        />
 
         <div className="flex flex-col gap-2">
           <span
@@ -418,7 +450,8 @@ export function PaymentStep({
           >
             <span
               id={bankValueId}
-              className={bank ? 'text-text-primary' : 'text-grey-400'}
+              // Words to read, not a placeholder: grey-600 keeps them AA.
+              className={bank ? 'text-text-primary' : 'text-text-secondary'}
             >
               {bank ? bankLabel(bank) : t('acquire.bank.pick')}
             </span>
@@ -430,37 +463,32 @@ export function PaymentStep({
           <FieldError id={bankErrorId} message={errors.bankCode?.message} />
         </div>
 
-        <div className="flex flex-col gap-1">
-          {method === 'MOBILE_PAYMENT' ? (
-            <TextField
-              label={t('acquire.fields.payerPhone')}
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel-national"
-              error={errors.origin?.message}
-              leading={
-                <span className="pl-3 text-body-xs text-text-secondary">
-                  {venezuelaCode}
-                </span>
-              }
-              {...register('origin')}
-            />
-          ) : (
-            <TextField
-              label={t('pay.origin.accountLabel')}
-              inputMode="numeric"
-              autoComplete="off"
-              placeholder={t('pay.origin.accountHint')}
-              error={errors.origin?.message}
-              {...register('origin')}
-            />
-          )}
-          <p className="text-body-sm text-text-secondary">
-            {method === 'MOBILE_PAYMENT'
-              ? t('acquire.payerPhone.description')
-              : t('pay.origin.accountDescription')}
-          </p>
-        </div>
+        {method === 'MOBILE_PAYMENT' ? (
+          <TextField
+            label={t('acquire.fields.payerPhone')}
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel-national"
+            hint={t('acquire.payerPhone.description')}
+            error={errors.origin?.message}
+            leading={
+              <span className="pl-3 text-body-xs text-text-secondary">
+                {venezuelaCode}
+              </span>
+            }
+            {...register('origin')}
+          />
+        ) : (
+          <TextField
+            label={t('pay.origin.accountLabel')}
+            inputMode="numeric"
+            autoComplete="off"
+            placeholder={t('pay.origin.accountHint')}
+            hint={t('pay.origin.accountDescription')}
+            error={errors.origin?.message}
+            {...register('origin')}
+          />
+        )}
 
         <TextField
           label={t('acquire.date.title')}
@@ -471,20 +499,16 @@ export function PaymentStep({
           {...register('paidOn')}
         />
 
-        <div className="flex flex-col gap-1">
-          <TextField
-            label={t('pay.amount.label')}
-            inputMode="decimal"
-            autoComplete="off"
-            error={errors.amount?.message}
-            {...register('amount')}
-          />
-          <p className="text-body-sm text-text-secondary">
-            {t('pay.amount.description', {
-              expected: formatBillingAmount(intent.amountVes),
-            })}
-          </p>
-        </div>
+        <TextField
+          label={t('pay.amount.label')}
+          inputMode="decimal"
+          autoComplete="off"
+          hint={t('pay.amount.description', {
+            expected: formatBillingAmount(intent.amountVes),
+          })}
+          error={errors.amount?.message}
+          {...register('amount')}
+        />
 
         <div className="flex flex-col gap-2">
           <FieldError
@@ -520,7 +544,7 @@ export function PaymentStep({
           if (!open) setPendingBody(null);
         }}
         expected={intent.amountVes}
-        reported={pendingBody?.amountVes ?? 0}
+        reported={shownBody?.amountVes ?? 0}
         onSend={() => {
           if (pendingBody) send(pendingBody);
           setPendingBody(null);

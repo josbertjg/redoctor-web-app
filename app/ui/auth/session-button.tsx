@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 import { useTranslations } from 'next-intl';
 import { DropdownMenu } from 'radix-ui';
 
+import { canUseSpecialistArea } from '@/app/lib/auth/account';
 import { routes } from '@/app/lib/routes';
-import { canUseSpecialistArea } from '@/app/lib/schemas/identity';
 import { cn } from '@/app/lib/utils';
 
 import { Avatar } from '@/app/ui/avatar';
@@ -16,7 +17,7 @@ import { Skeleton } from '@/app/ui/skeleton';
 import { useSession } from '@/app/hooks/use-session';
 
 type SessionButtonProps = {
-  /** Where to come back after signing in: the page's own path. */
+  /** Where to come back after signing in; the page's own path by default. */
   redirect?: string;
   /**
    * `bar`: «Entrar», or the account's avatar with its menu, for a header.
@@ -25,6 +26,20 @@ type SessionButtonProps = {
   layout?: 'bar' | 'list';
   className?: string;
 };
+
+/**
+ * A page signs the person in and brings them back to itself (AGENTS.md §1:
+ * a patient returns to the link they came from). Not the landing — there the
+ * account decides where to go (a specialist to `/panel`) — nor the sign-in
+ * and sign-up pages themselves.
+ */
+function returnPath(pathname: string | null): string | undefined {
+  if (pathname === null || pathname === routes.home()) return undefined;
+  if (pathname === routes.signIn() || pathname === routes.signUp()) {
+    return undefined;
+  }
+  return pathname;
+}
 
 const itemClass =
   'flex min-h-touch w-full cursor-pointer items-center rounded-lg px-3 text-body-md text-text-primary transition-colors duration-fast ease-house outline-none select-none hover:bg-surface-variant focus-visible:ring-3 focus-visible:ring-ring/50 data-[highlighted]:bg-surface-variant';
@@ -42,6 +57,7 @@ export function SessionButton({
   className,
 }: SessionButtonProps) {
   const t = useTranslations('auth');
+  const pathname = usePathname();
   const { status, expected, user, account, signOut } = useSession();
 
   if (status === 'signed-out' || (status === 'resolving' && !expected)) {
@@ -53,7 +69,9 @@ export function SessionButton({
         block={layout === 'list'}
         className={className}
       >
-        <Link href={routes.signIn(redirect)}>{t('signIn')}</Link>
+        <Link href={routes.signIn(redirect ?? returnPath(pathname))}>
+          {t('signIn')}
+        </Link>
       </Button>
     );
   }

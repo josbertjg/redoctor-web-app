@@ -4,7 +4,7 @@ import { useEffect, useTransition } from 'react';
 
 import CloudOff from '@material-symbols/svg-400/rounded/cloud_off.svg?svgr';
 
-import messages from '@/app/lib/i18n/messages/es.json';
+import { globalErrorMessages as messages } from '@/app/lib/i18n/global-error-messages';
 import { reportError } from '@/app/lib/observability/report';
 import { cn } from '@/app/lib/utils';
 
@@ -39,14 +39,14 @@ export default function GlobalError({ error, retry }: GlobalErrorProps) {
       className={cn(urbanist.variable, 'h-full antialiased')}
     >
       <body className="flex min-h-full flex-col">
-        <title>{messages.metadata.siteName}</title>
+        <title>{messages.siteName}</title>
         <main className="flex flex-1 flex-col justify-center pb-16">
           <EmptyState
             headingLevel={1}
             tone="error"
             icon={CloudOff}
-            title={messages.errors.page.title}
-            description={messages.errors.page.description}
+            title={messages.title}
+            description={messages.description}
             action={
               <Button
                 loading={isRetrying}

@@ -36,14 +36,33 @@ const slotSchema = z.object({
 export const priceTypes = ['FIXED', 'RANGE', 'FROM'] as const;
 
 const priceSchema = z.object({
-  type: z.enum(priceTypes).nullish(),
+  // A type this version does not know reads as no price, not as a broken answer.
+  type: z.enum(priceTypes).nullish().catch(null),
   currency: z.string().nullish(),
   amount: z.number().nullish(),
   minAmount: z.number().nullish(),
   maxAmount: z.number().nullish(),
 });
 
-export const appointmentSchema = z.object({
+const statusSchema = z.enum(appointmentStatuses);
+
+/*
+ * A status this version does not know — the API computes some, like one
+ * under way — is read as the stored one (`persistedStatus`, same values),
+ * and without it as pending, as the app does: one new value never breaks a
+ * whole list or page.
+ */
+function knownStatus(
+  status: string,
+  persisted: string | null | undefined,
+): AppointmentStatus {
+  const direct = statusSchema.safeParse(status);
+  if (direct.success) return direct.data;
+  const stored = statusSchema.safeParse(persisted);
+  return stored.success ? stored.data : 'PENDING_CONFIRMATION';
+}
+
+const appointmentShape = z.object({
   id: z.string(),
   /** Whose account holds it: null while an invitation waits to be claimed. */
   patientUserId: z.string().nullish(),
@@ -73,7 +92,8 @@ export const appointmentSchema = z.object({
   officeLatitude: z.number().nullish(),
   officeLongitude: z.number().nullish(),
   reasonName: z.string().nullish(),
-  status: z.enum(appointmentStatuses),
+  status: z.string(),
+  persistedStatus: z.string().nullish(),
   /** The patient may confirm now: from 24 h before it starts. */
   canConfirmNow: z.boolean().nullish(),
   confirmationWindowOpensAt: z.string().nullish(),
@@ -94,6 +114,11 @@ export const appointmentSchema = z.object({
   /** The specialist's notes for the patient (the app shows them). */
   notes: z.string().nullish(),
 });
+
+export const appointmentSchema = appointmentShape.transform((appointment) => ({
+  ...appointment,
+  status: knownStatus(appointment.status, appointment.persistedStatus),
+}));
 
 /** `GET /scheduling/appointments/{id}` and every write on it answer the appointment. */
 export const appointmentResponseSchema = z.object({

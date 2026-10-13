@@ -3,14 +3,11 @@
 import { useMemo } from 'react';
 import type { ReactNode } from 'react';
 
-import { Choreographed, readDuration, readEase } from '@/app/ui/motion';
+import { Choreographed, houseTransition, piece } from '@/app/ui/motion';
 import type {
   AnimationSequence,
   DOMKeyframesDefinition,
 } from '@/app/ui/motion';
-
-/** The section's pieces, as summary.tsx marks them. */
-const piece = (name: string) => `[data-piece="${name}"]`;
 
 /*
  * «Del mensaje a la consulta» enters as it scrolls into view: the white box
@@ -21,10 +18,7 @@ const piece = (name: string) => `[data-piece="${name}"]`;
  */
 export function SummaryMotion({ children }: { children: ReactNode }) {
   const { hidden, sequence } = useMemo(() => {
-    const step = {
-      duration: readDuration('entrance'),
-      ease: readEase('entrance'),
-    };
+    const step = houseTransition('entrance');
     const hidden: Record<string, DOMKeyframesDefinition> = {
       [piece('box')]: { opacity: 0 },
       [piece('title')]: { opacity: 0, y: 24 },

@@ -86,7 +86,10 @@ export function isSafeRedirect(value: string | null | undefined): boolean {
   if (value.startsWith('//') || value.startsWith('/\\')) return false;
   try {
     const base = 'https://redoctorapp.invalid';
-    return new URL(value, base).origin === base;
+    const url = new URL(value, base);
+    // `/..//evil.com` resolves to the path `//evil.com`: the browser would
+    // take it for another host once the path is used on its own.
+    return url.origin === base && !url.pathname.startsWith('//');
   } catch {
     return false;
   }
