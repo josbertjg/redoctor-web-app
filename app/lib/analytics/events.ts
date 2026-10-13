@@ -35,6 +35,8 @@ export type AnalyticsEvents = {
   web_subscription_created: { coupon: boolean; free: boolean };
   /** A specialist changed plan on the web: up, paying the difference, or down at the period's end. */
   web_subscription_plan_changed: { kind: 'upgrade' | 'downgrade' };
+  /** A downgrade waiting for the period's end, undone on the web. */
+  web_subscription_change_undone: Record<string, never>;
   /** A payment reported on the web (M13): how it was paid. Never the amount or the reference. */
   web_payment_reported: { method: 'mobile_payment' | 'bank_transfer' };
 };

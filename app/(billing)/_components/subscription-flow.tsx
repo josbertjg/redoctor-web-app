@@ -83,6 +83,7 @@ function SpecialistSubscription({ user }: { user: SessionUser }) {
 
   return (
     <SubscriptionView
+      user={user}
       subscription={subscription}
       // Unreadable receipt: the notice comes from the subscription alone.
       // A plan that owes nothing has no receipt to tell about, whatever an

@@ -25,6 +25,7 @@ import {
   plansQueryOptions,
   type PlanChanged,
 } from '@/app/lib/queries/billing';
+import { myOfficesQueryOptions } from '@/app/lib/queries/offices';
 import { routes } from '@/app/lib/routes';
 import {
   activeDiscount,
@@ -50,12 +51,16 @@ type ChangePlanViewProps = {
   user: SessionUser;
   /** An active subscription that can change (`canChangePlan`). */
   subscription: Subscription;
-  /** The plan asked for, by its slug (`?plan=`). */
+  /** The plan asked for, by its slug (`?plan=`, or the plans' choice). */
   planSlug: string;
+  /** Reached from the plans: the way back returns there. */
+  backToPlans: boolean;
   /** An upgrade left the receipt of the difference: the payment's steps take over. */
   onPay: (subscription: Subscription) => void;
-  /** To «Mi suscripción». */
+  /** To the plans, or to «Mi suscripción»: where the person came from. */
   onBack: () => void;
+  /** «Mantener mi plan»: to «Mi suscripción». */
+  onKeep: () => void;
 };
 
 /** A refusal the API explains in its own words (a receipt owed, a limit): no retry changes it. */
@@ -81,8 +86,10 @@ export function ChangePlanView({
   user,
   subscription,
   planSlug,
+  backToPlans,
   onPay,
   onBack,
+  onKeep,
 }: ChangePlanViewProps) {
   const t = useTranslations('billing');
   const tRoot = useTranslations();
@@ -93,6 +100,21 @@ export function ChangePlanView({
     ...planChangePreviewQueryOptions(user, plan?.id ?? ''),
     enabled: plan !== null,
   });
+  // A downgrade the active offices do not fit is refused before it is
+  // asked (the app's check): only the app turns offices off.
+  const limit = plan?.maxActiveClinics ?? null;
+  const offices = useQuery({
+    ...myOfficesQueryOptions(user),
+    enabled: preview.data?.kind === 'DOWNGRADE' && limit !== null,
+  });
+  const activeOffices =
+    offices.data?.filter((office) => office.isActive).length ?? 0;
+  const officesOver =
+    preview.data?.kind === 'DOWNGRADE' &&
+    limit !== null &&
+    activeOffices > limit
+      ? { active: activeOffices, count: limit }
+      : null;
   const [accepted, setAccepted] = useState(false);
   const [askedToAccept, setAskedToAccept] = useState(false);
   const [done, setDone] = useState<PlanChanged | null>(null);
@@ -194,6 +216,16 @@ export function ChangePlanView({
       );
     }
 
+    // A downgrade waits for the offices it is checked against (a failure
+    // to read them leaves the check to the API: ERR_5076).
+    if (
+      preview.data.kind === 'DOWNGRADE' &&
+      limit !== null &&
+      offices.isPending
+    ) {
+      return <PaySkeleton />;
+    }
+
     return (
       <ChangeSummary
         subscription={subscription}
@@ -204,7 +236,10 @@ export function ChangePlanView({
         onAccepted={setAccepted}
         changing={change.isPending}
         failure={failureKey ? tRoot(failureKey) : null}
+        officesOver={officesOver}
+        backToPlans={backToPlans}
         onBack={onBack}
+        onKeep={onKeep}
         onConfirm={() => {
           if (change.isPending) return;
           const losesCoupon = preview.data.discountEffect === 'ENDS';
@@ -232,7 +267,11 @@ type ChangeSummaryProps = {
   changing: boolean;
   /** Why the change failed, in words; null when there is nothing to add (no connection: the global notice says it). */
   failure: string | null;
+  /** A downgrade the active offices do not fit: it cannot be asked. */
+  officesOver: { active: number; count: number } | null;
+  backToPlans: boolean;
   onBack: () => void;
+  onKeep: () => void;
   onConfirm: () => void;
 };
 
@@ -246,10 +285,14 @@ function ChangeSummary({
   onAccepted,
   changing,
   failure,
+  officesOver,
+  backToPlans,
   onBack,
+  onKeep,
   onConfirm,
 }: ChangeSummaryProps) {
   const t = useTranslations('billing');
+  const tRoot = useTranslations();
   const planHeadingId = useId();
   const todayHeadingId = useId();
   const failureId = useId();
@@ -291,7 +334,7 @@ function ChangeSummary({
         className="inline-flex min-h-touch w-fit items-center gap-1 rounded-lg pr-2 text-label-lg text-primary outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <Icon icon={ArrowBack} size={20} />
-        {t('mySubscription.title')}
+        {backToPlans ? tRoot('back') : t('mySubscription.title')}
       </button>
 
       <header className="flex flex-col gap-2">
@@ -384,21 +427,33 @@ function ChangeSummary({
         </div>
       ) : null}
 
+      {officesOver ? (
+        <p className="animate-fade-up rounded-2xl bg-warning-light p-4 text-body-md text-text-primary">
+          {t('planChange.officesBlocked', {
+            active: officesOver.active,
+            plan: plan.name,
+            count: officesOver.count,
+          })}
+        </p>
+      ) : null}
+
       <div className="flex flex-col gap-3">
-        <Button
-          block
-          shape="soft"
-          loading={changing}
-          aria-describedby={failure ? failureId : undefined}
-          onClick={onConfirm}
-        >
-          {downgrade
-            ? t('planChange.confirmDowngrade')
-            : payNow
-              ? t('planChange.confirmUpgrade')
-              : t('planChange.confirmUpgradeFree')}
-        </Button>
-        <Button block variant="white" shape="soft" onClick={onBack}>
+        {officesOver ? null : (
+          <Button
+            block
+            shape="soft"
+            loading={changing}
+            aria-describedby={failure ? failureId : undefined}
+            onClick={onConfirm}
+          >
+            {downgrade
+              ? t('planChange.confirmDowngrade')
+              : payNow
+                ? t('planChange.confirmUpgrade')
+                : t('planChange.confirmUpgradeFree')}
+          </Button>
+        )}
+        <Button block variant="white" shape="soft" onClick={onKeep}>
           {t('planChange.keep')}
         </Button>
         <FieldError

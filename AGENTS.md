@@ -81,7 +81,7 @@ transactional emails the API sends.
 | M9 Landing | Designed by the designer; copy in the doc «Landing de Redoctor» |
 | M10 Legal and account | Privacy, terms, account deletion (texts from the lawyer) |
 | M11 Bridges | `/panel/specialties`, `/panel/profile`, `/home/*` (pages that only open the app) and `/daily-summary/unsubscribe` (daily-summary email opt-out); `/panel/subscription` and `/panel/agenda` were bridges until M14 made them pages |
-| M13 Specialist payment | `/panel/subscription` («Mi suscripción»: the plan, its state and its notice) and `/panel/subscription/pay` (the payment, never opened by the app; the owner's split of 2026-10-13, `/pay` before): choose a plan with a coupon, Pago Móvil and transfer data in Bs from the API, report the payment, see it in review; the upgrade a missing feature invites to (`?plan=`, 2026-10-13); changing plan from «Mi suscripción», cancelling and the rest stay in the app for now (§13, Decided) |
+| M13 Specialist payment | `/panel/subscription` («Mi suscripción»: the plan, its state and its notice) and `/panel/subscription/pay` (the payment, never opened by the app; the owner's split of 2026-10-13, `/pay` before): choose a plan with a coupon, Pago Móvil and transfer data in Bs from the API, report the payment, see it in review; changing plan — from «Mi suscripción» (`?view=plans`) or from a missing feature's invitation (`?plan=`) — and undoing a scheduled change (2026-10-13); cancelling, resuming and the rest stay in the app for now (§13, Decided) |
 | M14 Specialist panel | `/panel` and its sections (2026-10-13): the home (the plan and its notice, today's patients, the statistics, what stays in the app), the day's agenda `/panel/agenda[/{date}]` and the history `/panel/appointments` (read only, each appointment opening `/a/{id}`), the statistics `/panel/reports` (the app's summary and four reports, PDF and CSV when the plan allows), the subscription (M13); a specialist stays in it until signing out |
 | M12 Release | PostHog funnel by origin, tests on real phones from WhatsApp and Gmail, domain cutover |
 
@@ -234,8 +234,8 @@ app/                                  # The application: routes, UI and logic
   (billing)/                          # module: specialist payment (M13)
     error.tsx                         #   the root error, for what fails above the subscription's frame
     panel/subscription/layout.tsx · page.tsx · error.tsx   # /panel/subscription — layout = <PanelFrame width="narrow">; its error inside the frame
-    panel/subscription/pay/page.tsx   #   /panel/subscription/pay[?plan=] — the payment and the upgrade, never opened by the app (§6); /pay redirects here
-    _components/                      #   subscription-flow, subscription-view, subscription-load-error, pay-flow, plans-view, plan-benefits, change-plan-view, pay-view, method-step, payment-step, payment-totals, coupon-sheet, bank-picker, different-amount-sheet, payment-done, copy-button, detail-list, pay-skeleton
+    panel/subscription/pay/page.tsx   #   /panel/subscription/pay[?plan=|?view=plans] — the payment, the plans and the change of plan, never opened by the app (§6); /pay redirects here
+    _components/                      #   subscription-flow, subscription-view, subscription-load-error, undo-plan-change, pay-flow, plans-view, plan-benefits, change-plan-view, pay-view, method-step, payment-step, payment-totals, coupon-sheet, bank-picker, different-amount-sheet, payment-done, copy-button, detail-list, pay-skeleton
   (bridges)/                          # module: pages that only open the app, noindex (M11)
     layout.tsx
     panel/specialties/ · panel/profile/
@@ -244,7 +244,7 @@ app/                                  # The application: routes, UI and logic
     daily-summary/unsubscribe/page.tsx   # daily-summary opt-out — a Server Action
   api/                                # route handlers only when the browser must not call the API (none yet)
   ui/                                 # ALL shared UI
-    button.tsx · text-field.tsx · select-field.tsx · text-area.tsx · checkbox.tsx · choice-cards.tsx · stars-input.tsx · tabs.tsx · field-error.tsx · sheet.tsx · skeleton.tsx · toast.tsx · empty-state.tsx · status-card.tsx · avatar.tsx …
+    button.tsx · text-field.tsx · select-field.tsx · text-area.tsx · checkbox.tsx · choice-cards.tsx · stars-input.tsx · tabs.tsx · field-error.tsx · sheet.tsx · skeleton.tsx · toast.tsx · empty-state.tsx · status-card.tsx · link-card.tsx · avatar.tsx …
     messages-scope.tsx                #   a page's own client messages (§9)
     layout/                           #   site-header, page-frame (a page's column and its main, in the guarded layouts), panel-frame and panel-nav (the specialist's panel around each section), bottom-actions
     auth/                             #   session-provider, session-button, require-session, sign-in-buttons, sign-in-legal-note, account-error-state, in-app-browser-help, provider-logos
@@ -1451,13 +1451,11 @@ written out in full, or Next.js does not inline it).
   the day is a date field instead of «Hoy / Ayer / Otra fecha»; the phone
   is always asked (the web's `/me` carries none to confirm); the benefits
   unfold inside the plan's card. **Left for later, on the owner's word
-  (2026-10-12), all still in the app:** changing plan from «Mi
-  suscripción» (the plans in change mode; the upgrade a missing feature
-  invites to is on the web since 2026-10-13, M14), cancelling and
-  resuming, abandoning an unpaid subscription, undoing a scheduled change,
-  the receipts' history, «Saldo a favor», «Mis cupones» (saving and
-  listing) and «Datos de cobro»; no email sends anyone to the web for
-  them. With M13 the billing copy entered `es.json` under
+  (2026-10-12), all still in the app:** cancelling and resuming,
+  abandoning an unpaid subscription, the receipts' history, «Saldo a
+  favor», «Mis cupones» (saving and listing) and «Datos de cobro»; no
+  email sends anyone to the web for them. Changing plan and undoing a
+  scheduled change came to the web on 2026-10-13 (M14). With M13 the billing copy entered `es.json` under
   the app's `billing.*` keys, and `app/lib/format/dates.ts` writes instants
   as days and hours in Caracas for anything that is not an appointment.
   Production needs the API's CORS (REDOC-362): the e2e covers the page
@@ -1610,27 +1608,40 @@ written out in full, or Next.js does not inline it).
     owed when there is one, «Tu plan está al día» otherwise — and keeps
     that start while the payment changes the subscription underneath. The
     AASA excludes it, and `assetlinks.json` for Android 15+ (§6).
-  - **The upgrade (`/panel/subscription/pay?plan={slug}`, same day):** for
-    a plan that can change (the app's `canChangePlan`: active, not
-    cancelled, no upgrade waiting), the page starts on the change to that
-    plan — the app's PlanChangeSheet as a page, its `billing.planChange`
-    words: the API's preview (`GET …/change-plan/preview`), what is paid
-    now line by line («A pagar ahora»: the new plan for the days left,
-    less what the current one leaves unused), the price from the renewal,
-    the coupon kept or lost (its loss accepted with the app's checkbox),
-    «Cambiar y pagar» and «Mantener mi plan». `POST …/change-plan` goes
-    through the write-once guard (a conflict that is this same change
-    counts as done), then the receipt of the difference goes through the
-    payment's two steps; the plan changes once that payment is approved.
-    A downgrade is scheduled for the period's end («Programar el cambio»).
-    Without a plan, `?plan=` comes chosen among the plans; a receipt owed
-    comes first, as the API changes no plan with debt.
+  - **Changing plan (same day, the owner's «continúa con lo del cambiar de
+    plan»), as the app does it, its `billing.*` words:** while the plan can
+    change (the app's `canChangePlan`: active, not cancelled, no upgrade
+    waiting), «Mi suscripción» offers «Cambiar de plan» (and so does «Tu
+    plan está al día»): `/panel/subscription/pay?view=plans`, the plans in
+    the app's change mode — the plan in force chosen and marked «Tu plan»,
+    a scheduled one «Próximo mes», «Cambiar a este plan» only for another
+    plan, fading in place. A plan chosen there, or the one a missing
+    feature invites to (`?plan={slug}`), opens the change: the app's
+    PlanChangeSheet as a page — the API's preview (`GET
+    …/change-plan/preview`), what is paid now line by line («A pagar
+    ahora»: the new plan for the days left, less what the current one
+    leaves unused), the price from the renewal, the coupon kept or lost
+    (its loss accepted with the app's checkbox), «Cambiar y pagar» and
+    «Mantener mi plan». `POST …/change-plan` goes through the write-once
+    guard (a conflict that is this same change counts as done), then the
+    receipt of the difference goes through the payment's two steps; the
+    plan changes once that payment is approved. A downgrade is scheduled
+    for the period's end («Programar el cambio»), refused before it is
+    asked when the active offices exceed the new plan's (the app's check;
+    only the app turns offices off), and undone from «Mi suscripción»
+    («Anular el cambio de plan»: a sheet that says what stays, then
+    `DELETE …/scheduled-change` through the write-once guard). Without a
+    plan, `?plan=` comes chosen among the plans; a receipt owed comes
+    first, as the API changes no plan with debt.
   - **Where the web differs from the app, on purpose and to confirm:** the
     panel reads appointments and never changes them; the history loads
     progressively (30, then «Ver más») where the app shows all; the
     statistics are one page of tabs where the app has a dashboard and four
     screens; the PDF is the browser's print, not a generated file; the
-    heatmap shows only the hours with appointments.
+    heatmap shows only the hours with appointments; the change of plan is
+    a page where the app has a sheet over its plans («Mantener mi plan»
+    returns to «Mi suscripción»), and a downgrade the offices do not fit
+    says to turn them off in the app.
   - **For the app (prompts were handed over):** map `/panel/appointments`
     and `/panel/reports` to its «Citas» and «Estadísticas», list its
     `/panel/` pages in the Android filter instead of `/panel/.*` so the

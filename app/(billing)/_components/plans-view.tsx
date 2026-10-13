@@ -13,18 +13,25 @@ import { useTranslations } from 'next-intl';
 import type { SessionUser } from '@/app/lib/firebase/client';
 import { formatBillingAmount } from '@/app/lib/format/money';
 import { plansQueryOptions } from '@/app/lib/queries/billing';
-import type { OfferedPlan } from '@/app/lib/schemas/billing';
+import {
+  canChangePlan,
+  type OfferedPlan,
+  type Subscription,
+} from '@/app/lib/schemas/billing';
 import { cn } from '@/app/lib/utils';
 
 import { Button } from '@/app/ui/button';
 import { EmptyState } from '@/app/ui/empty-state';
 import { Icon } from '@/app/ui/icons';
 import { Skeleton } from '@/app/ui/skeleton';
+import { StateChip } from '@/app/ui/state-chip';
 
 import { planBenefits } from './plan-benefits';
 
 type PlansViewProps = {
   user: SessionUser;
+  /** The plan in force, to change from; null to take one. */
+  current?: Subscription | null;
   /** The plan to come chosen (`?plan=`, a slug), when it is on offer. */
   preferredSlug?: string | null;
   onSelect: (plan: OfferedPlan) => void;
@@ -32,14 +39,18 @@ type PlansViewProps = {
 };
 
 /*
- * The plans on offer, to take one (the app's SubscriptionPlansScreen):
- * each card names the plan, its monthly price and what it includes, behind
- * «Ver beneficios»; the one a link asks for, or else the first, comes
- * chosen so the button always has a plan to take, and «Seleccionar plan»
- * goes on to pay. Changing an active plan is the change view's.
+ * The plans on offer (the app's SubscriptionPlansScreen): each card names
+ * the plan, its monthly price and what it includes, behind «Ver
+ * beneficios». To take one, the one a link asks for, or else the first,
+ * comes chosen so the button always has a plan to take, and «Seleccionar
+ * plan» goes on to pay. To change the plan in force (`current`), as the
+ * app's change mode: it comes chosen, marked «Tu plan» (and a scheduled one
+ * «Próximo mes»), and «Cambiar a este plan» is there only for another plan
+ * while the plan can change — it fades in place, so nothing moves.
  */
 export function PlansView({
   user,
+  current = null,
   preferredSlug = null,
   onSelect,
   onBack,
@@ -55,8 +66,22 @@ export function PlansView({
   const chosen =
     list.find((plan) => plan.id === chosenId) ??
     list.find((plan) => plan.slug === preferredSlug) ??
+    list.find((plan) => plan.id === current?.plan.id) ??
     list[0] ??
     null;
+  const changeable = current !== null && canChangePlan(current);
+  const scheduledId = current?.scheduledChange?.plan.id ?? null;
+  const canChangeTo =
+    changeable &&
+    chosen !== null &&
+    chosen.id !== current.plan.id &&
+    chosen.id !== scheduledId;
+  const badgeOf = (plan: OfferedPlan) =>
+    plan.id === current?.plan.id
+      ? t('plans.change.currentBadge')
+      : plan.id === scheduledId
+        ? t('plans.change.scheduledBadge')
+        : null;
 
   return (
     <div className="flex w-full flex-col gap-4">
@@ -70,14 +95,18 @@ export function PlansView({
       </button>
       <header className="flex flex-col gap-2">
         <h1 className="text-headline-sm text-text-primary">
-          {t.rich('plans.title', {
+          {t.rich(current ? 'plans.change.title' : 'plans.title', {
             highlight: (chunks) => (
               <span className="text-primary">{chunks}</span>
             ),
           })}
         </h1>
         <p className="text-body-md text-text-secondary">
-          {t('plans.subtitle')}
+          {current
+            ? changeable
+              ? t('plans.change.subtitle')
+              : t('plans.current.subtitle')
+            : t('plans.subtitle')}
         </p>
       </header>
 
@@ -126,6 +155,7 @@ export function PlansView({
                   plan={plan}
                   groupName={groupName}
                   selected={selected}
+                  badge={badgeOf(plan)}
                   expanded={open}
                   benefits={planBenefits(t, plan)}
                   onSelect={() => {
@@ -141,15 +171,38 @@ export function PlansView({
               );
             })}
           </fieldset>
-          <Button
-            block
-            shape="soft"
-            onClick={() => {
-              if (chosen) onSelect(chosen);
-            }}
-          >
-            {t('plans.select')}
-          </Button>
+          {current === null ? (
+            <Button
+              block
+              shape="soft"
+              onClick={() => {
+                if (chosen) onSelect(chosen);
+              }}
+            >
+              {t('plans.select')}
+            </Button>
+          ) : (
+            // Kept in place while hidden: showing it moves nothing.
+            <div
+              aria-hidden={canChangeTo ? undefined : true}
+              inert={!canChangeTo}
+              className={cn(
+                'transition-opacity duration-base ease-house',
+                canChangeTo ? 'opacity-100' : 'opacity-0',
+              )}
+            >
+              <Button
+                block
+                shape="soft"
+                tabIndex={canChangeTo ? undefined : -1}
+                onClick={() => {
+                  if (chosen && canChangeTo) onSelect(chosen);
+                }}
+              >
+                {t('plans.change.select')}
+              </Button>
+            </div>
+          )}
         </>
       )}
     </div>
@@ -160,6 +213,8 @@ type PlanCardProps = {
   plan: OfferedPlan;
   groupName: string;
   selected: boolean;
+  /** «Tu plan» or «Próximo mes», when changing plan. */
+  badge: string | null;
   expanded: boolean;
   benefits: readonly string[];
   onSelect: () => void;
@@ -176,6 +231,7 @@ function PlanCard({
   plan,
   groupName,
   selected,
+  badge,
   expanded,
   benefits,
   onSelect,
@@ -203,7 +259,10 @@ function PlanCard({
           onChange={onSelect}
           className="sr-only"
         />
-        <span className="text-title-md">{plan.name}</span>
+        <span className="flex flex-wrap items-center gap-2">
+          <span className="text-title-md">{plan.name}</span>
+          {badge ? <StateChip tone="info">{badge}</StateChip> : null}
+        </span>
         <span>
           <span className="text-subtitle-l font-bold">
             {formatBillingAmount(plan.price.amount)}

@@ -17,6 +17,7 @@ import {
 import { routes } from '@/app/lib/routes';
 import {
   canChangePlan,
+  hasEnded,
   mayOwe,
   type Subscription,
 } from '@/app/lib/schemas/billing';
@@ -34,19 +35,23 @@ import { PlansView } from './plans-view';
 import { SubscriptionLoadError } from './subscription-load-error';
 
 type View =
-  | { kind: 'plans' }
-  | { kind: 'change'; planSlug: string }
+  /** `changing`: from the plan in force, marked; else to take one. */
+  | { kind: 'plans'; changing: boolean }
+  | { kind: 'change'; planSlug: string; fromPlans: boolean }
   | { kind: 'pay'; mode: PayMode; fromPlans: boolean }
   | { kind: 'upToDate' };
 
+/** What a link asks the page for: a plan to change to (`?plan=`), or the plans (`?view=plans`). */
+export type PayRequest = { plan: string | null; plans: boolean };
+
 /**
- * Where the page starts, from where the plan stands and the plan a link
+ * Where the page starts, from where the plan stands and what the link
  * asks for; null while that is not known.
  */
 function startingView(
   subscription: Subscription | null,
   payable: { isLoading: boolean; hasInvoice: boolean },
-  wantedPlan: string | null,
+  request: PayRequest,
 ): View | null {
   // No plan, one that expired unpaid, or one cancelled: the plans, to take one.
   if (
@@ -54,7 +59,7 @@ function startingView(
     subscription.status === 'INCOMPLETE_EXPIRED' ||
     subscription.status === 'CANCELED'
   ) {
-    return { kind: 'plans' };
+    return { kind: 'plans', changing: false };
   }
   // What is owed comes first: the API changes no plan with debt.
   if (mayOwe(subscription)) {
@@ -70,37 +75,41 @@ function startingView(
   // Another plan asked for (a feature this one lacks): the change to it,
   // when the plan can change (the app's rule).
   if (
-    wantedPlan !== null &&
-    wantedPlan !== subscription.plan.slug &&
+    request.plan !== null &&
+    request.plan !== subscription.plan.slug &&
     canChangePlan(subscription)
   ) {
-    return { kind: 'change', planSlug: wantedPlan };
+    return { kind: 'change', planSlug: request.plan, fromPlans: false };
   }
+  // «Cambiar de plan»: the plans, the one in force marked.
+  if (request.plans) return { kind: 'plans', changing: true };
   return { kind: 'upToDate' };
 }
 
 /*
- * `/panel/subscription/pay` (M13, the owner's split of 2026-10-13): only to
- * pay. Where the plan stands decides where it starts — the plans when there
- * is none to pay, the receipt owed when there is one, the change to the
- * plan a link asks for (`?plan=`, a feature the current one lacks) — and
- * the steps follow in place. That start is kept once taken: paying changes
- * the subscription underneath, and the person must still see how the
- * payment ended. The app never opens this page (AGENTS.md §6): a link to
- * pay reaches the web even on a phone where the app is installed.
+ * `/panel/subscription/pay` (M13, the owner's split of 2026-10-13): paying,
+ * choosing a plan and changing it. Where the plan stands decides where it
+ * starts — the plans when there is none to pay, the receipt owed when
+ * there is one, the change to the plan a link asks for (`?plan=`, a
+ * feature the current one lacks), the plans to change to (`?view=plans`,
+ * «Cambiar de plan») — and the steps follow in place. That start is kept
+ * once taken: paying changes the subscription underneath, and the person
+ * must still see how the payment ended. The app never opens this page
+ * (AGENTS.md §6): a link to pay reaches the web even on a phone where the
+ * app is installed.
  */
-export function PayFlow({ wantedPlan }: { wantedPlan: string | null }) {
+export function PayFlow({ request }: { request: PayRequest }) {
   const { user } = useSession();
   if (user === null) return <PaySkeleton />;
-  return <SpecialistPayment user={user} wantedPlan={wantedPlan} />;
+  return <SpecialistPayment user={user} request={request} />;
 }
 
 function SpecialistPayment({
   user,
-  wantedPlan,
+  request,
 }: {
   user: SessionUser;
-  wantedPlan: string | null;
+  request: PayRequest;
 }) {
   const t = useTranslations('billing');
   const router = useRouter();
@@ -116,7 +125,7 @@ function SpecialistPayment({
     const start = startingView(
       subscription,
       { isLoading: payable.isLoading, hasInvoice: payable.data != null },
-      wantedPlan,
+      request,
     );
     if (start !== null) setView(start);
   }
@@ -171,13 +180,22 @@ function SpecialistPayment({
         return (
           <PlansView
             user={user}
-            preferredSlug={wantedPlan}
+            current={
+              view.changing && subscription !== null && !hasEnded(subscription)
+                ? subscription
+                : null
+            }
+            preferredSlug={request.plan}
             onSelect={(plan) => {
-              setView({
-                kind: 'pay',
-                mode: { kind: 'contract', plan },
-                fromPlans: true,
-              });
+              setView(
+                view.changing
+                  ? { kind: 'change', planSlug: plan.slug, fromPlans: true }
+                  : {
+                      kind: 'pay',
+                      mode: { kind: 'contract', plan },
+                      fromPlans: true,
+                    },
+              );
             }}
             onBack={toSubscription}
           />
@@ -190,6 +208,7 @@ function SpecialistPayment({
             user={user}
             subscription={subscription}
             planSlug={view.planSlug}
+            backToPlans={view.fromPlans}
             onPay={(changed) => {
               setView({
                 kind: 'pay',
@@ -197,7 +216,14 @@ function SpecialistPayment({
                 fromPlans: false,
               });
             }}
-            onBack={toSubscription}
+            onBack={
+              view.fromPlans
+                ? () => {
+                    setView({ kind: 'plans', changing: true });
+                  }
+                : toSubscription
+            }
+            onKeep={toSubscription}
           />
         );
       case 'pay':
@@ -208,7 +234,7 @@ function SpecialistPayment({
             onBack={
               view.fromPlans
                 ? () => {
-                    setView({ kind: 'plans' });
+                    setView({ kind: 'plans', changing: false });
                   }
                 : toSubscription
             }
@@ -223,11 +249,24 @@ function SpecialistPayment({
             title={t('payPage.upToDate.title')}
             description={t('payPage.upToDate.description')}
             action={
-              <Button asChild shape="soft">
-                <Link href={routes.subscription()}>
-                  {t('payPage.upToDate.action')}
-                </Link>
-              </Button>
+              <>
+                <Button asChild shape="soft">
+                  <Link href={routes.subscription()}>
+                    {t('payPage.upToDate.action')}
+                  </Link>
+                </Button>
+                {subscription !== null && canChangePlan(subscription) ? (
+                  <Button
+                    variant="white"
+                    shape="soft"
+                    onClick={() => {
+                      setView({ kind: 'plans', changing: true });
+                    }}
+                  >
+                    {t('mySubscription.changePlan.title')}
+                  </Button>
+                ) : null}
+              </>
             }
           />
         );

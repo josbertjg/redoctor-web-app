@@ -238,6 +238,19 @@ export const billingHandlers = [
 
   ...planChangeHandlers(),
 
+  http.delete(
+    apiUrl('/billing/me/subscription/scheduled-change'),
+    ({ request }) =>
+      isStranger(request)
+        ? unauthorized()
+        : HttpResponse.json({
+            subscription: buildSubscription({
+              status: 'ACTIVE',
+              incompleteExpiresAt: null,
+            }),
+          }),
+  ),
+
   http.post(apiUrl('/billing/me/subscription'), async ({ request }) => {
     if (isStranger(request)) return unauthorized();
     const body = subscribeBodySchema.safeParse(await request.json());

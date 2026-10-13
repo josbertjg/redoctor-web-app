@@ -1,11 +1,13 @@
 'use client';
 
-import { useId } from 'react';
+import { useId, useState } from 'react';
 
 import Link from 'next/link';
 
+import SwapVert from '@material-symbols/svg-400/rounded/swap_vert.svg?svgr';
 import { useTranslations } from 'next-intl';
 
+import type { SessionUser } from '@/app/lib/firebase/client';
 import {
   formatDate,
   formatDateTime,
@@ -15,6 +17,7 @@ import { formatBillingAmount } from '@/app/lib/format/money';
 import { routes } from '@/app/lib/routes';
 import {
   activeDiscount,
+  canChangePlan,
   subscriptionStatusChips,
   type Subscription,
   type SubscriptionNotice,
@@ -24,12 +27,15 @@ import { cn } from '@/app/lib/utils';
 import { NoticePanel } from '@/app/ui/billing/notice-panel';
 import { PlanEmblem } from '@/app/ui/billing/plan-emblem';
 import { Button } from '@/app/ui/button';
+import { LinkCard } from '@/app/ui/link-card';
 import { StateChip } from '@/app/ui/state-chip';
 
 import { couponDiscountLabel } from './coupon-words';
 import { DetailList, type DetailItem } from './detail-list';
+import { UndoPlanChange } from './undo-plan-change';
 
 type SubscriptionViewProps = {
+  user: SessionUser;
   subscription: Subscription;
   /** What to tell about the billing, already resolved; null when the plan is simply at its stage. */
   notice: SubscriptionNotice | null;
@@ -135,16 +141,26 @@ function periodRows(t: Translate, subscription: Subscription): DetailItem[] {
 /*
  * «Mi suscripción», as the app's screen heads it: which plan, what it
  * costs, where it stands and what that means — then the notice with what
- * to do, when there is one. Paying, or taking a plan again, is the payment
- * page's (`/panel/subscription/pay`); changing plan, cancelling or resuming
- * stay in the app for now.
+ * to do, when there is one, and «Cambiar de plan» while the plan can
+ * change, with «Anular el cambio de plan» for a downgrade scheduled.
+ * Paying, taking a plan again or choosing the new one is the payment
+ * page's (`/panel/subscription/pay`); cancelling or resuming stay in the
+ * app for now.
  */
 export function SubscriptionView({
+  user,
   subscription,
   notice,
 }: SubscriptionViewProps) {
   const t = useTranslations('billing');
   const headingId = useId();
+  // Once a scheduled change has shown, its undo stays mounted to fade out.
+  const [hadScheduled, setHadScheduled] = useState(
+    subscription.scheduledChange != null,
+  );
+  if (!hadScheduled && subscription.scheduledChange != null) {
+    setHadScheduled(true);
+  }
   const chip = subscriptionStatusChips[subscription.status];
   const canceled = subscription.status === 'CANCELED';
   const rows = canceled ? [] : periodRows(t, subscription);
@@ -205,6 +221,19 @@ export function SubscriptionView({
             {t('mySubscription.subscribeAgain')}
           </Link>
         </Button>
+      ) : null}
+
+      {canChangePlan(subscription) ? (
+        <LinkCard
+          href={routes.subscriptionPlans()}
+          icon={SwapVert}
+          title={t('mySubscription.changePlan.title')}
+          description={t('mySubscription.changePlan.description')}
+        />
+      ) : null}
+
+      {hadScheduled ? (
+        <UndoPlanChange user={user} subscription={subscription} />
       ) : null}
     </div>
   );

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { screen } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { http, HttpResponse } from 'msw';
@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 import { meResponseSchema, toAccount } from '@/app/lib/schemas/identity';
 
+import { Toaster } from '@/app/ui/toast';
 import {
   buildInvoice,
   buildIntent,
@@ -15,6 +16,9 @@ import {
   buildSubscription,
   hoursFromNow,
   intentIds,
+  planIds,
+  usd,
+  type SubscriptionPayload,
 } from '@/tests/factories/billing';
 import { renderWithPageMessages } from '@/tests/render';
 
@@ -67,6 +71,7 @@ function renderSubscription() {
           <SubscriptionFlow />
         </main>
       </SessionContext.Provider>
+      <Toaster regionLabel="Notificaciones" closeLabel="Cerrar" />
     </QueryClientProvider>,
     pageNamespaces.subscription,
   );
@@ -291,5 +296,101 @@ describe('SubscriptionFlow', () => {
       'href',
       '/panel',
     );
+  });
+});
+
+describe('SubscriptionFlow, changing plan', () => {
+  const corporate = {
+    id: planIds.corporate,
+    slug: 'corporativo',
+    name: 'Corporativo',
+  };
+  const professional = {
+    id: planIds.professional,
+    slug: 'profesional',
+    name: 'Profesional',
+  };
+  const active = (overrides: Partial<SubscriptionPayload> = {}) =>
+    buildSubscription({
+      status: 'ACTIVE',
+      incompleteExpiresAt: null,
+      plan: corporate,
+      price: usd(6000),
+      ...overrides,
+    });
+
+  it('leads to the plans while the plan can change', async () => {
+    server.use(subscriptionHandler(active()));
+    renderSubscription();
+
+    expect(
+      await screen.findByRole('link', { name: /Cambiar de plan/ }),
+    ).toHaveAttribute('href', '/panel/subscription/pay?view=plans');
+  });
+
+  it('offers no change while an upgrade waits for its payment', async () => {
+    server.use(
+      subscriptionHandler(
+        active({
+          pendingUpgrade: { plan: professional, invoiceId: 'invoice-x' },
+        }),
+      ),
+    );
+    renderSubscription();
+
+    await screen.findByRole('heading', { level: 2, name: 'Corporativo' });
+    expect(
+      screen.queryByRole('link', { name: /Cambiar de plan/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('undoes a scheduled downgrade after asking', async () => {
+    let current = active({
+      scheduledChange: {
+        plan: professional,
+        price: usd(3000),
+        effectiveAt: '2026-11-12T03:59:59.999Z',
+      },
+    });
+    server.use(
+      http.get(apiUrl('/billing/me/subscription'), () =>
+        HttpResponse.json({
+          subscription: current,
+          access: { hasAccess: true },
+        }),
+      ),
+      http.delete(apiUrl('/billing/me/subscription/scheduled-change'), () => {
+        current = active();
+        return HttpResponse.json({ subscription: current });
+      }),
+    );
+    const { baseElement } = renderSubscription();
+
+    expect(await screen.findByText('Próximo plan')).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Anular el cambio de plan' }),
+    );
+    const sheet = await screen.findByRole('dialog', {
+      name: '¿Anular el cambio al plan Profesional?',
+    });
+    expect(
+      within(sheet).getByText(
+        'Sigues en tu plan Corporativo y se renueva como siempre.',
+      ),
+    ).toBeInTheDocument();
+    expect(await axe(baseElement)).toHaveNoViolations();
+
+    await userEvent.click(
+      within(sheet).getByRole('button', { name: 'Sí, anular el cambio' }),
+    );
+    expect(
+      await screen.findByText('Listo. Sigues en tu plan actual.'),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText('Próximo plan')).not.toBeInTheDocument();
+    });
+    expect(
+      screen.queryByRole('button', { name: 'Anular el cambio de plan' }),
+    ).not.toBeInTheDocument();
   });
 });

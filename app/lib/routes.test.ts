@@ -22,6 +22,9 @@ describe('routes', () => {
     expect(routes.subscriptionPay('profesional')).toBe(
       '/panel/subscription/pay?plan=profesional',
     );
+    expect(routes.subscriptionPlans()).toBe(
+      '/panel/subscription/pay?view=plans',
+    );
   });
 
   it('builds the bridges', () => {
@@ -45,6 +48,7 @@ describe('routes', () => {
   it('keeps the payment page out of the app paths, and the rest of the panel in', () => {
     expect(isAppOwnedPath(routes.subscriptionPay())).toBe(false);
     expect(isAppOwnedPath(routes.subscriptionPay('profesional'))).toBe(false);
+    expect(isAppOwnedPath(routes.subscriptionPlans())).toBe(false);
     expect(isAppOwnedPath(routes.subscription())).toBe(true);
     expect(isAppOwnedPath(routes.agenda('2026-10-01'))).toBe(true);
     expect(isAppOwnedPath(routes.specialistAppointments())).toBe(true);

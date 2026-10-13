@@ -24,6 +24,7 @@ import {
   reportPayment,
   resolvePayable,
   subscribe,
+  undoScheduledChange,
   validateCoupon,
 } from './billing';
 import { apiUrl, errorEnvelope } from '../../../tests/msw/api-url';
@@ -324,6 +325,33 @@ describe('changing plan', () => {
         acceptDiscountLoss: false,
       }),
     ).rejects.toMatchObject({ code: 'ERR_5075' });
+  });
+});
+
+describe('undoScheduledChange', () => {
+  it('drops the downgrade and answers the plan renewing as it is', async () => {
+    const renewed = await undoScheduledChange(user);
+
+    expect(renewed.status).toBe('ACTIVE');
+    expect(renewed.scheduledChange).toBeNull();
+  });
+
+  it('counts a conflict as done once nothing is scheduled', async () => {
+    server.use(
+      http.delete(apiUrl('/billing/me/subscription/scheduled-change'), () =>
+        HttpResponse.json(errorEnvelope('ERR_5073', 'Invalid transition'), {
+          status: 409,
+        }),
+      ),
+      subscriptionHandler(
+        buildSubscription({ status: 'ACTIVE', incompleteExpiresAt: null }),
+      ),
+    );
+
+    await expect(undoScheduledChange(user)).resolves.toMatchObject({
+      status: 'ACTIVE',
+      scheduledChange: null,
+    });
   });
 });
 

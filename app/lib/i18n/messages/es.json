@@ -525,6 +525,16 @@
         "manyClinics": "Máximo {count} consultorios",
         "unlimitedClinics": "Consultorios ilimitados",
         "exportReports": "Visualización y descarga de reportes administrativos"
+      },
+      "change": {
+        "title": "Cambia tu plan <highlight>cuando</highlight> lo necesites",
+        "subtitle": "Si subes, hoy pagas solo la diferencia de lo que queda del mes. Si bajas, el cambio entra al terminar tu periodo.",
+        "select": "Cambiar a este plan",
+        "currentBadge": "Tu plan",
+        "scheduledBadge": "Próximo mes"
+      },
+      "current": {
+        "subtitle": "Tu plan actual está marcado. Ahora mismo no se puede cambiar: revisa «Mi suscripción»."
       }
     },
     "planChange": {
@@ -553,7 +563,20 @@
       "loadErrorDescription": "Revisa tu conexión e inténtalo de nuevo.",
       "unavailableTitle": "Ese plan no está disponible",
       "unavailableDescription": "Puede que ya no se ofrezca. Revisa tu suscripción.",
-      "refusedTitle": "No puedes cambiar de plan ahora"
+      "refusedTitle": "No puedes cambiar de plan ahora",
+      "officesBlocked": "Tienes {active} consultorios activos y el plan {plan} permite {count}. Desactiva los que sobran desde la app antes de bajar de plan."
+    },
+    "actions": {
+      "undoPlanChange": {
+        "entry": "Anular el cambio de plan",
+        "title": "¿Anular el cambio al plan {next}?",
+        "stays": "Sigues en tu plan {plan} y se renueva como siempre.",
+        "noChange": "No pasarás al plan {next}.",
+        "confirm": "Sí, anular el cambio",
+        "keep": "Volver",
+        "success": "Listo. Sigues en tu plan actual.",
+        "failed": "No pudimos anular el cambio. Inténtalo de nuevo."
+      }
     },
     "mySubscription": {
       "title": "Mi suscripción",
@@ -598,6 +621,10 @@
           "noDate": "Tu plan todavía no está activo. Págalo para activarlo y aparecer en las búsquedas."
         },
         "canceled": "No apareces en las búsquedas. Puedes contratar un plan cuando quieras."
+      },
+      "changePlan": {
+        "title": "Cambiar de plan",
+        "description": "Sube para tener más consultorios o baja para pagar menos."
       }
     },
     "months": "{count, plural, one {1 mes} other {# meses}}",

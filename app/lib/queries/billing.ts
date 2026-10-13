@@ -25,6 +25,7 @@ import {
   savedCouponsResponseSchema,
   startedPaymentSchema,
   subscribeResponseSchema,
+  subscriptionResponseSchema,
   toInvoiceDetail,
   type Coupon,
   type CouponChoice,
@@ -508,6 +509,45 @@ export function changePlan(
         // A conflict may be this same change, made by a lost answer or a
         // second tab — its receipt is the debt the API now sees (ERR_5075).
         // Any other is the page's to explain.
+        if (isApiError(error) && error.status === 409) {
+          const landed = await lookAgain();
+          if (landed) return landed;
+        }
+        throw error;
+      }
+    },
+    findLanded: lookAgain,
+  });
+}
+
+const undoes = createWriteOnceGuard<Subscription>();
+
+/**
+ * `DELETE /billing/me/subscription/scheduled-change`: a downgrade waiting
+ * for the period's end is dropped, and the plan renews as it is. A
+ * conflict, or a lost answer, counts as done once nothing is scheduled any
+ * more — the person's wish, whoever got there first.
+ */
+export function undoScheduledChange(user: TokenHolder): Promise<Subscription> {
+  const lookAgain = async (): Promise<Subscription | null> => {
+    const { subscription } = await readSubscription(user);
+    return subscription !== null && subscription.scheduledChange == null
+      ? subscription
+      : null;
+  };
+
+  return undoes({
+    intent: `undo-change:${user.id}`,
+    send: async () => {
+      try {
+        const { subscription } = await apiFetch({
+          method: 'DELETE',
+          path: '/billing/me/subscription/scheduled-change',
+          token: await user.getToken(),
+          schema: subscriptionResponseSchema,
+        });
+        return subscription;
+      } catch (error) {
         if (isApiError(error) && error.status === 409) {
           const landed = await lookAgain();
           if (landed) return landed;

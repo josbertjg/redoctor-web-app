@@ -498,6 +498,11 @@ export const planChangeBodySchema = z.strictObject({
   acceptDiscountLoss: z.literal(true).optional(),
 });
 
+/** `DELETE /billing/me/subscription/scheduled-change`: the subscription, renewing as it is. */
+export const subscriptionResponseSchema = z.object({
+  subscription: subscriptionSchema,
+});
+
 /** `POST /billing/me/subscription/change-plan`: the subscription as it stays, and an upgrade's receipt. */
 export const planChangeResponseSchema = z.object({
   kind: z.enum(planChangeKinds).or(unknownValue),

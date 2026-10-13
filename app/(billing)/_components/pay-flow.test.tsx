@@ -25,6 +25,7 @@ import { renderWithPageMessages } from '@/tests/render';
 import { SessionContext, type Session } from '@/app/hooks/use-session';
 
 import { PayFlow } from './pay-flow';
+import { buildOffices } from '../../../tests/factories/agenda';
 import { buildSpecialistMeResponse } from '../../../tests/factories/identity';
 import { apiUrl, errorEnvelope } from '../../../tests/msw/api-url';
 import {
@@ -68,13 +69,13 @@ const queryClient = () =>
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
 
-function renderPay(wantedPlan: string | null = null) {
+function renderPay(plan: string | null = null, plans = false) {
   return renderWithPageMessages(
     <QueryClientProvider client={queryClient()}>
       <SessionContext.Provider value={signedIn}>
         {/* As the page renders it: inside its main landmark. */}
         <main>
-          <PayFlow wantedPlan={wantedPlan} />
+          <PayFlow request={{ plan, plans }} />
         </main>
       </SessionContext.Provider>
       <Toaster regionLabel="Notificaciones" closeLabel="Cerrar" />
@@ -736,5 +737,139 @@ describe('PayFlow, changing plan (?plan=)', () => {
     expect(
       screen.queryByRole('heading', { name: /Cambiar al plan/ }),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe('PayFlow, «Cambiar de plan» (?view=plans)', () => {
+  const essential = {
+    id: planIds.essential,
+    slug: 'esencial',
+    name: 'Esencial',
+  };
+  const professional = {
+    id: planIds.professional,
+    slug: 'profesional',
+    name: 'Profesional',
+  };
+  const corporate = {
+    id: planIds.corporate,
+    slug: 'corporativo',
+    name: 'Corporativo',
+  };
+  const activeOn = (
+    plan: { id: string; slug: string; name: string },
+    price: number,
+    overrides: Parameters<typeof buildSubscription>[0] = {},
+  ) =>
+    subscriptionHandler(
+      buildSubscription({
+        status: 'ACTIVE',
+        incompleteExpiresAt: null,
+        plan,
+        price: usd(price),
+        ...overrides,
+      }),
+    );
+
+  it('marks the plan in force and changes to another one', async () => {
+    server.use(activeOn(essential, 1500));
+    const { container } = renderPay(null, true);
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Cambia tu plan cuando lo necesites',
+      }),
+    ).toBeInTheDocument();
+    const own = await screen.findByRole('radio', { name: /Esencial/ });
+    expect(own).toBeChecked();
+    expect(own).toHaveAccessibleName(/Tu plan/);
+    expect(
+      screen.queryByRole('button', { name: 'Cambiar a este plan' }),
+    ).not.toBeInTheDocument();
+    expect(await axe(container)).toHaveNoViolations();
+
+    await userEvent.click(screen.getByRole('radio', { name: /Profesional/ }));
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Cambiar a este plan' }),
+    );
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Cambiar al plan Profesional',
+      }),
+    ).toBeInTheDocument();
+
+    // «Volver» returns to the plans, the choice kept in view.
+    await userEvent.click(screen.getByRole('button', { name: 'Volver' }));
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Cambia tu plan cuando lo necesites',
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it('marks a scheduled plan and offers no change to it', async () => {
+    server.use(
+      activeOn(corporate, 6000, {
+        scheduledChange: {
+          plan: professional,
+          price: usd(3000),
+          effectiveAt: '2026-11-12T03:59:59.999Z',
+        },
+      }),
+    );
+    renderPay(null, true);
+
+    const scheduled = await screen.findByRole('radio', { name: /Profesional/ });
+    expect(scheduled).toHaveAccessibleName(/Próximo mes/);
+    await userEvent.click(scheduled);
+    expect(
+      screen.queryByRole('button', { name: 'Cambiar a este plan' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('refuses a downgrade the active offices do not fit', async () => {
+    server.use(
+      activeOn(corporate, 6000),
+      ...planChangeHandlers({ from: planIds.corporate }),
+      http.get(apiUrl('/specialists/offices'), () =>
+        HttpResponse.json(
+          buildOffices([
+            { id: 'office-1', name: 'Clínica Canaima' },
+            { id: 'office-2', name: 'Torre Sur' },
+          ]),
+        ),
+      ),
+    );
+    renderPay('esencial');
+
+    expect(
+      await screen.findByText(
+        'Tienes 2 consultorios activos y el plan Esencial permite 1. Desactiva los que sobran desde la app antes de bajar de plan.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Programar el cambio' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Mantener mi plan' }),
+    ).toBeInTheDocument();
+  });
+
+  it('leads from a plan up to date to the plans', async () => {
+    server.use(activeOn(essential, 1500));
+    renderPay();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Cambiar de plan' }),
+    );
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Cambia tu plan cuando lo necesites',
+      }),
+    ).toBeInTheDocument();
   });
 });

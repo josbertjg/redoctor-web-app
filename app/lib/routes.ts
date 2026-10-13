@@ -70,6 +70,8 @@ export const routes = {
     plan
       ? (`/panel/subscription/pay?plan=${encodeURIComponent(plan)}` as const)
       : ('/panel/subscription/pay' as const),
+  /** The plans, to change from the one in force (or to take one). */
+  subscriptionPlans: () => '/panel/subscription/pay?view=plans' as const,
 
   /* Legal (M10). */
   privacy: () => '/privacy' as const,
