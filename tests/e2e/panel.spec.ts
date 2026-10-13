@@ -15,6 +15,10 @@ const sections = [
   '/panel/appointments',
   '/panel/reports',
   '/panel/subscription',
+  '/panel/subscription/invoices',
+  '/panel/subscription/invoices/2a2a2a2a-2a2a-4a2a-8a2a-2a2a2a2a2a2a',
+  '/panel/subscription/balance',
+  '/panel/subscription/coupons',
 ];
 
 for (const path of sections) {

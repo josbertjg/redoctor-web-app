@@ -37,6 +37,16 @@ export type AnalyticsEvents = {
   web_subscription_plan_changed: { kind: 'upgrade' | 'downgrade' };
   /** A downgrade waiting for the period's end, undone on the web. */
   web_subscription_change_undone: Record<string, never>;
+  /** A plan asked to end with its period, on the web. */
+  web_subscription_canceled: Record<string, never>;
+  /** A cancellation taken back before the period's end, on the web. */
+  web_subscription_resumed: Record<string, never>;
+  /** An unpaid subscription dropped on the web, to choose another plan. */
+  web_subscription_abandoned: Record<string, never>;
+  /** A coupon put on the plan in force, on the web: typed, or one of «Mis cupones». Never the code. */
+  web_subscription_coupon_applied: { saved: boolean };
+  /** A code kept in «Mis cupones» on the web. Never the code. */
+  web_coupon_saved: Record<string, never>;
   /** A payment reported on the web (M13): how it was paid. Never the amount or the reference. */
   web_payment_reported: { method: 'mobile_payment' | 'bank_transfer' };
 };

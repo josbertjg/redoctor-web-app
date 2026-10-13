@@ -6,8 +6,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 
-import { buildOffices } from '@/tests/factories/agenda';
-import { officeId } from '@/tests/factories/appointments';
+import { buildOffices, caracasAt } from '@/tests/factories/agenda';
+import { buildAppointment, officeId } from '@/tests/factories/appointments';
+import {
+  enterAll,
+  stubIntersectionObserver,
+} from '@/tests/intersection-observer';
 import { freezeClock, renderPanel } from '@/tests/panel';
 
 import { AppointmentsHistory } from './appointments-history';
@@ -41,6 +45,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.unstubAllGlobals();
 });
 
 describe('AppointmentsHistory', () => {
@@ -59,6 +64,46 @@ describe('AppointmentsHistory', () => {
       'jueves 1 de octubre de 2026',
     ]);
     expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('shows ten at a time, the next ten as the end of the list comes into view', async () => {
+    stubIntersectionObserver();
+    // 25 attended consultations, one a day of September, the latest first.
+    const many = Array.from({ length: 25 }, (_, index) =>
+      buildAppointment(
+        {
+          id: `history-${String(index)}`,
+          attendee: { firstName: 'Paciente', lastName: String(index + 1) },
+          status: 'COMPLETED',
+          persistedStatus: 'COMPLETED',
+        },
+        caracasAt(`2026-09-${String(index + 1).padStart(2, '0')}`, 9),
+      ),
+    );
+    server.use(
+      http.get(apiUrl('/scheduling/specialist/appointments'), () =>
+        HttpResponse.json({
+          appointments: many,
+          total: many.length,
+          page: 1,
+          pageSize: 100,
+        }),
+      ),
+    );
+    renderHistory();
+
+    expect(await screen.findByText('25 citas')).toBeInTheDocument();
+    expect(screen.getAllByText(/^Paciente \d+$/)).toHaveLength(10);
+    expect(
+      screen.queryByRole('button', { name: 'Ver más' }),
+    ).not.toBeInTheDocument();
+
+    enterAll();
+    expect(await screen.findByText('Paciente 15')).toBeInTheDocument();
+    expect(screen.getAllByText(/^Paciente \d+$/)).toHaveLength(20);
+    enterAll();
+    expect(await screen.findByText('Paciente 1')).toBeInTheDocument();
+    expect(screen.getAllByText(/^Paciente \d+$/)).toHaveLength(25);
   });
 
   it('keeps the filters in the address', async () => {

@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import { waitForContent } from './helpers';
+import manifest from '../../package.json';
 
 /*
  * The landing's welcome: the splash veil on a session's first visit, and
@@ -38,4 +39,13 @@ test('the promise keeps its words while the letters enter', async ({
   await expect(page.getByRole('heading', { level: 1 })).toHaveAccessibleName(
     /Confianza, salud y gestión eficiente,\s*en un solo click\./,
   );
+});
+
+test('the footer tells which version of the web is live', async ({ page }) => {
+  await page.goto('/');
+  await waitForContent(page);
+
+  await expect(
+    page.getByRole('contentinfo').getByText(`Versión: ${manifest.version}`),
+  ).toBeVisible();
 });

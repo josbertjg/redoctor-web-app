@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 
-import CheckCircleFill from '@material-symbols/svg-400/rounded/check_circle-fill.svg?svgr';
 import ConfirmationNumber from '@material-symbols/svg-400/rounded/confirmation_number.svg?svgr';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
@@ -31,6 +30,7 @@ import { Icon } from '@/app/ui/icons';
 import { Sheet } from '@/app/ui/sheet';
 import { TextField } from '@/app/ui/text-field';
 
+import { CouponPreview, SavedCouponsPicker } from './coupon-pieces';
 import { couponSummary } from './coupon-words';
 
 import type { AppliedCoupon } from './payment-types';
@@ -234,62 +234,29 @@ export function CouponSheet({
           }}
         />
         {applicable ? (
-          <div className="animate-fade-in rounded-lg bg-success-light p-3">
-            <p className="flex items-start gap-2 text-label-lg text-green-800">
-              <Icon
-                icon={CheckCircleFill}
-                size={18}
-                className="mt-0.5 shrink-0 text-success"
-              />
-              {couponSummary(t, applicable.coupon)}
-            </p>
-            <p className="mt-1 text-body-md font-semibold text-green-800">
-              {t('coupon.preview.amount', {
-                amount: formatBillingAmount({
-                  amount:
-                    plan.price.amount.amount -
-                    couponDiscount(applicable.coupon, plan.price.amount).amount,
-                  currency: plan.price.amount.currency,
-                }),
-              })}
-            </p>
-          </div>
+          <CouponPreview
+            summary={couponSummary(t, applicable.coupon)}
+            amount={t('coupon.preview.amount', {
+              amount: formatBillingAmount({
+                amount:
+                  plan.price.amount.amount -
+                  couponDiscount(applicable.coupon, plan.price.amount).amount,
+                currency: plan.price.amount.currency,
+              }),
+            })}
+          />
         ) : null}
-        {savedForPlan.length > 0 ? (
-          <div className="flex animate-fade-in flex-col gap-2">
-            <p className="text-label-md text-text-secondary">
-              {t('acquire.coupon.saved')}
-            </p>
-            <ul className="flex flex-col divide-y divide-divider">
-              {savedForPlan.map((coupon) => (
-                <li key={coupon.savedCouponId}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      // One at a time, as the app: a tap while another is
-                      // being checked would answer for the wrong code.
-                      if (validate.isPending) return;
-                      setCode(coupon.code);
-                      setProblem(null);
-                      validate.mutate({
-                        code: coupon.code,
-                        savedCoupon: coupon,
-                      });
-                    }}
-                    className="flex min-h-touch w-full flex-col items-start gap-0.5 rounded-lg py-2 text-left outline-none hover:bg-white-200 focus-visible:ring-3 focus-visible:ring-ring/50"
-                  >
-                    <span className="text-label-lg text-text-primary">
-                      {coupon.code}
-                    </span>
-                    <span className="text-body-sm text-text-secondary">
-                      {couponSummary(t, coupon)}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
+        <SavedCouponsPicker
+          coupons={savedForPlan}
+          onPick={(coupon) => {
+            // One at a time, as the app: a tap while another is being
+            // checked would answer for the wrong code.
+            if (validate.isPending) return;
+            setCode(coupon.code);
+            setProblem(null);
+            validate.mutate({ code: coupon.code, savedCoupon: coupon });
+          }}
+        />
       </form>
     </Sheet>
   );

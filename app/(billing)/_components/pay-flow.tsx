@@ -41,8 +41,15 @@ type View =
   | { kind: 'pay'; mode: PayMode; fromPlans: boolean }
   | { kind: 'upToDate' };
 
-/** What a link asks the page for: a plan to change to (`?plan=`), or the plans (`?view=plans`). */
-export type PayRequest = { plan: string | null; plans: boolean };
+/**
+ * What a link asks the page for: a plan to change to (`?plan=`), the plans
+ * (`?view=plans`), or one receipt to pay, from its page (`?invoice=`).
+ */
+export type PayRequest = {
+  plan: string | null;
+  plans: boolean;
+  invoice: string | null;
+};
 
 /**
  * Where the page starts, from where the plan stands and what the link
@@ -60,6 +67,14 @@ function startingView(
     subscription.status === 'CANCELED'
   ) {
     return { kind: 'plans', changing: false };
+  }
+  // A receipt chosen on its page: that one, whatever else is owed.
+  if (request.invoice !== null) {
+    return {
+      kind: 'pay',
+      mode: { kind: 'invoice', subscription, invoiceId: request.invoice },
+      fromPlans: false,
+    };
   }
   // What is owed comes first: the API changes no plan with debt.
   if (mayOwe(subscription)) {
@@ -89,10 +104,11 @@ function startingView(
 /*
  * `/panel/subscription/pay` (M13, the owner's split of 2026-10-13): paying,
  * choosing a plan and changing it. Where the plan stands decides where it
- * starts — the plans when there is none to pay, the receipt owed when
- * there is one, the change to the plan a link asks for (`?plan=`, a
- * feature the current one lacks), the plans to change to (`?view=plans`,
- * «Cambiar de plan») — and the steps follow in place. That start is kept
+ * starts — the plans when there is none to pay, the receipt a receipt's
+ * page asks to pay (`?invoice=`), the receipt owed when there is one, the
+ * change to the plan a link asks for (`?plan=`, a feature the current one
+ * lacks), the plans to change to (`?view=plans`, «Cambiar de plan») — and
+ * the steps follow in place. That start is kept
  * once taken: paying changes the subscription underneath, and the person
  * must still see how the payment ended. The app never opens this page
  * (AGENTS.md §6): a link to pay reaches the web even on a phone where the
@@ -139,6 +155,13 @@ function SpecialistPayment({
   const toSubscription = () => {
     router.push(routes.subscription());
   };
+  // A receipt paid from its page goes back to it, where the payment shows.
+  const toOrigin =
+    request.invoice === null
+      ? toSubscription
+      : () => {
+          router.push(routes.subscriptionInvoice(request.invoice ?? ''));
+        };
 
   return (
     // `contents`: a handle for the focus, no box of its own.
@@ -236,9 +259,9 @@ function SpecialistPayment({
                 ? () => {
                     setView({ kind: 'plans', changing: false });
                   }
-                : toSubscription
+                : toOrigin
             }
-            onExit={toSubscription}
+            onExit={toOrigin}
           />
         );
       case 'upToDate':

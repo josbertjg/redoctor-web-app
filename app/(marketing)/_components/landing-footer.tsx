@@ -1,5 +1,6 @@
 import { useTranslations } from 'next-intl';
 
+import { appVersion } from '@/app/lib/app-version';
 import { routes } from '@/app/lib/routes';
 
 import { Logo } from '@/app/ui/logo';
@@ -11,11 +12,14 @@ const linkClass =
 
 /*
  * The footer (Figma): the brand line, the contact channels and the legal
- * links on the darker blue. The channels are the mockup's placeholders
- * until REDOC-357; the legal pages arrive with M10.
+ * links on the darker blue, and at the foot the web's version (the
+ * owner's ask, 2026-10-13: it tells which one is live), written as the
+ * app writes its own. The channels are the mockup's placeholders until
+ * REDOC-357; the legal pages arrive with M10.
  */
 export function LandingFooter() {
   const t = useTranslations('landing.footer');
+  const tRoot = useTranslations();
   const year = new Date().getFullYear();
 
   return (
@@ -78,9 +82,10 @@ export function LandingFooter() {
             </li>
           </ul>
         </nav>
-        <p className="mt-10 text-body-xxxs text-blue-100">
-          {t('copyright', { year })}
-        </p>
+        <div className="mt-10 flex flex-col gap-1 text-body-xxxs text-blue-100 sm:flex-row sm:items-center sm:justify-between">
+          <p>{t('copyright', { year })}</p>
+          <p>{tRoot('version', { version: appVersion })}</p>
+        </div>
       </div>
     </footer>
   );

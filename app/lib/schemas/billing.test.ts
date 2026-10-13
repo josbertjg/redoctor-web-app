@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildBalanceMovement,
   buildInvoice,
   buildInvoiceDetail,
   buildIntent,
@@ -17,8 +18,22 @@ import {
 } from '@/tests/factories/billing';
 
 import {
+  actionLanded,
   activeDiscount,
+  balanceMovementSchema,
+  billingDocument,
+  canAbandon,
+  canApplyCoupon,
+  canCancel,
   canChangePlan,
+  canPayInvoice,
+  canResume,
+  nextPage,
+  parseInvoiceFilter,
+  parseInvoiceId,
+  savedCouponSchema,
+  signedMovement,
+  sortSavedCoupons,
   couponAppliesTo,
   couponDiscount,
   couponSchema,
@@ -513,5 +528,174 @@ describe('subscriptionNotice', () => {
   it('types the subscription it reads', () => {
     const typed: Subscription = subscription();
     expect(typed.plan.name).toBe('Profesional');
+  });
+});
+
+describe('what «Mi suscripción» lets the person do', () => {
+  const active = (overrides: Parameters<typeof buildSubscription>[0] = {}) =>
+    subscription({ status: 'ACTIVE', incompleteExpiresAt: null, ...overrides });
+
+  it('cancels an active plan not asked to end yet', () => {
+    expect(canCancel(active())).toBe(true);
+    expect(canCancel(active({ cancelAtPeriodEnd: true }))).toBe(false);
+    expect(canCancel(subscription())).toBe(false);
+  });
+
+  it('resumes one asked to end, until it ends', () => {
+    const now = new Date('2026-10-20T12:00:00.000Z');
+    expect(
+      canResume(active({ cancelAtPeriodEnd: true, endsAt: periodEnd }), now),
+    ).toBe(true);
+    expect(
+      canResume(
+        active({ cancelAtPeriodEnd: true, endsAt: '2026-10-19T12:00:00.000Z' }),
+        now,
+      ),
+    ).toBe(false);
+    // With no end known it is still in time, as the app reads it.
+    expect(canResume(active({ cancelAtPeriodEnd: true }), now)).toBe(true);
+    expect(canResume(active(), now)).toBe(false);
+    expect(
+      canResume(
+        subscription({ status: 'CANCELED', cancelAtPeriodEnd: true }),
+        now,
+      ),
+    ).toBe(false);
+  });
+
+  it('drops an unpaid subscription, never with a payment in review', () => {
+    expect(canAbandon(subscription(), detail())).toBe(true);
+    // A receipt that could not be read does not hide it: the API decides.
+    expect(canAbandon(subscription(), null)).toBe(true);
+    expect(
+      canAbandon(
+        subscription(),
+        detail([
+          buildIntent({ status: 'IN_REVIEW', reported: buildReported() }),
+        ]),
+      ),
+    ).toBe(false);
+    expect(canAbandon(active(), null)).toBe(false);
+  });
+
+  it('puts a coupon on an active plan with none discounting', () => {
+    expect(canApplyCoupon(active())).toBe(true);
+    expect(
+      canApplyCoupon(
+        active({
+          discount: {
+            code: 'REDOCTOR20',
+            discountType: 'PERCENT',
+            percentOff: 20,
+            duration: 'ONCE',
+            status: 'ACTIVE',
+          },
+        }),
+      ),
+    ).toBe(false);
+    // One that ended frees the place.
+    expect(
+      canApplyCoupon(
+        active({
+          discount: {
+            code: 'REDOCTOR20',
+            discountType: 'PERCENT',
+            percentOff: 20,
+            duration: 'ONCE',
+            status: 'ENDED',
+          },
+        }),
+      ),
+    ).toBe(true);
+    expect(canApplyCoupon(subscription())).toBe(false);
+  });
+
+  it('recognises where each action leaves the subscription', () => {
+    expect(actionLanded('cancel', active({ cancelAtPeriodEnd: true }))).toBe(
+      true,
+    );
+    expect(actionLanded('cancel', active())).toBe(false);
+    expect(actionLanded('resume', active())).toBe(true);
+    expect(
+      actionLanded('abandon', subscription({ status: 'INCOMPLETE_EXPIRED' })),
+    ).toBe(true);
+    expect(actionLanded('abandon', subscription())).toBe(false);
+    expect(actionLanded('undoPlanChange', active())).toBe(true);
+  });
+});
+
+describe('receipts, balance and coupons as the pages read them', () => {
+  it('pays a receipt from its page while something is owed and nothing waits', () => {
+    expect(canPayInvoice(detail())).toBe(true);
+    expect(
+      canPayInvoice(
+        detail([
+          buildIntent({ status: 'IN_REVIEW', reported: buildReported() }),
+        ]),
+      ),
+    ).toBe(false);
+    expect(
+      canPayInvoice(
+        detail([], buildInvoice({ status: 'PAID', pending: usd(0) })),
+      ),
+    ).toBe(false);
+  });
+
+  it('writes the document as the app does, or nothing when a part is missing', () => {
+    expect(
+      billingDocument({ documentType: 'V', documentNumber: '12345678' }),
+    ).toBe('V-12345678');
+    expect(
+      billingDocument({ documentType: null, documentNumber: '12345678' }),
+    ).toBeNull();
+    expect(
+      billingDocument({ documentType: 'V', documentNumber: '' }),
+    ).toBeNull();
+  });
+
+  it('reads the address: a known status, a well-formed id, or nothing', () => {
+    expect(parseInvoiceFilter('paid')).toBe('paid');
+    expect(parseInvoiceFilter('PAID')).toBeNull();
+    expect(parseInvoiceFilter('toString')).toBeNull();
+    expect(parseInvoiceFilter(['open'])).toBeNull();
+    expect(parseInvoiceId(invoiceIds.unpaid)).toBe(invoiceIds.unpaid);
+    expect(parseInvoiceId('../admin')).toBeNull();
+    expect(parseInvoiceId(undefined)).toBeNull();
+  });
+
+  it('asks for the next page while there is one', () => {
+    expect(nextPage({ page: 1, totalPages: 2 })).toBe(2);
+    expect(nextPage({ page: 2, totalPages: 2 })).toBeUndefined();
+    expect(nextPage({ page: 1, totalPages: 0 })).toBeUndefined();
+  });
+
+  it('signs each movement: a credit adds, a debit takes', () => {
+    const credit = balanceMovementSchema.parse(buildBalanceMovement());
+    const debit = balanceMovementSchema.parse(
+      buildBalanceMovement({ type: 'DEBIT', amount: usd(300) }),
+    );
+    expect(signedMovement(credit)).toEqual(usd(500));
+    expect(signedMovement(debit)).toEqual(usd(-300));
+  });
+
+  it('lists the coupons still to use first, the rest in the API’s order', () => {
+    const coupon = (code: string, state: string) =>
+      savedCouponSchema.parse({
+        code,
+        name: code,
+        discountType: 'PERCENT',
+        percentOff: 10,
+        duration: 'ONCE',
+        savedCouponId: code,
+        state,
+      });
+    expect(
+      sortSavedCoupons([
+        coupon('A', 'USED'),
+        coupon('B', 'AVAILABLE'),
+        coupon('C', 'EXPIRED'),
+        coupon('D', 'AVAILABLE'),
+      ]).map((saved) => saved.code),
+    ).toEqual(['B', 'D', 'A', 'C']);
   });
 });

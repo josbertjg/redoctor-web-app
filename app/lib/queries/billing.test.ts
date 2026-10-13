@@ -4,34 +4,49 @@ import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildBalanceMovement,
   buildInvoice,
   buildIntent,
+  buildPaidInvoice,
   buildProrationInvoice,
   buildReported,
   buildSubscription,
+  couponCodes,
   intentIds,
   invoiceIds,
   planIds,
+  savedCouponId,
   usd,
 } from '@/tests/factories/billing';
 
 import {
+  applyCoupon,
+  balanceQueryOptions,
+  billingAccountQueryOptions,
   changePlan,
+  changeSubscription,
   couponRejectionKey,
+  invoiceQueryOptions,
+  invoicesQueryOptions,
+  myCouponsQueryOptions,
   payableInvoiceQueryOptions,
   planChangePreviewQueryOptions,
   plansQueryOptions,
   reportPayment,
   resolvePayable,
+  saveCoupon,
+  savedCouponsQueryOptions,
   subscribe,
-  undoScheduledChange,
   validateCoupon,
 } from './billing';
 import { apiUrl, errorEnvelope } from '../../../tests/msw/api-url';
 import {
+  applyDiscountHandler,
+  balanceHandler,
   invoiceDetailHandler,
   invoicesHandler,
   planChangeHandlers,
+  subscriptionActionHandlers,
   subscriptionHandler,
 } from '../../../tests/msw/handlers/billing';
 import { validToken } from '../../../tests/msw/handlers/identity';
@@ -328,29 +343,161 @@ describe('changing plan', () => {
   });
 });
 
-describe('undoScheduledChange', () => {
-  it('drops the downgrade and answers the plan renewing as it is', async () => {
-    const renewed = await undoScheduledChange(user);
+describe('changeSubscription', () => {
+  const active = (overrides: Parameters<typeof buildSubscription>[0] = {}) =>
+    buildSubscription({
+      status: 'ACTIVE',
+      incompleteExpiresAt: null,
+      ...overrides,
+    });
+
+  it('drops a scheduled downgrade: the plan renews as it is', async () => {
+    const renewed = await changeSubscription(user, 'undoPlanChange');
 
     expect(renewed.status).toBe('ACTIVE');
     expect(renewed.scheduledChange).toBeNull();
   });
 
-  it('counts a conflict as done once nothing is scheduled', async () => {
+  it('cancels at the period’s end, keeping the plan until then', async () => {
+    const canceled = await changeSubscription(user, 'cancel');
+
+    expect(canceled.status).toBe('ACTIVE');
+    expect(canceled.cancelAtPeriodEnd).toBe(true);
+  });
+
+  it('resumes a plan asked to end', async () => {
+    const resumed = await changeSubscription(user, 'resume');
+
+    expect(resumed.cancelAtPeriodEnd).toBe(false);
+  });
+
+  it('abandons an unpaid subscription', async () => {
+    const abandoned = await changeSubscription(user, 'abandon');
+
+    expect(abandoned.status).toBe('INCOMPLETE_EXPIRED');
+  });
+
+  it('counts a conflict as done once the subscription stands where the action leaves it', async () => {
+    server.use(
+      ...subscriptionActionHandlers({
+        refusal: { code: 'ERR_5073', message: 'Invalid transition' },
+      }),
+      subscriptionHandler(active({ cancelAtPeriodEnd: true })),
+    );
+
+    await expect(changeSubscription(user, 'cancel')).resolves.toMatchObject({
+      cancelAtPeriodEnd: true,
+    });
+  });
+
+  it('passes on a conflict that left it elsewhere', async () => {
+    server.use(
+      ...subscriptionActionHandlers({
+        refusal: { code: 'ERR_5073', message: 'Invalid transition' },
+      }),
+      subscriptionHandler(buildSubscription()),
+    );
+
+    await expect(changeSubscription(user, 'abandon')).rejects.toMatchObject({
+      code: 'ERR_5073',
+    });
+  });
+
+  it('counts a conflict on the undo as done once nothing is scheduled', async () => {
     server.use(
       http.delete(apiUrl('/billing/me/subscription/scheduled-change'), () =>
         HttpResponse.json(errorEnvelope('ERR_5073', 'Invalid transition'), {
           status: 409,
         }),
       ),
-      subscriptionHandler(
-        buildSubscription({ status: 'ACTIVE', incompleteExpiresAt: null }),
-      ),
+      subscriptionHandler(active()),
     );
 
-    await expect(undoScheduledChange(user)).resolves.toMatchObject({
+    await expect(
+      changeSubscription(user, 'undoPlanChange'),
+    ).resolves.toMatchObject({ status: 'ACTIVE', scheduledChange: null });
+  });
+});
+
+describe('receipts, balance and billing account', () => {
+  const receipts = Array.from({ length: 23 }, (_, index) =>
+    buildPaidInvoice({
+      id: `invoice-${String(index)}`,
+      number: `R-2026-${String(index).padStart(6, '0')}`,
+    }),
+  );
+
+  it('reads the receipts a page at a time, the next one while there is more', async () => {
+    server.use(invoicesHandler([buildInvoice(), ...receipts]));
+    const client = new QueryClient();
+
+    const first = await client.infiniteQuery(invoicesQueryOptions(user, null));
+    const [page] = first.pages;
+    expect(page?.items).toHaveLength(20);
+    expect(page?.meta).toMatchObject({ page: 1, totalPages: 2 });
+
+    const options = invoicesQueryOptions(user, null);
+    expect(page && options.getNextPageParam(page, first.pages, 1, [1])).toBe(2);
+  });
+
+  it('keeps one status when filtered', async () => {
+    server.use(invoicesHandler([buildInvoice(), ...receipts]));
+
+    const open = await new QueryClient().infiniteQuery(
+      invoicesQueryOptions(user, 'open'),
+    );
+    expect(open.pages[0]?.items.map((invoice) => invoice.status)).toEqual([
+      'OPEN',
+    ]);
+  });
+
+  it('reads one receipt with its payments, attempts and adjustments', async () => {
+    server.use(
+      invoiceDetailHandler(buildPaidInvoice(), [], {
+        allocations: [
+          {
+            paymentId: 'payment-1',
+            amount: usd(3000),
+            paymentAmountVes: { amount: 119839, currency: 'VES' },
+            rate: '39.94633333',
+            confirmedAt: '2026-09-13T15:00:00.000Z',
+          },
+        ],
+      }),
+    );
+
+    const receipt = await new QueryClient().query(
+      invoiceQueryOptions(user, buildPaidInvoice().id),
+    );
+    expect(receipt.allocations).toHaveLength(1);
+    expect(receipt.adjustments).toEqual([]);
+    expect(receipt.billingData?.legalName).toBe('Luis Gómez');
+  });
+
+  it('answers a receipt that does not exist with its 404, for the page to say it', async () => {
+    await expect(
+      new QueryClient().query(invoiceQueryOptions(user, 'not-a-receipt')),
+    ).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('reads the balance with its movements', async () => {
+    server.use(balanceHandler(500, [buildBalanceMovement()]));
+
+    const balance = await new QueryClient().infiniteQuery(
+      balanceQueryOptions(user),
+    );
+    expect(balance.pages[0]?.balance).toEqual(usd(500));
+    expect(balance.pages[0]?.items[0]?.type).toBe('CREDIT');
+  });
+
+  it('reads whom the receipts are issued to', async () => {
+    const account = await new QueryClient().query(
+      billingAccountQueryOptions(user),
+    );
+    expect(account).toMatchObject({
+      legalName: 'Luis Gómez',
+      documentType: 'V',
       status: 'ACTIVE',
-      scheduledChange: null,
     });
   });
 });
@@ -497,5 +644,144 @@ describe('coupons', () => {
       ),
     ).toBeNull();
     expect(couponRejectionKey(new Error('other'))).toBeNull();
+  });
+});
+
+describe('«Mis cupones» and a coupon on the plan in force', () => {
+  const active = (overrides: Parameters<typeof buildSubscription>[0] = {}) =>
+    buildSubscription({
+      status: 'ACTIVE',
+      incompleteExpiresAt: null,
+      ...overrides,
+    });
+
+  it('lists every coupon, the ones still to use first; the picker keeps only those', async () => {
+    server.use(
+      http.get(apiUrl('/billing/me/coupons'), () =>
+        HttpResponse.json({
+          items: [
+            {
+              code: 'USADO10',
+              name: 'Usado',
+              discountType: 'PERCENT',
+              percentOff: 10,
+              amountOff: null,
+              duration: 'ONCE',
+              durationMonths: null,
+              planIds: [],
+              expiresAt: null,
+              personal: false,
+              savedCouponId: 'saved-used',
+              state: 'USED',
+              savedAt: '2026-09-01T12:00:00.000Z',
+            },
+            {
+              code: 'REDOCTOR20',
+              name: 'Bienvenida 2026',
+              discountType: 'PERCENT',
+              percentOff: 20,
+              amountOff: null,
+              duration: 'ONCE',
+              durationMonths: null,
+              planIds: [],
+              expiresAt: null,
+              personal: false,
+              savedCouponId: 'saved-available',
+              state: 'AVAILABLE',
+              savedAt: '2026-10-01T12:00:00.000Z',
+            },
+          ],
+        }),
+      ),
+    );
+    const client = new QueryClient();
+
+    const all = await client.query(myCouponsQueryOptions(user));
+    expect(all.map((coupon) => coupon.state)).toEqual(['AVAILABLE', 'USED']);
+
+    const available = savedCouponsQueryOptions(user).select?.(all) ?? [];
+    expect(available.map((coupon) => coupon.code)).toEqual(['REDOCTOR20']);
+  });
+
+  it('saves a code without spending it', async () => {
+    const saved = await saveCoupon(user, couponCodes.twentyOff);
+
+    expect(saved).toMatchObject({ code: 'REDOCTOR20', state: 'AVAILABLE' });
+  });
+
+  it('names why a code cannot be saved in the app’s words', async () => {
+    await expect(saveCoupon(user, couponCodes.expired)).rejects.toSatisfy(
+      (error) =>
+        couponRejectionKey(error) === 'billing.couponRejection.expired',
+    );
+  });
+
+  it('applies a typed code or a saved coupon to the plan in force', async () => {
+    await expect(
+      applyCoupon(user, {
+        choice: { code: couponCodes.twentyOff },
+        code: couponCodes.twentyOff,
+      }),
+    ).resolves.toMatchObject({ code: 'REDOCTOR20', status: 'ACTIVE' });
+    await expect(
+      applyCoupon(user, {
+        choice: { savedCouponId },
+        code: couponCodes.professionalOnly,
+      }),
+    ).resolves.toMatchObject({ code: 'SOLOPRO' });
+  });
+
+  it('counts «one already discounting» as done when it is this coupon', async () => {
+    server.use(
+      applyDiscountHandler({ active: true }),
+      subscriptionHandler(
+        active({
+          discount: {
+            couponName: 'Bienvenida 2026',
+            code: 'REDOCTOR20',
+            discountType: 'PERCENT',
+            percentOff: 20,
+            amountOff: null,
+            duration: 'ONCE',
+            remainingCycles: 1,
+            status: 'ACTIVE',
+          },
+        }),
+      ),
+    );
+
+    await expect(
+      applyCoupon(user, {
+        choice: { code: couponCodes.twentyOff },
+        code: couponCodes.twentyOff,
+      }),
+    ).resolves.toMatchObject({ code: 'REDOCTOR20' });
+  });
+
+  it('passes on «one already discounting» when it is another', async () => {
+    server.use(
+      applyDiscountHandler({ active: true }),
+      subscriptionHandler(
+        active({
+          discount: {
+            couponName: 'Otro',
+            code: 'OTRO50',
+            discountType: 'PERCENT',
+            percentOff: 50,
+            amountOff: null,
+            duration: 'ONCE',
+            remainingCycles: 1,
+            status: 'ACTIVE',
+          },
+        }),
+      ),
+    );
+
+    await expect(
+      applyCoupon(user, {
+        choice: { code: couponCodes.twentyOff },
+        code: couponCodes.twentyOff,
+      }),
+    ).rejects.toMatchObject({ code: 'ERR_5106' });
   });
 });

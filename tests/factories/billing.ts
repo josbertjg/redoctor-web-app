@@ -1,4 +1,6 @@
 import type {
+  balanceMovementSchema,
+  billingAccountResponseSchema,
   couponSchema,
   invoiceDetailResponseSchema,
   invoiceSchema,
@@ -28,6 +30,12 @@ export type StartedPaymentPayload = z.input<typeof startedPaymentSchema>;
 export type CouponPayload = z.input<typeof couponSchema> &
   Record<string, unknown>;
 export type SavedCouponPayload = z.input<typeof savedCouponSchema>;
+export type BalanceMovementPayload = z.input<typeof balanceMovementSchema> &
+  Record<string, unknown>;
+export type BillingAccountPayload = z.input<
+  typeof billingAccountResponseSchema
+>['account'] &
+  Record<string, unknown>;
 type PaymentMethod = z.infer<typeof paymentMethodSchema>;
 
 export const planIds = {
@@ -345,4 +353,63 @@ export function buildSavedCoupons(): SavedCouponPayload[] {
       savedAt: '2026-10-01T12:00:00.000Z',
     } as SavedCouponPayload,
   ];
+}
+
+/** A receipt already paid: the month before, approved in full. */
+export function buildPaidInvoice(
+  overrides: Partial<InvoicePayload> = {},
+): InvoicePayload {
+  return buildInvoice({
+    id: '2d2d2d2d-2d2d-4d2d-8d2d-2d2d2d2d2d2d',
+    number: 'R-2026-000101',
+    status: 'PAID',
+    periodStart: '2026-09-12T04:00:00.000Z',
+    periodEnd: '2026-10-12T03:59:59.999Z',
+    paid: usd(3000),
+    pending: usd(0),
+    lines: [
+      {
+        type: 'PLAN',
+        description: 'Plan Profesional · 12 sept – 11 oct 2026',
+        amount: usd(3000),
+      },
+    ],
+    paidAt: '2026-09-13T15:00:00.000Z',
+    ...overrides,
+  });
+}
+
+/** A movement of the balance: $ 5 paid over on that receipt. */
+export function buildBalanceMovement(
+  overrides: Partial<BalanceMovementPayload> = {},
+): BalanceMovementPayload {
+  return {
+    id: '5a5a5a5a-5a5a-4a5a-8a5a-5a5a5a5a5a5a',
+    type: 'CREDIT',
+    amount: usd(500),
+    source: 'PAYMENT_EXCESS',
+    label: 'Pagaste de más',
+    reason: null,
+    invoiceId: '2d2d2d2d-2d2d-4d2d-8d2d-2d2d2d2d2d2d',
+    paymentId: null,
+    balanceAfter: usd(500),
+    createdAt: '2026-09-13T15:00:00.000Z',
+    ...overrides,
+  };
+}
+
+/** Whom the receipts are issued to, as the API creates it. */
+export function buildBillingAccount(
+  overrides: Partial<BillingAccountPayload> = {},
+): BillingAccountPayload {
+  return {
+    id: '6a6a6a6a-6a6a-4a6a-8a6a-6a6a6a6a6a6a',
+    specialistId: 'specialist-1',
+    legalName: 'Luis Gómez',
+    documentType: 'V',
+    documentNumber: '12345678',
+    email: 'facturas@example.com',
+    status: 'ACTIVE',
+    ...overrides,
+  };
 }

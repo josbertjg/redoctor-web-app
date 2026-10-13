@@ -4,6 +4,10 @@ import { useId, useState } from 'react';
 
 import Link from 'next/link';
 
+import Badge from '@material-symbols/svg-400/rounded/badge.svg?svgr';
+import ConfirmationNumber from '@material-symbols/svg-400/rounded/confirmation_number.svg?svgr';
+import EventBusy from '@material-symbols/svg-400/rounded/event_busy.svg?svgr';
+import LocalActivity from '@material-symbols/svg-400/rounded/local_activity.svg?svgr';
 import SwapVert from '@material-symbols/svg-400/rounded/swap_vert.svg?svgr';
 import { useTranslations } from 'next-intl';
 
@@ -17,9 +21,15 @@ import { formatBillingAmount } from '@/app/lib/format/money';
 import { routes } from '@/app/lib/routes';
 import {
   activeDiscount,
+  canAbandon,
+  canApplyCoupon,
+  canCancel,
   canChangePlan,
+  canResume,
   subscriptionStatusChips,
+  type InvoiceDetail,
   type Subscription,
+  type SubscriptionAction,
   type SubscriptionNotice,
 } from '@/app/lib/schemas/billing';
 import { cn } from '@/app/lib/utils';
@@ -29,16 +39,32 @@ import { PlanEmblem } from '@/app/ui/billing/plan-emblem';
 import { Button } from '@/app/ui/button';
 import { LinkCard } from '@/app/ui/link-card';
 import { StateChip } from '@/app/ui/state-chip';
+import { StatusCard } from '@/app/ui/status-card';
 
+import { ApplyCouponSheet } from './apply-coupon-sheet';
+import { BillingAccountSheet } from './billing-account-sheet';
+import { Collapse } from './collapse';
 import { couponDiscountLabel } from './coupon-words';
 import { DetailList, type DetailItem } from './detail-list';
-import { UndoPlanChange } from './undo-plan-change';
+import { EntitlementsCard } from './entitlements-card';
+import {
+  askAbout,
+  SubscriptionActionSheet,
+  type AskedAction,
+} from './subscription-action-sheet';
+import { BalanceSection, RecentInvoices } from './subscription-sections';
 
 type SubscriptionViewProps = {
   user: SessionUser;
   subscription: Subscription;
   /** What to tell about the billing, already resolved; null when the plan is simply at its stage. */
   notice: SubscriptionNotice | null;
+  /** The receipt it owes, when one is owed and could be read: a payment in review keeps it from being dropped. */
+  payable: InvoiceDetail | null;
+  /** What the deadlines count from, decided once for the page. */
+  now: Date;
+  /** The API's access rule: whether what the plan includes is on now. */
+  hasAccess: boolean;
 };
 
 type Translate = ReturnType<typeof useTranslations<'billing'>>;
@@ -138,29 +164,33 @@ function periodRows(t: Translate, subscription: Subscription): DetailItem[] {
   return rows;
 }
 
+/** The sheets «Mi suscripción» opens, one at a time. */
+type SheetKind = 'action' | 'coupon' | 'account';
+
 /*
- * «Mi suscripción», as the app's screen heads it: which plan, what it
- * costs, where it stands and what that means — then the notice with what
- * to do, when there is one, and «Cambiar de plan» while the plan can
- * change, with «Anular el cambio de plan» for a downgrade scheduled.
- * Paying, taking a plan again or choosing the new one is the payment
- * page's (`/panel/subscription/pay`); cancelling or resuming stay in the
- * app for now.
+ * «Mi suscripción», as the app's screen: which plan, what it costs, where
+ * it stands and what that means — the notice with what to do, when there
+ * is one —, what the plan includes, and from there everything about it:
+ * resuming a plan asked to end, changing plan, a coupon on the plan in force, «Mis cupones», whom
+ * the receipts are issued to, undoing a scheduled change, dropping a
+ * subscription never paid, cancelling; then the balance and the latest
+ * receipts. Paying, taking a plan again or choosing the new one is the
+ * payment page's (`/panel/subscription/pay`). What comes and goes as the
+ * subscription moves unfolds and folds in place.
  */
 export function SubscriptionView({
   user,
   subscription,
   notice,
+  payable,
+  now,
+  hasAccess,
 }: SubscriptionViewProps) {
   const t = useTranslations('billing');
   const headingId = useId();
-  // Once a scheduled change has shown, its undo stays mounted to fade out.
-  const [hadScheduled, setHadScheduled] = useState(
-    subscription.scheduledChange != null,
-  );
-  if (!hadScheduled && subscription.scheduledChange != null) {
-    setHadScheduled(true);
-  }
+  const [sheet, setSheet] = useState<SheetKind | null>(null);
+  const [asked, setAsked] = useState<AskedAction | null>(null);
+
   const chip = subscriptionStatusChips[subscription.status];
   const canceled = subscription.status === 'CANCELED';
   const rows = canceled ? [] : periodRows(t, subscription);
@@ -170,6 +200,17 @@ export function SubscriptionView({
       : subscription.status === 'INCOMPLETE'
         ? 'text-warning-800'
         : 'text-text-secondary';
+
+  const ask = (action: SubscriptionAction) => {
+    setAsked(askAbout(action, subscription));
+    setSheet('action');
+  };
+  const sheetProps = (kind: SheetKind) => ({
+    open: sheet === kind,
+    onOpenChange: (open: boolean) => {
+      setSheet(open ? kind : null);
+    },
+  });
 
   return (
     <div className="flex w-full flex-col gap-4">
@@ -215,6 +256,34 @@ export function SubscriptionView({
         <NoticePanel notice={notice} payHref={routes.subscriptionPay()} />
       ) : null}
 
+      {/* Asked to end and still in time: it can be taken back. */}
+      <Collapse open={canResume(subscription, now)}>
+        <StatusCard
+          icon={EventBusy}
+          title={t('mySubscription.resumeTitle')}
+          description={t('mySubscription.resumePrompt')}
+        >
+          <Button
+            block
+            shape="soft"
+            aria-haspopup="dialog"
+            onClick={() => {
+              ask('resume');
+            }}
+          >
+            {t('actions.resume.entry')}
+          </Button>
+        </StatusCard>
+      </Collapse>
+
+      {canceled ? null : (
+        <EntitlementsCard
+          user={user}
+          subscription={subscription}
+          hasAccess={hasAccess}
+        />
+      )}
+
       {canceled ? (
         <Button asChild block shape="soft">
           <Link href={routes.subscriptionPay()}>
@@ -223,18 +292,109 @@ export function SubscriptionView({
         </Button>
       ) : null}
 
-      {canChangePlan(subscription) ? (
+      <Collapse open={canChangePlan(subscription)}>
         <LinkCard
           href={routes.subscriptionPlans()}
           icon={SwapVert}
           title={t('mySubscription.changePlan.title')}
           description={t('mySubscription.changePlan.description')}
         />
-      ) : null}
+      </Collapse>
+      <Collapse open={canApplyCoupon(subscription)}>
+        <LinkCard
+          onClick={() => {
+            setSheet('coupon');
+          }}
+          icon={ConfirmationNumber}
+          title={t('manage.coupon.entry')}
+          description={t('manage.coupon.sectionDescription')}
+        />
+      </Collapse>
+      <LinkCard
+        href={routes.subscriptionCoupons()}
+        icon={LocalActivity}
+        title={t('myCoupons.title')}
+        description={t('myCoupons.entryDescription')}
+      />
+      <LinkCard
+        onClick={() => {
+          setSheet('account');
+        }}
+        icon={Badge}
+        title={t('account.title')}
+        description={t('account.entry')}
+      />
 
-      {hadScheduled ? (
-        <UndoPlanChange user={user} subscription={subscription} />
-      ) : null}
+      {/* What changes the subscription's course, at the foot. */}
+      <Collapse open={subscription.scheduledChange != null}>
+        <Button
+          block
+          variant="white"
+          shape="soft"
+          aria-haspopup="dialog"
+          onClick={() => {
+            ask('undoPlanChange');
+          }}
+        >
+          {t('actions.undoPlanChange.entry')}
+        </Button>
+      </Collapse>
+      <Collapse open={canAbandon(subscription, payable)}>
+        <TextAction
+          onClick={() => {
+            ask('abandon');
+          }}
+        >
+          {t('actions.abandon.entry')}
+        </TextAction>
+      </Collapse>
+      {/* Loose and in words: the last thing to touch by accident, but hiding it would be worse. */}
+      <Collapse open={canCancel(subscription)}>
+        <TextAction
+          onClick={() => {
+            ask('cancel');
+          }}
+        >
+          {t('actions.cancel.entry')}
+        </TextAction>
+      </Collapse>
+
+      <BalanceSection user={user} />
+      <RecentInvoices user={user} />
+
+      <SubscriptionActionSheet
+        user={user}
+        asked={asked}
+        {...sheetProps('action')}
+      />
+      <ApplyCouponSheet
+        user={user}
+        subscription={subscription}
+        {...sheetProps('coupon')}
+      />
+      <BillingAccountSheet user={user} {...sheetProps('account')} />
+    </div>
+  );
+}
+
+/** An action that loses something, in words and in the error's color (the app's text buttons). */
+function TextAction({
+  onClick,
+  children,
+}: {
+  onClick: () => void;
+  children: string;
+}) {
+  return (
+    <div className="flex justify-center">
+      <button
+        type="button"
+        aria-haspopup="dialog"
+        onClick={onClick}
+        className="inline-flex min-h-touch items-center rounded-lg px-3 text-label-lg text-error-700 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
+        {children}
+      </button>
     </div>
   );
 }

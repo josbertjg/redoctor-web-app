@@ -16,6 +16,7 @@ import {
   billingKeys,
   subscriptionQueryOptions,
   couponRejectionKey,
+  invoiceQueryOptions,
   payableInvoiceQueryOptions,
   startPayment,
   subscribe,
@@ -48,10 +49,13 @@ import { PaymentStep } from './payment-step';
 
 import type { AppliedCoupon, PaymentOutcome } from './payment-types';
 
-/** Taking a plan, or paying the receipt a subscription owes. */
+/**
+ * Taking a plan, or paying a receipt: the one the subscription owes, or the
+ * one its page chose (`invoiceId`).
+ */
 export type PayMode =
   | { kind: 'contract'; plan: OfferedPlan }
-  | { kind: 'invoice'; subscription: Subscription };
+  | { kind: 'invoice'; subscription: Subscription; invoiceId?: string };
 
 type PayViewProps = {
   user: SessionUser;
@@ -91,12 +95,19 @@ export function PayView({ user, mode, onBack, onExit }: PayViewProps) {
   } | null>(null);
   const [outcome, setOutcome] = useState<PaymentOutcome | null>(null);
 
-  const payable = useQuery(
+  const receiptId = mode.kind === 'invoice' ? (mode.invoiceId ?? null) : null;
+  const receipt = useQuery({
+    ...invoiceQueryOptions(user, receiptId ?? ''),
+    enabled: receiptId !== null,
+  });
+  const owedBySubscription = useQuery(
     payableInvoiceQueryOptions(
       user,
-      mode.kind === 'invoice' ? mode.subscription : null,
+      mode.kind === 'invoice' && receiptId === null ? mode.subscription : null,
     ),
   );
+  // The receipt to pay: the one chosen on its page, or the one owed.
+  const payable = receiptId === null ? owedBySubscription : receipt;
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
@@ -121,6 +132,13 @@ export function PayView({ user, mode, onBack, onExit }: PayViewProps) {
     });
     void queryClient.invalidateQueries({
       queryKey: billingKeys.payables(user.id),
+    });
+    // The receipts show their payments; a payment over leaves balance.
+    void queryClient.invalidateQueries({
+      queryKey: billingKeys.invoices(user.id),
+    });
+    void queryClient.invalidateQueries({
+      queryKey: billingKeys.balance(user.id),
     });
   };
 
@@ -150,9 +168,13 @@ export function PayView({ user, mode, onBack, onExit }: PayViewProps) {
     if (plan) return plan.name;
     if (mode.kind !== 'invoice') return '';
     const upgrade = mode.subscription.pendingUpgrade;
-    return upgrade != null && invoice?.id === upgrade.invoiceId
-      ? upgrade.plan.name
-      : mode.subscription.plan.name;
+    if (upgrade != null && invoice?.id === upgrade.invoiceId) {
+      return upgrade.plan.name;
+    }
+    // A receipt of an earlier subscription names no plan here.
+    return invoice === null || invoice.subscriptionId === mode.subscription.id
+      ? mode.subscription.plan.name
+      : '';
   })();
 
   /** The coupon no longer serves: it is taken off and the reason told; taking the plan without it is one tap away. */
@@ -277,8 +299,14 @@ export function PayView({ user, mode, onBack, onExit }: PayViewProps) {
 
     if (mode.kind === 'invoice') {
       if (payable.isPending) return <PaySkeleton />;
+      // A receipt chosen by a link that leads nowhere: nothing to pay here.
+      const missing =
+        receiptId !== null &&
+        payable.isLoadingError &&
+        isApiError(payable.error) &&
+        (payable.error.status === 404 || payable.error.status === 400);
       // Only when there is nothing to show: a failed re-read keeps the receipt.
-      if (payable.isLoadingError) {
+      if (payable.isLoadingError && !missing) {
         return (
           <EmptyState
             tone="error"

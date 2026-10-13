@@ -506,6 +506,7 @@
   "refresh": "Refrescar",
   "billing": {
     "metaTitle": "Pagar",
+    "missing": "---",
     "plans": {
       "title": "Elige el plan <highlight>ideal</highlight> para tu perfil profesional",
       "subtitle": "Aumenta tu visibilidad y conecta con más pacientes de forma segura.",
@@ -567,6 +568,40 @@
       "officesBlocked": "Tienes {active} consultorios activos y el plan {plan} permite {count}. Desactiva los que sobran desde la app antes de bajar de plan."
     },
     "actions": {
+      "cancel": {
+        "entry": "Cancelar mi plan",
+        "title": "¿Cancelar tu plan?",
+        "keepsUntil": "Conservas tu plan y sus beneficios hasta el {date}.",
+        "keepsUntilNoDate": "Conservas tu plan y sus beneficios hasta el final del periodo.",
+        "visibility": "Desde ese día dejarás de aparecer en las búsquedas de pacientes.",
+        "noCharge": "No te cobraremos la próxima mensualidad.",
+        "resume": "Puedes reanudarlo antes de esa fecha si cambias de opinión.",
+        "keep": "No, mantener mi plan",
+        "confirm": "Sí, cancelar",
+        "success": "Listo. Tu plan termina al final del periodo.",
+        "failed": "No pudimos cancelar tu plan. Inténtalo de nuevo."
+      },
+      "resume": {
+        "entry": "Reanudar mi plan",
+        "title": "¿Reanudar tu plan?",
+        "renews": "Tu plan se renovará el {date}, como siempre.",
+        "renewsNoDate": "Tu plan se renovará al final del periodo, como siempre.",
+        "visibility": "Seguirás apareciendo en las búsquedas de pacientes.",
+        "confirm": "Sí, reanudar",
+        "keep": "Volver",
+        "success": "Listo. Tu plan sigue activo.",
+        "failed": "No pudimos reanudar tu plan. Inténtalo de nuevo."
+      },
+      "abandon": {
+        "entry": "Descartar esta suscripción",
+        "title": "¿Descartar tu suscripción al plan {plan}?",
+        "voids": "Anularemos su recibo sin pagar.",
+        "choose": "Podrás elegir otro plan, o volver a este, cuando quieras.",
+        "keep": "No, seguir con ella",
+        "confirm": "Sí, descartar",
+        "success": "Listo. Descartamos la suscripción sin pagar.",
+        "failed": "No pudimos descartar la suscripción. Inténtalo de nuevo."
+      },
       "undoPlanChange": {
         "entry": "Anular el cambio de plan",
         "title": "¿Anular el cambio al plan {next}?",
@@ -625,7 +660,15 @@
       "changePlan": {
         "title": "Cambiar de plan",
         "description": "Sube para tener más consultorios o baja para pagar menos."
-      }
+      },
+      "entitlements": {
+        "title": "¿Qué incluye tu plan?",
+        "clinics": "{count, plural, one {Hasta 1 consultorio activo} other {Hasta # consultorios activos}}",
+        "included": "Incluido",
+        "notIncluded": "No incluido"
+      },
+      "resumeTitle": "Cancelación pedida",
+      "resumePrompt": "Pediste cancelar tu plan. Si cambias de opinión, puedes reanudarlo antes de que termine."
     },
     "months": "{count, plural, one {1 mes} other {# meses}}",
     "coupon": {
@@ -770,7 +813,7 @@
         "goHome": "Ir al inicio"
       },
       "couponDropped": "Quitamos tu cupón",
-      "otherUnpaid": "Tienes una suscripción sin pagar del plan {plan}. Págala, o descártala desde la app, para elegir otro.",
+      "otherUnpaid": "Tienes una suscripción sin pagar del plan {plan}. Págala o descártala desde Mi suscripción para elegir otro.",
       "planUnavailable": "Ese plan ya no está disponible. Elige otro.",
       "accountType": {
         "checking": "Corriente",
@@ -837,6 +880,16 @@
         "more": "Lo que sobre quedará como saldo a favor para tu próxima mensualidad.",
         "fix": "Corregir el monto",
         "send": "Enviar así"
+      },
+      "intentStatus": {
+        "requiresAction": "Sin reportar",
+        "processing": "Procesando",
+        "inReview": "En verificación",
+        "succeeded": "Aprobado",
+        "failed": "Rechazado",
+        "expired": "Vencido",
+        "canceled": "Anulado",
+        "unknown": "Sin estado"
       }
     },
     "report": {
@@ -849,6 +902,117 @@
         "title": "Tu plan está al día",
         "description": "No tienes pagos pendientes. Cuando tengas uno, lo pagarás aquí.",
         "action": "Ver mi suscripción"
+      }
+    },
+    "invoices": {
+      "title": "Recibos",
+      "detailTitle": "Recibo",
+      "number": "N.° {number}",
+      "pendingShort": "Faltan {amount}",
+      "period": "Periodo",
+      "dueAt": "Vence el",
+      "paidAt": "Pagado el",
+      "concepts": "Lo que cubre",
+      "total": "Total",
+      "credited": "Ajustes",
+      "balanceApplied": "Saldo a favor aplicado",
+      "paid": "Pagado",
+      "pending": "Por pagar",
+      "allocations": "Pagos aplicados",
+      "allocationValue": "{usd} · {ves} · Tasa {rate}",
+      "intents": "Tus pagos reportados",
+      "adjustments": "Ajustes",
+      "billedTo": "A nombre de",
+      "legalName": "Nombre",
+      "loadErrorTitle": "No pudimos cargar tus recibos",
+      "loadErrorDescription": "Revisa tu conexión e inténtalo de nuevo.",
+      "emptyTitle": "Todavía no tienes recibos",
+      "emptyDescription": "Aquí verás cada recibo de tu plan y en qué quedó.",
+      "end": "No hay más recibos",
+      "seeAll": "Ver todos",
+      "filter": {
+        "label": "Filtrar por estado",
+        "all": "Todos",
+        "open": "Por pagar",
+        "paid": "Pagados",
+        "voided": "Anulados",
+        "uncollectible": "Incobrables"
+      },
+      "status": {
+        "draft": "Borrador",
+        "open": "Por pagar",
+        "paid": "Pagado",
+        "voided": "Anulado",
+        "uncollectible": "Incobrable",
+        "unknown": "Sin estado"
+      },
+      "kind": {
+        "cycle": "Mensualidad",
+        "proration": "Cambio de plan"
+      },
+      "loadMoreError": "No pudimos cargar más recibos.",
+      "notFoundTitle": "No encontramos este recibo",
+      "notFoundDescription": "Puede que el enlace esté incompleto. Tus recibos están en Mi suscripción.",
+      "backToList": "Ver mis recibos"
+    },
+    "balance": {
+      "title": "Saldo a favor",
+      "seeAll": "Ver movimientos",
+      "description": "Se usa solo en tu próxima mensualidad.",
+      "emptyDescription": "Ahora no tienes saldo. Aquí verás lo que sumes si pagas de más o te hacemos un ajuste.",
+      "end": "No hay más movimientos",
+      "emptyMovements": "Todavía no hay movimientos",
+      "loadErrorTitle": "No pudimos cargar tu saldo",
+      "loadErrorDescription": "Revisa tu conexión e inténtalo de nuevo.",
+      "loadMoreError": "No pudimos cargar más movimientos.",
+      "movementsLabel": "Movimientos",
+      "seeReceipt": "Ver el recibo"
+    },
+    "account": {
+      "title": "Datos de cobro",
+      "entry": "A nombre de quién salen tus recibos",
+      "note": "Tus recibos salen con estos datos. Si necesitas cambiarlos, escríbenos.",
+      "closed": "Esta cuenta de cobro está cerrada. Si tienes dudas, escríbenos.",
+      "name": "Nombre",
+      "document": "Documento",
+      "email": "Correo",
+      "loadError": "No pudimos cargar tus datos de cobro.",
+      "whatsappMessage": "¡Hola, equipo de Redoctor! 👋 Soy especialista y quiero cambiar los datos de mis recibos."
+    },
+    "myCoupons": {
+      "title": "Mis cupones",
+      "entryDescription": "Guarda códigos para usarlos después y mira los que te regalamos",
+      "personal": "Para ti",
+      "expiresOn": "Vence el {date}",
+      "state": {
+        "available": "Disponible",
+        "used": "Usado",
+        "expired": "Vencido",
+        "unknown": "Sin estado"
+      },
+      "loadErrorTitle": "No pudimos cargar tus cupones",
+      "loadErrorDescription": "Revisa tu conexión e inténtalo de nuevo.",
+      "emptyTitle": "Todavía no tienes cupones",
+      "emptyDescription": "Guarda aquí un código para usarlo al contratar o en tu próxima mensualidad.",
+      "saveDescription": "¿Tienes un código? Guárdalo aquí: no se gasta hasta que lo uses.",
+      "save": "Guardar cupón",
+      "saved": "Cupón guardado",
+      "failed": "No pudimos guardar el cupón. Inténtalo de nuevo.",
+      "listLabel": "Tus cupones"
+    },
+    "manage": {
+      "coupon": {
+        "sectionDescription": "Mira cómo te quedaría la mensualidad antes de usarlo",
+        "entry": "Aplicar un cupón",
+        "title": "Aplicar un cupón",
+        "description": "Escribe el código y mira cómo te quedaría la mensualidad antes de usarlo.",
+        "label": "Código del cupón",
+        "hint": "Ej: REDOCTOR20",
+        "validate": "Ver descuento",
+        "apply": "Aplicar cupón",
+        "previewNote": "Se descuenta desde tu próxima mensualidad. Al aplicarlo, el cupón queda usado.",
+        "success": "Cupón aplicado. Se descuenta desde tu próxima mensualidad.",
+        "failed": "No pudimos aplicar el cupón. Inténtalo de nuevo."
       }
     }
   },
@@ -1025,6 +1189,7 @@
   "price": "Precio",
   "cancel": "Cancelar",
   "back": "Volver",
+  "version": "Versión: {version}",
   "pickADate": "Selecciona una fecha",
   "morning": "Mañana",
   "afternoon": "Tarde",
@@ -1100,7 +1265,6 @@
       "to": "Hasta",
       "office": "Consultorio",
       "count": "{count, plural, one {1 cita} other {# citas}}",
-      "showMore": "Ver más",
       "empty": "Aún no tienes citas",
       "emptyDescription": "Las citas que agendes desde la app aparecerán aquí.",
       "noResultsDescription": "Prueba con otros filtros o quítalos.",

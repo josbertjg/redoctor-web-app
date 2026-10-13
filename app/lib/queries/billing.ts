@@ -1,4 +1,4 @@
-import { queryOptions } from '@tanstack/react-query';
+import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query';
 
 import { apiFetch } from '../api/client';
 import {
@@ -8,12 +8,21 @@ import {
 } from '../api/errors';
 import { createWriteOnceGuard } from '../api/write-once';
 import {
+  actionLanded,
+  activeDiscount,
+  appliedDiscountResponseSchema,
+  balancePageSchema,
+  billingAccountResponseSchema,
+  couponChoiceSchema,
   couponResponseSchema,
   couponValidationBodySchema,
   currentSubscriptionSchema,
   invoiceDetailResponseSchema,
+  invoiceFilters,
+  invoicesPageSchema,
   isPayable,
   mayOwe,
+  nextPage,
   offeredPlans,
   openInvoicesResponseSchema,
   pickPayableInvoice,
@@ -22,15 +31,22 @@ import {
   planChangeResponseSchema,
   plansResponseSchema,
   reportedPaymentResponseSchema,
+  saveCouponBodySchema,
+  savedCouponResponseSchema,
   savedCouponsResponseSchema,
+  sortSavedCoupons,
   startedPaymentSchema,
   subscribeResponseSchema,
   subscriptionResponseSchema,
   toInvoiceDetail,
+  type BalancePage,
+  type BillingAccount,
   type Coupon,
   type CouponChoice,
   type CurrentSubscription,
   type InvoiceDetail,
+  type InvoiceFilter,
+  type InvoicesPage,
   type OfferedPlan,
   type PaymentIntent,
   type PaymentMethod,
@@ -40,16 +56,19 @@ import {
   type StartedPayment,
   type SubscribeBody,
   type Subscription,
+  type SubscriptionAction,
+  type SubscriptionDiscount,
 } from '../schemas/billing';
 
-import type { TokenHolder } from '../api/types';
+import type { HttpMethod, TokenHolder } from '../api/types';
 
 /*
  * The specialist's billing, read and written in the browser with their
  * token (AGENTS.md §4): the subscription and the receipt it owes, the plans
- * on offer, the coupons, and the payment — started with the API's amount
- * in bolívares, then reported. Taking a plan and reporting a payment must
- * never land twice: both go through the write-once guard (§5).
+ * on offer, the coupons, the payment — started with the API's amount in
+ * bolívares, then reported —, the receipts, the balance and whom the
+ * receipts are issued to. Every write that must not land twice goes
+ * through the write-once guard (§5).
  */
 
 export const billingKeys = {
@@ -63,7 +82,18 @@ export const billingKeys = {
   savedCoupons: (userId: string) => ['billing', 'coupons', userId] as const,
   planChange: (userId: string, planId: string) =>
     ['billing', 'plan-change', userId, planId] as const,
+  /** Every list of receipts and every receipt read, to read them all again. */
+  invoices: (userId: string) => ['billing', 'invoices', userId] as const,
+  invoiceList: (userId: string, filter: InvoiceFilter | null) =>
+    ['billing', 'invoices', userId, 'list', filter ?? 'all'] as const,
+  invoice: (userId: string, invoiceId: string) =>
+    ['billing', 'invoices', userId, 'detail', invoiceId] as const,
+  balance: (userId: string) => ['billing', 'balance', userId] as const,
+  account: (userId: string) => ['billing', 'account', userId] as const,
 };
+
+/** Receipts and movements a page brings, as the app asks for them. */
+const listPageSize = 20;
 
 /** The plans a specialist can take, the cheapest first. */
 export function plansQueryOptions(user: TokenHolder) {
@@ -108,6 +138,8 @@ async function readInvoice(
   user: TokenHolder,
   invoiceId: string,
   signal?: AbortSignal,
+  /** A link's id that leads nowhere is the page's to say, not a report. */
+  linked = false,
 ): Promise<InvoiceDetail> {
   const { invoice } = await apiFetch({
     path: '/billing/me/invoices/:invoiceId',
@@ -115,8 +147,82 @@ async function readInvoice(
     token: await user.getToken(),
     schema: invoiceDetailResponseSchema,
     ...(signal ? { signal } : {}),
+    ...(linked
+      ? { expected: (error) => error.status === 404 || error.status === 400 }
+      : {}),
   });
   return invoice;
+}
+
+/** The person's receipts, the newest first, a page at a time; `filter` keeps one status. */
+export function invoicesQueryOptions(
+  user: TokenHolder,
+  filter: InvoiceFilter | null,
+) {
+  return infiniteQueryOptions({
+    queryKey: billingKeys.invoiceList(user.id, filter),
+    queryFn: async ({ pageParam, signal }): Promise<InvoicesPage> =>
+      apiFetch({
+        path: '/billing/me/invoices',
+        query: {
+          page: pageParam,
+          limit: listPageSize,
+          status: filter === null ? undefined : invoiceFilters[filter],
+        },
+        token: await user.getToken(),
+        schema: invoicesPageSchema,
+        signal,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (last) => nextPage(last.meta),
+    // A payment may be approved meanwhile: short, no polling.
+    staleTime: 30_000,
+  });
+}
+
+/** One receipt with everything that happened on it, by the id its page carries. */
+export function invoiceQueryOptions(user: TokenHolder, invoiceId: string) {
+  return queryOptions({
+    queryKey: billingKeys.invoice(user.id, invoiceId),
+    queryFn: ({ signal }) => readInvoice(user, invoiceId, signal, true),
+    staleTime: 30_000,
+  });
+}
+
+/** The balance and its movements, the newest first, a page at a time. */
+export function balanceQueryOptions(user: TokenHolder) {
+  return infiniteQueryOptions({
+    queryKey: billingKeys.balance(user.id),
+    queryFn: async ({ pageParam, signal }): Promise<BalancePage> =>
+      apiFetch({
+        path: '/billing/me/balance',
+        query: { page: pageParam, limit: listPageSize },
+        token: await user.getToken(),
+        schema: balancePageSchema,
+        signal,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (last) => nextPage(last.meta),
+    staleTime: 30_000,
+  });
+}
+
+/** Whom the receipts are issued to; the API creates it the first time it is read. */
+export function billingAccountQueryOptions(user: TokenHolder) {
+  return queryOptions({
+    queryKey: billingKeys.account(user.id),
+    queryFn: async ({ signal }): Promise<BillingAccount> => {
+      const { account } = await apiFetch({
+        path: '/billing/me/account',
+        token: await user.getToken(),
+        schema: billingAccountResponseSchema,
+        signal,
+      });
+      return account;
+    },
+    // Only an admin changes it.
+    staleTime: 5 * 60_000,
+  });
 }
 
 /**
@@ -175,8 +281,8 @@ export function payableInvoiceQueryOptions(
   });
 }
 
-/** The person's saved coupons still to use («Mis cupones»). */
-export function savedCouponsQueryOptions(user: TokenHolder) {
+/** «Mis cupones»: the codes saved and the personal ones an admin gave, the ones still to use first. */
+export function myCouponsQueryOptions(user: TokenHolder) {
   return queryOptions({
     queryKey: billingKeys.savedCoupons(user.id),
     queryFn: async ({ signal }): Promise<SavedCoupon[]> => {
@@ -186,9 +292,83 @@ export function savedCouponsQueryOptions(user: TokenHolder) {
         schema: savedCouponsResponseSchema,
         signal,
       });
-      return items.filter((coupon) => coupon.state === 'AVAILABLE');
+      return sortSavedCoupons(items);
     },
     staleTime: 60_000,
+  });
+}
+
+/** The saved coupons still to use, to pick one without typing it. */
+export function savedCouponsQueryOptions(user: TokenHolder) {
+  return queryOptions({
+    ...myCouponsQueryOptions(user),
+    select: (coupons: SavedCoupon[]) =>
+      coupons.filter((coupon) => coupon.state === 'AVAILABLE'),
+  });
+}
+
+/**
+ * `POST /billing/me/coupons`: a code kept in «Mis cupones» to use later.
+ * Saving spends nothing and reserves no use; the API takes it twice alike.
+ */
+export async function saveCoupon(
+  user: TokenHolder,
+  code: string,
+): Promise<SavedCoupon> {
+  const { savedCoupon } = await apiFetch({
+    method: 'POST',
+    path: '/billing/me/coupons',
+    body: saveCouponBodySchema.parse({ code }),
+    token: await user.getToken(),
+    schema: savedCouponResponseSchema,
+    idempotent: true,
+  });
+  return savedCoupon;
+}
+
+const discounts = createWriteOnceGuard<SubscriptionDiscount>();
+
+/**
+ * `POST /billing/me/subscription/discount`: the coupon discounts the plan
+ * in force from the next monthly receipt, and it is spent. One at a time:
+ * a conflict (ERR_5106) is this one when a lost answer or a second tab
+ * landed it, and the page's to explain otherwise.
+ */
+export function applyCoupon(
+  user: TokenHolder,
+  { choice, code }: { choice: CouponChoice; code: string },
+): Promise<SubscriptionDiscount> {
+  const lookAgain = async (): Promise<SubscriptionDiscount | null> => {
+    const { subscription } = await readSubscription(user);
+    const discount = subscription ? activeDiscount(subscription) : null;
+    return discount?.code.toUpperCase() === code ? discount : null;
+  };
+
+  return discounts({
+    intent: `discount:${code}`,
+    send: async () => {
+      try {
+        const { discount } = await apiFetch({
+          method: 'POST',
+          path: '/billing/me/subscription/discount',
+          body: couponChoiceSchema.parse(choice),
+          token: await user.getToken(),
+          schema: appliedDiscountResponseSchema,
+        });
+        return discount;
+      } catch (error) {
+        if (
+          isApiError(error) &&
+          error.status === 409 &&
+          error.code === 'ERR_5106'
+        ) {
+          const landed = await lookAgain();
+          if (landed) return landed;
+        }
+        throw error;
+      }
+    },
+    findLanded: lookAgain,
   });
 }
 
@@ -225,7 +405,9 @@ const rejectionByReason: Readonly<Record<string, CouponRejectionKey>> = {
 /** The writes a coupon rides on: a 404 elsewhere (a receipt, an attempt) says nothing of the coupon. */
 const couponPaths: ReadonlySet<string> = new Set([
   '/billing/me/coupons/validate',
+  '/billing/me/coupons',
   '/billing/me/subscription',
+  '/billing/me/subscription/discount',
 ]);
 
 /**
@@ -520,29 +702,52 @@ export function changePlan(
   });
 }
 
-const undoes = createWriteOnceGuard<Subscription>();
+/** How each transition is asked of the API. */
+const transitionRequests = {
+  cancel: { method: 'POST', path: '/billing/me/subscription/cancel' },
+  resume: { method: 'POST', path: '/billing/me/subscription/resume' },
+  abandon: { method: 'POST', path: '/billing/me/subscription/abandon' },
+  undoPlanChange: {
+    method: 'DELETE',
+    path: '/billing/me/subscription/scheduled-change',
+  },
+} as const satisfies Record<
+  SubscriptionAction,
+  { method: HttpMethod; path: string }
+>;
+
+const transitions = createWriteOnceGuard<Subscription>();
 
 /**
- * `DELETE /billing/me/subscription/scheduled-change`: a downgrade waiting
- * for the period's end is dropped, and the plan renews as it is. A
- * conflict, or a lost answer, counts as done once nothing is scheduled any
- * more — the person's wish, whoever got there first.
+ * The transitions of «Mi suscripción», as the app runs them: cancelling at
+ * the period's end (access is kept until then, the next month is not
+ * charged), resuming before that day, abandoning an unpaid subscription
+ * (its receipt is voided) and undoing a scheduled downgrade. Each answers
+ * the subscription as it stays. A conflict, or a lost answer, counts as
+ * done once the subscription stands where the action leaves it — the
+ * person's wish, whoever got there first (another tab, the app).
  */
-export function undoScheduledChange(user: TokenHolder): Promise<Subscription> {
+export function changeSubscription(
+  user: TokenHolder,
+  action: SubscriptionAction,
+): Promise<Subscription> {
   const lookAgain = async (): Promise<Subscription | null> => {
     const { subscription } = await readSubscription(user);
-    return subscription !== null && subscription.scheduledChange == null
+    return subscription !== null && actionLanded(action, subscription)
       ? subscription
       : null;
   };
+  const request = transitionRequests[action];
 
-  return undoes({
-    intent: `undo-change:${user.id}`,
+  return transitions({
+    intent: `${action}:${user.id}`,
     send: async () => {
       try {
         const { subscription } = await apiFetch({
-          method: 'DELETE',
-          path: '/billing/me/subscription/scheduled-change',
+          method: request.method,
+          path: request.path,
+          // The POSTs take an empty object; the DELETE, no body.
+          ...(request.method === 'POST' ? { body: {} } : {}),
           token: await user.getToken(),
           schema: subscriptionResponseSchema,
         });

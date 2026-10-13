@@ -193,29 +193,110 @@ export const invoiceLineSchema = z.object({
   amount: moneySchema,
 });
 
+export const invoiceStatuses = [
+  'DRAFT',
+  'OPEN',
+  'PAID',
+  'VOID',
+  'UNCOLLECTIBLE',
+] as const;
+
+export type InvoiceStatus = (typeof invoiceStatuses)[number] | 'UNKNOWN';
+
+/** Whom the receipts are issued to; only an admin changes it. */
+const billingIdentitySchema = z.object({
+  legalName: z.string(),
+  /** `V`, `E`, `P`, `J` or `G`. */
+  documentType: z.string().nullish(),
+  documentNumber: z.string().nullish(),
+});
+
 export const invoiceSchema = z.object({
   id: z.string(),
   number: z.string(),
   kind: z.enum(['SUBSCRIPTION_CYCLE', 'PRORATION']).or(unknownValue),
-  status: z
-    .enum(['DRAFT', 'OPEN', 'PAID', 'VOID', 'UNCOLLECTIBLE'])
-    .or(unknownValue),
+  status: z.enum(invoiceStatuses).or(unknownValue),
   subscriptionId: z.string(),
   periodStart: instant,
   periodEnd: instant,
   dueAt: instant,
   total: moneySchema,
   paid: moneySchema,
+  /** What adjustments took off. */
   credited: moneySchema,
+  /** What the balance paid. */
   balanceApplied: moneySchema,
   /** What is left to pay. */
   pending: moneySchema,
   lines: z.array(invoiceLineSchema),
+  billingData: billingIdentitySchema.nullish(),
   /** The API asks to show it on every receipt: an internal one, not a fiscal document. */
   notice: z.string().nullish(),
+  paidAt: instant,
 });
 
 export type Invoice = z.infer<typeof invoiceSchema>;
+
+/** `V-12345678`, or null when either part is missing (the app's `document`). */
+export function billingDocument(
+  identity: Pick<
+    z.infer<typeof billingIdentitySchema>,
+    'documentType' | 'documentNumber'
+  >,
+): string | null {
+  const type = identity.documentType;
+  const number = identity.documentNumber;
+  return type && number ? `${type}-${number}` : null;
+}
+
+/** A list's page as the API counts it. */
+const pageMetaSchema = z.object({
+  page: z.number().int(),
+  totalPages: z.number().int(),
+});
+
+export type PageMeta = z.infer<typeof pageMetaSchema>;
+
+/** The page after this one, or undefined on the last. */
+export function nextPage(meta: PageMeta): number | undefined {
+  return meta.page < meta.totalPages ? meta.page + 1 : undefined;
+}
+
+/** `GET /billing/me/invoices`: a page of receipts, the newest first. */
+export const invoicesPageSchema = z.object({
+  items: z.array(invoiceSchema),
+  meta: pageMetaSchema,
+});
+
+export type InvoicesPage = z.infer<typeof invoicesPageSchema>;
+
+/**
+ * The receipts' filters as the address carries them (`?status=`), the
+ * app's chips in its order; none is every receipt.
+ */
+export const invoiceFilters = {
+  open: 'OPEN',
+  paid: 'PAID',
+  voided: 'VOID',
+  uncollectible: 'UNCOLLECTIBLE',
+} as const satisfies Record<string, InvoiceStatus>;
+
+export type InvoiceFilter = keyof typeof invoiceFilters;
+
+export function parseInvoiceFilter(value: unknown): InvoiceFilter | null {
+  return typeof value === 'string' && Object.hasOwn(invoiceFilters, value)
+    ? (value as InvoiceFilter)
+    : null;
+}
+
+const recordIdPattern = /^[A-Za-z0-9-]{1,64}$/;
+
+/** A receipt's id as a link carries it; anything else is none. */
+export function parseInvoiceId(value: unknown): string | null {
+  return typeof value === 'string' && recordIdPattern.test(value)
+    ? value
+    : null;
+}
 
 export const paymentMethods = ['MOBILE_PAYMENT', 'BANK_TRANSFER'] as const;
 export const paymentMethodSchema = z.enum(paymentMethods);
@@ -260,10 +341,40 @@ export const paymentIntentSchema = z.object({
 
 export type PaymentIntent = z.infer<typeof paymentIntentSchema>;
 
-/** `GET /billing/me/invoices/{id}`: the receipt with its payment attempts, the newest first. */
+/** A payment an admin approved, applied to the receipt, with what it was in bolívares. */
+const allocationSchema = z.object({
+  paymentId: z.string(),
+  amount: moneySchema,
+  paymentAmountVes: moneySchema,
+  /** Bolívares per dollar, as the payment was taken. */
+  rate: z.string(),
+  confirmedAt: instant,
+});
+
+export type InvoiceAllocation = z.infer<typeof allocationSchema>;
+
+/** What an admin took off the receipt, with their reason. */
+const adjustmentSchema = z.object({
+  number: z.string(),
+  /** Written by the API, ready to show. */
+  label: z.string(),
+  amount: moneySchema,
+  reason: z.string().nullish(),
+  createdAt: instant,
+});
+
+export type InvoiceAdjustment = z.infer<typeof adjustmentSchema>;
+
+/**
+ * `GET /billing/me/invoices/{id}`: the receipt with everything that
+ * happened on it — the payments applied, the attempts (the newest first),
+ * the adjustments.
+ */
 export const invoiceDetailResponseSchema = z.object({
   invoice: invoiceSchema.extend({
     intents: z.array(paymentIntentSchema).default([]),
+    allocations: z.array(allocationSchema).default([]),
+    adjustments: z.array(adjustmentSchema).default([]),
   }),
 });
 
@@ -272,8 +383,8 @@ export type InvoiceDetail = z.infer<
 >['invoice'];
 
 /** `GET /billing/me/invoices?status=OPEN`: the newest first. */
-export const openInvoicesResponseSchema = z.object({
-  items: z.array(invoiceSchema),
+export const openInvoicesResponseSchema = invoicesPageSchema.pick({
+  items: true,
 });
 
 /** Something is still to be paid on it. */
@@ -318,7 +429,12 @@ export function lastRejected(detail: InvoiceDetail): PaymentIntent | null {
 
 /** The receipt as `POST /billing/me/subscription` answers it: new, with no attempt yet. */
 export function toInvoiceDetail(invoice: Invoice): InvoiceDetail {
-  return { ...invoice, intents: [] };
+  return { ...invoice, intents: [], allocations: [], adjustments: [] };
+}
+
+/** It can be paid from its page: something is owed and no payment waits for an admin. */
+export function canPayInvoice(detail: InvoiceDetail): boolean {
+  return isPayable(detail) && intentInReview(detail) === null;
 }
 
 export const startedPaymentSchema = z.object({
@@ -381,8 +497,32 @@ export const savedCouponsResponseSchema = z.object({
   items: z.array(savedCouponSchema),
 });
 
+/** `POST /billing/me/coupons`: the code kept in «Mis cupones», not spent. */
+export const savedCouponResponseSchema = z.object({
+  savedCoupon: savedCouponSchema,
+});
+
+/** `POST /billing/me/subscription/discount`: the coupon now discounting the next receipts. */
+export const appliedDiscountResponseSchema = z.object({
+  discount: subscriptionDiscountSchema,
+});
+
 export function couponAppliesTo(coupon: Coupon, planId: string): boolean {
   return coupon.planIds.length === 0 || coupon.planIds.includes(planId);
+}
+
+/** «Mis cupones» as the app lists them: the ones still to use first, the rest in the API's order. */
+export function sortSavedCoupons(
+  coupons: readonly SavedCoupon[],
+): SavedCoupon[] {
+  return coupons
+    .map((coupon, index) => ({ coupon, index }))
+    .sort(
+      (a, b) =>
+        Number(b.coupon.state === 'AVAILABLE') -
+          Number(a.coupon.state === 'AVAILABLE') || a.index - b.index,
+    )
+    .map(({ coupon }) => coupon);
 }
 
 /** What a coupon takes off a price, never more than the price itself. */
@@ -447,6 +587,8 @@ export const couponValidationBodySchema = z.strictObject({
   code: couponCode,
   planId: z.string().optional(),
 });
+
+export const saveCouponBodySchema = z.strictObject({ code: couponCode });
 
 /**
  * A reference number of 6 to 22 digits: what a Venezuelan bank receipt
@@ -522,6 +664,132 @@ export function canChangePlan(subscription: Subscription): boolean {
     subscription.pendingUpgrade == null
   );
 }
+
+/* ---------- Cancelling, resuming, abandoning, a coupon on the plan ------- */
+
+/**
+ * What the specialist can ask of their subscription from «Mi suscripción»,
+ * the app's `SubscriptionAction`: end it with the period, take that back,
+ * drop one never paid, drop a downgrade waiting for the period's end.
+ */
+export type SubscriptionAction =
+  'cancel' | 'resume' | 'abandon' | 'undoPlanChange';
+
+/** It can be asked to end with the period: active and not asked already. */
+export function canCancel(subscription: Subscription): boolean {
+  return (
+    subscription.status === 'ACTIVE' && subscription.cancelAtPeriodEnd !== true
+  );
+}
+
+/** A cancellation was asked and there is still time to take it back. */
+export function canResume(
+  subscription: Subscription,
+  now: Date = new Date(),
+): boolean {
+  if (subscription.cancelAtPeriodEnd !== true || hasEnded(subscription)) {
+    return false;
+  }
+  const ends = subscription.endsAt ? Date.parse(subscription.endsAt) : NaN;
+  return Number.isNaN(ends) || ends > now.getTime();
+}
+
+/**
+ * An unpaid subscription can be dropped to choose another plan without
+ * waiting for its 72 h — not with a payment in review, which the API
+ * refuses. `payable` is its receipt, when it could be read.
+ */
+export function canAbandon(
+  subscription: Subscription,
+  payable: InvoiceDetail | null,
+): boolean {
+  return (
+    subscription.status === 'INCOMPLETE' &&
+    (payable === null || intentInReview(payable) === null)
+  );
+}
+
+/** A coupon can go on the plan in force: active, with none discounting already (one at a time). */
+export function canApplyCoupon(subscription: Subscription): boolean {
+  return (
+    subscription.status === 'ACTIVE' && activeDiscount(subscription) === null
+  );
+}
+
+/**
+ * Whether a transition got to land, from the subscription as it stands —
+ * how a lost answer is recognised (the app's `_findTransition`).
+ */
+export function actionLanded(
+  action: SubscriptionAction,
+  subscription: Subscription,
+): boolean {
+  switch (action) {
+    case 'cancel':
+      return subscription.cancelAtPeriodEnd === true;
+    case 'resume':
+      return subscription.cancelAtPeriodEnd !== true;
+    case 'abandon':
+      return subscription.status === 'INCOMPLETE_EXPIRED';
+    case 'undoPlanChange':
+      return subscription.scheduledChange == null;
+  }
+}
+
+/* ---------- The balance and the billing account ------------------------- */
+
+/**
+ * A movement of the balance: what it was (the API's own words), when, and
+ * how much it added or took. `invoiceId` is the receipt it has to do with.
+ */
+export const balanceMovementSchema = z.object({
+  id: z.string(),
+  type: z.enum(['CREDIT', 'DEBIT']).or(unknownValue),
+  amount: moneySchema,
+  label: z.string(),
+  reason: z.string().nullish(),
+  invoiceId: z.string().nullish(),
+  createdAt: instant,
+});
+
+export type BalanceMovement = z.infer<typeof balanceMovementSchema>;
+
+/**
+ * `GET /billing/me/balance`: what was paid over and what admins added,
+ * with a page of its movements, the newest first. Only the next monthly
+ * receipt uses it.
+ */
+export const balancePageSchema = z.object({
+  balance: moneySchema,
+  items: z.array(balanceMovementSchema),
+  meta: pageMetaSchema,
+});
+
+export type BalancePage = z.infer<typeof balancePageSchema>;
+
+/** What a movement does to the balance, signed: a credit adds, anything else takes. */
+export function signedMovement(movement: BalanceMovement): Money {
+  const size = Math.abs(movement.amount.amount);
+  return {
+    amount: movement.type === 'CREDIT' ? size : -size,
+    currency: movement.amount.currency,
+  };
+}
+
+/**
+ * `GET /billing/me/account`: whom the receipts are issued to. Only read:
+ * an admin changes it (the person writes to support).
+ */
+export const billingAccountResponseSchema = z.object({
+  account: billingIdentitySchema.extend({
+    email: z.string().nullish(),
+    status: z.enum(['ACTIVE', 'CLOSED']).or(unknownValue),
+  }),
+});
+
+export type BillingAccount = z.infer<
+  typeof billingAccountResponseSchema
+>['account'];
 
 /* ---------- A feature the plan lacks ------------------------------------- */
 
@@ -710,6 +978,49 @@ export const subscriptionStatusChips: Record<
   INCOMPLETE: { label: 'incomplete', tone: 'warning' },
   PAST_DUE: { label: 'pastDue', tone: 'error' },
   INCOMPLETE_EXPIRED: { label: 'incompleteExpired', tone: 'neutral' },
+  CANCELED: { label: 'canceled', tone: 'neutral' },
+  UNKNOWN: { label: 'unknown', tone: 'neutral' },
+};
+
+/** The i18n leaf under `billing.invoices.status` that names a receipt's status. */
+export type InvoiceStatusLabel =
+  'draft' | 'open' | 'paid' | 'voided' | 'uncollectible' | 'unknown';
+
+export const invoiceStatusChips: Record<
+  InvoiceStatus,
+  { label: InvoiceStatusLabel; tone: ChipTone }
+> = {
+  PAID: { label: 'paid', tone: 'positive' },
+  OPEN: { label: 'open', tone: 'warning' },
+  UNCOLLECTIBLE: { label: 'uncollectible', tone: 'error' },
+  DRAFT: { label: 'draft', tone: 'neutral' },
+  VOID: { label: 'voided', tone: 'neutral' },
+  UNKNOWN: { label: 'unknown', tone: 'neutral' },
+};
+
+export type IntentStatus = PaymentIntent['status'];
+
+/** The i18n leaf under `billing.pay.intentStatus` that names a payment's status. */
+export type IntentStatusLabel =
+  | 'requiresAction'
+  | 'processing'
+  | 'inReview'
+  | 'succeeded'
+  | 'failed'
+  | 'expired'
+  | 'canceled'
+  | 'unknown';
+
+export const intentStatusChips: Record<
+  IntentStatus,
+  { label: IntentStatusLabel; tone: ChipTone }
+> = {
+  SUCCEEDED: { label: 'succeeded', tone: 'positive' },
+  IN_REVIEW: { label: 'inReview', tone: 'warning' },
+  PROCESSING: { label: 'processing', tone: 'warning' },
+  FAILED: { label: 'failed', tone: 'error' },
+  REQUIRES_ACTION: { label: 'requiresAction', tone: 'neutral' },
+  EXPIRED: { label: 'expired', tone: 'neutral' },
   CANCELED: { label: 'canceled', tone: 'neutral' },
   UNKNOWN: { label: 'unknown', tone: 'neutral' },
 };

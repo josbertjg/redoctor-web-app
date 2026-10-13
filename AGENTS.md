@@ -81,7 +81,7 @@ transactional emails the API sends.
 | M9 Landing | Designed by the designer; copy in the doc «Landing de Redoctor» |
 | M10 Legal and account | Privacy, terms, account deletion (texts from the lawyer) |
 | M11 Bridges | `/panel/specialties`, `/panel/profile`, `/home/*` (pages that only open the app) and `/daily-summary/unsubscribe` (daily-summary email opt-out); `/panel/subscription` and `/panel/agenda` were bridges until M14 made them pages |
-| M13 Specialist payment | `/panel/subscription` («Mi suscripción»: the plan, its state and its notice) and `/panel/subscription/pay` (the payment, never opened by the app; the owner's split of 2026-10-13, `/pay` before): choose a plan with a coupon, Pago Móvil and transfer data in Bs from the API, report the payment, see it in review; changing plan — from «Mi suscripción» (`?view=plans`) or from a missing feature's invitation (`?plan=`) — and undoing a scheduled change (2026-10-13); cancelling, resuming and the rest stay in the app for now (§13, Decided) |
+| M13 Specialist payment | `/panel/subscription` («Mi suscripción»: the plan, its state and its notice) and `/panel/subscription/pay` (the payment, never opened by the app; the owner's split of 2026-10-13, `/pay` before): choose a plan with a coupon, Pago Móvil and transfer data in Bs from the API, report the payment, see it in review; changing plan — from «Mi suscripción» (`?view=plans`) or from a missing feature's invitation (`?plan=`) — and undoing a scheduled change (2026-10-13); and the rest of the app's «Mi suscripción» the same day (§13, Decided): cancelling and resuming, dropping an unpaid subscription, a coupon on the plan in force, the billing data, the receipts (`/panel/subscription/invoices[/{id}]`, each one payable from its page), the balance (`/panel/subscription/balance`) and «Mis cupones» (`/panel/subscription/coupons`) |
 | M14 Specialist panel | `/panel` and its sections (2026-10-13): the home (the plan and its notice, today's patients, the statistics, what stays in the app), the day's agenda `/panel/agenda[/{date}]` and the history `/panel/appointments` (read only, each appointment opening `/a/{id}`), the statistics `/panel/reports` (the app's summary and four reports, PDF and CSV when the plan allows), the subscription (M13); a specialist stays in it until signing out |
 | M12 Release | PostHog funnel by origin, tests on real phones from WhatsApp and Gmail, domain cutover |
 
@@ -234,8 +234,10 @@ app/                                  # The application: routes, UI and logic
   (billing)/                          # module: specialist payment (M13)
     error.tsx                         #   the root error, for what fails above the subscription's frame
     panel/subscription/layout.tsx · page.tsx · error.tsx   # /panel/subscription — layout = <PanelFrame width="narrow">; its error inside the frame
-    panel/subscription/pay/page.tsx   #   /panel/subscription/pay[?plan=|?view=plans] — the payment, the plans and the change of plan, never opened by the app (§6); /pay redirects here
-    _components/                      #   subscription-flow, subscription-view, subscription-load-error, undo-plan-change, pay-flow, plans-view, plan-benefits, change-plan-view, pay-view, method-step, payment-step, payment-totals, coupon-sheet, bank-picker, different-amount-sheet, payment-done, copy-button, detail-list, pay-skeleton
+    panel/subscription/invoices/page.tsx · [invoiceId]/page.tsx   # the receipts (`?status=`) and a receipt
+    panel/subscription/balance/page.tsx · coupons/page.tsx        # the balance; «Mis cupones»
+    panel/subscription/pay/page.tsx   #   /panel/subscription/pay[?plan=|?view=plans|?invoice=] — the payment, the plans and the change of plan, never opened by the app (§6); /pay redirects here
+    _components/                      #   subscription-flow, subscription-view (+ entitlements-card, subscription-sections, subscription-action-sheet, apply-coupon-sheet, billing-account-sheet, collapse), subscription-load-error, invoices-flow, invoice-flow, invoice-card, balance-flow, balance-pieces, coupons-flow, coupon-pieces, paged-list-foot, list-notice, section-header, back-link, pay-flow, plans-view, plan-benefits, change-plan-view, pay-view, method-step, payment-step, payment-totals, coupon-sheet, bank-picker, different-amount-sheet, payment-done, copy-button, detail-list, pay-skeleton
   (bridges)/                          # module: pages that only open the app, noindex (M11)
     layout.tsx
     panel/specialties/ · panel/profile/
@@ -244,7 +246,7 @@ app/                                  # The application: routes, UI and logic
     daily-summary/unsubscribe/page.tsx   # daily-summary opt-out — a Server Action
   api/                                # route handlers only when the browser must not call the API (none yet)
   ui/                                 # ALL shared UI
-    button.tsx · text-field.tsx · select-field.tsx · text-area.tsx · checkbox.tsx · choice-cards.tsx · stars-input.tsx · tabs.tsx · field-error.tsx · sheet.tsx · skeleton.tsx · toast.tsx · empty-state.tsx · status-card.tsx · link-card.tsx · avatar.tsx …
+    button.tsx · text-field.tsx · select-field.tsx · text-area.tsx · checkbox.tsx · choice-cards.tsx · stars-input.tsx · tabs.tsx · filter-chips.tsx · field-error.tsx · sheet.tsx · skeleton.tsx · toast.tsx · empty-state.tsx · status-card.tsx · link-card.tsx · avatar.tsx …
     messages-scope.tsx                #   a page's own client messages (§9)
     layout/                           #   site-header, page-frame (a page's column and its main, in the guarded layouts), panel-frame and panel-nav (the specialist's panel around each section), bottom-actions
     auth/                             #   session-provider, session-button, require-session, sign-in-buttons, sign-in-legal-note, account-error-state, in-app-browser-help, provider-logos
@@ -269,7 +271,7 @@ app/                                  # The application: routes, UI and logic
     observability/                    #   report.ts (the seam), scrub.ts (what never leaves), sentry.ts
     security/                         #   csp.ts (the nonce policy proxy.ts sends)
     env.ts · public-env.ts · routes.ts · deep-links.ts · site.ts · support.ts · utils.ts · calendar.ts (.ics, Google Calendar)
-  hooks/                              # shared client hooks: use-session, use-sign-in-tracking, use-focus-heading, use-link-origin, use-device, use-in-app-browser
+  hooks/                              # shared client hooks: use-session, use-sign-in-tracking, use-focus-heading, use-infinite-scroll, use-link-origin, use-device, use-in-app-browser
 tests/                                # setup.ts · msw/ (server + handlers per domain) · factories/ · e2e/ (Playwright)
 public/                               # .well-known/ (§6) · brand/ (logo.svg, logo-white.svg, icons) · illustrations/ · animations/ (the app's splash_logo.riv)
 proxy.ts                              # Next 16's name for middleware: the CSP nonce per request, /.well-known excluded — nothing else
@@ -436,7 +438,9 @@ Every route path is built from one place, `app/lib/routes.ts` (the app has
   configuration endpoint with `webPaymentUrl` and support phones (REDOC-357),
   services inside the public profile (REDOC-367), invitation hardening
   (REDOC-314/315/316), anonymous reviews (REDOC-251), account deletion
-  `DELETE /identity/me` (REDOC-352). The daily-summary opt-out endpoints
+  `DELETE /identity/me` (REDOC-352), one checkout with a quote for paying
+  and changing plan (REDOC-363/368: the payment's two steps and the
+  change of plan get rebuilt on it). The daily-summary opt-out endpoints
   exist (`POST /notifications/daily-summary/unsubscribe|subscribe`) and
   the web's action calls them.
 
@@ -465,6 +469,7 @@ docs point here instead of copying it.
 | `/panel/agenda`, `/panel/agenda/{YYYY-MM-DD}` | specialist | The day's agenda (M14), read only; a malformed date is today, as in the app | the daily summary, email 10 (REDOC-359) |
 | `/panel/appointments` | specialist | The appointments history (M14); the app should open its «Citas» | the panel |
 | `/panel/reports` | specialist | The statistics (M14); the app should open its «Estadísticas» | the panel |
+| `/panel/subscription/invoices[/{id}]`, `/panel/subscription/balance`, `/panel/subscription/coupons` | specialist | The receipts, a receipt, the balance and «Mis cupones» (M13); the app should open its «Recibos», «Recibo», «Saldo a favor» and «Mis cupones» | «Mi suscripción» on the web (no email sends them) |
 | `/panel/specialties` | specialist | Bridge (a mirror is planned) | email 16 (REDOC-360) |
 | `/panel/profile` | specialist | Bridge (a mirror is planned) | email 18 (REDOC-360) |
 | `/home/*` | app internals | Bridge to the home / store; not a web route | the app's own paths |
@@ -1451,11 +1456,12 @@ written out in full, or Next.js does not inline it).
   the day is a date field instead of «Hoy / Ayer / Otra fecha»; the phone
   is always asked (the web's `/me` carries none to confirm); the benefits
   unfold inside the plan's card. **Left for later, on the owner's word
-  (2026-10-12), all still in the app:** cancelling and resuming,
-  abandoning an unpaid subscription, the receipts' history, «Saldo a
-  favor», «Mis cupones» (saving and listing) and «Datos de cobro»; no
-  email sends anyone to the web for them. Changing plan and undoing a
-  scheduled change came to the web on 2026-10-13 (M14). With M13 the billing copy entered `es.json` under
+  (2026-10-12):** cancelling and resuming, abandoning an unpaid
+  subscription, the receipts' history, «Saldo a favor», «Mis cupones»
+  (saving and listing) and «Datos de cobro»; no email sends anyone to the
+  web for them. Changing plan and undoing a scheduled change came to the
+  web on 2026-10-13 (M14), and all the rest the same day («The rest of
+  the payment», below). With M13 the billing copy entered `es.json` under
   the app's `billing.*` keys, and `app/lib/format/dates.ts` writes instants
   as days and hours in Caracas for anything that is not an appointment.
   Production needs the API's CORS (REDOC-362): the e2e covers the page
@@ -1634,8 +1640,10 @@ written out in full, or Next.js does not inline it).
     plan, `?plan=` comes chosen among the plans; a receipt owed comes
     first, as the API changes no plan with debt.
   - **Where the web differs from the app, on purpose and to confirm:** the
-    panel reads appointments and never changes them; the history loads
-    progressively (30, then «Ver más») where the app shows all; the
+    panel reads appointments and never changes them; the history shows
+    ten at a time, the next ten as the list's end comes into view
+    (infinite scroll, the owner's call of the same day), where the app
+    shows all; the
     statistics are one page of tabs where the app has a dashboard and four
     screens; the PDF is the browser's print, not a generated file; the
     heatmap shows only the hours with appointments; the change of plan is
@@ -1649,6 +1657,85 @@ written out in full, or Next.js does not inline it).
     (prod's `InAppPurchases` back to `none`), never link to the payment,
     and the deep-link fixes found reading its router (signed-out `/a`, a
     specialist's own `/s`, the review wall swallowing links).
+
+- **The rest of the payment (2026-10-13, the owner's «adelante con lo que
+  falta del resto del pago»), as the app's «Mi suscripción» does it, its
+  `billing.*` words:**
+  - **«Mi suscripción»** has what the app's screen has: after the plan
+    and its notice, «Cancelación pedida» with «Reanudar mi plan» while a
+    cancelled plan is still in time (the app's `canResume`); «¿Qué incluye
+    tu plan?» — what the plan includes, from the catalog, each row on
+    while the API's access rule (`access.hasAccess`) says so, and said in
+    words, not only by its mark —, unless the plan ended; «Cambiar de
+    plan», «Aplicar un
+    cupón» (an active plan with no coupon discounting), «Mis cupones» and
+    «Datos de cobro»; at the foot «Anular el cambio de plan»,
+    «Descartar esta suscripción» (unpaid, no payment in review) and
+    «Cancelar mi plan» (active, not asked yet), those two in words and in
+    the error's color; then the balance — only with a balance or a
+    history — and the latest three receipts, each with the way to its
+    whole list. What comes and goes as the subscription moves unfolds and
+    folds in place (`Collapse`).
+  - **Cancelling, resuming, dropping and undoing a change** share the
+    app's sheet: what changes point by point and two buttons, the way
+    back first when something is lost. Each write goes through the
+    write-once guard (`changeSubscription`); a conflict counts as done
+    when the subscription already stands where the action leaves it.
+    Cancelling keeps the plan until the period's end and charges no next
+    month; resuming takes it back; dropping voids the unpaid receipt, and
+    the page becomes «no plan» once the sheet has slid away.
+  - **A coupon on the plan in force** (`POST …/subscription/discount`):
+    the discount seen first — the monthly price it would leave —, then
+    applied, which spends it and discounts from the next monthly receipt.
+    One at a time: ERR_5106 counts as done when it is this coupon.
+  - **«Datos de cobro»:** a sheet with the name, the document and the
+    email the receipts are issued to, read only, with WhatsApp (a message
+    that says nothing about the person) and the support phones to change
+    them.
+  - **The receipts** (`/panel/subscription/invoices`, the app's
+    InvoicesScreen): the newest first, the app's status chips in the
+    address (`?status=open|paid|voided|uncollectible`, the owner's call),
+    20 a page, the next one coming by itself as the list's end comes into
+    view (infinite scroll, the owner's call: no «Ver más»; a page that
+    fails stops there with «Reintentar»). **A receipt** (`…/invoices/{id}`): number, kind, status, period,
+    due and paid days; the lines and how the amount owed is reached
+    (adjustments, balance applied, paid); the payments applied with their
+    bolívares and rate; the payments reported with their status and an
+    admin's reason; the adjustments; whom it is issued to; the API's
+    notice (an internal receipt, not a fiscal document); and «Pagar
+    ahora» while something is owed and no payment waits — the payment
+    page with `?invoice={id}` pays that receipt, whatever else is owed,
+    and goes back to it.
+  - **The balance** (`/panel/subscription/balance`): how much and what it
+    is for (only the next monthly receipt uses it), every movement
+    signed, one about a receipt opening it, scrolled in as the receipts.
+  - **«Mis cupones»** (`/panel/subscription/coupons`): a code saved for
+    later (it spends nothing and reserves no use), the coupons still to
+    use first, the personal ones marked «Para ti», the used and expired
+    ones with their chip. `acquire.otherUnpaid` says the app's words
+    again: «…descártala desde Mi suscripción…».
+  - **The owner's calls (same day):** the receipts' status stays in the
+    address; lists load by themselves as they end, never with «Ver más»;
+    the red button of what loses something keeps the app's error-500
+    (white words at 3.7:1, accepted like the brand-green chip).
+  - **Where the web differs from the app, on purpose and to confirm:**
+    the support channels inside «Datos de cobro» (the app opens its
+    support sheet); the entries of «Mi suscripción» as separate cards (the
+    app groups them in one), as on the panel's home; what the plan lacks
+    in the secondary grey, legible (the app's grey-300 measures 2.3:1),
+    and «Hasta 1 consultorio activo» in the singular (the app: «Hasta 1
+    consultorios activos»); a receipt's address that holds no id says
+    «No encontramos este recibo» on the page (a `notFound()` under the
+    panel's frame answers 200, §4).
+  - **For the app:** map these pages to its «Recibos», «Recibo», «Saldo a
+    favor» and «Mis cupones», each with its Android line (§6); nothing
+    links to them from outside yet.
+- **The web's version in the landing's footer (2026-10-13, the owner's
+  ask):** «Versión: 0.22.0», as the app writes its own (the catalog's
+  `version`), beside the copyright, so the live deploy can be told at a
+  glance. It comes from `package.json` (`app/lib/app-version.ts`, server
+  only: the whole manifest never travels to the browser); every commit
+  bumps it (§0).
 
 ### Improvements noted (not scheduled)
 

@@ -61,6 +61,17 @@ export const routes = {
   specialistAppointments: () => '/panel/appointments' as const,
   reports: () => '/panel/reports' as const,
   subscription: () => '/panel/subscription' as const,
+  /** The receipts, the newest first; `status` keeps one kind (`open`, `paid`, `voided`, `uncollectible`). */
+  subscriptionInvoices: (status?: string) =>
+    status
+      ? (`/panel/subscription/invoices?status=${encodeURIComponent(status)}` as const)
+      : ('/panel/subscription/invoices' as const),
+  subscriptionInvoice: (invoiceId: string) =>
+    `/panel/subscription/invoices/${segment(invoiceId)}` as const,
+  /** The balance and its movements. */
+  subscriptionBalance: () => '/panel/subscription/balance' as const,
+  /** «Mis cupones»: the codes kept for later, and the personal ones. */
+  subscriptionCoupons: () => '/panel/subscription/coupons' as const,
   /*
    * The payment (M13; the owner's path of 2026-10-13): never opened by the
    * app, never linked from it. `plan` (a slug) is the plan to take, or to
@@ -72,6 +83,9 @@ export const routes = {
       : ('/panel/subscription/pay' as const),
   /** The plans, to change from the one in force (or to take one). */
   subscriptionPlans: () => '/panel/subscription/pay?view=plans' as const,
+  /** One receipt to pay, the one its page shows. */
+  subscriptionPayInvoice: (invoiceId: string) =>
+    `/panel/subscription/pay?invoice=${encodeURIComponent(invoiceId)}` as const,
 
   /* Legal (M10). */
   privacy: () => '/privacy' as const,

@@ -32,11 +32,13 @@ import { AppointmentCard } from '@/app/ui/appointments/appointment-card';
 import { Button } from '@/app/ui/button';
 import { EmptyState } from '@/app/ui/empty-state';
 import { FieldError } from '@/app/ui/field-error';
+import { FilterChips } from '@/app/ui/filter-chips';
 import { Icon } from '@/app/ui/icons';
 import { SelectField } from '@/app/ui/select-field';
 import { Skeleton } from '@/app/ui/skeleton';
 import { TextField } from '@/app/ui/text-field';
 
+import { useInfiniteScroll } from '@/app/hooks/use-infinite-scroll';
 import { useSession } from '@/app/hooks/use-session';
 
 import { AgendaHeader } from './agenda-header';
@@ -86,8 +88,12 @@ const noFilters: Filters = {
   office: '',
 };
 
-/** How many cards show at first, and how many more each «Ver más» adds. */
-const pageSize = 30;
+/**
+ * How many cards show at first, and how many more come each time the end
+ * of the list comes into view (infinite scroll, 10 at a time: the owner's
+ * call, 2026-10-13).
+ */
+const pageSize = 10;
 
 /*
  * `/panel/appointments` (M14): the specialist's history, the app's «Más
@@ -144,7 +150,7 @@ function HistoryList({ user }: { user: SessionUser }) {
       );
       setShown(pageSize);
     },
-    [router],
+    [router, setShown],
   );
 
   useEffect(
@@ -178,6 +184,18 @@ function HistoryList({ user }: { user: SessionUser }) {
     enabled: !rangeInvalid,
     // A new filter keeps the list on screen until the answer replaces it.
     placeholderData: keepPreviousData,
+  });
+
+  // The latest first, as the app's «Más recientes».
+  const appointments = (query.data ?? [])
+    .map(toAppointmentSummary)
+    .sort(byStartDescending);
+  const foot = useInfiniteScroll({
+    enabled: appointments.length > shown,
+    onLoadMore: () => {
+      setShown((count) => count + pageSize);
+    },
+    loaded: shown,
   });
 
   const filtering =
@@ -302,10 +320,6 @@ function HistoryList({ user }: { user: SessionUser }) {
       );
     }
 
-    const appointments = query.data
-      .map(toAppointmentSummary)
-      .sort(byStartDescending);
-
     if (appointments.length === 0) {
       return filtering ? (
         <EmptyState
@@ -362,16 +376,8 @@ function HistoryList({ user }: { user: SessionUser }) {
           </section>
         ))}
         {appointments.length > shown ? (
-          <Button
-            variant="white"
-            shape="soft"
-            className="self-center"
-            onClick={() => {
-              setShown((count) => count + pageSize);
-            }}
-          >
-            {t('panel.history.showMore')}
-          </Button>
+          // Where the list ends: coming into view, the next ten follow.
+          <div ref={foot} aria-hidden="true" className="h-px" />
         ) : null}
       </section>
     );
@@ -389,7 +395,7 @@ function groupByDay(appointments: readonly AppointmentSummary[]) {
   return days;
 }
 
-/** The app's status chips, one at a time, «Todas» first: radios, so the keyboard moves among them. */
+/** The app's status chips, one at a time, «Todas» first. */
 function StatusFilter({
   value,
   onChange,
@@ -398,43 +404,19 @@ function StatusFilter({
   onChange: (status: AppointmentStatus | null) => void;
 }) {
   const t = useTranslations();
-  const name = useId();
-  const options: {
-    key: string;
-    status: AppointmentStatus | null;
-    label: string;
-  }[] = [
-    { key: 'all', status: null, label: t('appointments.filters.all') },
-    ...appointmentStatuses.map((status) => ({
-      key: status,
-      status,
-      label: t(`appointments.status.${statusChips[status].label}`),
-    })),
-  ];
-
   return (
-    <fieldset className="flex flex-col gap-2">
-      <legend className="mb-2 text-body-xxs font-medium text-text-primary">
-        {t('panel.history.statusLabel')}
-      </legend>
-      <div className="flex flex-wrap gap-2">
-        {options.map((option) => (
-          <label key={option.key} className="cursor-pointer">
-            <input
-              type="radio"
-              name={name}
-              checked={value === option.status}
-              onChange={() => {
-                onChange(option.status);
-              }}
-              className="peer sr-only"
-            />
-            <span className="inline-flex min-h-touch items-center rounded-full border border-divider bg-pure-white px-4 text-label-lg text-text-secondary transition-colors duration-fast ease-house peer-checked:border-primary peer-checked:bg-info-light peer-checked:text-primary peer-focus-visible:ring-3 peer-focus-visible:ring-ring/50 hover:bg-surface-variant">
-              {option.label}
-            </span>
-          </label>
-        ))}
-      </div>
-    </fieldset>
+    <FilterChips
+      legend={t('panel.history.statusLabel')}
+      options={[
+        { key: 'all', value: null, label: t('appointments.filters.all') },
+        ...appointmentStatuses.map((status) => ({
+          key: status,
+          value: status,
+          label: t(`appointments.status.${statusChips[status].label}`),
+        })),
+      ]}
+      value={value}
+      onChange={onChange}
+    />
   );
 }

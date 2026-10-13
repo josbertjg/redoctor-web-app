@@ -29,6 +29,7 @@ import { buildOffices } from '../../../tests/factories/agenda';
 import { buildSpecialistMeResponse } from '../../../tests/factories/identity';
 import { apiUrl, errorEnvelope } from '../../../tests/msw/api-url';
 import {
+  invoiceDetailHandler,
   invoicesHandler,
   planChangeHandlers,
   subscriptionHandler,
@@ -69,13 +70,17 @@ const queryClient = () =>
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
 
-function renderPay(plan: string | null = null, plans = false) {
+function renderPay(
+  plan: string | null = null,
+  plans = false,
+  invoice: string | null = null,
+) {
   return renderWithPageMessages(
     <QueryClientProvider client={queryClient()}>
       <SessionContext.Provider value={signedIn}>
         {/* As the page renders it: inside its main landmark. */}
         <main>
-          <PayFlow request={{ plan, plans }} />
+          <PayFlow request={{ plan, plans, invoice }} />
         </main>
       </SessionContext.Provider>
       <Toaster regionLabel="Notificaciones" closeLabel="Cerrar" />
@@ -869,6 +874,58 @@ describe('PayFlow, «Cambiar de plan» (?view=plans)', () => {
       await screen.findByRole('heading', {
         level: 1,
         name: 'Cambia tu plan cuando lo necesites',
+      }),
+    ).toBeInTheDocument();
+  });
+});
+
+describe('PayFlow, a receipt chosen on its page (?invoice=)', () => {
+  /** An active plan whose renewal is issued and not due yet: nothing owed by the page's own reading. */
+  const renewal = buildInvoice({
+    id: 'renewal-receipt',
+    number: 'R-2026-000130',
+    total: usd(3000),
+    pending: usd(3000),
+  });
+  const active = () =>
+    buildSubscription({ status: 'ACTIVE', incompleteExpiresAt: null });
+
+  it('pays that receipt, and goes back to it', async () => {
+    server.use(subscriptionHandler(active()), invoiceDetailHandler(renewal));
+    renderPay(null, false, renewal.id);
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: '¿Cómo vas a pagar?',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Plan Profesional')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Volver' }));
+    expect(router.push).toHaveBeenCalledWith(
+      '/panel/subscription/invoices/renewal-receipt',
+    );
+  });
+
+  it('says there is nothing to pay on a receipt already paid', async () => {
+    server.use(
+      subscriptionHandler(active()),
+      invoiceDetailHandler(
+        buildInvoice({
+          id: renewal.id,
+          status: 'PAID',
+          paid: usd(3000),
+          pending: usd(0),
+        }),
+      ),
+    );
+    renderPay(null, false, renewal.id);
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'No tienes pagos pendientes',
       }),
     ).toBeInTheDocument();
   });

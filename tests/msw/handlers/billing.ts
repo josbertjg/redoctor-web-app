@@ -1,16 +1,19 @@
 import { http, HttpResponse } from 'msw';
 
 import {
+  couponChoiceSchema,
   couponDiscount,
   couponSchema,
   couponValidationBodySchema,
   paymentReportBodySchema,
   planChangeBodySchema,
+  saveCouponBodySchema,
   startPaymentBodySchema,
   subscribeBodySchema,
 } from '@/app/lib/schemas/billing';
 
 import {
+  buildBillingAccount,
   buildInvoice,
   buildInvoiceDetail,
   buildIntent,
@@ -27,7 +30,10 @@ import {
   planIds,
   savedCouponId,
   usd,
+  type BalanceMovementPayload,
+  type BillingAccountPayload,
   type IntentPayload,
+  type InvoiceDetailPayload,
   type InvoicePayload,
   type SubscriptionPayload,
 } from '../../factories/billing';
@@ -59,7 +65,23 @@ export function subscriptionHandler(
   );
 }
 
-/** `GET /billing/me/invoices`, the newest first, filtered by status as the API does. */
+/** One page of a list as the API counts it (`page`, `limit`). */
+function pageOf<T>(request: Request, items: readonly T[]) {
+  const params = new URL(request.url).searchParams;
+  const limit = Number(params.get('limit') ?? 20) || 20;
+  const page = Number(params.get('page') ?? 1) || 1;
+  return {
+    items: items.slice((page - 1) * limit, page * limit),
+    meta: {
+      total: items.length,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(items.length / limit)),
+    },
+  };
+}
+
+/** `GET /billing/me/invoices`, the newest first, filtered by status and paged as the API does. */
 export function invoicesHandler(items: InvoicePayload[]) {
   return http.get(apiUrl('/billing/me/invoices'), ({ request }) => {
     if (isStranger(request)) return unauthorized();
@@ -67,10 +89,7 @@ export function invoicesHandler(items: InvoicePayload[]) {
     const matching = status
       ? items.filter((invoice) => invoice.status === status)
       : items;
-    return HttpResponse.json({
-      items: matching,
-      meta: { total: matching.length, page: 1, limit: 20, totalPages: 1 },
-    });
+    return HttpResponse.json(pageOf(request, matching));
   });
 }
 
@@ -78,6 +97,10 @@ export function invoicesHandler(items: InvoicePayload[]) {
 export function invoiceDetailHandler(
   invoice: InvoicePayload,
   intents: IntentPayload[] = [],
+  extras: Pick<
+    Partial<InvoiceDetailPayload>,
+    'allocations' | 'adjustments'
+  > = {},
 ) {
   return http.get(
     apiUrl('/billing/me/invoices/:invoiceId'),
@@ -90,7 +113,116 @@ export function invoiceDetailHandler(
         );
       }
       return HttpResponse.json({
-        invoice: buildInvoiceDetail(invoice, intents),
+        invoice: { ...buildInvoiceDetail(invoice, intents), ...extras },
+      });
+    },
+  );
+}
+
+/** `GET /billing/me/balance`: the balance and its movements, the newest first, paged. */
+export function balanceHandler(
+  amount: number,
+  movements: BalanceMovementPayload[] = [],
+) {
+  return http.get(apiUrl('/billing/me/balance'), ({ request }) =>
+    isStranger(request)
+      ? unauthorized()
+      : HttpResponse.json({
+          balance: usd(amount),
+          ...pageOf(request, movements),
+        }),
+  );
+}
+
+/** `GET /billing/me/account`: whom the receipts are issued to. */
+export function billingAccountHandler(
+  account: BillingAccountPayload = buildBillingAccount(),
+) {
+  return http.get(apiUrl('/billing/me/account'), ({ request }) =>
+    isStranger(request) ? unauthorized() : HttpResponse.json({ account }),
+  );
+}
+
+/**
+ * `POST …/cancel`, `…/resume` and `…/abandon` on an active subscription to
+ * the professional plan (an unpaid one for `abandon`): each answers the
+ * subscription as it stays. `refusal` answers them all with that conflict.
+ */
+export function subscriptionActionHandlers({
+  refusal = null,
+}: { refusal?: { code: string; message: string } | null } = {}) {
+  const active = (overrides: Partial<SubscriptionPayload> = {}) =>
+    buildSubscription({
+      status: 'ACTIVE',
+      incompleteExpiresAt: null,
+      ...overrides,
+    });
+  const answer =
+    (subscription: () => SubscriptionPayload) =>
+    ({ request }: { request: Request }) => {
+      if (isStranger(request)) return unauthorized();
+      if (refusal) return conflict(refusal.code, refusal.message);
+      return HttpResponse.json({ subscription: subscription() });
+    };
+  return [
+    http.post(
+      apiUrl('/billing/me/subscription/cancel'),
+      answer(() => active({ cancelAtPeriodEnd: true, endsAt: periodEnd })),
+    ),
+    http.post(
+      apiUrl('/billing/me/subscription/resume'),
+      answer(() => active()),
+    ),
+    http.post(
+      apiUrl('/billing/me/subscription/abandon'),
+      answer(() =>
+        buildSubscription({
+          status: 'INCOMPLETE_EXPIRED',
+          incompleteExpiresAt: null,
+        }),
+      ),
+    ),
+  ];
+}
+
+/**
+ * `POST /billing/me/subscription/discount` on a plan in force (`planId`):
+ * a code or a saved coupon, refused as the API refuses it — one already
+ * discounting (`active`) answers ERR_5106.
+ */
+export function applyDiscountHandler({
+  planId = planIds.professional,
+  active = false,
+}: { planId?: string; active?: boolean } = {}) {
+  return http.post(
+    apiUrl('/billing/me/subscription/discount'),
+    async ({ request }) => {
+      if (isStranger(request)) return unauthorized();
+      const body = couponChoiceSchema.safeParse(await request.json());
+      if (!body.success) return badRequest();
+      if (active) return conflict('ERR_5106', 'Discount already active');
+      const code =
+        'code' in body.data
+          ? body.data.code
+          : body.data.savedCouponId === savedCouponId
+            ? couponCodes.professionalOnly
+            : 'UNKNOWN';
+      const refusal = couponResponse(code, planId);
+      if (refusal) return refusal;
+      const terms = knownCoupons[code];
+      return HttpResponse.json({
+        discount: {
+          id: '7a7a7a7a-7a7a-4a7a-8a7a-7a7a7a7a7a7a',
+          couponName: terms?.name ?? code,
+          code,
+          discountType: terms?.discountType ?? 'PERCENT',
+          percentOff: terms?.percentOff ?? null,
+          amountOff: terms?.amountOff ?? null,
+          duration: terms?.duration ?? 'ONCE',
+          remainingCycles: 1,
+          status: 'ACTIVE',
+          endReason: null,
+        },
       });
     },
   );
@@ -237,6 +369,33 @@ export const billingHandlers = [
   invoiceDetailHandler(buildInvoice()),
 
   ...planChangeHandlers(),
+
+  ...subscriptionActionHandlers(),
+
+  balanceHandler(0),
+
+  billingAccountHandler(),
+
+  applyDiscountHandler(),
+
+  http.post(apiUrl('/billing/me/coupons'), async ({ request }) => {
+    if (isStranger(request)) return unauthorized();
+    const body = saveCouponBodySchema.safeParse(await request.json());
+    if (!body.success) return badRequest();
+    const refusal = couponResponse(body.data.code, undefined);
+    if (refusal) return refusal;
+    return HttpResponse.json(
+      {
+        savedCoupon: {
+          ...knownCoupons[body.data.code],
+          savedCouponId: `saved-${body.data.code}`,
+          state: 'AVAILABLE',
+          savedAt: new Date().toISOString(),
+        },
+      },
+      { status: 201 },
+    );
+  }),
 
   http.delete(
     apiUrl('/billing/me/subscription/scheduled-change'),

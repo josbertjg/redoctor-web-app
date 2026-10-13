@@ -113,8 +113,10 @@ export const pageNamespaces = {
   // The statistics (M14): the filters, the four reports, the downloads
   // and, when the plan lacks them, the plan that has them.
   reports: ['apiErrors', 'reports', 'panel', 'appBridge'],
-  // The specialist's subscription (M13): where the plan stands, its notice.
-  subscription: ['apiErrors', 'billing'],
+  // The specialist's subscription (M13): where the plan stands, its notice,
+  // what can be done with it, its receipts, its balance and its coupons;
+  // «Datos de cobro» leads to support (`appAccess`).
+  subscription: ['apiErrors', 'billing', 'appAccess'],
   // The payment (M13): the plans, the coupon sheet and the two steps of the
   // payment, all read in the browser.
   pay: ['apiErrors', 'billing', 'back', 'input'],

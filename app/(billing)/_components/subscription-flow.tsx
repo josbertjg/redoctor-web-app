@@ -28,9 +28,10 @@ import { SubscriptionView } from './subscription-view';
 /*
  * `/panel/subscription` (M13, the owner's split of 2026-10-13): where the
  * specialist's plan stands and everything about it — the plan, its state,
- * the notice with what to do, the period. Paying or taking a plan is the
- * payment page's (`/panel/subscription/pay`). On a phone with the app, the
- * same link opens the app's «Mi suscripción».
+ * the notice with what to do, the period, what can be done with it, the
+ * balance and the receipts. Paying or taking a plan is the payment page's
+ * (`/panel/subscription/pay`). On a phone with the app, the same link
+ * opens the app's «Mi suscripción».
  */
 export function SubscriptionFlow() {
   const { user } = useSession();
@@ -81,18 +82,19 @@ function SpecialistSubscription({ user }: { user: SessionUser }) {
   // The receipt owed is being read: it decides what the notice says.
   if (payable.isLoading) return <PaySkeleton />;
 
+  // Unreadable receipt: the notice comes from the subscription alone. A
+  // plan that owes nothing has no receipt to tell about, whatever an
+  // earlier visit left cached (a payment in review, since approved).
+  const owed = mayOwe(subscription) ? (payable.data ?? null) : null;
+
   return (
     <SubscriptionView
       user={user}
       subscription={subscription}
-      // Unreadable receipt: the notice comes from the subscription alone.
-      // A plan that owes nothing has no receipt to tell about, whatever an
-      // earlier visit left cached (a payment in review, since approved).
-      notice={subscriptionNotice({
-        subscription,
-        payable: mayOwe(subscription) ? (payable.data ?? null) : null,
-        now,
-      })}
+      notice={subscriptionNotice({ subscription, payable: owed, now })}
+      payable={owed}
+      now={now}
+      hasAccess={current.data.access.hasAccess}
     />
   );
 }
