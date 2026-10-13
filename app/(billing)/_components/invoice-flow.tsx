@@ -35,6 +35,7 @@ import {
   type PaymentIntent,
 } from '@/app/lib/schemas/billing';
 
+import { BackLink } from '@/app/ui/back-link';
 import { Button } from '@/app/ui/button';
 import { EmptyState } from '@/app/ui/empty-state';
 import { Icon, type IconComponent } from '@/app/ui/icons';
@@ -43,7 +44,6 @@ import { StateChip } from '@/app/ui/state-chip';
 
 import { useSession } from '@/app/hooks/use-session';
 
-import { BackLink } from './back-link';
 import { DetailList, type DetailItem } from './detail-list';
 import { invoiceKindKey } from './invoice-card';
 

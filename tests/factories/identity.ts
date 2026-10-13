@@ -72,6 +72,7 @@ export function buildSpecialistMeResponse(
     displayName: 'Dr. Luis Gómez',
     role: 'SPECIALIST',
     profiles: { patient: { exists: false }, specialist: specialistFacet() },
+    visibilityStatus: 'VISIBLE',
     ...overrides,
   });
 }

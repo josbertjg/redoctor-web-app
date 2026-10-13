@@ -121,9 +121,12 @@ describe('SessionButton', () => {
     expect(
       screen.queryByRole('link', { name: 'Mi panel' }),
     ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'Mi perfil' }),
+    ).not.toBeInTheDocument();
   });
 
-  it('leads a specialist to their page', () => {
+  it('leads a specialist to their panel and their profile', () => {
     renderWithSession(
       session({
         status: 'signed-in',
@@ -137,6 +140,10 @@ describe('SessionButton', () => {
     expect(screen.getByRole('link', { name: 'Mi panel' })).toHaveAttribute(
       'href',
       '/panel',
+    );
+    expect(screen.getByRole('link', { name: 'Mi perfil' })).toHaveAttribute(
+      'href',
+      '/panel/profile',
     );
     expect(
       screen.queryByRole('link', { name: 'Mis citas' }),

@@ -9,7 +9,10 @@ import { MessagesScope } from '@/app/ui/messages-scope';
 
 import { AdminNote } from '../_components/admin-note';
 import { PanelGreeting } from '../_components/panel-greeting';
-import { PanelInApp, PanelStatisticsCard } from '../_components/panel-links';
+import {
+  PanelProfileLinks,
+  PanelStatisticsCard,
+} from '../_components/panel-links';
 import { PanelPlanCard } from '../_components/panel-plan-card';
 import { PanelTodayCard } from '../_components/panel-today-card';
 import { SpecialistHomeSwitch } from '../_components/specialist-home-switch';
@@ -18,10 +21,10 @@ import { SpecialistOnly } from '../_components/specialist-only';
 /*
  * `/panel` (M14): where a specialist lands after signing in, and the home
  * of their panel, as the app's home: the plan and what it asks for first,
- * today's patients, the statistics one card away, and what stays in the
- * app. A specialist whose sign-up is still open is shown the way to finish
- * it in the app instead (M3); an admin's account, the note that its tools
- * are in the app. Never indexed.
+ * today's patients, and the statistics and the profile one card away. A
+ * specialist whose sign-up is still open is shown the way to finish it in
+ * the app instead (M3); an admin's account, the note that its tools are in
+ * the app. Never indexed.
  */
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -53,8 +56,8 @@ export default async function SpecialistHomePage() {
                 <PanelTodayCard />
               </div>
               <PanelStatisticsCard className="mt-4" />
+              <PanelProfileLinks />
             </SpecialistOnly>
-            <PanelInApp />
           </div>
         }
         pending={<AppAccess variant="finish" className="mx-auto mt-6" />}

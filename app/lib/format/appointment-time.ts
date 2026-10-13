@@ -114,3 +114,27 @@ export function weekdayInitials(): string[] {
 export function hourAgreement(time: string): 'one' | 'other' {
   return time.trim().startsWith('1:') ? 'one' : 'other';
 }
+
+/** The words around a duration, from the app's `specialistProfile.*` keys. */
+export type DurationWords = {
+  hour: string;
+  hours: string;
+  minutes: string;
+  perAppointment: string;
+};
+
+/** How long each appointment lasts: «30 min por cita», «1 hora 30 min por cita», «2 horas por cita». */
+export function formatSlotDuration(
+  minutes: number,
+  words: DurationWords,
+): string {
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  const parts = [
+    hours > 0
+      ? `${String(hours)} ${hours === 1 ? words.hour : words.hours}`
+      : null,
+    rest > 0 ? `${String(rest)} ${words.minutes}` : null,
+  ].filter((part) => part !== null);
+  return `${parts.join(' ')} ${words.perAppointment}`;
+}

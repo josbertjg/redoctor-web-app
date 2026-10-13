@@ -17,6 +17,7 @@ import {
 } from '@/app/lib/schemas/billing';
 import { cn } from '@/app/lib/utils';
 
+import { BackLink } from '@/app/ui/back-link';
 import { Button } from '@/app/ui/button';
 import { EmptyState } from '@/app/ui/empty-state';
 import { FilterChips } from '@/app/ui/filter-chips';
@@ -24,7 +25,6 @@ import { Skeleton } from '@/app/ui/skeleton';
 
 import { useSession } from '@/app/hooks/use-session';
 
-import { BackLink } from './back-link';
 import { InvoiceCard, InvoiceCardSkeleton } from './invoice-card';
 import { PagedListFoot } from './paged-list-foot';
 

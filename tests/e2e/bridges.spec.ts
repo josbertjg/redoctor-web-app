@@ -31,17 +31,9 @@ async function expectOpensInApp(page: Page, path: string) {
   );
 }
 
-// The subscription and the agenda are the panel's own pages since
-// 2026-10-13 (panel.spec.ts); these two still only open the app.
+// Every specialist page under /panel/ is the panel's own since 2026-10-13
+// (panel.spec.ts): only the app's internal paths still just open it.
 const bridges = [
-  {
-    path: '/panel/specialties',
-    heading: 'Tus especialidades se abren en la app de Redoctor',
-  },
-  {
-    path: '/panel/profile',
-    heading: 'Tu perfil se abre en la app de Redoctor',
-  },
   {
     path: '/home/home/my-subscription',
     heading: 'Esto se abre en la app de Redoctor',
@@ -67,13 +59,13 @@ for (const bridge of bridges) {
 }
 
 test('the link to the app never carries the origin tag', async ({ page }) => {
-  await page.goto('/panel/specialties?origin=email-16');
+  await page.goto('/home/home/my-subscription?origin=email-16');
 
-  await expectOpensInApp(page, '/panel/specialties');
+  await expectOpensInApp(page, '/home/home/my-subscription');
 });
 
 test('a bridge has no accessibility violations', async ({ page }) => {
-  await page.goto('/panel/specialties');
+  await page.goto('/home/home/my-subscription');
   await page.getByRole('link', { name: 'Abrir en la app' }).waitFor();
 
   expect(await auditAccessibility(page)).toEqual([]);

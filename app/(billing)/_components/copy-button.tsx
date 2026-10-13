@@ -6,6 +6,7 @@ import Check from '@material-symbols/svg-400/rounded/check.svg?svgr';
 import ContentCopy from '@material-symbols/svg-400/rounded/content_copy.svg?svgr';
 import { useTranslations } from 'next-intl';
 
+import { copyText } from '@/app/lib/clipboard';
 import { cn } from '@/app/lib/utils';
 
 import { Icon } from '@/app/ui/icons';
@@ -30,31 +31,6 @@ const variants = {
   outline:
     'h-control-lg w-full border border-border bg-white-50 px-6 text-label-lg text-primary shadow-sm hover:bg-white-200',
 };
-
-/**
- * The old way to copy, for browsers that refuse the Clipboard API (some
- * apps' web views, a page not served over https): a hidden text selected
- * and copied. False when that is refused too.
- */
-function copyBySelection(value: string): boolean {
-  const area = document.createElement('textarea');
-  area.value = value;
-  area.setAttribute('readonly', '');
-  area.className = 'fixed top-0 left-0 opacity-0';
-  document.body.append(area);
-  area.select();
-  // iOS selects nothing in a read-only field without an explicit range.
-  area.setSelectionRange(0, value.length);
-  try {
-    // Deprecated, and still the only way left in those browsers.
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
-    return document.execCommand('copy');
-  } catch {
-    return false;
-  } finally {
-    area.remove();
-  }
-}
 
 /*
  * Copies one datum of the payment to the clipboard and says so in place,
@@ -82,13 +58,9 @@ export function CopyButton({
   );
 
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(value);
-    } catch {
-      if (!copyBySelection(value)) {
-        toast.error(t('copyFailed'));
-        return;
-      }
+    if (!(await copyText(value))) {
+      toast.error(t('copyFailed'));
+      return;
     }
     setCopied(true);
     if (timer.current) clearTimeout(timer.current);

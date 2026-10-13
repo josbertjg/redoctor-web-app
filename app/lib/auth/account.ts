@@ -93,6 +93,43 @@ export function toRegistrationStatus(
   return registrationStatuses[raw.toUpperCase()] ?? 'unknown';
 }
 
+/**
+ * Whether the specialist's profile shows in the search and, when it does
+ * not, the first thing the API finds missing (`visibilityStatus`, the app's
+ * ProfileVisibilityStatus).
+ */
+export type ProfileVisibility =
+  | 'visible'
+  | 'profileIncomplete'
+  | 'noSpecialties'
+  | 'specialtiesPending'
+  | 'specialtiesRejected'
+  | 'noOffices'
+  | 'noSchedules'
+  | 'noMotivesAndPrices'
+  | 'verifyingSubscriptionPayment'
+  | 'noSubscription';
+
+const profileVisibilities: Readonly<Record<string, ProfileVisibility>> = {
+  VISIBLE: 'visible',
+  PROFILE_INCOMPLETE: 'profileIncomplete',
+  NO_SPECIALTIES: 'noSpecialties',
+  SPECIALTIES_PENDING: 'specialtiesPending',
+  SPECIALTIES_REJECTED: 'specialtiesRejected',
+  NO_OFFICES: 'noOffices',
+  NO_SCHEDULES: 'noSchedules',
+  NO_MOTIVES_AND_PRICES: 'noMotivesAndPrices',
+  VERIFYING_SUBSCRIPTION_PAYMENT: 'verifyingSubscriptionPayment',
+  NO_SUBSCRIPTION: 'noSubscription',
+};
+
+/** `null` when the API sends none (a patient's account) or one this version does not know. */
+export function toProfileVisibility(
+  raw: string | null | undefined,
+): ProfileVisibility | null {
+  return raw ? (profileVisibilities[raw.toUpperCase()] ?? null) : null;
+}
+
 export type Account = {
   id: string;
   email: string | null;
@@ -102,6 +139,8 @@ export type Account = {
   registration: RegistrationStatus;
   patient: AccountFacet;
   specialist: AccountFacet;
+  /** The specialist's profile in the search; `null` without one. */
+  visibility: ProfileVisibility | null;
 };
 
 /**

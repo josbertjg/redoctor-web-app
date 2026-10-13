@@ -2,13 +2,11 @@
 
 import Link from 'next/link';
 
-import CheckCircleFill from '@material-symbols/svg-400/rounded/check_circle-fill.svg?svgr';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
 import type { SessionUser } from '@/app/lib/firebase/client';
 import { formatDate } from '@/app/lib/format/dates';
-import { formatBillingAmount } from '@/app/lib/format/money';
 import {
   plansQueryOptions,
   subscriptionQueryOptions,
@@ -16,10 +14,10 @@ import {
 import { routes } from '@/app/lib/routes';
 import { featureOffer, type FeatureOffer } from '@/app/lib/schemas/billing';
 
-import { PlanEmblem } from '@/app/ui/billing/plan-emblem';
 import { Button } from '@/app/ui/button';
-import { Icon } from '@/app/ui/icons';
 import { Skeleton } from '@/app/ui/skeleton';
+
+import { PlanOfferCard } from '../plan-offer-card';
 
 export type DownloadOffer =
   | { status: 'loading' }
@@ -139,32 +137,11 @@ export function DownloadUpsell({ offer }: { offer: DownloadOffer }) {
     case 'subscribe':
       return (
         <div className="flex flex-col gap-4 pb-4">
-          <div className="flex animate-fade-up flex-col gap-3 rounded-2xl bg-pure-white p-4 shadow-md">
-            <div className="flex items-center gap-3">
-              <PlanEmblem slug={value.plan.slug} size="sm" />
-              <p className="flex min-w-0 flex-col">
-                <span className="text-title-md text-text-primary">
-                  {value.plan.name}
-                </span>
-                <span>
-                  <span className="text-subtitle-s font-bold text-text-primary">
-                    {formatBillingAmount(value.plan.price.amount)}
-                  </span>{' '}
-                  <span className="text-body-md text-text-secondary">
-                    {t('perMonth')}
-                  </span>
-                </span>
-              </p>
-            </div>
-            <p className="flex items-start gap-2 text-body-sm text-text-primary">
-              <Icon
-                icon={CheckCircleFill}
-                size={16}
-                className="mt-0.5 shrink-0 text-primary"
-              />
-              {t('includesDownloads')}
-            </p>
-          </div>
+          <PlanOfferCard
+            plan={value.plan}
+            benefit={t('includesDownloads')}
+            perMonth={t('perMonth')}
+          />
           <Button asChild block shape="soft">
             <Link href={routes.subscriptionPay(value.plan.slug)}>
               {value.kind === 'upgrade'

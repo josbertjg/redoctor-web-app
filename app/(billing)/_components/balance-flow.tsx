@@ -8,13 +8,13 @@ import type { SessionUser } from '@/app/lib/firebase/client';
 import { balanceQueryOptions } from '@/app/lib/queries/billing';
 import { routes } from '@/app/lib/routes';
 
+import { BackLink } from '@/app/ui/back-link';
 import { Button } from '@/app/ui/button';
 import { EmptyState } from '@/app/ui/empty-state';
 import { Skeleton } from '@/app/ui/skeleton';
 
 import { useSession } from '@/app/hooks/use-session';
 
-import { BackLink } from './back-link';
 import {
   BalanceMovementRow,
   BalanceMovementSkeleton,

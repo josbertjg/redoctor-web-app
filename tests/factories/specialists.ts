@@ -1,6 +1,7 @@
 import {
   publicProfileResponseSchema,
   toSpecialistProfile,
+  type myProfileResponseSchema,
   type SpecialistProfile,
 } from '@/app/lib/schemas/specialists';
 
@@ -83,6 +84,59 @@ export function buildPublicProfileResponse(
       },
     ],
     ...rest,
+  };
+}
+
+type MyProfileInput = z.input<typeof myProfileResponseSchema>;
+type OwnSpecialtyInput = MyProfileInput['specialties'][number];
+
+/** A specialty as the specialist's own profile lists it: verified unless told otherwise. */
+export function buildOwnSpecialty(
+  overrides: Partial<OwnSpecialtyInput> = {},
+): OwnSpecialtyInput {
+  return {
+    id: 'specialty-internal',
+    specialtyName: 'Medicina Interna',
+    specialtyPath: ['Medicina', 'Medicina Interna'],
+    collegeName: 'Colegio de Médicos del Distrito Metropolitano',
+    medicalLicenseNumber: '12345',
+    verificationStatus: 'VERIFIED',
+    rejectionReason: null,
+    subspecialties: [],
+    ...overrides,
+  };
+}
+
+/*
+ * The specialist's own profile shaped like `GET /specialists/profile` (dev,
+ * 2026-10-13), with made-up people.
+ */
+export function buildMyProfileResponse(
+  overrides: {
+    profile?: Partial<MyProfileInput['profile']>;
+    specialties?: OwnSpecialtyInput[];
+  } = {},
+): MyProfileInput {
+  return {
+    profile: {
+      specialistId: knownSpecialistId,
+      displayName: 'Dr. Luis Gómez',
+      description: 'Internista con diez años de consulta privada en Caracas.',
+      experiencia: 'Hospital Universitario de Caracas, 2014–2024.',
+      certificationList: [
+        {
+          name: 'Diplomado en Medicina Interna',
+          institution: 'Universidad Central de Venezuela',
+          location: null,
+          year: 2016,
+          type: 'DIPLOMA',
+        },
+      ],
+      gallery: [],
+      photoUrl: null,
+      ...overrides.profile,
+    },
+    specialties: overrides.specialties ?? [buildOwnSpecialty()],
   };
 }
 

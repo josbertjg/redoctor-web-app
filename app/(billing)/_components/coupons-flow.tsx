@@ -27,6 +27,7 @@ import {
 } from '@/app/lib/schemas/billing';
 import { cn } from '@/app/lib/utils';
 
+import { BackLink } from '@/app/ui/back-link';
 import { Button } from '@/app/ui/button';
 import { EmptyState } from '@/app/ui/empty-state';
 import { Icon } from '@/app/ui/icons';
@@ -37,7 +38,6 @@ import { toast } from '@/app/ui/toast';
 
 import { useSession } from '@/app/hooks/use-session';
 
-import { BackLink } from './back-link';
 import { couponSummary } from './coupon-words';
 
 /** A coupon's row while it comes: its final size, no words. */

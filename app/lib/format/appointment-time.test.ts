@@ -5,6 +5,7 @@ import {
   formatAppointmentDay,
   formatAppointmentTime,
   formatInstant,
+  formatSlotDuration,
   hourAgreement,
 } from './appointment-time';
 import messages from '../i18n/messages/es.json';
@@ -83,5 +84,21 @@ describe('hourAgreement', () => {
 
     expect(words('1:30 p. m.')).toContain('a la 1:30 p. m.');
     expect(words('3:30 p. m.')).toContain('a las 3:30 p. m.');
+  });
+});
+
+describe('formatSlotDuration', () => {
+  const words = {
+    hour: 'hora',
+    hours: 'horas',
+    minutes: 'min',
+    perAppointment: 'por cita',
+  };
+
+  it('says how long each appointment lasts, as the app writes it', () => {
+    expect(formatSlotDuration(30, words)).toBe('30 min por cita');
+    expect(formatSlotDuration(60, words)).toBe('1 hora por cita');
+    expect(formatSlotDuration(90, words)).toBe('1 hora 30 min por cita');
+    expect(formatSlotDuration(120, words)).toBe('2 horas por cita');
   });
 });

@@ -21,8 +21,11 @@ const typeKeys = {
  */
 export function CertificationList({
   certifications,
+  emptyDescription,
 }: {
   certifications: SpecialistProfile['certifications'];
+  /** A line under «Aún no hay certificaciones…»: the specialist's own profile invites to add them. */
+  emptyDescription?: string;
 }) {
   const t = useTranslations();
 
@@ -39,6 +42,11 @@ export function CertificationList({
         <p className="text-body-xxs text-text-secondary">
           {t('specialistProfile.noCertifications')}
         </p>
+        {emptyDescription ? (
+          <p className="max-w-sm text-body-xxs text-text-secondary">
+            {emptyDescription}
+          </p>
+        ) : null}
       </div>
     );
   }

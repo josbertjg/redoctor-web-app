@@ -48,8 +48,8 @@ const itemClass =
  * The session's place in a header (AGENTS.md §9): «Entrar» for whoever is
  * signed out; a placeholder of the same size while Firebase answers for a
  * browser that carried the session hint; then the person's avatar with
- * their menu — the specialist's page when the account has one, and
- * «Cerrar sesión».
+ * their menu — the specialist's panel and profile when the account has
+ * them, and «Cerrar sesión».
  */
 export function SessionButton({
   redirect,
@@ -90,6 +90,8 @@ export function SessionButton({
   const name = user.name ?? user.email ?? t('menu.label');
   const patientArea = account?.patient.exists ?? false;
   const specialistArea = account !== null && canUseSpecialistArea(account);
+  // The professional profile is a specialist's own (an admin's account has none).
+  const ownProfile = account?.specialist.exists ?? false;
   const onSignOut = () => {
     void signOut();
   };
@@ -106,6 +108,11 @@ export function SessionButton({
         {specialistArea ? (
           <Link href={routes.specialistHome()} className={itemClass}>
             {t('menu.specialistHome')}
+          </Link>
+        ) : null}
+        {ownProfile ? (
+          <Link href={routes.specialistProfile()} className={itemClass}>
+            {t('menu.profile')}
           </Link>
         ) : null}
         <button type="button" onClick={onSignOut} className={itemClass}>
@@ -149,6 +156,13 @@ export function SessionButton({
             <DropdownMenu.Item asChild>
               <Link href={routes.specialistHome()} className={itemClass}>
                 {t('menu.specialistHome')}
+              </Link>
+            </DropdownMenu.Item>
+          ) : null}
+          {ownProfile ? (
+            <DropdownMenu.Item asChild>
+              <Link href={routes.specialistProfile()} className={itemClass}>
+                {t('menu.profile')}
               </Link>
             </DropdownMenu.Item>
           ) : null}

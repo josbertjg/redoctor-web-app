@@ -3,6 +3,7 @@ import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 
 import type { SpecialistProfile } from '@/app/lib/schemas/specialists';
+import { cn } from '@/app/lib/utils';
 
 /*
  * The specialist's photos, as the app's gallery: 200 px squares in a row that
@@ -12,9 +13,12 @@ import type { SpecialistProfile } from '@/app/lib/schemas/specialists';
 export function Gallery({
   images,
   name,
+  inset = false,
 }: {
   images: SpecialistProfile['gallery'];
   name: string;
+  /** Inside a card: the row keeps to the card's padding instead of reaching the page's edges. */
+  inset?: boolean;
 }) {
   const t = useTranslations('specialists');
 
@@ -26,7 +30,12 @@ export function Gallery({
       // scrollable-region-focusable), so this region takes the focus.
       // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
       tabIndex={0}
-      className="-mx-gutter flex snap-x gap-2 overflow-x-auto px-gutter pb-1 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      className={cn(
+        'flex snap-x gap-2 overflow-x-auto pb-1 outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+        // Edge to edge on the page; the snap points keep the gutter, so the
+        // first photo starts aligned with the text.
+        !inset && '-mx-gutter scroll-px-gutter px-gutter',
+      )}
     >
       {images.map((image, index) => (
         <Image

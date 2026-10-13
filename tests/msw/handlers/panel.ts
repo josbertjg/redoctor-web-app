@@ -5,6 +5,11 @@ import {
   buildSpecialistAgenda,
   buildSpecialistReport,
 } from '../../factories/agenda';
+import {
+  buildPricingConfig,
+  buildWeeklySchedule,
+} from '../../factories/offices';
+import { buildMyProfileResponse } from '../../factories/specialists';
 import { apiUrl } from '../api-url';
 import { isStranger, unauthorized } from './identity';
 
@@ -17,7 +22,8 @@ const plain = (text: string) =>
 
 /*
  * The specialist's panel (M14), built from the factories: the agenda with
- * the API's filters and its pages, the offices and the statistics.
+ * the API's filters and its pages, the offices with their rates and hours,
+ * the statistics and the specialist's own profile.
  */
 export const panelHandlers = [
   http.get(apiUrl('/scheduling/specialist/appointments'), ({ request }) => {
@@ -52,6 +58,25 @@ export const panelHandlers = [
   http.get(apiUrl('/specialists/offices'), ({ request }) => {
     if (isStranger(request)) return unauthorized();
     return HttpResponse.json(buildOffices());
+  }),
+
+  // «Mi perfil» and «Mis especialidades»: the profile, each office's rates and hours.
+  http.get(apiUrl('/specialists/profile'), ({ request }) => {
+    if (isStranger(request)) return unauthorized();
+    return HttpResponse.json(buildMyProfileResponse());
+  }),
+
+  http.get(
+    apiUrl('/specialists/offices/:officeId/pricing-config'),
+    ({ request }) => {
+      if (isStranger(request)) return unauthorized();
+      return HttpResponse.json(buildPricingConfig());
+    },
+  ),
+
+  http.get(apiUrl('/specialists/offices/:officeId/schedule'), ({ request }) => {
+    if (isStranger(request)) return unauthorized();
+    return HttpResponse.json(buildWeeklySchedule());
   }),
 
   http.get(apiUrl('/reports/specialist'), ({ request }) => {

@@ -17,6 +17,8 @@ describe('routes', () => {
     expect(routes.agenda('2026-10-01')).toBe('/panel/agenda/2026-10-01');
     expect(routes.specialistAppointments()).toBe('/panel/appointments');
     expect(routes.reports()).toBe('/panel/reports');
+    expect(routes.specialistProfile()).toBe('/panel/profile');
+    expect(routes.specialties()).toBe('/panel/specialties');
     expect(routes.subscription()).toBe('/panel/subscription');
   });
 
@@ -27,9 +29,7 @@ describe('routes', () => {
     expect(routes.subscriptionPayInvoice('in 1')).toBe('/pay?invoice=in%201');
   });
 
-  it('builds the bridges', () => {
-    expect(routes.specialtiesBridge()).toBe('/panel/specialties');
-    expect(routes.profileBridge()).toBe('/panel/profile');
+  it('builds the bridge to the app’s internal paths', () => {
     expect(routes.homeBridge()).toBe('/home');
     expect(routes.homeBridge(['home', 'my subscription'])).toBe(
       '/home/home/my%20subscription',
@@ -51,8 +51,8 @@ describe('routes', () => {
     expect(isAppOwnedPath(routes.agenda('2026-10-01'))).toBe(true);
     expect(isAppOwnedPath(routes.specialistAppointments())).toBe(true);
     expect(isAppOwnedPath(routes.reports())).toBe(true);
-    expect(isAppOwnedPath(routes.specialtiesBridge())).toBe(true);
-    expect(isAppOwnedPath(routes.profileBridge())).toBe(true);
+    expect(isAppOwnedPath(routes.specialties())).toBe(true);
+    expect(isAppOwnedPath(routes.specialistProfile())).toBe(true);
 
     expect(isAppOwnedPath(routes.subscriptionPay())).toBe(false);
     expect(isAppOwnedPath(routes.subscriptionPay('profesional'))).toBe(false);

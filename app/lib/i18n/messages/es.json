@@ -265,6 +265,7 @@
     "menu": {
       "label": "Tu cuenta",
       "specialistHome": "Mi panel",
+      "profile": "Mi perfil",
       "appointments": "Mis citas"
     },
     "inAppBrowser": {
@@ -352,23 +353,23 @@
   "continue": "Continuar",
   "finish": "Finalizar",
   "dateOfBirth": "Fecha de nacimiento",
+  "days": {
+    "MONDAY_SHORT": "Lun",
+    "TUESDAY_SHORT": "Mar",
+    "WEDNESDAY_SHORT": "Mié",
+    "THURSDAY_SHORT": "Jue",
+    "FRIDAY_SHORT": "Vie",
+    "SATURDAY_SHORT": "Sáb",
+    "SUNDAY_SHORT": "Dom"
+  },
   "phoneNumber": "Teléfono",
   "identityDocument": "Cédula de identidad",
+  "inactive": "Inactivo",
   "sex": "Sexo",
   "male": "Hombre",
   "female": "Mujer",
   "ofRedoctor": "de Redoctor",
   "bridges": {
-    "specialties": {
-      "metaTitle": "Tus especialidades",
-      "title": "Tus especialidades se abren en la app de Redoctor",
-      "description": "Abre la app de Redoctor para ver tus especialidades y cómo va su revisión. Si tu sesión está cerrada, te pedirá entrar y te llevará directo a ellas. Si aún no tienes la app, instálala y vuelve a tocar el botón del correo."
-    },
-    "profile": {
-      "metaTitle": "Tu perfil",
-      "title": "Tu perfil se abre en la app de Redoctor",
-      "description": "Abre la app de Redoctor para revisar tu perfil profesional. Si tu sesión está cerrada, te pedirá entrar y te llevará directo a tu perfil. Si aún no tienes la app, instálala y vuelve a tocar el botón del correo."
-    },
     "home": {
       "metaTitle": "Abrir Redoctor",
       "title": "Esto se abre en la app de Redoctor",
@@ -450,7 +451,8 @@
     "attentionOffices": "Consultorios de atención",
     "noAboutSpecialist": "Este especialista no cuenta ni con imágenes ni con una descripción de su experiencia.",
     "noReviewsYet": "Aún no hay reseñas disponibles",
-    "beFirstToReview": "¡Sé uno de los primeros pacientes en compartir su experiencia con {name}!"
+    "beFirstToReview": "¡Sé uno de los primeros pacientes en compartir su experiencia con {name}!",
+    "shareSpecialistTooltip": "Compartir perfil"
   },
   "rating": {
     "review": "reseña",
@@ -490,7 +492,37 @@
   },
   "specialistProfile": {
     "aboutSpecialist": "Sobre este especialista",
-    "noCertifications": "Aún no hay certificaciones para mostrar"
+    "noCertifications": "Aún no hay certificaciones para mostrar",
+    "addDescription": "Añade una breve descripción sobre quién eres y qué haces",
+    "offices": "Consultorios de atención",
+    "officesUsage": "Estás usando {active} de {max, plural, one {# consultorio} other {# consultorios}}",
+    "addOffice": "Añade un consultorio",
+    "pricesAndReasons": "Precios y motivos de consulta",
+    "addPricesAndReasons": "Añade los motivos y precios de tus citas",
+    "standardTariff": "Precio estándar",
+    "perReasonTariff": "Precio por motivo",
+    "reasonPriceMissing": "Sin precio",
+    "schedule": "Horarios",
+    "addSchedule": "Añade tus horarios de disponibilidad",
+    "scheduleRangeConnector": "a",
+    "perAppointment": "por cita",
+    "hour": "hora",
+    "hours": "horas",
+    "minuteShort": "min",
+    "addPhotos": "Añade una o varias fotos a tu galería",
+    "addExperience": "Añade con mayor detalle tu experiencia y práctica profesional",
+    "newUser": "Nuevo en Redoctor",
+    "noEducation": "Aún no hay educación para mostrar",
+    "noEducationDescription": "Completa tu registro y validación profesional en la app para fortalecer la confianza de tus pacientes.",
+    "specialtiesUnderReview": "Estamos verificando tus especialidades",
+    "specialtiesUnderReviewDescription": "Tu colegiatura está en revisión. Te avisaremos apenas terminemos para que tu perfil sea visible para los pacientes.",
+    "specialtiesUnderReviewBadge": "En verificación",
+    "moreSpecialtiesUnderReview": "Aún estamos verificando tus otras especialidades. Aparecerán aquí en cuanto las validemos.",
+    "specialtiesRejected": "No pudimos verificar tus especialidades",
+    "specialtiesRejectedDescription": "Revisa los datos de tu colegiatura y vuelve a enviarlos para que podamos validarte.",
+    "specialtiesRejectedBadge": "Verificación rechazada",
+    "reviewSpecialties": "Revisar especialidades",
+    "noCertificationsDescription": "Agrega tus certificaciones para fortalecer la confianza de tus pacientes"
   },
   "certificationTypes": {
     "diploma": "Diplomado",
@@ -504,6 +536,7 @@
   "readMore": "Leer más",
   "showLess": "Ver menos",
   "refresh": "Refrescar",
+  "rejectionReason": "MOTIVO",
   "billing": {
     "metaTitle": "Pagar",
     "missing": "---",
@@ -668,7 +701,8 @@
         "notIncluded": "No incluido"
       },
       "resumeTitle": "Cancelación pedida",
-      "resumePrompt": "Pediste cancelar tu plan. Si cambias de opinión, puedes reanudarlo antes de que termine."
+      "resumePrompt": "Pediste cancelar tu plan. Si cambias de opinión, puedes reanudarlo antes de que termine.",
+      "entryPoint": "Mi Suscripción"
     },
     "months": "{count, plural, one {1 mes} other {# meses}}",
     "coupon": {
@@ -1014,6 +1048,14 @@
         "success": "Cupón aplicado. Se descuenta desde tu próxima mensualidad.",
         "failed": "No pudimos aplicar el cupón. Inténtalo de nuevo."
       }
+    },
+    "officeLimit": {
+      "withPlan": {
+        "changeDescription": "Tu plan permite {count, plural, one {# consultorio activo} other {# consultorios activos}}. Cambia a un plan con más para atender en más sedes."
+      }
+    },
+    "officeLimitReached": {
+      "upgradeAction": "Mejorar plan"
     }
   },
   "retry": "Reintentar",
@@ -1186,6 +1228,106 @@
     "range": "Desde {min} hasta {max}",
     "rangeShort": "{min} – {max}"
   },
+  "profile": {
+    "title": "Mi perfil",
+    "metaTitle": "Mi perfil",
+    "description": "Así te ven tus pacientes en Redoctor.",
+    "preview": {
+      "button": "Vista previa"
+    },
+    "share": {
+      "copied": "Copiamos el enlace a tu perfil.",
+      "copyFailed": "No pudimos copiar el enlace a tu perfil."
+    },
+    "status": {
+      "inactive": "Perfil Inactivo",
+      "waitingAdminReview": "En revisión",
+      "active": "Perfil activo",
+      "actionNeeded": "Acción requerida"
+    },
+    "activation": {
+      "active": {
+        "title": "Tu perfil está activo",
+        "description": "Apareces en las búsquedas de pacientes y pueden agendar contigo."
+      },
+      "underReview": {
+        "title": "Estamos verificando tu perfil",
+        "description": "Estamos revisando tu especialidad y credenciales profesionales. Tarda de 3 a 4 días hábiles y te avisamos apenas terminemos."
+      },
+      "rejected": {
+        "title": "Revisa tus credenciales",
+        "description": "No pudimos verificar la especialidad que registraste. Revisa el motivo en tu perfil profesional y vuelve a intentarlo.",
+        "descriptionPlural": "No pudimos verificar las especialidades que registraste. Revisa los motivos en tu perfil profesional y vuelve a intentarlo."
+      },
+      "verifyingPayment": {
+        "title": "Estamos verificando tu pago",
+        "description": "Ya recibimos tu reporte de pago y lo estamos revisando. En cuanto lo aprobemos, tu perfil se publica: no hace falta que vuelvas a pagar."
+      },
+      "specialtiesRejected": {
+        "action": "Ver motivos"
+      },
+      "steps": {
+        "credentials": {
+          "title": "Registra tu especialidad",
+          "description": "Necesitamos tu especialidad y tu número de colegiatura para verificarte como profesional de la salud."
+        },
+        "office": {
+          "title": "Agrega tu consultorio",
+          "description": "Los pacientes te buscan por cercanía. Sin al menos un consultorio cargado no apareces en los resultados."
+        },
+        "activateOffice": {
+          "title": "Activa un consultorio",
+          "description": "Los pacientes solo ven los consultorios activos y ninguno de los tuyos lo está. En tu perfil, toca el consultorio y enciende «Consultorio activo»."
+        },
+        "schedules": {
+          "title": "Configura tus horarios",
+          "description": "Define en qué días y horas atiendes para que los pacientes puedan agendar contigo."
+        },
+        "pricing": {
+          "title": "Configura tus motivos y precios",
+          "description": "Los pacientes agendan un motivo de consulta con su precio. Sin al menos uno activo y con precio en un consultorio, no apareces en las búsquedas."
+        },
+        "subscription": {
+          "title": "Elige tu plan",
+          "description": "El último paso: activa una suscripción para publicar tu perfil y empezar a recibir pacientes.",
+          "action": "Ver planes"
+        }
+      }
+    },
+    "officePricesError": "No pudimos cargar los precios de {office}.",
+    "officeScheduleError": "No pudimos cargar los horarios de {office}.",
+    "editInApp": {
+      "title": "¿Quieres cambiar algo?",
+      "description": "Tu foto, tu descripción, tus consultorios, tus horarios y tus precios se editan desde la app de Redoctor."
+    },
+    "loadErrorTitle": "No pudimos cargar tu perfil",
+    "loadErrorDescription": "Revisa tu conexión e inténtalo de nuevo."
+  },
+  "mySpecialties": {
+    "title": "Mis especialidades",
+    "metaTitle": "Mis especialidades",
+    "description": "Aquí ves todas tus especialidades registradas, estén verificadas o no",
+    "licenseNumber": "Matrícula",
+    "collegeLabel": "Institución",
+    "subspecialtiesLabel": "Subespecialidades",
+    "noRejectionReason": "No se indicó un motivo. Escríbenos si necesitas ayuda para corregirla.",
+    "emptyTitle": "Aún no has registrado ninguna especialidad",
+    "emptyDescription": "Registra tu especialidad y tu colegiatura para que podamos verificarte y tu perfil sea visible para los pacientes.",
+    "status": {
+      "verified": "Verificada",
+      "pending": "En revisión",
+      "rejected": "Rechazada"
+    },
+    "supportHint": "¿No estás conforme con nuestra decisión? Escríbenos y haremos todo lo posible por ayudarte.",
+    "supportAction": "Contactar a soporte",
+    "whatsappMessage": "¡Hola, equipo de Redoctor! 👋\n\nQuisiera revisar el rechazo de {count, plural, one {una de mis especialidades} other {algunas de mis especialidades}} para poder corregir la información.\n\nQuedo pendiente de sus comentarios para enviar los documentos actualizados. 💙",
+    "editInApp": {
+      "title": "¿Quieres cambiar algo?",
+      "description": "Registrar, corregir o eliminar una especialidad se hace desde la app de Redoctor."
+    },
+    "loadErrorTitle": "No pudimos cargar tus especialidades",
+    "loadErrorDescription": "Revisa tu conexión e inténtalo de nuevo."
+  },
   "price": "Precio",
   "cancel": "Cancelar",
   "back": "Volver",
@@ -1193,7 +1335,9 @@
   "pickADate": "Selecciona una fecha",
   "morning": "Mañana",
   "afternoon": "Tarde",
+  "active": "Activo",
   "evening": "Noche",
+  "experience": "Experiencia",
   "no_slots_available": "No hay cupos disponibles",
   "panel": {
     "nav": {
@@ -1229,16 +1373,16 @@
         "description": "Cómo te va en Redoctor: tus citas, tus ingresos estimados y tus reseñas.",
         "action": "Ver mis estadísticas"
       },
-      "inApp": {
-        "title": "En la app",
-        "description": "Agendar a tus pacientes y editar tus especialidades, tu perfil, tus consultorios y tus horarios se hace desde la app de Redoctor.",
-        "specialties": {
-          "title": "Especialidades",
-          "description": "Las especialidades que atiendes."
-        },
-        "profile": {
-          "title": "Perfil",
+      "profile": {
+        "title": "Tu perfil",
+        "description": "Lo que ven tus pacientes y cómo va la revisión de tus especialidades. Agendar a tus pacientes y editar tu perfil, tus consultorios y tus horarios se hace desde la app.",
+        "myProfile": {
+          "title": "Mi perfil",
           "description": "Lo que ven tus pacientes."
+        },
+        "specialties": {
+          "title": "Mis especialidades",
+          "description": "Cada una y cómo va su revisión."
         }
       }
     },

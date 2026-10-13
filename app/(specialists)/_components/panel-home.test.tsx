@@ -8,6 +8,7 @@ import { buildInvoice, buildSubscription } from '@/tests/factories/billing';
 import { freezeClock, renderPanel } from '@/tests/panel';
 
 import { PanelGreeting } from './panel-greeting';
+import { PanelProfileLinks } from './panel-links';
 import { PanelPlanCard } from './panel-plan-card';
 import { PanelTodayCard } from './panel-today-card';
 import {
@@ -91,5 +92,20 @@ describe('the panel’s home', () => {
       'href',
       '/panel/agenda',
     );
+  });
+
+  it('leads to the profile and to each specialty’s review', () => {
+    renderPanel(<PanelProfileLinks />, pageNamespaces.panelHome);
+
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Tu perfil' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Mi perfil/ })).toHaveAttribute(
+      'href',
+      '/panel/profile',
+    );
+    expect(
+      screen.getByRole('link', { name: /Mis especialidades/ }),
+    ).toHaveAttribute('href', '/panel/specialties');
   });
 });

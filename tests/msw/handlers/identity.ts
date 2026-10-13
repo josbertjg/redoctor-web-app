@@ -30,6 +30,13 @@ export const badRequest = () =>
     status: 400,
   });
 
+/** `/identity/me` answering for one account (`buildSpecialistMeResponse()`…). */
+export const meHandler = (me: ReturnType<typeof buildMeResponse>) =>
+  http.get(apiUrl('/identity/me'), ({ request }) => {
+    if (isStranger(request)) return unauthorized();
+    return HttpResponse.json(me);
+  });
+
 export const identityHandlers = [
   http.get(apiUrl('/identity/me'), ({ request }) => {
     if (isStranger(request)) return unauthorized();

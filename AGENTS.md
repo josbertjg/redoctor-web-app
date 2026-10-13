@@ -80,9 +80,9 @@ transactional emails the API sends.
 | M8 Public profile `/s/{id}` | Read-only: photo, verified specialties, offices with directions, service prices, rating and reviews, "Pronto podrás agendar aquí" |
 | M9 Landing | Designed by the designer; copy in the doc «Landing de Redoctor» |
 | M10 Legal and account | Privacy, terms, account deletion (texts from the lawyer) |
-| M11 Bridges | `/panel/specialties`, `/panel/profile`, `/home/*` (pages that only open the app) and `/daily-summary/unsubscribe` (daily-summary email opt-out); `/panel/subscription` and `/panel/agenda` were bridges until M14 made them pages |
+| M11 Bridges | `/home/*` (pages that only open the app) and `/daily-summary/unsubscribe` (daily-summary email opt-out); `/panel/subscription`, `/panel/agenda`, `/panel/specialties` and `/panel/profile` were bridges until M14 made them pages |
 | M13 Specialist payment | `/panel/subscription` («Mi suscripción»: the plan, its state and its notice) and `/pay` (the payment, out of the paths the app opens, since no app may charge; the owner's split of 2026-10-13): choose a plan with a coupon, Pago Móvil and transfer data in Bs from the API, report the payment, see it in review; changing plan — from «Mi suscripción» (`?view=plans`) or from a missing feature's invitation (`?plan=`) — and undoing a scheduled change (2026-10-13); and the rest of the app's «Mi suscripción» the same day (§13, Decided): cancelling and resuming, dropping an unpaid subscription, a coupon on the plan in force, the billing data, the receipts (`/panel/subscription/invoices[/{id}]`, each one payable from its page), the balance (`/panel/subscription/balance`) and «Mis cupones» (`/panel/subscription/coupons`) |
-| M14 Specialist panel | `/panel` and its sections (2026-10-13): the home (the plan and its notice, today's patients, the statistics, what stays in the app), the day's agenda `/panel/agenda[/{date}]` and the history `/panel/appointments` (read only, each appointment opening `/a/{id}`), the statistics `/panel/reports` (the app's summary and four reports, PDF and CSV when the plan allows), the subscription (M13); a specialist stays in it until signing out |
+| M14 Specialist panel | `/panel` and its sections (2026-10-13): the home (the plan and its notice, today's patients, the statistics, what stays in the app), the day's agenda `/panel/agenda[/{date}]` and the history `/panel/appointments` (read only, each appointment opening `/a/{id}`), the statistics `/panel/reports` (the app's summary and four reports, PDF and CSV when the plan allows), «Mi perfil» `/panel/profile` (whether patients find the profile and, if not, why; the profile as the app shows it to its owner) and «Mis especialidades» `/panel/specialties` (each specialty and its review), both read only, the subscription (M13); a specialist stays in it until signing out |
 | M12 Release | PostHog funnel by origin, tests on real phones from WhatsApp and Gmail, domain cutover |
 
 **Explicitly out of the pilot:** searching and booking from the web,
@@ -109,7 +109,7 @@ specialist's panel (it reads them; the app changes them). They come after.
   2026-10-13).** The web may sell — charging on the web is allowed and
   wanted —; neither app may (the stores forbid it, on Android as on iOS).
   So wherever the web meets a limit of the plan (downloading the
-  statistics today; the offices when the profile's mirror comes), it names
+  statistics; the offices at the plan's cap on «Mi perfil»), it names
   the plan that includes it, with its price, and leads to it: the change
   to it, the plans with it chosen, or the receipt owed first. Never
   support instead.
@@ -227,7 +227,8 @@ app/                                  # The application: routes, UI and logic
     panel/agenda/page.tsx · [date]/page.tsx   # /panel/agenda (today), /panel/agenda/{YYYY-MM-DD} (email 10); deeper paths match nothing: 404
     panel/appointments/page.tsx       #   the history, its filters in the address
     panel/reports/page.tsx            #   the statistics
-    _components/                      #   profile pieces; panel-*, agenda-*, appointments-history, booking-note; reports/ (the statistics' views, charts, filters, export and the plan that downloads)
+    panel/profile/page.tsx · specialties/page.tsx   # «Mi perfil» and «Mis especialidades», read only (emails 18 and 16)
+    _components/                      #   profile pieces; panel-*, agenda-*, appointments-history, booking-note, edit-in-app-card, plan-offer-card; reports/ (the statistics' views, charts, filters, export and the plan that downloads); my-profile/ (the view, its state, identity, offices, prices, schedules and training blocks); my-specialties/ (the view, the specialty card, support)
   (account)/                          # module: account and legal (M10)
     account/layout.tsx · page.tsx     #   /account — layout = <RequireSession>
     privacy/page.tsx · terms/page.tsx · delete-account/page.tsx
@@ -237,16 +238,14 @@ app/                                  # The application: routes, UI and logic
     panel/subscription/invoices/page.tsx · [invoiceId]/page.tsx   # the receipts (`?status=`) and a receipt
     panel/subscription/balance/page.tsx · coupons/page.tsx        # the balance; «Mis cupones»
     pay/page.tsx                      #   /pay[?plan=|?view=plans|?invoice=] — the payment, the plans and the change of plan; out of `/panel/`, listed by no app (§6)
-    _components/                      #   subscription-flow, subscription-view (+ entitlements-card, subscription-sections, subscription-action-sheet, apply-coupon-sheet, billing-account-sheet, collapse), subscription-load-error, invoices-flow, invoice-flow, invoice-card, balance-flow, balance-pieces, coupons-flow, coupon-pieces, paged-list-foot, list-notice, section-header, back-link, pay-flow, plans-view, plan-benefits, change-plan-view, pay-view, method-step, payment-step, payment-totals, coupon-sheet, bank-picker, different-amount-sheet, payment-done, copy-button, detail-list, pay-skeleton
+    _components/                      #   subscription-flow, subscription-view (+ entitlements-card, subscription-sections, subscription-action-sheet, apply-coupon-sheet, billing-account-sheet, collapse), subscription-load-error, invoices-flow, invoice-flow, invoice-card, balance-flow, balance-pieces, coupons-flow, coupon-pieces, paged-list-foot, list-notice, section-header, pay-flow, plans-view, plan-benefits, change-plan-view, pay-view, method-step, payment-step, payment-totals, coupon-sheet, bank-picker, different-amount-sheet, payment-done, copy-button, detail-list, pay-skeleton
   (bridges)/                          # module: pages that only open the app, noindex (M11)
     layout.tsx
-    panel/specialties/ · panel/profile/
-                                      #   still bridges; the rest of /panel/ is the panel's own (M13, M14)
-    home/[[...rest]]/
+    home/[[...rest]]/                 #   the app's internal paths; every page under /panel/ is the panel's own (M13, M14)
     daily-summary/unsubscribe/page.tsx   # daily-summary opt-out — a Server Action
   api/                                # route handlers only when the browser must not call the API (none yet)
   ui/                                 # ALL shared UI
-    button.tsx · text-field.tsx · select-field.tsx · text-area.tsx · checkbox.tsx · choice-cards.tsx · stars-input.tsx · tabs.tsx · filter-chips.tsx · field-error.tsx · sheet.tsx · skeleton.tsx · toast.tsx · empty-state.tsx · status-card.tsx · link-card.tsx · avatar.tsx …
+    button.tsx · back-link.tsx · text-field.tsx · select-field.tsx · text-area.tsx · checkbox.tsx · choice-cards.tsx · stars-input.tsx · tabs.tsx · filter-chips.tsx · field-error.tsx · sheet.tsx · skeleton.tsx · toast.tsx · empty-state.tsx · status-card.tsx · link-card.tsx · avatar.tsx …
     messages-scope.tsx                #   a page's own client messages (§9)
     layout/                           #   site-header, page-frame (a page's column and its main, in the guarded layouts), panel-frame and panel-nav (the specialist's panel around each section), bottom-actions
     auth/                             #   session-provider, session-button, require-session, sign-in-buttons, sign-in-legal-note, account-error-state, in-app-browser-help, provider-logos
@@ -270,7 +269,7 @@ app/                                  # The application: routes, UI and logic
     analytics/ · i18n/
     observability/                    #   report.ts (the seam), scrub.ts (what never leaves), sentry.ts
     security/                         #   csp.ts (the nonce policy proxy.ts sends)
-    env.ts · public-env.ts · routes.ts · deep-links.ts · site.ts · support.ts · utils.ts · calendar.ts (.ics, Google Calendar)
+    env.ts · public-env.ts · routes.ts · deep-links.ts · site.ts · support.ts · clipboard.ts · utils.ts · calendar.ts (.ics, Google Calendar)
   hooks/                              # shared client hooks: use-session, use-sign-in-tracking, use-focus-heading, use-infinite-scroll, use-link-origin, use-device, use-in-app-browser
 tests/                                # setup.ts · msw/ (server + handlers per domain) · factories/ · e2e/ (Playwright)
 public/                               # .well-known/ (§6) · brand/ (logo.svg, logo-white.svg, icons) · illustrations/ · animations/ (the app's splash_logo.riv)
@@ -469,8 +468,8 @@ docs point here instead of copying it.
 | `/panel/agenda`, `/panel/agenda/{YYYY-MM-DD}` | specialist | The day's agenda (M14), read only; a malformed date is today, as in the app | the daily summary, email 10 (REDOC-359) |
 | `/panel/appointments` | specialist | The appointments history (M14); the app opens its «Citas» (since its v0.169.1; an older build, its home) | the panel |
 | `/panel/reports` | specialist | The statistics (M14); the app opens its «Estadísticas» (since its v0.169.1; an older build, its home) | the panel |
-| `/panel/specialties` | specialist | Bridge (a mirror is planned) | email 16 (REDOC-360) |
-| `/panel/profile` | specialist | Bridge (a mirror is planned) | email 18 (REDOC-360) |
+| `/panel/specialties` | specialist | «Mis especialidades» (M14), read only: each specialty and where its review stands | email 16 (REDOC-360) |
+| `/panel/profile` | specialist | «Mi perfil» (M14), read only: whether patients find the profile and, if not, why; the profile as the app shows it to its owner | email 18 (REDOC-360) |
 | `/home/*` | app internals | Bridge to the home / store; not a web route | the app's own paths |
 
 The specialist's pages live under `/panel/`, but the app opens only the
@@ -1778,6 +1777,59 @@ written out in full, or Next.js does not inline it).
   - **Nothing changed in Jira, the API or the emails:** they always said
     `https://redoctorapp.com/pay`, and `webPaymentUrl` stays empty until
     CORS (REDOC-362) is in production.
+- **«Mi perfil» and «Mis especialidades» on the web (2026-10-13, late
+  evening; the owner's «adelante con las versiones web de mis
+  especialidades y de mi perfil», editing staying in the app):** the last
+  two bridges under `/panel/` became the panel's pages, read only, as the
+  app shows them to their owner, its `profile.*`, `specialistProfile.*` and
+  `mySpecialties.*` words:
+  - **«Mi perfil» (`/panel/profile`, email 18 «Perfil no visible»):**
+    first, whether patients find the profile and, if not, the first thing
+    missing (`/me`'s `visibilityStatus`, read again on arrival), in the
+    words of the app's «Estado de mi perfil» — in review, rejected («Ver
+    motivos»), the step still to take («Activa un consultorio» when every
+    office is off), the plan («Ver planes»), a payment in review («Mi
+    Suscripción»); what only the app does opens it. Then the app's
+    «Perfil» tab: the photo and the professional name with the verified
+    mark and the specialty badges (and «En verificación», «Verificación
+    rechazada» or «Nuevo en Redoctor»); the description; the offices,
+    active or not, with «Estás usando N de M consultorios» and, at the
+    plan's cap, the plan with more offices, its price and «Mejorar plan»
+    (§1, the owner's rule); the prices and reasons per office; the hours
+    per office («Lun a Jue», «30 min por cita»); the gallery; the
+    experience; «Educación» and «Certificaciones». An empty section says
+    what is missing in the app's words («Añade un consultorio»). «Vista
+    previa» opens `/s/{id}`, which tells its owner «Así ven tu perfil tus
+    pacientes»; «Compartir perfil» shares the bare link, or copies it.
+  - **«Mis especialidades» (`/panel/specialties`, email 16):** every
+    specialty, the rejected first, then those in review, then the
+    verified, each with its branch of the catalog, its chip, institution,
+    license and subspecialties and, when rejected, the reason (or the
+    app's line when none was given); after a rejection, support by
+    WhatsApp.
+  - Both close on what stays in the app (registering, correcting, editing:
+    «Abrir en la app», or the note to open it from the phone). The
+    panel's home leads to them («Tu perfil»), and so does the account
+    menu («Mi perfil», as the app's avatar sheet); neither is a section of
+    the panel's navigation.
+  - **Data:** `GET /specialists/profile` (a 404 is a profile not made
+    yet: every section to fill), `GET /specialists/offices`, and per office
+    `…/pricing-config` and `…/schedule` (a 404 is nothing set yet).
+  - **Where the web differs from the app, on purpose and to confirm:**
+    read only; the profile's state as a card at the top where the app has
+    a badge in its bar and a sheet; the app's «Aún no hay reseñas
+    disponibles», which it shows under the name whatever the reviews, is
+    left out («Vista previa» shows the real rating); hours as «8:00 a. m.»,
+    as every hour on the web; a reason without a price reads «Sin precio»
+    where the app shows «—»; «1 de 1 consultorio» and «1 consultorio
+    activo» in the singular; the support message names no one — no
+    specialist, specialty or reason, as the app's does — since wa.me is
+    outside the chat's encryption; the offices' address in white on the
+    active card, where the app's green-200 on green-500 measures 1.8:1.
+    The specialty badges and the active offices keep the app's green-500
+    with white words (2.8:1, the owner's brand rule), while `/s/{id}`'s
+    specialty pill is green-700 since M8: one of the two should change,
+    his call.
 
 ### Improvements noted (not scheduled)
 

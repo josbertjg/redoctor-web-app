@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { priceSchema } from './price';
 import { isDocumentType, type DocumentType } from '../format/identity-document';
 
 /*
@@ -31,17 +32,6 @@ const slotSchema = z.object({
   /** The instants it starts and ends, for comparisons with now and calendars. */
   startsAtUtc: z.string(),
   endsAtUtc: z.string().nullish(),
-});
-
-export const priceTypes = ['FIXED', 'RANGE', 'FROM'] as const;
-
-const priceSchema = z.object({
-  // A type this version does not know reads as no price, not as a broken answer.
-  type: z.enum(priceTypes).nullish().catch(null),
-  currency: z.string().nullish(),
-  amount: z.number().nullish(),
-  minAmount: z.number().nullish(),
-  maxAmount: z.number().nullish(),
 });
 
 const statusSchema = z.enum(appointmentStatuses);

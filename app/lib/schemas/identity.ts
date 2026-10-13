@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import {
   toFacetStatus,
+  toProfileVisibility,
   toRegistrationStatus,
   type Account,
   type AccountFacet,
@@ -47,6 +48,8 @@ export const meResponseSchema = z.object({
       specialist: facetSchema.nullish(),
     })
     .nullish(),
+  /** Free text in the contract too; the catalog lives in `toProfileVisibility`. */
+  visibilityStatus: z.string().nullish(),
 });
 
 export type MeResponse = z.infer<typeof meResponseSchema>;
@@ -158,6 +161,7 @@ export function toAccount(me: MeResponse): Account {
     registration,
     patient: facet('patient'),
     specialist: facet('specialist'),
+    visibility: toProfileVisibility(me.visibilityStatus),
   };
 }
 

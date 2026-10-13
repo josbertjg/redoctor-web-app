@@ -355,3 +355,19 @@ describe('sign-up bodies', () => {
     ).toBe(false);
   });
 });
+
+describe('the profile’s place in the search', () => {
+  const visibilityOf = (visibilityStatus?: string) =>
+    toAccount(meResponseSchema.parse({ ...base, visibilityStatus })).visibility;
+
+  it('reads where the specialist’s profile stands, as the API checks it', () => {
+    expect(visibilityOf('VISIBLE')).toBe('visible');
+    expect(visibilityOf('NO_MOTIVES_AND_PRICES')).toBe('noMotivesAndPrices');
+    expect(visibilityOf('specialties_rejected')).toBe('specialtiesRejected');
+  });
+
+  it('has none without the value, or with one this version does not know', () => {
+    expect(visibilityOf()).toBeNull();
+    expect(visibilityOf('HIDDEN_BY_ADMIN')).toBeNull();
+  });
+});

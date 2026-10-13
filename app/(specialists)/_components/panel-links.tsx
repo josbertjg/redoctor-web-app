@@ -26,13 +26,13 @@ export function PanelStatisticsCard({ className }: { className?: string }) {
 }
 
 /*
- * What only the app does, said plainly: booking patients and editing the
- * specialties, the profile, the offices and the hours. Each card leads to
- * its page under `/panel/`, which opens the app on a phone where it is
- * installed.
+ * The specialist's profile, one card away from the home: what patients see
+ * («Mi perfil») and each specialty's review («Mis especialidades»), with
+ * what stays in the app said plainly — booking, and editing the profile,
+ * the offices and the hours. On a phone with the app, both pages open it.
  */
-export function PanelInApp({ className }: { className?: string }) {
-  const t = useTranslations('panel.home.inApp');
+export function PanelProfileLinks({ className }: { className?: string }) {
+  const t = useTranslations('panel.home.profile');
   const headingId = useId();
 
   return (
@@ -49,18 +49,18 @@ export function PanelInApp({ className }: { className?: string }) {
       <ul className="grid gap-3 sm:grid-cols-2">
         <li>
           <LinkCard
-            href={routes.specialtiesBridge()}
-            icon={Stethoscope}
-            title={t('specialties.title')}
-            description={t('specialties.description')}
+            href={routes.specialistProfile()}
+            icon={IdCard}
+            title={t('myProfile.title')}
+            description={t('myProfile.description')}
           />
         </li>
         <li>
           <LinkCard
-            href={routes.profileBridge()}
-            icon={IdCard}
-            title={t('profile.title')}
-            description={t('profile.description')}
+            href={routes.specialties()}
+            icon={Stethoscope}
+            title={t('specialties.title')}
+            description={t('specialties.description')}
           />
         </li>
       </ul>

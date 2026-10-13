@@ -63,6 +63,10 @@ export const routes = {
   agenda,
   specialistAppointments: () => '/panel/appointments' as const,
   reports: () => '/panel/reports' as const,
+  /** «Mi perfil»: what patients see of the specialist, read only (edited in the app). */
+  specialistProfile: () => '/panel/profile' as const,
+  /** «Mis especialidades»: each one and where its review stands. */
+  specialties: () => '/panel/specialties' as const,
   subscription: () => '/panel/subscription' as const,
   /** The receipts, the newest first; `status` keeps one kind (`open`, `paid`, `voided`, `uncollectible`). */
   subscriptionInvoices: (status?: string) =>
@@ -97,10 +101,7 @@ export const routes = {
   terms: () => '/terms' as const,
   deleteAccount: () => '/delete-account' as const,
 
-  /* The specialist's pages that still only open the app (M11). */
-  specialtiesBridge: () => '/panel/specialties' as const,
-  profileBridge: () => '/panel/profile' as const,
-  /** The app's internal paths (`/home/*`): never a web page of their own. */
+  /** The app's internal paths (`/home/*`): never a web page of their own (M11). */
   homeBridge: (rest: readonly string[] = []) =>
     rest.length === 0
       ? ('/home' as const)

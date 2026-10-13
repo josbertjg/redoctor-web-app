@@ -14,6 +14,8 @@ const sections = [
   '/panel/agenda/2026-10-14',
   '/panel/appointments',
   '/panel/reports',
+  '/panel/profile',
+  '/panel/specialties',
   '/panel/subscription',
   '/panel/subscription/invoices',
   '/panel/subscription/invoices/2a2a2a2a-2a2a-4a2a-8a2a-2a2a2a2a2a2a',

@@ -113,6 +113,37 @@ export const pageNamespaces = {
   // The statistics (M14): the filters, the four reports, the downloads
   // and, when the plan lacks them, the plan that has them.
   reports: ['apiErrors', 'reports', 'panel', 'appBridge'],
+  // «Mi perfil» (M14): the profile's state, its sections as the app shows
+  // them, the plan with more offices, sharing and «Abrir en la app».
+  myProfile: [
+    'apiErrors',
+    'panel',
+    'profile',
+    'specialistProfile',
+    'mySpecialties',
+    'specialists',
+    'search',
+    'billing',
+    'priceFormat',
+    'days',
+    'active',
+    'inactive',
+    'description',
+    'experience',
+    'education',
+    'certifications',
+    'certificationTypes',
+    'readMore',
+    'showLess',
+  ],
+  // «Mis especialidades» (M14): each specialty and its review, and support.
+  mySpecialties: [
+    'apiErrors',
+    'panel',
+    'profile',
+    'mySpecialties',
+    'rejectionReason',
+  ],
   // The specialist's subscription (M13): where the plan stands, its notice,
   // what can be done with it, its receipts, its balance and its coupons;
   // «Datos de cobro» leads to support (`appAccess`).
