@@ -130,6 +130,15 @@ export const appointmentListResponseSchema = z.object({
   appointments: z.array(appointmentSchema),
 });
 
+/**
+ * `GET /scheduling/specialist/appointments`: one page of the specialist's
+ * agenda (M14), the same appointments with the count of all that match.
+ */
+export const specialistAppointmentPageSchema = z.object({
+  appointments: z.array(appointmentSchema),
+  total: z.number().int().nonnegative().catch(0),
+});
+
 export type AppointmentResponse = z.infer<typeof appointmentSchema>;
 
 /** What a page shows of an appointment: who, when, where, how much, why. */

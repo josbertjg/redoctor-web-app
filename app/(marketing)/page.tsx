@@ -3,6 +3,10 @@ import { preload } from 'react-dom';
 import type { Metadata } from 'next';
 
 import { cookies, headers } from 'next/headers';
+import { redirect } from 'next/navigation';
+
+import { panelHintCookie } from '@/app/lib/auth/session-hint';
+import { routes } from '@/app/lib/routes';
 
 import { MotionProvider } from '@/app/ui/motion/provider';
 
@@ -13,6 +17,7 @@ import { LandingFooter } from './_components/landing-footer';
 import { LandingHeader } from './_components/landing-header';
 import { Pricing } from './_components/pricing';
 import { Roadmap } from './_components/roadmap';
+import { SpecialistRedirect } from './_components/specialist-redirect';
 import { splashCookie } from './_components/splash/splash-cookie';
 import { SplashVeil } from './_components/splash/splash-veil';
 import { Summary } from './_components/summary';
@@ -30,9 +35,16 @@ export const metadata: Metadata = {
  *
  * A session's first visit opens with the splash veil (the app's logo); the
  * cookie it leaves says the next visits do not. The hero's words wait for it.
+ *
+ * A specialist never sees it (owner, 2026-10-13): its search and plans read
+ * as an offer to book, which they cannot. Their browser carries the panel
+ * hint, so the server sends them to `/panel` before painting anything.
  */
 export default async function HomePage() {
   const [cookieStore, headerList] = await Promise.all([cookies(), headers()]);
+  if (cookieStore.get(panelHintCookie)?.value === '1') {
+    redirect(routes.specialistHome());
+  }
   // A visit that asks to save data does without the splash and its ~370 KB
   // (the veil checks the connection again once it runs).
   const savesData = headerList.get('save-data') === 'on';
@@ -63,6 +75,7 @@ export default async function HomePage() {
           {'[data-entrance]{opacity:1!important;transform:none!important}'}
         </style>
       </noscript>
+      <SpecialistRedirect />
       {showSplash && <SplashVeil />}
       {/* The page clips the background shapes at its own edges (`clip` keeps
           the header sticky); the sections never do, so a shape can run from

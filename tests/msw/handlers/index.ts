@@ -3,6 +3,7 @@ import { billingHandlers } from './billing';
 import { identityHandlers } from './identity';
 import { invitationsHandlers } from './invitations';
 import { notificationsHandlers } from './notifications';
+import { panelHandlers } from './panel';
 import { reviewsHandlers } from './reviews';
 import { specialistsHandlers } from './specialists';
 import { specialtiesHandlers } from './specialties';
@@ -22,4 +23,5 @@ export const handlers: HttpHandler[] = [
   ...invitationsHandlers,
   ...appointmentsHandlers,
   ...billingHandlers,
+  ...panelHandlers,
 ];

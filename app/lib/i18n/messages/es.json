@@ -264,7 +264,7 @@
     "termsOfUseAndPrivacy": "Términos de uso y políticas de privacidad",
     "menu": {
       "label": "Tu cuenta",
-      "specialistHome": "Mis herramientas",
+      "specialistHome": "Mi panel",
       "appointments": "Mis citas"
     },
     "inAppBrowser": {
@@ -287,7 +287,7 @@
       "patient": {
         "title": "Esta página es para pacientes",
         "description": "Tu cuenta es de especialista. Tus herramientas están en tu página.",
-        "action": "Ir a mis herramientas"
+        "action": "Ir a mi panel"
       }
     },
     "sessionExpired": "Tu sesión ha caducado, vuelve a iniciar sesión.",
@@ -359,16 +359,6 @@
   "female": "Mujer",
   "ofRedoctor": "de Redoctor",
   "bridges": {
-    "subscription": {
-      "metaTitle": "Tu suscripción",
-      "title": "Tu suscripción se abre en la app de Redoctor",
-      "description": "Abre la app de Redoctor para ver tu plan y tus pagos. Si tu sesión está cerrada, te pedirá entrar y te llevará directo a tu suscripción. Si aún no tienes la app, instálala y vuelve a tocar el botón del correo."
-    },
-    "agenda": {
-      "metaTitle": "Tu agenda",
-      "title": "Tu agenda se abre en la app de Redoctor",
-      "description": "Abre la app de Redoctor para ver tus citas del día. Si tu sesión está cerrada, te pedirá entrar y te llevará directo a tu agenda. Si aún no tienes la app, instálala y vuelve a tocar el botón del correo."
-    },
     "specialties": {
       "metaTitle": "Tus especialidades",
       "title": "Tus especialidades se abren en la app de Redoctor",
@@ -449,7 +439,8 @@
       "metaTitle": "Perfil no disponible",
       "title": "Este perfil no está disponible",
       "description": "Puede que el enlace esté incompleto o que el perfil ya no esté publicado. Pídele a tu especialista que te lo envíe de nuevo."
-    }
+    },
+    "ownProfileNote": "Así ven tu perfil tus pacientes."
   },
   "search": {
     "verifiedSpecialist": "Especialista verificado",
@@ -549,7 +540,7 @@
       "forbidden": {
         "title": "Esta página es para especialistas",
         "description": "Tu cuenta no tiene un perfil de especialista. Tus herramientas están en la app.",
-        "action": "Ir a mis herramientas"
+        "action": "Ir a mi panel"
       },
       "rows": {
         "title": "Tu periodo",
@@ -797,6 +788,13 @@
       "nothingTitle": "No tienes pagos pendientes",
       "nothingDescription": "No tienes recibos por pagar.",
       "nothingAction": "Volver"
+    },
+    "payPage": {
+      "upToDate": {
+        "title": "Tu plan está al día",
+        "description": "No tienes pagos pendientes. Cuando tengas uno, lo pagarás aquí.",
+        "action": "Ver mi suscripción"
+      }
     }
   },
   "retry": "Reintentar",
@@ -900,7 +898,7 @@
       "signIn": "Entra para ver tu cita",
       "signInDescription": "Tu cita está guardada en tu cuenta de Redoctor: entra con la misma cuenta de Google o Apple.",
       "forSpecialists": "Gestiona esta cita desde la app",
-      "forSpecialistsDescription": "Confirmar, reprogramar o cerrar una cita se hace desde la app de Redoctor.",
+      "forSpecialistsDescription": "Reprogramarla, cancelarla, cerrarla o recordársela a tu paciente se hace desde la app de Redoctor.",
       "addToCalendar": "Agregar al calendario",
       "googleCalendar": "Google Calendar",
       "otherCalendar": "Apple, Outlook u otro (.ics)",
@@ -909,7 +907,8 @@
       "metaTitle": "Tu cita en Redoctor",
       "metaDescription": "Mira los detalles de tu cita y confírmala en Redoctor.",
       "cancelledAt": "Fecha de cancelación",
-      "seeMine": "Ver mis citas"
+      "seeMine": "Ver mis citas",
+      "backToAgenda": "Volver a mi agenda"
     },
     "list": {
       "metaTitle": "Mis citas",
@@ -940,6 +939,27 @@
       "patient": "el paciente",
       "specialist": "el especialista",
       "system": "el sistema"
+    },
+    "mostRecent": "Más recientes",
+    "today": "Hoy",
+    "noAppointmentsForDay": "No tienes citas para este día",
+    "noAppointmentsFound": "No se encontraron citas",
+    "hub": {
+      "title": "Mis citas",
+      "doneForToday": "¡Terminaste por hoy!",
+      "attended": "{count, plural, one {1 atendida} other {# atendidas}}",
+      "noShows": "{count, plural, one {1 no asistió} other {# no asistieron}}",
+      "cancelled": "{count, plural, one {1 cancelada} other {# canceladas}}",
+      "loadError": "No pudimos cargar tus citas"
+    },
+    "search": {
+      "hint": "Nombre, cédula, teléfono o correo",
+      "clear": "Limpiar búsqueda"
+    },
+    "filters": {
+      "all": "Todas",
+      "allOffices": "Todos los consultorios",
+      "clearAll": "Quitar"
     }
   },
   "priceFormat": {
@@ -954,5 +974,288 @@
   "morning": "Mañana",
   "afternoon": "Tarde",
   "evening": "Noche",
-  "no_slots_available": "No hay cupos disponibles"
+  "no_slots_available": "No hay cupos disponibles",
+  "panel": {
+    "nav": {
+      "label": "Tu panel",
+      "home": "Inicio",
+      "appointments": "Citas",
+      "reports": "Estadísticas",
+      "subscription": "Suscripción"
+    },
+    "home": {
+      "metaTitle": "Tu panel",
+      "greeting": "Hola, {name}",
+      "greetingNoName": "Hola",
+      "description": "Tu agenda, tus estadísticas y tu suscripción, de un vistazo.",
+      "today": {
+        "title": "Hoy",
+        "patients": "{count, plural, =0 {Sin pacientes hoy} one {1 paciente hoy} other {# pacientes hoy}}",
+        "next": "Tu próxima cita",
+        "noneLeft": "Ya no te quedan citas por atender hoy.",
+        "seeAgenda": "Ver mi agenda",
+        "loadError": "No pudimos cargar tus citas de hoy."
+      },
+      "plan": {
+        "title": "Tu plan",
+        "see": "Ver mi suscripción",
+        "noPlanTitle": "¡Llega a más pacientes desde hoy!",
+        "noPlanDescription": "Elige un plan, haz visible tu perfil y conecta con nuevos pacientes.",
+        "seePlans": "Ver planes",
+        "loadError": "No pudimos cargar tu suscripción."
+      },
+      "statistics": {
+        "title": "Estadísticas",
+        "description": "Cómo te va en Redoctor: tus citas, tus ingresos estimados y tus reseñas.",
+        "action": "Ver mis estadísticas"
+      },
+      "inApp": {
+        "title": "En la app",
+        "description": "Agendar a tus pacientes y editar tus especialidades, tu perfil, tus consultorios y tus horarios se hace desde la app de Redoctor.",
+        "specialties": {
+          "title": "Especialidades",
+          "description": "Las especialidades que atiendes."
+        },
+        "profile": {
+          "title": "Perfil",
+          "description": "Lo que ven tus pacientes."
+        }
+      }
+    },
+    "agenda": {
+      "metaTitle": "Mi agenda",
+      "title": "Mi agenda",
+      "tabsLabel": "Tus citas",
+      "day": "Agenda del día",
+      "history": "Historial",
+      "previousDay": "Día anterior",
+      "nextDay": "Día siguiente",
+      "backToToday": "Volver a hoy",
+      "count": "{count, plural, one {1 cita} other {# citas}}",
+      "emptyDescription": "Las citas que agendes desde la app aparecerán aquí.",
+      "loadErrorDescription": "Revisa tu conexión e inténtalo de nuevo."
+    },
+    "history": {
+      "metaTitle": "Historial de citas",
+      "title": "Historial de citas",
+      "filtersLabel": "Filtrar las citas",
+      "searchLabel": "Buscar",
+      "statusLabel": "Estado",
+      "from": "Desde",
+      "to": "Hasta",
+      "office": "Consultorio",
+      "count": "{count, plural, one {1 cita} other {# citas}}",
+      "showMore": "Ver más",
+      "empty": "Aún no tienes citas",
+      "emptyDescription": "Las citas que agendes desde la app aparecerán aquí.",
+      "noResultsDescription": "Prueba con otros filtros o quítalos.",
+      "rangeOrder": "La fecha «Desde» debe ser anterior a «Hasta»."
+    },
+    "forbidden": {
+      "title": "Esta sección es para especialistas",
+      "description": "Tu cuenta no tiene un perfil de especialista. Sus herramientas están en la app.",
+      "action": "Ir a mi panel"
+    }
+  },
+  "reports": {
+    "trend": {
+      "up": "Sube frente al periodo anterior",
+      "down": "Baja frente al periodo anterior",
+      "flat": "Igual que en el periodo anterior"
+    },
+    "previousDays": "{days, plural, one {{value} el día anterior} other {{value} en los # días anteriores}}",
+    "blocks": {
+      "summary": "Resumen",
+      "appointmentsEvolution": "Evolución de las citas"
+    },
+    "period": {
+      "label": "Periodo",
+      "thisWeek": "Esta semana",
+      "thisMonth": "Este mes",
+      "last30Days": "Últimos 30 días",
+      "last3Months": "Últimos 3 meses",
+      "thisYear": "Este año",
+      "custom": "Personalizado",
+      "by": {
+        "day": "por días",
+        "week": "por semanas",
+        "month": "por meses"
+      },
+      "customTitle": "Elige el periodo",
+      "from": "Desde",
+      "to": "Hasta",
+      "apply": "Aplicar",
+      "problem": {
+        "invalid": "Elige el primer día y el último.",
+        "order": "El primer día debe ser anterior al último.",
+        "future": "El periodo puede llegar hasta hoy.",
+        "tooLong": "El periodo puede ser de hasta {days} días.",
+        "tooOld": "El periodo puede empezar hasta hace {years} años."
+      }
+    },
+    "series": {
+      "empty": "Sin movimiento en este periodo",
+      "weekOf": "Semana del {date}"
+    },
+    "appointments": {
+      "total": "Citas",
+      "completed": "Atendidas",
+      "cancelled": "Canceladas",
+      "noShow": "No asistieron",
+      "open": "Abiertas"
+    },
+    "status": {
+      "pendingConfirmation": "Por confirmar",
+      "confirmed": "Confirmadas",
+      "rescheduleProposed": "Con cambio propuesto",
+      "cancelled": "Canceladas",
+      "completed": "Atendidas",
+      "noShow": "No asistieron"
+    },
+    "openAppointments": {
+      "title": "Todavía abiertas",
+      "caption": "Sin desenlace aún"
+    },
+    "heatmap": {
+      "title": "Días y horas con más citas",
+      "hour": "{hour}h",
+      "less": "Menos",
+      "more": "Más ({max})",
+      "busiest": "La franja con más citas: {day} de {from} a {to}, {count}.",
+      "cell": "{day} de {from} a {to}: {count}",
+      "empty": "Todavía no hay citas en este periodo.",
+      "slot": "{day}, {from} – {to}"
+    },
+    "cancelledBy": {
+      "title": "Quién canceló",
+      "caption": "{count, plural, one {1 cancelada} other {# canceladas}}",
+      "patient": "El paciente",
+      "you": "Tú",
+      "system": "El sistema"
+    },
+    "patients": {
+      "title": "Pacientes",
+      "new": "Pacientes nuevos",
+      "newCaptionOwn": "Su primera cita contigo",
+      "returning": "Pacientes que volvieron",
+      "returningCaptionOwn": "Ya te habían visitado antes",
+      "unclaimed": "Citas sin cuenta",
+      "unclaimedCaption": "De pacientes que aún no se registran"
+    },
+    "offices": {
+      "title": "Por consultorio"
+    },
+    "income": {
+      "title": "Ingresos estimados",
+      "titleIn": "Ingresos estimados en {currency}",
+      "estimatedOwn": "Facturado según tus precios",
+      "appointments": "{count, plural, one {De 1 cita atendida} other {De # citas atendidas}}",
+      "unpriced": "{count, plural, one {1 cita atendida sin precio} other {# citas atendidas sin precio}}",
+      "byReason": "Ingresos por motivo en {currency}",
+      "withoutReason": "Sin motivo",
+      "empty": "No hubo citas atendidas con precio en este periodo.",
+      "summaryTable": "Ingresos estimados por moneda",
+      "unpricedRow": "Atendidas sin precio"
+    },
+    "reviews": {
+      "title": "Reseñas",
+      "caption": "Por la fecha en que se escribieron",
+      "count": "{count, plural, one {1 reseña} other {# reseñas}}",
+      "withComment": "{count, plural, one {1 con comentario} other {# con comentario}}",
+      "allTime": "{count, plural, one {Desde siempre: {average} de nota media en 1 reseña} other {Desde siempre: {average} de nota media en # reseñas}}",
+      "allTimeEmptyOwn": "Todavía no tienes reseñas.",
+      "average": "Nota media",
+      "evolution": "Evolución de la nota media",
+      "distributionTable": "Reseñas por nota",
+      "stars": "{stars, plural, one {# estrella} other {# estrellas}}",
+      "summaryTable": "Resumen de reseñas",
+      "allTimeRow": "Desde siempre"
+    },
+    "reasons": {
+      "title": "Motivos de consulta",
+      "withoutReason": "{count, plural, one {1 cita sin motivo} other {# citas sin motivo}}",
+      "empty": "Todavía no hay citas con motivo en este periodo.",
+      "completedTitle": "Atendidas por motivo",
+      "completedOf": "{total, plural, one {{completed} de 1 cita atendida} other {{completed} de # citas atendidas}}",
+      "unnamed": "Motivo sin nombre"
+    },
+    "screen": {
+      "loadError": "No pudimos cargar el reporte",
+      "loadErrorDescription": "Inténtalo de nuevo en unos segundos."
+    },
+    "export": {
+      "download": "Descargar",
+      "sheetTitle": "Descargar el reporte",
+      "pdfTitle": "PDF",
+      "pdfDescription": "Con los gráficos y las tablas, para leer, imprimir o enviar.",
+      "pdfHint": "Se abrirá la ventana de impresión: elige «Guardar como PDF».",
+      "csvTitle": "Hoja de cálculo (CSV)",
+      "csvDescription": "Las cifras en tablas, para abrir en Excel o Google Sheets.",
+      "csvPeriod": "Periodo",
+      "csvGeneratedAt": "Generado el",
+      "documentTitle": "Reporte de estadísticas",
+      "fileName": "Redoctor - Reporte - {from} a {to}",
+      "lockedTitle": "Tu plan no incluye descargas",
+      "lockedDescription": "Descargar tus reportes en PDF o CSV no está incluido en tu plan. Si necesitas ayuda, escríbenos o llámanos.",
+      "notReady": "Espera a que cargue el reporte para descargarlo.",
+      "supportMessage": "¡Hola, equipo de Redoctor! 👋 Soy especialista y tengo una pregunta sobre las descargas de mis reportes."
+    },
+    "table": {
+      "period": "Periodo",
+      "day": "Día",
+      "hour": "Hora",
+      "status": "Estado",
+      "appointments": "Citas",
+      "office": "Consultorio",
+      "reason": "Motivo",
+      "amount": "Monto",
+      "concept": "Concepto",
+      "previousPeriod": "Periodo anterior",
+      "who": "Quién",
+      "stars": "Nota",
+      "reviews": "Reseñas",
+      "share": "Parte",
+      "currency": "Moneda",
+      "figure": "Cifra",
+      "thisPeriod": "Este periodo"
+    },
+    "tables": {
+      "appointmentsSeries": "Citas por periodo",
+      "byStatus": "Citas por estado",
+      "weekdayHours": "Citas por día y hora",
+      "appointmentsSummary": "Resumen de citas"
+    },
+    "statistics": {
+      "metaTitle": "Estadísticas",
+      "title": "Estadísticas",
+      "subtitle": "Cómo te va en Redoctor",
+      "filtersLabel": "Qué periodo mirar",
+      "officeLabel": "Consultorio",
+      "allOffices": "Todos los consultorios",
+      "reportsLabel": "Tus reportes",
+      "attended": "Citas atendidas",
+      "ofTotal": "de {total}",
+      "moreCurrencies": "{count, plural, one {+1 moneda} other {+# monedas}}",
+      "incomeNone": "Sin citas atendidas con precio",
+      "rating": "Calificación",
+      "noPreviousReviews": "{days, plural, one {Sin reseñas el día anterior} other {Sin reseñas en los # días anteriores}}",
+      "noNewReviews": "Sin reseñas nuevas en este periodo",
+      "noReviews": "Todavía no tienes reseñas",
+      "returning": "{count, plural, one {1 ya te conocía} other {# ya te conocían}}",
+      "outcome": "Cómo terminaron tus citas",
+      "busiestHours": "Tus horas más pedidas",
+      "topReasons": "Motivos más consultados",
+      "emptyTitle": "Aún no tienes citas en este periodo",
+      "emptyDescription": "Cuando atiendas pacientes, aquí verás tus citas, tus ingresos estimados y tus reseñas.",
+      "sections": {
+        "summary": "Resumen",
+        "appointments": "Citas",
+        "income": "Ingresos",
+        "reviews": "Reseñas",
+        "reasons": "Motivos"
+      },
+      "appointmentsCount": "{count, plural, one {1 cita} other {# citas}}",
+      "missing": "—"
+    }
+  }
 }

@@ -29,7 +29,7 @@ export function SiteHeader({
   return (
     <header
       className={cn(
-        'mx-auto flex w-full max-w-content items-center justify-between gap-4 px-gutter py-3',
+        'mx-auto flex w-full max-w-content items-center justify-between gap-4 px-gutter py-3 print:hidden',
         className,
       )}
     >

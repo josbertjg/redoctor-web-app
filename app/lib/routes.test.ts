@@ -11,10 +11,17 @@ describe('routes', () => {
     expect(routes.appointment('abc')).toBe('/a/abc');
   });
 
+  it('builds the panel', () => {
+    expect(routes.specialistHome()).toBe('/panel');
+    expect(routes.agenda()).toBe('/panel/agenda');
+    expect(routes.agenda('2026-10-01')).toBe('/panel/agenda/2026-10-01');
+    expect(routes.specialistAppointments()).toBe('/panel/appointments');
+    expect(routes.reports()).toBe('/panel/reports');
+    expect(routes.subscription()).toBe('/panel/subscription');
+    expect(routes.subscriptionPay()).toBe('/panel/subscription/pay');
+  });
+
   it('builds the bridges', () => {
-    expect(routes.subscriptionBridge()).toBe('/panel/subscription');
-    expect(routes.agendaBridge()).toBe('/panel/agenda');
-    expect(routes.agendaBridge('2026-10-01')).toBe('/panel/agenda/2026-10-01');
     expect(routes.specialtiesBridge()).toBe('/panel/specialties');
     expect(routes.profileBridge()).toBe('/panel/profile');
     expect(routes.homeBridge()).toBe('/home');
@@ -32,8 +39,13 @@ describe('routes', () => {
     expect(routes.signUp('/i/tok')).toBe('/sign-up?redirect=%2Fi%2Ftok');
   });
 
-  it('keeps the payment route out of the app paths', () => {
-    expect(isAppOwnedPath(routes.payment())).toBe(false);
+  it('keeps the payment page out of the app paths, and the rest of the panel in', () => {
+    expect(isAppOwnedPath(routes.subscriptionPay())).toBe(false);
+    expect(isAppOwnedPath(routes.subscription())).toBe(true);
+    expect(isAppOwnedPath(routes.agenda('2026-10-01'))).toBe(true);
+    expect(isAppOwnedPath(routes.specialistAppointments())).toBe(true);
+    expect(isAppOwnedPath(routes.reports())).toBe(true);
+    expect(isAppOwnedPath(routes.specialistHome())).toBe(false);
   });
 
   it('encodes the opt-out token', () => {

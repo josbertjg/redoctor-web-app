@@ -2,11 +2,13 @@ import { cache, Suspense } from 'react';
 
 import type { Metadata } from 'next';
 
+import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 
 import { getTranslations } from 'next-intl/server';
 
 import { smartAppBanner } from '@/app/lib/app-bridge';
+import { panelHintCookie } from '@/app/lib/auth/session-hint';
 import { getSpecialistProfile as readSpecialistProfile } from '@/app/lib/data/specialists';
 import { routes } from '@/app/lib/routes';
 
@@ -16,6 +18,7 @@ import { BottomActions } from '@/app/ui/layout/bottom-actions';
 import { SiteHeader } from '@/app/ui/layout/site-header';
 import { Tabs } from '@/app/ui/tabs';
 
+import { BookingNote } from '../../_components/booking-note';
 import { CertificationList } from '../../_components/certification-list';
 import { Gallery } from '../../_components/gallery';
 import { OfficeList } from '../../_components/office-list';
@@ -81,6 +84,9 @@ export default async function SpecialistProfilePage({
 
   const t = await getTranslations();
   const moreLabels = { more: t('readMore'), less: t('showLess') };
+  // A specialist's browser: the booking line waits for the session (BookingNote).
+  const expectSpecialist =
+    (await cookies()).get(panelHintCookie)?.value === '1';
   const hasAbout = profile.gallery.length > 0 || profile.experience !== null;
 
   return (
@@ -169,9 +175,12 @@ export default async function SpecialistProfilePage({
         </div>
 
         <BottomActions>
-          <p className="text-center text-body-xxs text-text-secondary">
-            {t('specialists.bookingSoon')}
-          </p>
+          <BookingNote
+            specialistId={profile.id}
+            patientNote={t('specialists.bookingSoon')}
+            ownNote={t('specialists.ownProfileNote')}
+            expectSpecialist={expectSpecialist}
+          />
           <OpenInAppButton path={routes.specialist(profile.id)} />
         </BottomActions>
       </main>

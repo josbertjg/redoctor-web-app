@@ -24,12 +24,17 @@ const centsFormat = new Intl.NumberFormat(formatLocale, {
   maximumFractionDigits: 2,
 });
 
+/** The sign a currency is written with: `$`, `€`, `Bs.S`; the code itself for any other. */
+export function currencySymbol(currency: string): string {
+  return symbols[currency] ?? currency;
+}
+
 /** `$ 15` or `$ 19,99`. */
 export function formatMoney(amount: number, currency = 'USD'): string {
   const text = Number.isInteger(amount)
     ? amountFormat.format(amount)
     : centsFormat.format(amount);
-  return `${symbols[currency] ?? currency} ${text}`;
+  return `${currencySymbol(currency)} ${text}`;
 }
 
 /* ---------- Billing (M13): the app's `MoneyFormat` ------------------------ */

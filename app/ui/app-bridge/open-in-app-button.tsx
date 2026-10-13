@@ -20,6 +20,8 @@ type OpenInAppButtonProps = {
   path: string;
   /** How the link reached the person, for the note shown on a computer. */
   source?: 'link' | 'email';
+  /** On a computer: the note to open it from the phone, or nothing (a page that already does what the app would). */
+  desktop?: 'note' | 'none';
   className?: string;
 };
 
@@ -36,6 +38,7 @@ type OpenInAppButtonProps = {
 export function OpenInAppButton({
   path,
   source = 'link',
+  desktop = 'note',
   className,
 }: OpenInAppButtonProps) {
   const t = useTranslations('appBridge');
@@ -51,11 +54,14 @@ export function OpenInAppButton({
           appBridgeConfig,
         );
   const storeRedirect = links?.storeRedirect;
+  const onComputer = links !== null && links.openApp === undefined;
 
   useEffect(() => {
     if (storeRedirect === undefined || appChosen) return;
     return scheduleStoreRedirect(storeRedirect);
   }, [storeRedirect, appChosen]);
+
+  if (onComputer && desktop === 'none') return null;
 
   return (
     <div

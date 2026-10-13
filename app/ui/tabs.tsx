@@ -21,6 +21,12 @@ type TabsProps<Value extends string> = {
   defaultValue?: Value;
   value?: Value;
   onValueChange?: (value: Value) => void;
+  /**
+   * Many tabs on a phone: the row scrolls inside itself, each tab its own
+   * width, instead of widening the page. Off by default: the tabs share
+   * the row.
+   */
+  scrollable?: boolean;
   className?: string;
 };
 
@@ -39,6 +45,7 @@ export function Tabs<Value extends string>({
   defaultValue,
   value,
   onValueChange,
+  scrollable = false,
   className,
 }: TabsProps<Value>) {
   const initial = defaultValue ?? items[0]?.value;
@@ -58,13 +65,19 @@ export function Tabs<Value extends string>({
     >
       <RadixTabs.List
         aria-label={label}
-        className="flex border-b border-divider"
+        className={cn(
+          'flex border-b border-divider',
+          scrollable && '[scrollbar-width:none] overflow-x-auto',
+        )}
       >
         {items.map((item) => (
           <RadixTabs.Trigger
             key={item.value}
             value={item.value}
-            className={tabClass}
+            className={cn(
+              tabClass,
+              scrollable && 'flex-none px-3 sm:flex-1 sm:px-4',
+            )}
           >
             {item.label}
           </RadixTabs.Trigger>

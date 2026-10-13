@@ -94,7 +94,7 @@ describe('SessionButton', () => {
 
     expect(screen.getByText('Ana Pérez')).toBeInTheDocument();
     expect(
-      screen.queryByRole('link', { name: 'Mis herramientas' }),
+      screen.queryByRole('link', { name: 'Mi panel' }),
     ).not.toBeInTheDocument();
     await userEvent.click(
       screen.getByRole('button', { name: 'Cerrar sesión' }),
@@ -119,7 +119,7 @@ describe('SessionButton', () => {
       '/appointments',
     );
     expect(
-      screen.queryByRole('link', { name: 'Mis herramientas' }),
+      screen.queryByRole('link', { name: 'Mi panel' }),
     ).not.toBeInTheDocument();
   });
 
@@ -134,9 +134,10 @@ describe('SessionButton', () => {
       <SessionButton layout="list" />,
     );
 
-    expect(
-      screen.getByRole('link', { name: 'Mis herramientas' }),
-    ).toHaveAttribute('href', '/panel');
+    expect(screen.getByRole('link', { name: 'Mi panel' })).toHaveAttribute(
+      'href',
+      '/panel',
+    );
     expect(
       screen.queryByRole('link', { name: 'Mis citas' }),
     ).not.toBeInTheDocument();

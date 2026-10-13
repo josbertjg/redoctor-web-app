@@ -31,16 +31,9 @@ async function expectOpensInApp(page: Page, path: string) {
   );
 }
 
+// The subscription and the agenda are the panel's own pages since
+// 2026-10-13 (panel.spec.ts); these two still only open the app.
 const bridges = [
-  {
-    path: '/panel/subscription',
-    heading: 'Tu suscripción se abre en la app de Redoctor',
-  },
-  { path: '/panel/agenda', heading: 'Tu agenda se abre en la app de Redoctor' },
-  {
-    path: '/panel/agenda/2026-10-01',
-    heading: 'Tu agenda se abre en la app de Redoctor',
-  },
   {
     path: '/panel/specialties',
     heading: 'Tus especialidades se abren en la app de Redoctor',
@@ -74,13 +67,13 @@ for (const bridge of bridges) {
 }
 
 test('the link to the app never carries the origin tag', async ({ page }) => {
-  await page.goto('/panel/subscription?origin=email-12');
+  await page.goto('/panel/specialties?origin=email-16');
 
-  await expectOpensInApp(page, '/panel/subscription');
+  await expectOpensInApp(page, '/panel/specialties');
 });
 
 test('a bridge has no accessibility violations', async ({ page }) => {
-  await page.goto('/panel/subscription');
+  await page.goto('/panel/specialties');
   await page.getByRole('link', { name: 'Abrir en la app' }).waitFor();
 
   expect(await auditAccessibility(page)).toEqual([]);
@@ -99,6 +92,7 @@ const renamed = [
     '/daily-summary/unsubscribe?token=forged-in-e2e',
   ],
   ['/citas/invitacion/forged-in-e2e', '/i/forged-in-e2e'],
+  ['/pay', '/panel/subscription/pay'],
 ] as const;
 
 for (const [from, to] of renamed) {
@@ -114,9 +108,9 @@ for (const [from, to] of renamed) {
   });
 }
 
-// No loading state streams the bridges (there is no root loading.tsx), so a
-// notFound() in the page answers a real 404, with the not-found page,
-// noindex (node_modules/next/dist/docs, not-found.md).
+// No loading state streams the panel (there is no root loading.tsx, nor one
+// in the panel), so a notFound() in the agenda answers a real 404, with the
+// not-found page, noindex (node_modules/next/dist/docs, not-found.md).
 test('an agenda path the app does not know shows the not-found page', async ({
   page,
 }) => {

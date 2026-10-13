@@ -6,7 +6,9 @@ import { createWriteOnceGuard } from '../api/write-once';
 import {
   appointmentListResponseSchema,
   appointmentResponseSchema,
+  specialistAppointmentPageSchema,
   type AppointmentResponse,
+  type AppointmentStatus,
 } from '../schemas/appointments';
 import { availableDaysSchema, daySlotsSchema } from '../schemas/availability';
 
@@ -17,11 +19,25 @@ import type { TokenHolder } from '../api/types';
  * token (AGENTS.md §4): the list behind `/appointments` (M6), the page
  * behind `/a/{id}` and its actions (M5) — confirm (from 24 h before), cancel
  * and reschedule to another slot of the same office. Every write goes
- * through the write-once guard (§5).
+ * through the write-once guard (§5). And the specialist's agenda, read
+ * only, behind the panel's `/panel/agenda` and `/panel/appointments` (M14).
  */
+
+/** What the specialist's agenda is asked for: each one optional, as the API takes them. */
+export type SpecialistAppointmentFilters = {
+  /** Calendar days (YYYY-MM-DD), both included. */
+  from?: string | undefined;
+  to?: string | undefined;
+  status?: AppointmentStatus | undefined;
+  /** Name, document, phone or email, in one box. */
+  search?: string | undefined;
+  officeId?: string | undefined;
+};
 
 export const appointmentKeys = {
   list: (userId: string) => ['appointments', userId] as const,
+  specialistList: (userId: string, filters: SpecialistAppointmentFilters) =>
+    ['specialist-appointments', userId, filters] as const,
   detail: (userId: string, appointmentId: string) =>
     ['appointment', userId, appointmentId] as const,
   availableDays: (officeId: string, month: string) =>
@@ -78,6 +94,46 @@ export function appointmentsQueryOptions(user: TokenHolder) {
       });
       return appointments;
     },
+    staleTime: 30_000,
+  });
+}
+
+/** The API pages the agenda by up to 100; a pilot's agenda fits in a few. */
+const specialistPageSize = 100;
+/** A ceiling, so a runaway count never means a hundred requests (100 per minute per IP, §5). */
+const specialistMaxPages = 10;
+
+/**
+ * The specialist's appointments that match, every page of them, as the app
+ * reads its agenda: the API documents no order, so the screen orders them.
+ */
+export function specialistAppointmentsQueryOptions(
+  user: TokenHolder,
+  filters: SpecialistAppointmentFilters,
+) {
+  return queryOptions({
+    queryKey: appointmentKeys.specialistList(user.id, filters),
+    queryFn: async ({ signal }) => {
+      const appointments: AppointmentResponse[] = [];
+      for (let page = 1; page <= specialistMaxPages; page += 1) {
+        const result = await apiFetch({
+          path: '/scheduling/specialist/appointments',
+          query: { ...filters, page, pageSize: specialistPageSize },
+          token: await user.getToken(),
+          schema: specialistAppointmentPageSchema,
+          signal,
+        });
+        appointments.push(...result.appointments);
+        if (
+          result.appointments.length < specialistPageSize ||
+          appointments.length >= result.total
+        ) {
+          break;
+        }
+      }
+      return appointments;
+    },
+    // The patient may confirm, move or cancel meanwhile: short, no polling.
     staleTime: 30_000,
   });
 }

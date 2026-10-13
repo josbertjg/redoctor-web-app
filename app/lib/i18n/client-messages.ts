@@ -106,7 +106,15 @@ export const pageNamespaces = {
   // The patient's appointments (M6) and the review wall before them (M7):
   // the list, the cards and the rating, all read in the browser.
   appointments: ['apiErrors', 'appointments', 'reviews'],
-  // The specialist's payment (M13): the subscription, the plans, the
-  // coupon sheet and the two steps of the payment, all read in the browser.
+  // The panel's home (M14): the plan and its notice, today's appointments.
+  panelHome: ['apiErrors', 'billing', 'appointments', 'panel'],
+  // The agenda and the history of the specialist's appointments (M14).
+  agenda: ['apiErrors', 'appointments', 'panel', 'identityDocument'],
+  // The statistics (M14): the filters, the four reports, the downloads.
+  reports: ['apiErrors', 'reports', 'panel', 'appBridge', 'appAccess'],
+  // The specialist's subscription (M13): where the plan stands, its notice.
+  subscription: ['apiErrors', 'billing'],
+  // The payment (M13): the plans, the coupon sheet and the two steps of the
+  // payment, all read in the browser.
   pay: ['apiErrors', 'billing', 'back', 'input'],
 } as const satisfies Record<string, readonly Namespace[]>;

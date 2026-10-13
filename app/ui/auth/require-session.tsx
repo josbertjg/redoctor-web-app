@@ -45,8 +45,9 @@ function isAllowed(account: Account, facet: SessionFacet | undefined) {
  * Wraps the layout of a segment that needs a session (AGENTS.md §3, §9):
  * `/me` resolves before anything of the segment paints; without a session
  * the person goes to sign in and comes back here afterwards; an account with
- * no sign-up behind it goes to sign up first (M3), the same way back; the
- * wrong facet gets a way out instead of a page that is not theirs.
+ * no sign-up behind it goes to sign up first (M3), the same way back; a
+ * specialist on a patient's page goes back to their panel; any other wrong
+ * facet gets a way out instead of a page that is not theirs.
  */
 export function RequireSession({
   facet,
@@ -66,11 +67,19 @@ export function RequireSession({
     session.account !== null &&
     needsSignUp(session.account);
   const back = returnTo ?? pathname;
+  // A patient's page is no place for a specialist: they stay in their panel
+  // (owner, 2026-10-13). One who is also a patient keeps their own.
+  const toPanel =
+    facet === 'patient' &&
+    session.account !== null &&
+    !session.account.patient.exists &&
+    canUseSpecialistArea(session.account);
 
   useEffect(() => {
     if (signedOut) router.replace(routes.signIn(back));
     else if (mustSignUp) router.replace(routes.signUp(back));
-  }, [signedOut, mustSignUp, back, router]);
+    else if (toPanel) router.replace(routes.specialistHome());
+  }, [signedOut, mustSignUp, toPanel, back, router]);
 
   if (session.status !== 'signed-in') return fallback;
 
@@ -79,7 +88,7 @@ export function RequireSession({
   }
 
   const { account } = session;
-  if (account === null || mustSignUp) return fallback;
+  if (account === null || mustSignUp || toPanel) return fallback;
 
   if (!isAllowed(account, facet)) {
     const area = facet === 'specialist' ? 'specialist' : 'patient';

@@ -2,7 +2,8 @@
 
 import { useId } from 'react';
 
-import CrownFill from '@material-symbols/svg-400/rounded/crown-fill.svg?svgr';
+import Link from 'next/link';
+
 import { useTranslations } from 'next-intl';
 
 import {
@@ -11,37 +12,27 @@ import {
   formatPeriod,
 } from '@/app/lib/format/dates';
 import { formatBillingAmount } from '@/app/lib/format/money';
+import { routes } from '@/app/lib/routes';
 import {
   activeDiscount,
-  planTier,
   subscriptionStatusChips,
-  type PlanTier,
   type Subscription,
   type SubscriptionNotice,
 } from '@/app/lib/schemas/billing';
 import { cn } from '@/app/lib/utils';
 
+import { NoticePanel } from '@/app/ui/billing/notice-panel';
+import { PlanEmblem } from '@/app/ui/billing/plan-emblem';
 import { Button } from '@/app/ui/button';
-import { Icon } from '@/app/ui/icons';
 import { StateChip } from '@/app/ui/state-chip';
 
 import { couponDiscountLabel } from './coupon-words';
 import { DetailList, type DetailItem } from './detail-list';
-import { NoticePanel } from './notice-panel';
 
 type SubscriptionViewProps = {
   subscription: Subscription;
   /** What to tell about the billing, already resolved; null when the plan is simply at its stage. */
   notice: SubscriptionNotice | null;
-  onPay: () => void;
-  onSeePlans: () => void;
-};
-
-/** The crown's metal: bronze, silver and gold, from less to more. */
-const emblems: Record<PlanTier, string> = {
-  bronze: 'bg-orange-50 text-orange-500',
-  silver: 'bg-silver-50 text-silver-600',
-  gold: 'bg-warning-50 text-warning-500',
 };
 
 type Translate = ReturnType<typeof useTranslations<'billing'>>;
@@ -144,14 +135,13 @@ function periodRows(t: Translate, subscription: Subscription): DetailItem[] {
 /*
  * «Mi suscripción», as the app's screen heads it: which plan, what it
  * costs, where it stands and what that means — then the notice with what
- * to do, when there is one. The web shows the state and the way to pay;
- * changing plan, cancelling or resuming stay in the app for now.
+ * to do, when there is one. Paying, or taking a plan again, is the payment
+ * page's (`/panel/subscription/pay`); changing plan, cancelling or resuming
+ * stay in the app for now.
  */
 export function SubscriptionView({
   subscription,
   notice,
-  onPay,
-  onSeePlans,
 }: SubscriptionViewProps) {
   const t = useTranslations('billing');
   const headingId = useId();
@@ -176,14 +166,7 @@ export function SubscriptionView({
         className="flex animate-fade-up flex-col gap-4 rounded-2xl bg-pure-white p-5 shadow-md"
       >
         <div className="flex items-center gap-4">
-          <span
-            className={cn(
-              'flex size-14 shrink-0 items-center justify-center rounded-full',
-              emblems[planTier(subscription.plan.slug)],
-            )}
-          >
-            <Icon icon={CrownFill} className="size-7" />
-          </span>
+          <PlanEmblem slug={subscription.plan.slug} />
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <div className="flex items-start justify-between gap-3">
               <h2 id={headingId} className="text-title-md text-text-primary">
@@ -212,11 +195,15 @@ export function SubscriptionView({
         ) : null}
       </section>
 
-      {notice ? <NoticePanel notice={notice} onPay={onPay} /> : null}
+      {notice ? (
+        <NoticePanel notice={notice} payHref={routes.subscriptionPay()} />
+      ) : null}
 
       {canceled ? (
-        <Button block shape="soft" onClick={onSeePlans}>
-          {t('mySubscription.subscribeAgain')}
+        <Button asChild block shape="soft">
+          <Link href={routes.subscriptionPay()}>
+            {t('mySubscription.subscribeAgain')}
+          </Link>
         </Button>
       ) : null}
     </div>

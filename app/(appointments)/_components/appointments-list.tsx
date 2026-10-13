@@ -9,11 +9,10 @@ import type {
   AppointmentSummary,
 } from '@/app/lib/schemas/appointments';
 
+import { AppointmentCard } from '@/app/ui/appointments/appointment-card';
 import { EmptyState } from '@/app/ui/empty-state';
 import { type IconComponent } from '@/app/ui/icons';
 import { Tabs } from '@/app/ui/tabs';
-
-import { AppointmentCard } from './appointment-card';
 
 /*
  * «Mis citas» (M6): the ones to come and the ones over, each in its tab

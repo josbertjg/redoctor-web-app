@@ -7,10 +7,29 @@ import { renderWithIntl } from '@/tests/render';
 
 import HomePage from './page';
 
-// The splash has played this session: the page is the landing alone.
+// The splash has played this session: the page is the landing alone. The
+// panel hint is the test's to set: a specialist's browser goes to the panel.
+const hints = vi.hoisted(() => ({ panel: false }));
 vi.mock('next/headers', () => ({
-  cookies: () => Promise.resolve({ has: () => true }),
+  cookies: () =>
+    Promise.resolve({
+      has: () => true,
+      get: (name: string) =>
+        name === 'redoctor-panel' && hints.panel ? { value: '1' } : undefined,
+    }),
   headers: () => Promise.resolve(new Headers()),
+}));
+
+const navigation = vi.hoisted(() => ({
+  redirect: vi.fn((path: string) => {
+    throw new Error(`redirect:${path}`);
+  }),
+  replace: vi.fn(),
+}));
+vi.mock('next/navigation', () => ({
+  redirect: navigation.redirect,
+  useRouter: () => ({ replace: navigation.replace, push: vi.fn() }),
+  usePathname: () => '/',
 }));
 
 const renderHome = async () => renderWithIntl(await HomePage());
@@ -71,5 +90,14 @@ describe('HomePage', () => {
     expect(
       screen.getByText(/Redoctor es gratis para los pacientes/),
     ).toBeVisible();
+  });
+
+  it('sends a specialist’s browser to the panel before painting the landing', async () => {
+    hints.panel = true;
+    try {
+      await expect(HomePage()).rejects.toThrow('redirect:/panel');
+    } finally {
+      hints.panel = false;
+    }
   });
 });

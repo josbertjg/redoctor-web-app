@@ -13,11 +13,8 @@ import { meResponseSchema, toAccount } from '@/app/lib/schemas/identity';
 import { Toaster } from '@/app/ui/toast';
 import {
   buildInvoice,
-  buildIntent,
-  buildReported,
   buildStartedPayment,
   buildSubscription,
-  hoursFromNow,
   intentIds,
   planIds,
   ves,
@@ -30,12 +27,17 @@ import { PayFlow } from './pay-flow';
 import { buildSpecialistMeResponse } from '../../../tests/factories/identity';
 import { apiUrl, errorEnvelope } from '../../../tests/msw/api-url';
 import {
-  invoiceDetailHandler,
   invoicesHandler,
   subscriptionHandler,
 } from '../../../tests/msw/handlers/billing';
 import { validToken } from '../../../tests/msw/handlers/identity';
 import { server } from '../../../tests/msw/server';
+
+const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => router,
+  usePathname: () => '/panel/subscription/pay',
+}));
 
 const user = {
   id: 'uid-1',
@@ -137,14 +139,7 @@ describe('PayFlow', () => {
     const reports = recordBodies('/report');
     const { container } = renderPay();
 
-    expect(
-      await screen.findByRole('heading', {
-        level: 1,
-        name: 'Todavía no tienes un plan',
-      }),
-    ).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Ver planes' }));
-
+    // Without a plan, the payment page starts on the plans.
     expect(
       await screen.findByRole('heading', {
         level: 1,
@@ -152,7 +147,7 @@ describe('PayFlow', () => {
       }),
     ).toBeInTheDocument();
     // The cheapest comes chosen; the archived plan is not offered.
-    expect(screen.getAllByRole('radio')).toHaveLength(3);
+    expect(await screen.findAllByRole('radio')).toHaveLength(3);
     expect(screen.getByRole('radio', { name: /Esencial/ })).toBeChecked();
     await userEvent.click(screen.getByRole('radio', { name: /Profesional/ }));
     const [, professionalToggle] = screen.getAllByRole('button', {
@@ -216,7 +211,8 @@ describe('PayFlow', () => {
     expect(
       screen.getByText('Equivale a $ 30 · Tasa del día Bs 39,95'),
     ).toBeInTheDocument();
-    expect(screen.getByText(/Este monto vale hasta las/)).toBeInTheDocument();
+    // «hasta la 1:15» or «hasta las 3:15»: the article follows the hour.
+    expect(screen.getByText(/Este monto vale hasta las? /)).toBeInTheDocument();
     expect(screen.getByText('(0102) Banco de Venezuela')).toBeInTheDocument();
     expect(screen.getByText('04141234567')).toBeInTheDocument();
     expect(screen.getByText('J-123456789')).toBeInTheDocument();
@@ -269,28 +265,14 @@ describe('PayFlow', () => {
     server.use(...unpaidSubscription());
     const { container } = renderPay();
 
-    expect(
-      await screen.findByRole('heading', { level: 1, name: 'Mi suscripción' }),
-    ).toBeInTheDocument();
-    expect(screen.getByText('Sin pagar')).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', {
-        level: 2,
-        name: 'Tu suscripción está sin pagar',
-      }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/Págala antes del .* para activar tu plan/),
-    ).toBeInTheDocument();
-    expect(await axe(container)).toHaveNoViolations();
-
-    await userEvent.click(screen.getByRole('button', { name: 'Pagar ahora' }));
+    // A receipt owed: the payment page starts on paying it.
     expect(
       await screen.findByRole('heading', {
         level: 1,
         name: '¿Cómo vas a pagar?',
       }),
     ).toBeInTheDocument();
+    expect(await axe(container)).toHaveNoViolations();
     expect(
       screen.getByText('Plan Profesional · 12 oct – 11 nov 2026'),
     ).toBeInTheDocument();
@@ -351,133 +333,9 @@ describe('PayFlow', () => {
     expect(screen.getByText('Transferencia')).toBeInTheDocument();
   });
 
-  it('says a payment is being verified and offers nothing to pay', async () => {
-    server.use(
-      ...unpaidSubscription(),
-      invoiceDetailHandler(buildInvoice(), [
-        buildIntent({ status: 'IN_REVIEW', reported: buildReported() }),
-      ]),
-    );
-    renderPay();
-
-    expect(
-      await screen.findByRole('heading', {
-        level: 2,
-        name: 'Estamos verificando tu pago',
-      }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        'Te avisaremos en cuanto lo aprobemos. Mientras tanto no hace falta enviar otro.',
-      ),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: 'Pagar ahora' }),
-    ).not.toBeInTheDocument();
-  });
-
-  it('shows the admin’s reason for a rejected payment and the way to pay again', async () => {
-    server.use(
-      ...unpaidSubscription(),
-      invoiceDetailHandler(buildInvoice(), [
-        buildIntent({
-          id: intentIds.rejected,
-          status: 'FAILED',
-          reported: buildReported(),
-          failureReason: 'La referencia no aparece en el estado de cuenta.',
-        }),
-      ]),
-    );
-    renderPay();
-
-    expect(
-      await screen.findByRole('heading', {
-        level: 2,
-        name: 'Rechazamos tu último pago',
-      }),
-    ).toBeInTheDocument();
-    expect(screen.getByText('Motivo del rechazo')).toBeInTheDocument();
-    expect(
-      screen.getByText('La referencia no aparece en el estado de cuenta.'),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Pagar ahora' }),
-    ).toBeInTheDocument();
-  });
-
-  it('tells an active plan where it stands, with its period and its coupon', async () => {
-    server.use(
-      subscriptionHandler(
-        buildSubscription({
-          status: 'ACTIVE',
-          incompleteExpiresAt: null,
-          discount: {
-            code: 'REDOCTOR20',
-            couponName: 'Bienvenida 2026',
-            discountType: 'PERCENT',
-            percentOff: 20,
-            amountOff: null,
-            duration: 'REPEATING',
-            remainingCycles: 2,
-            status: 'ACTIVE',
-          },
-          courtesy: { monthsLeft: 1, endsAt: null },
-        }),
-      ),
-    );
-    renderPay();
-
-    expect(
-      await screen.findByRole('heading', { level: 1, name: 'Mi suscripción' }),
-    ).toBeInTheDocument();
-    expect(screen.getByText('Activa')).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        'Tu plan está al día. Se renueva el 11 de noviembre de 2026.',
-      ),
-    ).toBeInTheDocument();
-    expect(screen.getByText('12 oct. – 11 nov. 2026')).toBeInTheDocument();
-    expect(screen.getByText('Cupón REDOCTOR20')).toBeInTheDocument();
-    expect(screen.getByText('20 % de descuento')).toBeInTheDocument();
-    expect(screen.getByText('Mensualidades con descuento')).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument();
-    expect(screen.getByText('1 mes')).toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: 'Pagar ahora' }),
-    ).not.toBeInTheDocument();
-  });
-
-  it('counts the days a past-due plan has left', async () => {
-    server.use(
-      subscriptionHandler(
-        buildSubscription({
-          status: 'PAST_DUE',
-          incompleteExpiresAt: null,
-          graceEndsAt: hoursFromNow(5 * 24),
-        }),
-      ),
-      invoicesHandler([buildInvoice()]),
-    );
-    renderPay();
-
-    expect(
-      await screen.findByRole('heading', {
-        level: 2,
-        name: 'Tu plan se cancelará en 5 días',
-      }),
-    ).toBeInTheDocument();
-    expect(screen.getByText('Pago vencido')).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Pagar ahora' }),
-    ).toBeInTheDocument();
-  });
-
   it('activates the plan at once when a coupon covers the month', async () => {
     renderPay();
 
-    await userEvent.click(
-      await screen.findByRole('button', { name: 'Ver planes' }),
-    );
     await userEvent.click(
       await screen.findByRole('radio', { name: /Profesional/ }),
     );
@@ -544,9 +402,6 @@ describe('PayFlow', () => {
     );
     renderPay();
 
-    await userEvent.click(
-      await screen.findByRole('button', { name: 'Pagar ahora' }),
-    );
     await userEvent.click(
       await screen.findByRole('button', { name: 'Pago móvil' }),
     );
@@ -617,9 +472,37 @@ describe('PayFlow', () => {
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: 'Todavía no tienes un plan',
+        name: 'Elige el plan ideal para tu perfil profesional',
       }),
     ).toBeInTheDocument();
+  });
+
+  it('says a plan up to date has nothing to pay, and leads to it', async () => {
+    server.use(
+      subscriptionHandler(
+        buildSubscription({ status: 'ACTIVE', incompleteExpiresAt: null }),
+      ),
+    );
+    renderPay();
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Tu plan está al día',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'Ver mi suscripción' }),
+    ).toHaveAttribute('href', '/panel/subscription');
+  });
+
+  it('goes back to the subscription from the plans', async () => {
+    renderPay();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Mi suscripción' }),
+    );
+    expect(router.push).toHaveBeenCalledWith('/panel/subscription');
   });
 
   it('tells an account the API does not take for a specialist’s', async () => {
@@ -638,8 +521,9 @@ describe('PayFlow', () => {
         name: 'Esta página es para especialistas',
       }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole('link', { name: 'Ir a mis herramientas' }),
-    ).toHaveAttribute('href', '/panel');
+    expect(screen.getByRole('link', { name: 'Ir a mi panel' })).toHaveAttribute(
+      'href',
+      '/panel',
+    );
   });
 });

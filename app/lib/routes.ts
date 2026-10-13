@@ -7,17 +7,18 @@
  *
  * URL segments are English (owner, 2026-10-12). What the path says is who
  * it is for: the short links people share at the top (`/s`, `/i`, `/a`),
- * the specialist's pages that the app opens under `/panel/`, and the payment
- * outside it on purpose (AGENTS.md §6). A renamed path keeps answering with
- * a redirect (next.config.ts).
+ * and the specialist's panel under `/panel/`, which the app opens on a
+ * phone where it is installed — all but the payment page, kept out of the
+ * app's paths on purpose (AGENTS.md §6). A renamed path keeps answering
+ * with a redirect (next.config.ts).
  */
 
 const segment = (value: string) => encodeURIComponent(value);
 
-/** `/panel/agenda` opens today; `/panel/agenda/{YYYY-MM-DD}` that day. */
-function agendaBridge(): '/panel/agenda';
-function agendaBridge(date: string): `/panel/agenda/${string}`;
-function agendaBridge(date?: string) {
+/** `/panel/agenda` shows today; `/panel/agenda/{YYYY-MM-DD}` that day. */
+function agenda(): '/panel/agenda';
+function agenda(date: string): `/panel/agenda/${string}`;
+function agenda(date?: string) {
   return date
     ? (`/panel/agenda/${segment(date)}` as const)
     : ('/panel/agenda' as const);
@@ -50,20 +51,25 @@ export const routes = {
   appointments: () => '/appointments' as const,
   account: () => '/account' as const,
 
-  /* Specialist (M2): the page with the app's options, after signing in. */
+  /*
+   * The specialist's panel (M14): where a specialist lands after signing in
+   * and stays until signing out. Each section is the web's side of the
+   * app's screen with the same path.
+   */
   specialistHome: () => '/panel' as const,
+  agenda,
+  specialistAppointments: () => '/panel/appointments' as const,
+  reports: () => '/panel/reports' as const,
+  subscription: () => '/panel/subscription' as const,
+  /* The payment (M13; the owner's path of 2026-10-13): never opened by the app, never linked from it. */
+  subscriptionPay: () => '/panel/subscription/pay' as const,
 
   /* Legal (M10). */
   privacy: () => '/privacy' as const,
   terms: () => '/terms' as const,
   deleteAccount: () => '/delete-account' as const,
 
-  /* Specialist payment (M13, owner's name of 2026-10-12): never an app path, never linked from the app. */
-  payment: () => '/pay' as const,
-
-  /* The specialist's pages the app opens (M11): bridges on the web. */
-  subscriptionBridge: () => '/panel/subscription' as const,
-  agendaBridge,
+  /* The specialist's pages that still only open the app (M11). */
   specialtiesBridge: () => '/panel/specialties' as const,
   profileBridge: () => '/panel/profile' as const,
   /** The app's internal paths (`/home/*`): never a web page of their own. */

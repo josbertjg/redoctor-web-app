@@ -80,22 +80,31 @@ transactional emails the API sends.
 | M8 Public profile `/s/{id}` | Read-only: photo, verified specialties, offices with directions, service prices, rating and reviews, "Pronto podrás agendar aquí" |
 | M9 Landing | Designed by the designer; copy in the doc «Landing de Redoctor» |
 | M10 Legal and account | Privacy, terms, account deletion (texts from the lawyer) |
-| M11 Bridges | `/panel/subscription`, `/panel/agenda`, `/panel/specialties`, `/panel/profile` (specialist pages that open the app) and `/daily-summary/unsubscribe` (daily-summary email opt-out) |
-| M13 Specialist payment | `/pay` (the owner's name, 2026-10-12): the subscription and the receipt it owes, choose a plan with a coupon, Pago Móvil and transfer data in Bs from the API, report the payment, see it in review; changing plan, cancelling and the rest stay in the app for now (§13, Decided) |
+| M11 Bridges | `/panel/specialties`, `/panel/profile`, `/home/*` (pages that only open the app) and `/daily-summary/unsubscribe` (daily-summary email opt-out); `/panel/subscription` and `/panel/agenda` were bridges until M14 made them pages |
+| M13 Specialist payment | `/panel/subscription` («Mi suscripción»: the plan, its state and its notice) and `/panel/subscription/pay` (the payment, never opened by the app; the owner's split of 2026-10-13, `/pay` before): choose a plan with a coupon, Pago Móvil and transfer data in Bs from the API, report the payment, see it in review; changing plan, cancelling and the rest stay in the app for now (§13, Decided) |
+| M14 Specialist panel | `/panel` and its sections (2026-10-13): the home (the plan and its notice, today's patients, the statistics, what stays in the app), the day's agenda `/panel/agenda[/{date}]` and the history `/panel/appointments` (read only, each appointment opening `/a/{id}`), the statistics `/panel/reports` (the app's summary and four reports, PDF and CSV when the plan allows), the subscription (M13); a specialist stays in it until signing out |
 | M12 Release | PostHog funnel by origin, tests on real phones from WhatsApp and Gmail, domain cutover |
 
 **Explicitly out of the pilot:** searching and booking from the web,
-favorites, notifications inbox, the specialist's panel. They come after.
+favorites, notifications inbox, and acting on appointments from the
+specialist's panel (it reads them; the app changes them). They come after.
 
 ### Non-negotiable product rules (decided with Josbert)
 
 - The web is **the mirror of the app** in what matters: same quality bar,
   same domain language (entities, names, rules), foundations built for every
   role — even though today it only serves the patient flows and the
-  specialist's payment. It is **not** a copy of the app's folder tree: the
+  specialist's panel. It is **not** a copy of the app's folder tree: the
   web follows Next.js conventions (§3). No "pilot-only" shortcuts in anything
   that will be base; something temporary lives inside its route segment or
   module and can be removed without touching the rest.
+- **Every link, three ways (owner, 2026-10-13).** On a phone with the app,
+  a Redoctor link opens the app. On a phone without it, this web is not only
+  the bridge but the mirror: it shows what the app would show there and lets
+  the person do what the app lets them do (confirm, reschedule, cancel,
+  rate, pay…). On a computer, the web is where it gets done. That is the
+  target for every link of §6; a page that only says «open the app» falls
+  short of it.
 - **Spanish only** for now, but every user-facing string goes through i18n
   from day one (§9).
 - **A link never signs anyone in.** Sign-in is always a deliberate Google or
@@ -107,10 +116,19 @@ favorites, notifications inbox, the specialist's panel. They come after.
   pages reached through a link (`/i`, `/a`, `/s`) are never blocked.
 - **Where signing in leads (2026-10-12):** a **patient** stays on the
   landing — the search lives there — or returns to the link they came from.
-  A **specialist** lands on `/panel`, a page with the app's options
-  (agenda, specialties, profile, subscription, each opening the app through
-  its bridge) where the payment (M13) will join. An **admin** gets the same
-  page with a note that their tools are in the app.
+  A **specialist** lands on `/panel`, their panel (M14). An **admin** gets
+  the same page with a note that their tools are in the app.
+- **A specialist stays in the panel until signing out (owner,
+  2026-10-13).** The landing reads as an offer to book, which a specialist
+  cannot: a browser whose session is a specialist's (or an admin's) carries
+  the panel hint (§9), so the server sends `/` to `/panel` before painting
+  it; the patients' «Mis citas» sends a specialist there too, unless the
+  account is also a patient's. Links still open, since a link never breaks
+  (`/a` read only, `/i`, `/s`, the panel's paths, the opt-out, the legal
+  pages), and none of them offers booking: on their own profile a
+  specialist reads «Así ven tu perfil tus pacientes». Signing in from a
+  link goes back to it; from anywhere else, to the panel. Only «Cerrar
+  sesión» leaves.
 - Public profile `/s/{id}` is read-only during the pilot and says "Pronto
   podrás agendar aquí; por ahora pídele tu cita a tu especialista".
 - **Another browser, another session.** Gmail, Instagram and Facebook open
@@ -194,32 +212,36 @@ app/                                  # The application: routes, UI and logic
     layout.tsx · error.tsx            #   the bar with the account; the error under it
     a/[appointmentId]/page.tsx        #   /a/{id} — read in the browser with the patient's session
     appointments/layout.tsx · page.tsx · loading.tsx      # /appointments (M6, M7) — layout = <RequireSession facet="patient">
-    _components/                      #   appointment-flow, -view, -actions, -record; cancel-sheet, reschedule-sheet, month-calendar, calendar-menu; appointments-flow, -list, -skeleton, appointment-card; review-wall, review-form
-  (specialists)/                      # module: public profile (M8) and the specialist's own page (M2)
+    _components/                      #   appointment-flow, -view, -actions, -record; cancel-sheet, reschedule-sheet, month-calendar, calendar-menu; appointments-flow, -list, -skeleton; review-wall, review-form
+  (specialists)/                      # module: public profile (M8) and the specialist's panel (M2, M14)
     s/[specialistId]/page.tsx · loading.tsx · not-found.tsx · opengraph-image.tsx   # /s/{id}
-    panel/layout.tsx · page.tsx · loading.tsx · error.tsx   # /panel — layout = <PageFrame><RequireSession facet="specialist">
-    _components/
+    panel/layout.tsx · page.tsx · error.tsx   # /panel — layout = <PanelFrame> (the bar, the sections, <RequireSession facet="specialist">); no loading.tsx, so a notFound() is a real 404
+    panel/agenda/page.tsx · [date]/page.tsx   # /panel/agenda (today), /panel/agenda/{YYYY-MM-DD} (email 10); deeper paths match nothing: 404
+    panel/appointments/page.tsx       #   the history, its filters in the address
+    panel/reports/page.tsx            #   the statistics
+    _components/                      #   profile pieces; panel-*, agenda-*, appointments-history, booking-note; reports/ (the statistics' views, charts, filters, export)
   (account)/                          # module: account and legal (M10)
     account/layout.tsx · page.tsx     #   /account — layout = <RequireSession>
     privacy/page.tsx · terms/page.tsx · delete-account/page.tsx
   (billing)/                          # module: specialist payment (M13)
-    error.tsx                         #   the root error, for what fails above /pay's frame
-    pay/layout.tsx · page.tsx · loading.tsx · error.tsx   # /pay — layout = <PageFrame><RequireSession facet="specialist">; its error inside the frame, under the bar
-    _components/                      #   pay-flow, subscription-view, notice-panel, plans-view, pay-view, method-step, payment-step, payment-totals, coupon-sheet, bank-picker, different-amount-sheet, payment-done, copy-button, detail-list, pay-skeleton
+    error.tsx                         #   the root error, for what fails above the subscription's frame
+    panel/subscription/layout.tsx · page.tsx · error.tsx   # /panel/subscription — layout = <PanelFrame width="narrow">; its error inside the frame
+    panel/subscription/pay/page.tsx   #   /panel/subscription/pay — the payment, never opened by the app (§6); /pay redirects here
+    _components/                      #   subscription-flow, subscription-view, subscription-load-error, pay-flow, plans-view, pay-view, method-step, payment-step, payment-totals, coupon-sheet, bank-picker, different-amount-sheet, payment-done, copy-button, detail-list, pay-skeleton
   (bridges)/                          # module: pages that only open the app, noindex (M11)
     layout.tsx
-    panel/subscription/ · panel/agenda/[[...date]]/ · panel/specialties/ · panel/profile/
-                                      #   /panel/* opens the app; /panel itself is (specialists)'s page
+    panel/specialties/ · panel/profile/
+                                      #   still bridges; the rest of /panel/ is the panel's own (M13, M14)
     home/[[...rest]]/
     daily-summary/unsubscribe/page.tsx   # daily-summary opt-out — a Server Action
   api/                                # route handlers only when the browser must not call the API (none yet)
   ui/                                 # ALL shared UI
-    button.tsx · text-field.tsx · text-area.tsx · checkbox.tsx · choice-cards.tsx · stars-input.tsx · tabs.tsx · field-error.tsx · sheet.tsx · skeleton.tsx · toast.tsx · empty-state.tsx · status-card.tsx · avatar.tsx …
+    button.tsx · text-field.tsx · select-field.tsx · text-area.tsx · checkbox.tsx · choice-cards.tsx · stars-input.tsx · tabs.tsx · field-error.tsx · sheet.tsx · skeleton.tsx · toast.tsx · empty-state.tsx · status-card.tsx · avatar.tsx …
     messages-scope.tsx                #   a page's own client messages (§9)
-    layout/                           #   site-header, page-frame (a page's column and its main, in the guarded layouts), bottom-actions
+    layout/                           #   site-header, page-frame (a page's column and its main, in the guarded layouts), panel-frame and panel-nav (the specialist's panel around each section), bottom-actions
     auth/                             #   session-provider, session-button, require-session, sign-in-buttons, sign-in-legal-note, account-error-state, in-app-browser-help, provider-logos
     app-bridge/                       #   open-in-app-button, store-badges, app-access (a specialist's way to the app), store-qr
-    appointments/ · specialists/ · billing/ · reviews/   # domain components used by two or more modules (appointments/: headline, details)
+    appointments/ · specialists/ · billing/ · reviews/   # domain components used by two or more modules (appointments/: headline, details, appointment-card; billing/: notice-panel, plan-emblem)
     analytics/ · og/                  #   link-origin-tracker; the Open Graph brand card (next/og)
     motion/                           #   the one door to Motion: provider, m, tokens, staggered-text (§8.11)
     icons.tsx                         #   the Icon primitive (not icon.tsx: that name is a Next.js metadata file)
@@ -231,9 +253,10 @@ app/                                  # The application: routes, UI and logic
     queries/                          #   TanStack queryOptions + mutation functions per domain (client)
     actions/                          #   Server Actions — only where no user token is needed
     firebase/                         #   client.ts: Firebase Auth, loaded on demand (client-only)
-    auth/                             #   account (the account's model and rules, no zod), session-hint (the cookie), last-provider, token (the bearer's source), destination, sign-up (the plan)
-    format/                           #   names, phone (+58), identity-document, date-of-birth — the forms' rules; money, appointment-time, dates — prices and billing amounts, days and hours
+    auth/                             #   account (the account's model and rules, no zod), session-hint (the session and panel cookies), last-provider, token (the bearer's source), destination, sign-up (the plan)
+    format/                           #   names, phone (+58), identity-document, date-of-birth — the forms' rules; money, appointment-time, dates — prices and billing amounts, days and hours; figures — the statistics' numbers, periods, weekdays and hours
     billing/                          #   banks.ts: the app's list of Venezuelan banks (the API publishes none)
+    reports/                          #   period.ts (the presets, the buckets), figures.ts (trends, the main currency, rankings), csv.ts (the spreadsheet)
     analytics/ · i18n/
     observability/                    #   report.ts (the seam), scrub.ts (what never leaves), sentry.ts
     security/                         #   csp.ts (the nonce policy proxy.ts sends)
@@ -274,7 +297,7 @@ for what is shared (setup, MSW, factories) and for Playwright.
    Components unless they need state, effects or browser APIs — then
    `'use client'` at the smallest leaf. `app/lib/data/*` imports
    `server-only`; Firebase Auth and PostHog code imports `client-only`.
-   Segments that need a session (`appointments`, `account`, `pay`) wrap their
+   Segments that need a session (`appointments`, `account`, `panel`) wrap their
    `layout.tsx` in `<RequireSession>`, which shows a skeleton until `/me`
    resolves; `/i` and `/a` load without a session and ask for it inside.
    Authenticated mutations run in the browser through `app/lib/queries`
@@ -429,26 +452,31 @@ docs point here instead of copying it.
 | --- | --- | --- | --- |
 | `/s/{specialistId}` | public | Full read-only profile (M8) + "Abrir en la app" | the app («Compartir perfil»); emails 14 and 17 |
 | `/i/{token}` | patient | Full invitation experience (M4); "Abrir en la app" once the app is published (patients have none in the pilot, §13) | the app (the specialist's WhatsApp); the API's `invitationUrl` |
-| `/a/{appointmentId}` | patient (and specialist in the app) | Full appointment experience (M5) + "Abrir en la app" | the app (reminders, confirmation); emails 11–13 and 15 |
-| `/panel/subscription` | specialist | Bridge only: the app handles it. Never render billing here | billing emails 01–05 and 07–09 (REDOC-356) |
-| `/panel/agenda`, `/panel/agenda/{YYYY-MM-DD}` | specialist | Bridge; a malformed date opens today in the app | the daily summary, email 10 (REDOC-359) |
-| `/panel/specialties` | specialist | Bridge | email 16 (REDOC-360) |
-| `/panel/profile` | specialist | Bridge | email 18 (REDOC-360) |
+| `/a/{appointmentId}` | patient (and specialist in the app) | Full appointment experience (M5); its specialist reads it, with the patient in full and the way back to the agenda | the app (reminders, confirmation); emails 11–13 and 15 |
+| `/panel/subscription` | specialist | «Mi suscripción» (M13): the plan, its state, its notice and the way to pay | billing emails 01–05 and 07–09 (REDOC-356) |
+| `/panel/agenda`, `/panel/agenda/{YYYY-MM-DD}` | specialist | The day's agenda (M14), read only; a malformed date is today, as in the app | the daily summary, email 10 (REDOC-359) |
+| `/panel/appointments` | specialist | The appointments history (M14); the app should open its «Citas» | the panel |
+| `/panel/reports` | specialist | The statistics (M14); the app should open its «Estadísticas» | the panel |
+| `/panel/specialties` | specialist | Bridge (a mirror is planned) | email 16 (REDOC-360) |
+| `/panel/profile` | specialist | Bridge (a mirror is planned) | email 18 (REDOC-360) |
 | `/home/*` | app internals | Bridge to the home / store; not a web route | the app's own paths |
 
 The specialist's pages live under `/panel/`, and the app opens
-**everything** there: one AASA entry (`/panel/*`) and one Android
-`pathPrefix="/panel/"`. `/panel` itself is the web's page with the app's
-options (§1). So a new specialist page under `/panel/` needs only the app's
-router and the web's bridge: no AASA, no manifest, no wait for Apple's CDN.
-In the app these links need a specialist's session (without one it asks to
-sign in; another role stays on its home). "Abrir en la app" uses the same
-path: `redoctor://redoctorapp.com/panel/agenda/2026-10-08`.
+**everything** there but the payment page: one AASA entry (`/panel/*`,
+after the payment's exclusion) and, on Android, the app's filter for
+`/panel/`. `/panel` itself is the web's home of the panel (M14). So a new
+specialist page under `/panel/` needs only the app's router (until it
+maps the path, the app opens its home) and the web's page: no AASA, no
+manifest, no wait for Apple's CDN. In the app these links need a
+specialist's session (without one it asks to sign in; another role stays
+on its home). "Abrir en la app" uses the same path:
+`redoctor://redoctorapp.com/panel/agenda/2026-10-08`.
 
 Paths only the web serves that others write: the daily-summary opt-out
 `/daily-summary/unsubscribe?token=…` (the API's `url_baja`, REDOC-359), the
-payment `/pay` (the admin's `webPaymentUrl`, REDOC-357) and the home page
-(`/?origin=email-14`). Push notifications carry ids, not links.
+payment `/panel/subscription/pay` (the admin's `webPaymentUrl`, REDOC-357;
+`/pay` redirects there) and the home page (`/?origin=email-14`). Push
+notifications carry ids, not links.
 
 **A renamed path never dies.** Until 2026-10-12 the specialist's paths were
 Spanish (`/suscripcion`, `/agenda[/…]`, `/especialidades`, `/perfil`), the
@@ -465,8 +493,8 @@ segments.
 #### Adding or renaming a public link
 
 1. **Web:** the page or bridge and its builder in `app/lib/routes.ts`;
-   outside `/panel/`, `universalLinkPaths` and the AASA too (a test keeps
-   them equal); a renamed path gets its redirect in `next.config.ts`;
+   outside `/panel/`, `universalLinkComponents` and the AASA too (a test
+   keeps them equal); a renamed path gets its redirect in `next.config.ts`;
    `robots.ts`; the e2e.
 2. **App** (`redoctor-mobile-app`): `AppDeepLinks.resolve` and its test;
    outside `/panel/`, the Android manifest too.
@@ -476,15 +504,21 @@ segments.
 5. **In that order:** a copy of the app from before does not know a new
    path, so the emails switch last.
 
-### The payment route is NOT an app path
+### The payment page is NOT an app path
 
-The specialist pays on the web (M13) at `/pay` (the owner's name,
-2026-10-12). The route must **never** appear in the AASA, in
-`assetlinks.json` or in the app's manifest, nor under `/panel/`, where the
-app opens everything (a unit test keeps it out), and the app never links to it —
-Apple's rules in Venezuela forbid the app from pointing to an external
-purchase. The billing emails offer it only when the API's `webPaymentUrl`
-has a value.
+The specialist pays on the web (M13) at `/panel/subscription/pay` (the
+owner's path of 2026-10-13; `/pay` before, redirected for good). Charging
+on the web is allowed and wanted; what the stores forbid is the **app**
+charging, or pointing to a charge — and the app on iOS cannot take the
+payment at all. So a link to pay must reach this web even on a phone where
+the app is installed: the AASA **excludes** the page before its `/panel/*`
+(`"exclude": true`, first match wins; unit tests keep it out of
+`isAppOwnedPath`), the app's Android filter must not match it (it lists
+the `/panel/` paths it opens instead of the whole prefix), and the app
+never links to it. A phone keeps the AASA it read when the app was
+installed: after a change, Apple's CDN must have the new copy and the
+testers reinstall. The billing emails offer it only when the API's
+`webPaymentUrl` has a value.
 
 ### The `.well-known` files (served from `public/`, byte-exact)
 
@@ -502,6 +536,12 @@ has a value.
           { "/": "/s/*" },
           { "/": "/i/*" },
           { "/": "/a/*" },
+          {
+            "/": "/panel/subscription/pay",
+            "exclude": true,
+            "comment": "The payment stays in the browser: the app cannot charge."
+          },
+          { "/": "/panel/subscription/pay/*", "exclude": true },
           { "/": "/panel/*" },
           { "/": "/home/*" }
         ]
@@ -511,8 +551,9 @@ has a value.
 }
 ```
 
-`app/lib/deep-links.ts` (`universalLinkPaths`) lists the same paths in the
-same order, and a unit test fails if the two drift apart.
+`app/lib/deep-links.ts` (`universalLinkComponents`) lists the same
+components in the same order, exclusions included, and a unit test fails
+if the two drift apart.
 
 `/.well-known/assetlinks.json` — package `com.redoctor.mobileapp`, relation
 `delegate_permission/common.handle_all_urls`, and the SHA-256 fingerprints
@@ -808,7 +849,11 @@ accent / neutral / warning / error tones), `Avatar`, `StarsRating`,
   Inside Instagram's or Facebook's browser the buttons give way to the
   steps to open the link in Chrome or Safari. A cookie `redoctor-session=1`
   (nothing else in it) tells the server a session is likely, so the bar
-  renders a placeholder instead of «Entrar» until Firebase answers. The
+  renders a placeholder instead of «Entrar» until Firebase answers. A
+  second one, `redoctor-panel=1`, says the session is a specialist's (or an
+  admin's), written once `/me` answers and forgotten with the session: the
+  landing sends that browser to `/panel` on the server (§1), and the public
+  profile holds its booking line until the session is known. The
   last provider used wears «Última vez» and goes first (localStorage).
   Sign-out clears the Query cache, the hint, the PostHog identity and
   Sentry's user — also when Firebase ends the session by itself (another
@@ -1316,7 +1361,8 @@ written out in full, or Next.js does not inline it).
   Production needs the API's CORS (REDOC-362): the e2e covers the page
   without a session, the component tests (MSW) the rest.
 
-- **The payment (M13) as built (2026-10-12):** `/pay` (the owner's name;
+- **The payment (M13) as built (2026-10-12; split into `/panel/subscription`
+  and `/panel/subscription/pay` on 2026-10-13, M14):** `/pay` (the owner's name;
   the provisional `NEXT_PUBLIC_PAYMENT_PATH` is gone, the route is a
   literal) needs the specialist facet (`RequireSession facet="specialist"`;
   an account the billing API refuses with a 403 — an admin's — is told the
@@ -1475,6 +1521,65 @@ written out in full, or Next.js does not inline it).
     the green trust card). The landing's inert search and buttons are
     finished bit by bit; the minimum `/panel`, patient search and booking
     wait for his word (memory).
+
+- **The specialist's panel (M14) as built (2026-10-13, the owner's «panel
+  completo»):** his old four cards — the appointments with each one's
+  detail, the subscription's state, paying it, the reports — in one panel
+  that a specialist lands on and stays in until signing out (§1), with the
+  app's sections as its navigation: Inicio, Citas, Estadísticas,
+  Suscripción (`PanelFrame`, `PanelNav`; an admin's account without the
+  specialist facet has the home only). Charging on the web is allowed and
+  wanted (owner, same day); only the app may not charge.
+  - **Home (`/panel`):** «Hola, {name}»; the subscription's notice first,
+    as the app's home puts it, then the plan with «Ver mi suscripción», or
+    «¡Llega a más pacientes desde hoy!» with the plans; today's patients
+    (the cancelled ones do not count) and the next appointment still
+    ahead; the statistics; and «En la app» (specialties and profile, still
+    bridges, and what only the app does: booking, offices, hours).
+  - **Citas:** the day's agenda (`/panel/agenda[/{date}]`, email 10's «Ver
+    mi agenda»): the day in words, the days before and after, «Volver a
+    hoy», the tally («4 citas · 1 atendida · 1 cancelada») and the
+    appointments by the hour; and the history (`/panel/appointments`, the
+    app's «Más recientes»): the latest first, grouped by day, with the
+    app's search box (name, document, phone or email, after a pause), its
+    status chips, two dates and the office when there are two or more, all
+    in the address. Every card names the patient and their document and
+    opens `/a/{id}`, which shows the specialist the patient in full and
+    «Volver a mi agenda»; acting on an appointment stays in the app. The
+    agenda reads every page of `GET /scheduling/specialist/appointments`
+    (100 a page, 10 at most), as the app does.
+  - **Estadísticas (`/panel/reports`):** the app's tab and its four reports
+    as five tabs — Resumen (attended of the total, estimated income in the
+    currency with the most appointments, rating or the all-time one, new
+    patients; how the appointments ended; the busiest hours; the top
+    reasons), Citas (the four counts, their evolution, who cancelled, the
+    patients, the week's hours, the offices), Ingresos (one block per
+    currency, never added together), Reseñas, Motivos — each figure against
+    the period of the same length before, from one `GET /reports/specialist`.
+    The app's periods (this month by default; up to 366 days, never past
+    today) and the office live in the address. «Descargar» is gated by the
+    plan's `canExport`, as in the app (support, never a plan to buy): a PDF
+    through the browser's print of every section, a CSV built here
+    (semicolons and a byte-order mark, for Excel in Spanish). Drawn with
+    boxes, no chart library; each drawing carries its table for screen
+    readers.
+  - **Suscripción:** «Mi suscripción» at `/panel/subscription` and the
+    payment at `/panel/subscription/pay` (the owner's split): the payment
+    page starts where the plan stands — the plans without one, the receipt
+    owed when there is one, «Tu plan está al día» otherwise — and keeps
+    that start while the payment changes the subscription underneath. The
+    AASA excludes it (§6).
+  - **Where the web differs from the app, on purpose and to confirm:** the
+    panel reads appointments and never changes them; the history loads
+    progressively (30, then «Ver más») where the app shows all; the
+    statistics are one page of tabs where the app has a dashboard and four
+    screens; the PDF is the browser's print, not a generated file; the
+    heatmap shows only the hours with appointments.
+  - **For the app (a prompt was handed over):** map `/panel/appointments`
+    and `/panel/reports` to its «Citas» and «Estadísticas», keep its
+    Android filter off `/panel/subscription/pay`, never link to it, and the
+    deep-link fixes found reading its router (signed-out `/a`, a
+    specialist's own `/s`, the review wall swallowing links).
 
 ### Improvements noted (not scheduled)
 

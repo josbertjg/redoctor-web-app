@@ -93,15 +93,22 @@ export function AppointmentView({
         </StateChip>
       }
     >
-      <AppointmentHeadline appointment={appointment} />
+      <AppointmentHeadline
+        appointment={appointment}
+        viewer={readOnly ? 'specialist' : 'patient'}
+      />
       {readOnly ? (
         <StatusCard
           icon={Stethoscope}
           title={t('appointments.detail.forSpecialists')}
           description={t('appointments.detail.forSpecialistsDescription')}
         >
-          {/* The specialist has the app; patients do not in the pilot (§6). */}
-          <OpenInAppButton path={routes.appointment(appointment.id)} />
+          {/* The specialist has the app; patients do not in the pilot (§6).
+            On a computer the panel is where they are: no note to go to the phone. */}
+          <OpenInAppButton
+            path={routes.appointment(appointment.id)}
+            desktop="none"
+          />
         </StatusCard>
       ) : (
         <>
@@ -115,11 +122,23 @@ export function AppointmentView({
       )}
       <AppointmentDetails
         appointment={appointment}
-        patient={usePatient(appointment)}
+        patient={usePatient(appointment, readOnly)}
       />
       <AppointmentRecord appointment={appointment} />
-      {readOnly ? null : (
-        // The patient's other appointments (M6); a specialist's live in the app.
+      {readOnly ? (
+        // The specialist's day, in their panel (M14).
+        <Button
+          asChild
+          variant="white"
+          shape="soft"
+          className="animate-fade-up"
+        >
+          <Link href={{ pathname: routes.agenda(appointment.date) }}>
+            {t('appointments.detail.backToAgenda')}
+          </Link>
+        </Button>
+      ) : (
+        // The patient's other appointments (M6).
         <Button
           asChild
           variant="white"
@@ -184,12 +203,17 @@ function PendingReview({
   );
 }
 
-/** The patient's section: someone in one's care in full, and always the reason and the notes. */
-function usePatient(appointment: AppointmentSummary) {
+/**
+ * The patient's section: someone in one's care in full, and always the
+ * reason and the notes. The specialist reading their appointment (M14)
+ * sees who attends in full too, as the app's patient header shows them.
+ */
+function usePatient(appointment: AppointmentSummary, forSpecialist: boolean) {
   const t = useTranslations();
   const { attendee, forDependent } = appointment;
+  const inFull = forDependent || forSpecialist;
   const facts: PatientFact[] = [];
-  if (forDependent) {
+  if (inFull) {
     if (attendee.document) {
       facts.push({
         term: t('identityDocument'),
@@ -224,7 +248,7 @@ function usePatient(appointment: AppointmentSummary) {
   }
   return {
     heading: t('appointments.detail.patient'),
-    name: forDependent ? `${attendee.firstName} ${attendee.lastName}` : null,
+    name: inFull ? `${attendee.firstName} ${attendee.lastName}` : null,
     facts,
     note: forDependent ? t('appointments.detail.attendeeIsTercero') : undefined,
   };

@@ -13,6 +13,8 @@ import {
   buildMeResponse,
   buildNewAccountMeResponse,
   buildSpecialistMeResponse,
+  patientFacet,
+  specialistFacet,
 } from '../../../tests/factories/identity';
 
 const router = vi.hoisted(() => ({ replace: vi.fn(), push: vi.fn() }));
@@ -175,6 +177,48 @@ describe('RequireSession', () => {
     );
 
     expect(screen.getByText('Contenido privado')).toBeInTheDocument();
+  });
+
+  it('sends a specialist from a patient page to their panel', () => {
+    router.replace.mockClear();
+    renderGuard(
+      session({
+        status: 'signed-in',
+        user,
+        account: toAccount(meResponseSchema.parse(buildSpecialistMeResponse())),
+        accountStatus: 'ready',
+      }),
+      'patient',
+    );
+
+    expect(screen.getByText('Esqueleto')).toBeInTheDocument();
+    expect(router.replace).toHaveBeenCalledWith('/panel');
+    expect(screen.queryByText('Contenido privado')).not.toBeInTheDocument();
+  });
+
+  it('lets a specialist who is also a patient into their own appointments', () => {
+    router.replace.mockClear();
+    renderGuard(
+      session({
+        status: 'signed-in',
+        user,
+        account: toAccount(
+          meResponseSchema.parse(
+            buildSpecialistMeResponse({
+              profiles: {
+                patient: patientFacet(),
+                specialist: specialistFacet(),
+              },
+            }),
+          ),
+        ),
+        accountStatus: 'ready',
+      }),
+      'patient',
+    );
+
+    expect(screen.getByText('Contenido privado')).toBeInTheDocument();
+    expect(router.replace).not.toHaveBeenCalled();
   });
 
   it('lets the right facet in', () => {

@@ -4,8 +4,9 @@ import { absoluteUrl, isIndexable } from '@/app/lib/site';
 
 /*
  * Production lets crawlers in except where a person's data lives (the
- * patient area, payment) and where a page only opens the app. Those pages
- * are also noindex. Previews and local builds are closed.
+ * patient area, the specialist's panel and its payment) and where a page
+ * only opens the app. Those pages are also noindex. Previews and local
+ * builds are closed.
  *
  * The links whose URL carries a credential or a person's appointment (/i,
  * /a, the opt-out, and sign-in and sign-up, whose `redirect` can name them)
@@ -14,7 +15,7 @@ import { absoluteUrl, isIndexable } from '@/app/lib/site';
  * link appears somewhere public. They answer `X-Robots-Tag: noindex` instead
  * (next.config.ts).
  */
-const privatePaths = ['/appointments', '/account', '/panel', '/pay', '/home/'];
+const privatePaths = ['/appointments', '/account', '/panel', '/home/'];
 
 export default function robots(): MetadataRoute.Robots {
   if (!isIndexable) {

@@ -110,6 +110,13 @@ const nextConfig: NextConfig = {
         destination: '/i/:token',
         permanent: true,
       },
+      // The payment moved into the panel (owner, 2026-10-13); REDOC-357 and
+      // the emails' examples named /pay first.
+      {
+        source: '/pay',
+        destination: '/panel/subscription/pay',
+        permanent: true,
+      },
     ]);
   },
   headers() {

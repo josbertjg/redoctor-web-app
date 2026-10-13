@@ -3,7 +3,7 @@ import type { Device } from './platform';
 /*
  * The URL space shared with the mobile app (AGENTS.md §6). The app claims
  * these paths as App Links / Universal Links: when it is installed, tapping
- * them opens the app; when it is not, they open this web. The payment route
+ * them opens the app; when it is not, they open this web. The payment page
  * is never one of them.
  *
  * Mirrors `AppDeepLinks` and `LinkOrigin` of the app
@@ -13,35 +13,52 @@ import type { Device } from './platform';
 /** The app's own scheme: the fallback when a https link stays in the browser. */
 export const appScheme = 'redoctor';
 
+export type UniversalLinkComponent = {
+  /** A path, or a prefix ending in `*`. */
+  readonly path: string;
+  /** A path the app must leave to the browser, though a later pattern would take it. */
+  readonly exclude?: true;
+};
+
 /**
  * What the app opens, as published in
  * /.well-known/apple-app-site-association and in its order (a test keeps the
  * two equal): the short links people share, everything under `/panel/` (the
- * specialist's pages; `/panel` itself is the web's) and its internal paths.
- * iOS reads them from there; Android from the app's manifest. A new
- * specialist page under `/panel/` needs no change here, in the AASA or in
- * the manifest: only the app's router and the web's bridge. The Spanish
- * names of before 2026-10-12 are only redirects now (next.config.ts).
+ * specialist's panel; `/panel` itself is the web's) and its internal paths.
+ * iOS reads them from there, first match first; Android from the app's
+ * manifest. The one exception under `/panel/` is the payment page: the app
+ * cannot charge (the stores forbid it), so a link to pay must reach this
+ * web even on a phone with the app. A new page under `/panel/` needs no
+ * change here: only the app's router. The Spanish names of before
+ * 2026-10-12 are only redirects now (next.config.ts).
  */
-export const universalLinkPaths = [
-  '/s/*',
-  '/i/*',
-  '/a/*',
-  '/panel/*',
-  '/home/*',
-] as const;
+export const universalLinkComponents = [
+  { path: '/s/*' },
+  { path: '/i/*' },
+  { path: '/a/*' },
+  { path: '/panel/subscription/pay', exclude: true },
+  { path: '/panel/subscription/pay/*', exclude: true },
+  { path: '/panel/*' },
+  { path: '/home/*' },
+] as const satisfies readonly UniversalLinkComponent[];
+
+const matches = (pattern: string, path: string) =>
+  pattern.endsWith('*')
+    ? path.startsWith(pattern.slice(0, -1))
+    : path === pattern;
 
 /**
- * Whether the app opens a site path, reading the patterns as iOS does: `*`
- * covers the rest of the path, so `/panel/*` takes `/panel/agenda` and
- * leaves `/panel` to the web.
+ * Whether the app opens a site path, reading the patterns as iOS does: the
+ * first that matches decides, and `*` covers the rest of the path, so
+ * `/panel/*` takes `/panel/agenda` and leaves `/panel` to the web.
  */
 export function isAppOwnedPath(path: string): boolean {
-  return universalLinkPaths.some((pattern) =>
-    pattern.endsWith('*')
-      ? path.startsWith(pattern.slice(0, -1))
-      : path === pattern,
-  );
+  const pathname = path.split(/[?#]/, 1)[0] ?? path;
+  const component: UniversalLinkComponent | undefined =
+    universalLinkComponents.find((candidate) =>
+      matches(candidate.path, pathname),
+    );
+  return component !== undefined && component.exclude !== true;
 }
 
 /* ---------- ?origin= (measurement only, AGENTS.md §6) ------------------ */

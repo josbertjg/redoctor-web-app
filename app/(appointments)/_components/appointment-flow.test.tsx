@@ -335,12 +335,20 @@ describe('AppointmentFlow', () => {
         name: 'Gestiona esta cita desde la app',
       }),
     ).toBeInTheDocument();
-    // A computer has no app to open: the note says where it is.
+    // The specialist looks for the patient, and goes back to their day.
+    expect(screen.getAllByText('Paciente').length).toBeGreaterThan(0);
     expect(
-      await screen.findByText(
+      screen.getByRole('link', { name: 'Volver a mi agenda' }),
+    ).toHaveAttribute(
+      'href',
+      expect.stringMatching(/^\/panel\/agenda\/\d{4}-\d{2}-\d{2}$/),
+    );
+    // On a computer the panel is where they are: no note to go to the phone.
+    expect(
+      screen.queryByText(
         'Abre este enlace desde tu teléfono, donde tienes la app de Redoctor.',
       ),
-    ).toBeVisible();
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: 'Reprogramar' }),
     ).not.toBeInTheDocument();

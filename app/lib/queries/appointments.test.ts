@@ -1,8 +1,10 @@
 import { QueryClient } from '@tanstack/react-query';
+import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 
 import {
   appointmentIds,
+  buildAppointment,
   officeId,
   takenStartTime,
 } from '@/tests/factories/appointments';
@@ -14,8 +16,11 @@ import {
   confirmAppointment,
   daySlotsQueryOptions,
   rescheduleAppointment,
+  specialistAppointmentsQueryOptions,
 } from './appointments';
+import { apiUrl } from '../../../tests/msw/api-url';
 import { validToken } from '../../../tests/msw/handlers/identity';
+import { server } from '../../../tests/msw/server';
 
 const user = { id: 'uid-1', getToken: () => Promise.resolve(validToken) };
 
@@ -109,5 +114,59 @@ describe('appointmentsQueryOptions', () => {
     expect(appointments.map((appointment) => appointment.id)).not.toContain(
       appointmentIds.someoneElse,
     );
+  });
+});
+
+describe('specialistAppointmentsQueryOptions', () => {
+  it('reads every page of the agenda, as the app does', async () => {
+    const pages: number[] = [];
+    server.use(
+      http.get(apiUrl('/scheduling/specialist/appointments'), ({ request }) => {
+        const page = Number(new URL(request.url).searchParams.get('page'));
+        pages.push(page);
+        const size = page === 1 ? 100 : 50;
+        return HttpResponse.json({
+          appointments: Array.from({ length: size }, (_, index) =>
+            buildAppointment({ id: `${String(page)}-${String(index)}` }),
+          ),
+          total: 150,
+          page,
+          pageSize: 100,
+        });
+      }),
+    );
+
+    const appointments = await new QueryClient().query(
+      specialistAppointmentsQueryOptions(user, { from: '2026-10-01' }),
+    );
+    expect(appointments).toHaveLength(150);
+    expect(pages).toEqual([1, 2]);
+  });
+
+  it('asks with the filters the API takes', async () => {
+    let query: URLSearchParams | undefined;
+    server.use(
+      http.get(apiUrl('/scheduling/specialist/appointments'), ({ request }) => {
+        query = new URL(request.url).searchParams;
+        return HttpResponse.json({ appointments: [], total: 0 });
+      }),
+    );
+
+    await new QueryClient().query(
+      specialistAppointmentsQueryOptions(user, {
+        from: '2026-10-01',
+        to: '2026-10-14',
+        status: 'CANCELLED',
+        search: 'rosa',
+      }),
+    );
+    expect(Object.fromEntries(query ?? [])).toEqual({
+      from: '2026-10-01',
+      to: '2026-10-14',
+      status: 'CANCELLED',
+      search: 'rosa',
+      page: '1',
+      pageSize: '100',
+    });
   });
 });

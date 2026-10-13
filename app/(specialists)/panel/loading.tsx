@@ -1,6 +1,0 @@
-import { SpecialistHomeSkeleton } from '../_components/specialist-home-skeleton';
-
-/** The page's skeleton while it streams (the same one the session guard shows). */
-export default function SpecialistHomeLoading() {
-  return <SpecialistHomeSkeleton />;
-}

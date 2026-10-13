@@ -7,8 +7,11 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { forgetPerson, identifyPerson } from '@/app/lib/analytics/identity';
 import { track } from '@/app/lib/analytics/track';
 import { isApiError } from '@/app/lib/api/errors';
+import { canUseSpecialistArea } from '@/app/lib/auth/account';
 import {
+  forgetPanelHint,
   forgetSessionHint,
+  rememberPanelHint,
   rememberSessionHint,
 } from '@/app/lib/auth/session-hint';
 import { setTokenSource } from '@/app/lib/auth/token';
@@ -90,8 +93,12 @@ export function SessionProvider({
         if (cancelled) return;
         stop = watchSession((user) => {
           setTokenSource(user ? user.getToken : null);
-          if (user) rememberSessionHint();
-          else forgetSessionHint();
+          if (user) {
+            rememberSessionHint();
+          } else {
+            forgetSessionHint();
+            forgetPanelHint();
+          }
           const previous = lastPerson.current;
           lastPerson.current = user?.id ?? null;
           if (previous !== null && previous !== lastPerson.current) {
@@ -133,6 +140,10 @@ export function SessionProvider({
     const person = { id: account.id, role: account.role };
     identifyPerson(person);
     reportPerson(person);
+    // A specialist's browser goes to the panel from the next visit on (`/`
+    // redirects on the server); anyone else's keeps the landing.
+    if (canUseSpecialistArea(account)) rememberPanelHint();
+    else forgetPanelHint();
   }, [account]);
 
   const signOut = async () => {
@@ -145,6 +156,7 @@ export function SessionProvider({
       // Even when Firebase could not be reached, nothing of the person stays.
       setTokenSource(null);
       forgetSessionHint();
+      forgetPanelHint();
       forgetPerson();
       reportPerson(null);
       queryClient.clear();

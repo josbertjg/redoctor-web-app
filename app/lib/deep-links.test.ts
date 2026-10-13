@@ -12,25 +12,31 @@ import {
   playStoreUrl,
   toAndroidIntentUrl,
   toAppSchemeUrl,
-  universalLinkPaths,
+  universalLinkComponents,
   withoutOrigin,
 } from './deep-links';
 
-describe('universalLinkPaths', () => {
-  it('matches the paths published in the AASA file', () => {
+describe('universalLinkComponents', () => {
+  it('matches the components published in the AASA file, in order', () => {
     const aasa = JSON.parse(
       readFileSync(
         join(process.cwd(), 'public/.well-known/apple-app-site-association'),
         'utf8',
       ),
     ) as {
-      applinks: { details: { components: { '/': string }[] }[] };
+      applinks: {
+        details: { components: { '/': string; exclude?: boolean }[] }[];
+      };
     };
     const published = aasa.applinks.details.flatMap((detail) =>
-      detail.components.map((component) => component['/']),
+      detail.components.map((component) =>
+        component.exclude
+          ? { path: component['/'], exclude: component.exclude }
+          : { path: component['/'] },
+      ),
     );
 
-    expect(published).toEqual([...universalLinkPaths]);
+    expect(published).toEqual([...universalLinkComponents]);
   });
 });
 
@@ -39,7 +45,17 @@ describe('isAppOwnedPath', () => {
     expect(isAppOwnedPath('/s/123')).toBe(true);
     expect(isAppOwnedPath('/panel/subscription')).toBe(true);
     expect(isAppOwnedPath('/panel/agenda/2026-10-01')).toBe(true);
+    expect(isAppOwnedPath('/panel/reports')).toBe(true);
     expect(isAppOwnedPath('/home/home/my-subscription')).toBe(true);
+  });
+
+  it('leaves the payment page to the browser, whatever follows it', () => {
+    expect(isAppOwnedPath('/panel/subscription/pay')).toBe(false);
+    expect(isAppOwnedPath('/panel/subscription/pay?origin=email-4')).toBe(
+      false,
+    );
+    expect(isAppOwnedPath('/panel/subscription/pay/')).toBe(false);
+    expect(isAppOwnedPath('/panel/subscription/payments')).toBe(true);
   });
 
   it('no longer claims the Spanish names, which only redirect now', () => {

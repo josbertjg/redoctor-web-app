@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { getSessionToken } from '@/app/lib/auth/token';
@@ -11,7 +12,10 @@ import { renderWithIntl } from '@/tests/render';
 import { useSession } from '@/app/hooks/use-session';
 
 import { SessionProvider } from './session-provider';
+import { buildSpecialistMeResponse } from '../../../tests/factories/identity';
+import { apiUrl } from '../../../tests/msw/api-url';
 import { validToken } from '../../../tests/msw/handlers/identity';
+import { server } from '../../../tests/msw/server';
 
 const firebase = vi.hoisted(() => ({
   listener: undefined as ((user: SessionUser | null) => void) | undefined,
@@ -73,6 +77,7 @@ function renderProvider(expected = false) {
 afterEach(() => {
   firebase.listener = undefined;
   document.cookie = 'redoctor-session=; path=/; max-age=0';
+  document.cookie = 'redoctor-panel=; path=/; max-age=0';
 });
 
 describe('SessionProvider', () => {
@@ -102,7 +107,32 @@ describe('SessionProvider', () => {
     expect(await screen.findByText('name: Ana Pérez')).toBeInTheDocument();
     expect(screen.getByText('account: ready')).toBeInTheDocument();
     expect(document.cookie).toContain('redoctor-session=1');
+    // A patient keeps the landing: no panel hint.
+    expect(document.cookie).not.toContain('redoctor-panel=1');
     await expect(getSessionToken()).resolves.toBe(validToken);
+  });
+
+  it('remembers the panel for a specialist, and forgets it on signing out', async () => {
+    server.use(
+      http.get(apiUrl('/identity/me'), () =>
+        HttpResponse.json(buildSpecialistMeResponse()),
+      ),
+    );
+    renderProvider();
+    await waitFor(() => {
+      expect(firebase.listener).toBeDefined();
+    });
+    firebase.listener?.(user);
+
+    await screen.findByText('name: Dr. Luis Gómez');
+    await waitFor(() => {
+      expect(document.cookie).toContain('redoctor-panel=1');
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Salir' }));
+    await waitFor(() => {
+      expect(document.cookie).not.toContain('redoctor-panel=1');
+    });
   });
 
   it('signs out through Firebase and forgets everything', async () => {
