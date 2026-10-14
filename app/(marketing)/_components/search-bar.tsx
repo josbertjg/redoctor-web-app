@@ -15,7 +15,8 @@ import { SearchForm } from './search-form';
  * the search icon alone at the end — 20 px in from the edges, 24 px
  * between the pieces; stacked on phones, with lines between the rows and
  * the search as a labelled row. In the docked navigation bar, the same
- * pieces in a 44 px pill on a light surface, the city only from tablets up.
+ * pieces in a 44 px pill on a light surface, the city only from tablets up
+ * and the specialty's hint in one word.
  * TODO(search): the submit wires to the search when it opens (AGENTS.md §1).
  */
 const variants = {
@@ -37,8 +38,10 @@ const variants = {
     city: 'hidden md:flex',
     divider: 'hidden h-5 w-px md:block',
     secondDivider: 'hidden',
+    // A 36 px circle in the 44 px pill; an invisible ring around it makes
+    // the tap target the pill's full height (§8.5) without moving a thing.
     button:
-      '-mr-1.5 size-9 shrink-0 rounded-full hover:scale-110 focus-visible:ring-3 focus-visible:ring-ring/50',
+      'relative -mr-1.5 size-9 shrink-0 rounded-full after:absolute after:-inset-1 after:rounded-full hover:scale-110 focus-visible:ring-3 focus-visible:ring-ring/50',
     label: 'sr-only',
   },
 };
@@ -57,6 +60,9 @@ export function SearchBar({
 }: SearchBarProps) {
   const t = useTranslations('landing.hero.search');
   const style = variants[variant];
+  // The specialty's hint whole in the hero; one word in the docked bar,
+  // where the field is 99 px wide on a 360 px phone (and 104 px at 1024).
+  const specialtyHint = variant === 'bar' ? t('barSpecialty') : undefined;
 
   return (
     <SearchForm
@@ -72,6 +78,7 @@ export function SearchBar({
         name="q"
         icon={Stethoscope}
         label={t('specialty')}
+        hint={specialtyHint}
         className={style.field}
       />
       <Divider className={style.divider} />
@@ -111,11 +118,14 @@ function SearchField({
   name,
   icon,
   label,
+  hint = label,
   className,
 }: {
   name: string;
   icon: IconComponent;
   label: string;
+  /** The placeholder, when shorter than the label screen readers hear. */
+  hint?: string | undefined;
   className?: string;
 }) {
   return (
@@ -130,7 +140,7 @@ function SearchField({
       <input
         type="text"
         name={name}
-        placeholder={label}
+        placeholder={hint}
         autoComplete="off"
         className="min-w-0 flex-1 bg-transparent text-pure-black outline-none placeholder:text-grey-700"
       />

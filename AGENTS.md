@@ -649,7 +649,8 @@ Every shared path renders, besides its content, a way to open the app:
   opened → signed in → claimed → confirmed), then strips it from canonical
   URLs and from anything it shares. The app ignores it.
 - `/i/{token}`: the token is a credential. Never log it, never send it to
-  analytics or Sentry, `noindex`, and the `<meta og:*>` preview is generic
+  analytics or Sentry (Firebase's sign-in window sees it, accepted: §11),
+  `noindex`, and the `<meta og:*>` preview is generic
   (brand image, "Tienes una cita en Redoctor") — no names, no dates. Same
   for `/a/{id}`. `/s/{id}` may have a rich preview (name, specialty, photo):
   that is public information.
@@ -1008,6 +1009,17 @@ pnpm check          # typecheck + lint + format:check + test + build
   `redoctorapp.com` and the Vercel preview domain. Any Google Maps browser
   key created for `/s/{id}` directions is a **new** key restricted by
   referrer — never the app's key.
+- **Firebase's sign-in window sees the page's address (accepted, owner,
+  2026-10-13).** `signInWithPopup` hands the address of the page it opens
+  from, whole, to the auth handler as `redirectUrl`
+  (`redoctor-3acf8.firebaseapp.com/__/auth/handler`: Google, for our own
+  project, over HTTPS; read in `@firebase/auth`). On `/i/{token}` the
+  sign-in buttons are on the invitation's page, so the token goes with it
+  (and inside `redirect` on the hop through `/sign-in` or `/sign-up`).
+  Nothing of ours records it, and what a person typed never rides along
+  (`returnPath`, §9). Keeping it out would mean opening the window from an
+  address without the token, inside the tap (Safari blocks a window
+  opened later): only if the threat model changes.
 - Dependencies: `pnpm audit` in CI, Renovate weekly, lockfile committed.
 
 ---
@@ -1200,7 +1212,10 @@ written out in full, or Next.js does not inline it).
   between the mark and the links and takes the free room, which slides the
   links over to «Entrar». CSS transitions on `data-docked`, 300 ms, house
   curve; scrolling back undoes it. Two search landmarks need two names
-  (`landing.hero.search.barLabel`).
+  (`landing.hero.search.barLabel`). Its specialty field hints «Especialidad»
+  alone (2026-10-13; the hero's whole hint, 238 px, was cut at every width:
+  the field is 99 px on a 360 px phone, 104 at 1024, 232 at 1280), and its
+  36 px search button answers taps on the pill's full 44 px.
 - **No root `loading.tsx` (2026-10-08):** §4.
 
 ### Decided (2026-10-12)

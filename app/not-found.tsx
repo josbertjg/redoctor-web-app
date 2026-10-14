@@ -13,7 +13,9 @@ import { SiteHeader } from '@/app/ui/layout/site-header';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('not_found');
-  return { title: t('metaTitle') };
+  // Said here, not left to Next.js: `next start` adds noindex to a 404, but
+  // Vercel serves an unknown path the prerendered page, which has none.
+  return { title: t('metaTitle'), robots: { index: false, follow: false } };
 }
 
 /*

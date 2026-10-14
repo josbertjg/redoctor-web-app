@@ -24,7 +24,8 @@
         "specialty": "Especialidad, enfermedad, doctor",
         "city": "Ciudad",
         "submit": "Buscar",
-        "barLabel": "Buscar especialistas desde la barra"
+        "barLabel": "Buscar especialistas desde la barra",
+        "barSpecialty": "Especialidad"
       },
       "specialtiesLabel": "Especialidades"
     },
