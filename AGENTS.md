@@ -79,7 +79,7 @@ transactional emails the API sends.
 | M7 Review | Stars, comment, "your review is public / anonymous by default" notice |
 | M8 Public profile `/s/{id}` | Read-only: photo, verified specialties, offices with directions, service prices, rating and reviews, and «Agendar cita» toward the booking (M15) |
 | M9 Landing | Designed by the designer; copy in the doc «Landing de Redoctor» |
-| M10 Legal and account | Privacy, terms, account deletion (texts from the lawyer) |
+| M10 Legal and account | `/terms`, `/privacy` and `/delete-account` (2026-10-14): the terms of use, the privacy policy and how to have an account deleted, drafted from what the web and the app do, as the base the lawyer reviews (the owner's word); the company's identification is a placeholder until he fills it (§13) |
 | M11 Bridges | `/home/*` (pages that only open the app) and `/daily-summary/unsubscribe` (daily-summary email opt-out); `/panel/subscription`, `/panel/agenda`, `/panel/specialties` and `/panel/profile` were bridges until M14 made them pages |
 | M13 Specialist payment | `/panel/subscription` («Mi suscripción»: the plan, its state and its notice) and `/pay` (the payment, out of the paths the app opens, since no app may charge; the owner's split of 2026-10-13): choose a plan with a coupon, Pago Móvil and transfer data in Bs from the API, report the payment, see it in review; changing plan — from «Mi suscripción» (`?view=plans`) or from a missing feature's invitation (`?plan=`) — and undoing a scheduled change (2026-10-13); and the rest of the app's «Mi suscripción» the same day (§13, Decided): cancelling and resuming, dropping an unpaid subscription, a coupon on the plan in force, the billing data, the receipts (`/panel/subscription/invoices[/{id}]`, each one payable from its page), the balance (`/panel/subscription/balance`) and «Mis cupones» (`/panel/subscription/coupons`) |
 | M14 Specialist panel | `/panel` and its sections (2026-10-13): the home (the plan and its notice, today's patients, the statistics, what stays in the app), the day's agenda `/panel/agenda[/{date}]` and the history `/panel/appointments` (read only, each appointment opening `/a/{id}`), the statistics `/panel/reports` (the app's summary and four reports, PDF and CSV when the plan allows), «Mi perfil» `/panel/profile` (whether patients find the profile and, if not, why; the profile as the app shows it to its owner) and «Mis especialidades» `/panel/specialties` (each specialty and its review), both read only, the subscription (M13); a specialist stays in it until signing out |
@@ -244,9 +244,12 @@ app/                                  # The application: routes, UI and logic
     search/page.tsx · error.tsx       #   /search — the search in the address, the first page read on the server, the rest in the browser
     _components/                      #   search-header (+ -header-bar), search-navigation (the address as the one state, the pending line), search-results, result-card, availability-strip, search-filters, map-panel, results-map, map-markers, results-states
     _components/                      #   profile pieces; panel-*, agenda-*, appointments-history, booking-action and book-at-office (the profile's «Agendar cita», `useBookingOffer`), edit-in-app-card, plan-offer-card; reports/ (the statistics' views, charts, filters, export and the plan that downloads); my-profile/ (the view, its state, identity, offices, prices, schedules and training blocks); my-specialties/ (the view, the specialty card, support)
-  (account)/                          # module: account and legal (M10)
-    account/layout.tsx · page.tsx     #   /account — layout = <RequireSession>
-    privacy/page.tsx · terms/page.tsx · delete-account/page.tsx
+  (account)/                          # module: legal and account (M10)
+    layout.tsx                        #   the bar with the account over the legal pages
+    terms/page.tsx · privacy/page.tsx · delete-account/page.tsx   # /terms, /privacy, /delete-account — public, indexed; every word in the catalog (`legal.*`)
+    _components/legal-document.tsx    #   a document: title and date, intro, contents, sections (rich messages: paragraphs, lists, links to the other pages, the email, the support WhatsApp)
+    _data/legal-sections.ts           #   each document's sections, in order
+    (account/page.tsx, /account, is not built: the account's own page waits for the API's deletion endpoint, REDOC-352)
   (billing)/                          # module: specialist payment (M13)
     layout.tsx · error.tsx            #   <PanelFrame width="narrow"> around every page below, kept as the person moves between them; the error inside it
     panel/subscription/page.tsx       #   /panel/subscription — «Mi suscripción»
@@ -1140,8 +1143,12 @@ written out in full, or Next.js does not inline it).
 4. When REDOC-362 (CORS, pilot environment) and REDOC-357 (configuration
    endpoint) ship; until then the dev-only proxy and the provisional
    constants stay isolated.
-5. Legal texts (privacy, terms, account deletion) — from the lawyer; the
-   pages exist with placeholders marked as such, never with invented text.
+5. Legal texts (privacy, terms, account deletion) — the lawyer's review of
+   the drafts of 2026-10-14 (Decided, «The legal pages (M10) as drafted»):
+   the company's identification (`legal.entity`), the citations, the
+   figures chosen as defaults and the fiscal-invoice line. The pages show
+   the drafts meanwhile; the identification stays a bracketed placeholder
+   until the owner fills it.
 6. Store ids — empty until the apps are published.
 7. The JS budget of §8.10: 150 KB gzip is below what React 19 + Next.js 16
    weigh on their own (≈140 KB); today's public pages ship 198–225 KB.
@@ -2135,6 +2142,71 @@ written out in full, or Next.js does not inline it).
     links here (the landing doc, §6). Nothing changed there, the prices
     were already on the page; «Seleccionar plan» now makes the path from
     the landing to the payment real.
+
+- **The legal pages (M10) as drafted (the owner's «vamos con M10… que
+  esto sirva como base para que el abogado lo revise», 2026-10-14):**
+  `/terms`, `/privacy` and `/delete-account`, in `(account)`, public and
+  indexed (the sitemap lists them), under the bar with the account. Every
+  word lives in the catalog under `legal.*`: the company's identification
+  once (`legal.entity`: name, RIF, address, email — **placeholders in
+  brackets until the owner fills them**; the email becomes a link only
+  when it is a real address), and each document as a title, its date of
+  update, an introduction and named sections (`legal.<doc>.sections.<id>`,
+  ordered by `app/(account)/_data/legal-sections.ts`), written as rich
+  messages (`<p>`, `<ul>`, `<ol>`, `<li>`, `<b>`, and the links `<terms>`,
+  `<privacy>`, `<delete>`, `<mail>`, `<support>` — the support WhatsApp
+  from the environment, its message saying nothing about the person).
+  - **What they say, drawn from what the web and the app do:** the terms
+    cover what Redoctor is and is not (no medical service, no
+    emergencies), who may use it (adults; minors as someone in one's
+    care; licensed specialists), the account (Google or Apple, no
+    passwords), the patients' services (free; invitations, booking,
+    confirming from 24 h before, rescheduling and cancelling before the
+    start; the consultation paid to the specialist, never through
+    Redoctor), the specialists' services (the verification and what it is
+    not; their duties: licences, truthful data, consent to contact
+    patients, medical secrecy, no clinical record in Redoctor), the plans
+    (USD, paid in bolívares at the BCV rate, Pago Móvil or transfer
+    reported and verified, monthly periods with no automatic charge,
+    grace then invisibility, upgrades prorated and downgrades at the
+    period's end, cancellation at the period's end with no refund,
+    coupons and balance, internal receipts vs the fiscal invoice, price
+    changes with 30 days' notice), reviews (after a finished consultation,
+    public with the first name and the surname's initial), prohibited
+    uses, intellectual property, communications (the daily summary's
+    opt-out, the newsletter only with consent, WhatsApp sent by the
+    specialist), availability, liability (capped at 12 months of a
+    specialist's payments), indemnity, termination, changes with 15 days'
+    notice, Venezuelan law and Caracas courts, and contact. The policy
+    covers who it applies to, every datum the web and the app handle
+    (account, patient and dependants, appointments — the reason as health
+    data —, reviews, specialists' professional, verification and billing
+    data, the device's position rounded to a kilometre, technical data),
+    the purposes and their bases (the consents the sign-up asks: terms,
+    health and location data, newsletter), who receives what (the
+    specialist of the appointment, the public profile, the providers:
+    Google, Apple, hosting, email, PostHog and Sentry as configured),
+    transfers abroad, retention (30 days after deletion, billing per the
+    tax rules, logs 90 days), rights and how to exercise them (15 working
+    days), minors, health data and medical secrecy, security, the cookies
+    and local storage by name, analytics as built (no IP, no page URLs, no
+    recordings), communications, changes and contact; the legal frame is
+    named generically (the Constitution, the data-messages and
+    cyber-crime laws, the medical-secrecy rules, the TSJ's criteria) **for
+    the lawyer to confirm or replace**. The deletion page says how to ask
+    (support, from the account's email, no password ever), the 30-day
+    term and what goes and what stays (billing records).
+  - **Linked from:** the landing's footer, the sign-in's legal line and
+    the sign-up's consent (each a link; the sign-up's open apart so
+    nothing typed is lost). The app's KYC consent and the store listings
+    should point at `https://redoctorapp.com/terms`, `/privacy` and
+    `/delete-account` (for the app's agent).
+  - **Open for the lawyer and the owner:** the figures chosen as
+    reasonable defaults (30 days to delete, 90 days of logs, 15 working
+    days to answer, 15 and 30 days' notice, the 12-month liability cap,
+    Caracas courts), the legal citations, the fiscal-invoice line, and
+    the company's identification. `/account` (the account's own page with
+    the deletion button) waits for REDOC-352.
 
 ### Improvements noted (not scheduled)
 

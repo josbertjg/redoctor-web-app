@@ -1,19 +1,35 @@
 'use client';
 
+import Link from 'next/link';
+
 import { useTranslations } from 'next-intl';
 
+import { routes } from '@/app/lib/routes';
 import { cn } from '@/app/lib/utils';
 
-/** The legal line under the sign-in buttons, as the app's login says it. */
+const linkClass =
+  'rounded-sm font-semibold underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50';
+
+/** The legal line under the sign-in buttons, as the app's login says it, each page linked (M10). */
 export function SignInLegalNote({ className }: { className?: string }) {
   const t = useTranslations('auth');
-  // TODO(M10): link the legal pages once they exist.
   return (
     <p
       className={cn('text-center text-body-sm text-text-secondary', className)}
     >
       {t('byLoggingInAcceptsOur')}
-      <span className="font-semibold">{t('termsOfUseAndPrivacy')}</span>
+      {t.rich('termsOfUseAndPrivacy', {
+        terms: (chunks) => (
+          <Link href={routes.terms()} className={linkClass}>
+            {chunks}
+          </Link>
+        ),
+        privacy: (chunks) => (
+          <Link href={routes.privacy()} className={linkClass}>
+            {chunks}
+          </Link>
+        ),
+      })}
     </p>
   );
 }

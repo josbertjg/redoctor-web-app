@@ -2,6 +2,8 @@
 
 import { useId, useMemo, useState } from 'react';
 
+import Link from 'next/link';
+
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
@@ -31,6 +33,7 @@ import {
   isDocumentAvailable,
   registerPatient,
 } from '@/app/lib/queries/identity';
+import { routes } from '@/app/lib/routes';
 
 import { Button } from '@/app/ui/button';
 import { Checkbox } from '@/app/ui/checkbox';
@@ -40,6 +43,9 @@ import { IdentityDocumentField } from '@/app/ui/identity-document-field';
 import { TextField } from '@/app/ui/text-field';
 
 import { usePersonChecks } from '@/app/hooks/use-person-checks';
+
+const legalLinkClass =
+  'rounded-sm font-semibold text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50';
 
 /** What the form asks: the names and consents, the personal data, or both. */
 export type SignUpParts = { register: boolean; personalData: boolean };
@@ -311,14 +317,33 @@ export function PatientSignUpForm({
 
       {parts.register ? (
         <div className="flex flex-col">
-          {/* TODO(M10): link the terms once the legal pages exist. */}
+          {/* The legal pages open apart, so nothing typed here is lost. */}
           <Checkbox
             label={
               <>
                 {t('auth.iHaveRead')}{' '}
-                <span className="font-semibold">
-                  {t('auth.termsOfUseAndPrivacy')}
-                </span>{' '}
+                {t.rich('auth.termsOfUseAndPrivacy', {
+                  terms: (chunks) => (
+                    <Link
+                      href={routes.terms()}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={legalLinkClass}
+                    >
+                      {chunks}
+                    </Link>
+                  ),
+                  privacy: (chunks) => (
+                    <Link
+                      href={routes.privacy()}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={legalLinkClass}
+                    >
+                      {chunks}
+                    </Link>
+                  ),
+                })}{' '}
                 {t('ofRedoctor')}.
               </>
             }

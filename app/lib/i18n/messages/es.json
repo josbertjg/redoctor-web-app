@@ -257,7 +257,7 @@
     "continueWithApple": "Continuar con Apple",
     "lastUsed": "Última vez",
     "byLoggingInAcceptsOur": "Al iniciar sesión, aceptas nuestros ",
-    "termsOfUseAndPrivacy": "Términos de uso y políticas de privacidad",
+    "termsOfUseAndPrivacy": "<terms>Términos de uso</terms> y <privacy>políticas de privacidad</privacy>",
     "menu": {
       "label": "Tu cuenta",
       "specialistHome": "Mi panel",
@@ -1784,6 +1784,191 @@
       },
       "appointmentsCount": "{count, plural, one {1 cita} other {# citas}}",
       "missing": "—"
+    }
+  },
+  "legal": {
+    "entity": {
+      "name": "[Razón social de Redoctor]",
+      "rif": "[J-00000000-0]",
+      "address": "[Dirección fiscal, ciudad, estado, Venezuela]",
+      "email": "[legal@redoctorapp.com]"
+    },
+    "common": {
+      "updated": "Última actualización: {date}",
+      "contents": "Contenido",
+      "whatsappMessage": "Hola, escribo desde la web de Redoctor.",
+      "noWhatsapp": "nuestro WhatsApp de soporte"
+    },
+    "terms": {
+      "metaTitle": "Términos y condiciones de uso · Redoctor",
+      "metaDescription": "Las condiciones para usar Redoctor como paciente o como especialista: cuentas, citas, verificación, planes y pagos, reseñas y responsabilidades.",
+      "title": "Términos y condiciones de uso",
+      "updatedAt": "14 de octubre de 2026",
+      "intro": "<p>Estos Términos y condiciones de uso (los «Términos») regulan el acceso y el uso de Redoctor: el sitio web redoctorapp.com y la aplicación móvil Redoctor (en conjunto, la «Plataforma»), operados por {company}, RIF {rif}, con domicilio en {address} («Redoctor», «nosotros»).</p><p>Léelos con atención. Al crear una cuenta, al marcar la casilla de aceptación o al usar la Plataforma, aceptas estos Términos y nuestra <privacy>Política de privacidad</privacy>. Si no estás de acuerdo con ellos, no uses la Plataforma.</p>",
+      "sections": {
+        "what": {
+          "title": "1. Qué es Redoctor",
+          "body": "<p>Redoctor es una plataforma tecnológica que conecta a pacientes con profesionales de la salud verificados (los «Especialistas») para buscar, agendar, confirmar, reprogramar, cancelar y calificar consultas presenciales en los consultorios que cada Especialista publica.</p><p>Redoctor no es un centro de salud, no presta servicios médicos, no emite diagnósticos ni tratamientos y no participa en la relación entre el paciente y el Especialista. La consulta se realiza entre el paciente y el Especialista, bajo la exclusiva responsabilidad profesional de este último, en los términos de la Ley del Ejercicio de la Medicina, el Código de Deontología Médica y las demás normas que rigen su profesión.</p><p><b>Redoctor no atiende emergencias.</b> Si tú o alguien a tu cargo está en una situación de riesgo para la vida o la salud, llama de inmediato a los servicios de emergencia o acude al centro de salud más cercano.</p>"
+        },
+        "definitions": {
+          "title": "2. Definiciones",
+          "body": "<ul><li><b>Paciente:</b> la persona que usa la Plataforma para recibir, agendar y gestionar citas, para sí misma o para una persona a su cargo.</li><li><b>Especialista:</b> el profesional de la salud que publica su perfil, sus consultorios, horarios y precios, y gestiona sus citas en la Plataforma.</li><li><b>Persona a cargo:</b> la persona por la que un Paciente agenda o reclama una cita (por ejemplo, un hijo menor de edad o un familiar bajo su cuidado), actuando como su representante legal o con su autorización.</li><li><b>Consultorio:</b> el lugar físico donde el Especialista atiende, con su dirección, horarios y precios.</li><li><b>Cita:</b> la reserva de una consulta presencial con un Especialista en un Consultorio, en una fecha y hora determinadas.</li><li><b>Invitación:</b> el enlace que un Especialista envía a un paciente, por WhatsApp o por correo electrónico, para que guarde en su cuenta una cita que el Especialista ya agendó.</li><li><b>Perfil verificado:</b> el perfil de un Especialista cuya identidad y especialidades han sido revisadas y aprobadas por Redoctor.</li><li><b>Plan:</b> la suscripción mensual que un Especialista contrata para usar las funciones de pago de la Plataforma.</li></ul>"
+        },
+        "eligibility": {
+          "title": "3. Quién puede usar Redoctor",
+          "body": "<p>Para crear una cuenta debes ser mayor de dieciocho (18) años y tener capacidad legal para obligarte. Los menores de edad y las personas que no puedan gestionar su propia cuenta solo pueden ser atendidos a través de la cuenta de su representante legal, como Personas a cargo.</p><p>Para registrarte como Especialista debes ser un profesional de la salud con título y licencia o colegiatura vigentes en la República Bolivariana de Venezuela, y estar legalmente habilitado para ejercer la especialidad que declares.</p><p>Al registrarte declaras que la información que proporcionas es veraz, completa y actual, y te comprometes a mantenerla así.</p>"
+        },
+        "account": {
+          "title": "4. Tu cuenta",
+          "body": "<p>La cuenta se crea e inicia sesión con una cuenta de Google o de Apple. Redoctor no guarda contraseñas: la autenticación la realizan esos proveedores. Eres responsable de la seguridad de tu cuenta de Google o de Apple y de todo lo que ocurra desde tu cuenta de Redoctor.</p><p>Una misma cuenta puede tener un perfil de Paciente y un perfil de Especialista. Los perfiles son personales e intransferibles: no puedes ceder tu cuenta ni usar la de otra persona.</p><p>Avísanos de inmediato por los canales de soporte si sospechas un acceso no autorizado. Podemos suspender o cerrar una cuenta que incumpla estos Términos, que presente datos falsos o que ponga en riesgo a otros usuarios o a la Plataforma.</p><p>Puedes eliminar tu cuenta cuando quieras siguiendo las indicaciones de <delete>Eliminar mi cuenta</delete>.</p>"
+        },
+        "patients": {
+          "title": "5. Servicios para pacientes",
+          "body": "<p>El uso de la Plataforma es gratuito para los pacientes. Redoctor no cobra por buscar, agendar ni gestionar citas.</p><ul><li><b>Búsqueda.</b> Puedes buscar Especialistas por nombre, especialidad y ubicación sin tener una cuenta. Los perfiles muestran la información que cada Especialista publica y que Redoctor ha aprobado.</li><li><b>Invitaciones.</b> Un Especialista puede agendar una cita para ti y enviarte una Invitación. Al abrirla puedes guardar la cita en tu cuenta, para ti o para una Persona a cargo, y confirmarla cuando corresponda.</li><li><b>Agendar.</b> Puedes agendar una cita desde el perfil de un Especialista eligiendo consultorio, fecha y hora, motivo de consulta y la persona que será atendida.</li><li><b>Confirmar.</b> Las citas nacen pendientes y pueden confirmarse desde veinticuatro (24) horas antes de su inicio. Una cita no confirmada puede ser cancelada por el Especialista.</li><li><b>Reprogramar y cancelar.</b> Puedes reprogramar una cita a otro horario disponible del mismo consultorio o cancelarla, siempre antes de la hora de inicio. Te pedimos avisar con la mayor anticipación posible: detrás de cada cita hay un profesional que reservó ese tiempo para ti.</li><li><b>Recordatorios.</b> Te enviaremos correos electrónicos sobre tus citas: invitación, confirmación, recordatorios y cambios.</li></ul><p><b>Precio y pago de la consulta.</b> El precio que ves en la Plataforma lo fija cada Especialista y es informativo. La consulta se paga directamente al Especialista, en su consultorio y por los medios que él acepte. Redoctor no cobra, no intermedia ni gestiona pagos de pacientes y no es responsable de reembolsos entre pacientes y Especialistas.</p><p><b>Personas a cargo.</b> Al agendar o reclamar una cita para otra persona, declaras que eres su representante legal o que cuentas con su autorización para hacerlo y para compartir sus datos con el Especialista.</p>"
+        },
+        "specialists": {
+          "title": "6. Servicios para especialistas",
+          "body": "<p>Como Especialista puedes crear tu perfil profesional, publicar tus consultorios, horarios, servicios y precios, agendar e invitar a tus pacientes, gestionar tu agenda y consultar tus estadísticas, en los términos del Plan que contrates.</p><p><b>Verificación.</b> Antes de que un perfil sea visible para los pacientes, Redoctor verifica la identidad del Especialista con su documento de identidad y valida cada especialidad declarada con los títulos, certificaciones o licencias que la respalden. Solo la información aprobada se publica. Redoctor puede pedir documentos adicionales, rechazar una especialidad o retirar la verificación si detecta inconsistencias. La verificación no es una certificación de la calidad de los servicios del Especialista ni una recomendación de Redoctor.</p><p><b>Obligaciones.</b> Como Especialista te comprometes a:</p><ul><li>mantener vigentes tu licencia, colegiatura y demás habilitaciones, y ejercer conforme a la ley y a la ética profesional;</li><li>publicar información veraz y actualizada sobre tus consultorios, horarios, servicios y precios, y respetar el precio publicado al momento de la cita;</li><li>atender las citas confirmadas o cancelarlas con la mayor anticipación posible;</li><li>contar con el consentimiento del paciente para contactarlo y para registrar sus datos en la Plataforma, y usar esos datos únicamente para la atención y la gestión de sus citas;</li><li>guardar el secreto médico y llevar la historia clínica de tus pacientes conforme a la normativa aplicable, fuera de la Plataforma: Redoctor no es un sistema de historia clínica;</li><li>no usar la Plataforma para enviar comunicaciones no solicitadas ni para fines distintos de la gestión de tu consulta.</li></ul><p>Respecto de los datos de tus pacientes que registras en la Plataforma, actúas como responsable de su tratamiento en tu relación asistencial, y Redoctor los trata por tu cuenta y para operar el servicio, en los términos de la <privacy>Política de privacidad</privacy>.</p>"
+        },
+        "plans": {
+          "title": "7. Planes, pagos y facturación",
+          "body": "<p>Las funciones de pago para Especialistas se contratan mediante Planes de suscripción mensual. Las características, los límites y el precio de cada Plan se publican en la Plataforma al momento de contratarlo.</p><ul><li><b>Precio y moneda.</b> Los precios se expresan en dólares de los Estados Unidos de América (USD) y se pagan en bolívares, calculados a la tasa de cambio oficial de referencia publicada por el Banco Central de Venezuela vigente el día en que Redoctor emite el monto a pagar. El monto en bolívares se mantiene por el tiempo indicado al emitirlo; vencido ese plazo, se calcula de nuevo.</li><li><b>Medios de pago.</b> Pago Móvil o transferencia bancaria a las cuentas de Redoctor que se muestran en la Plataforma. Tras pagar, debes reportar el pago con su referencia, banco, origen, fecha y monto. Redoctor verifica el reporte y activa o renueva el Plan al aprobarlo. Un reporte con datos incorrectos o un pago que no pueda identificarse puede ser rechazado; en ese caso te indicaremos el motivo.</li><li><b>Períodos y renovación.</b> Cada período es de un mes. Al final de cada período se emite el recibo del siguiente, que debes pagar para que el Plan continúe. Redoctor no realiza cobros automáticos. Un Plan con recibos vencidos pasa a mora, con un período de gracia durante el cual tu perfil sigue visible; vencido ese período, el perfil deja de ser visible para los pacientes hasta que el pago se regularice.</li><li><b>Cambios de Plan.</b> Puedes cambiar a un Plan superior en cualquier momento, pagando la diferencia proporcional por los días restantes del período, o programar el cambio a un Plan inferior para el inicio del siguiente período. Un cambio a un Plan con menos consultorios activos requiere que desactives antes los consultorios que excedan el límite.</li><li><b>Cancelación.</b> Puedes cancelar tu Plan cuando quieras. La cancelación es efectiva al final del período ya pagado: hasta entonces conservas todas las funciones. Los pagos realizados no son reembolsables, salvo que la ley disponga otra cosa o que el servicio no haya podido prestarse por causas imputables a Redoctor.</li><li><b>Cupones y saldo a favor.</b> Los cupones de descuento están sujetos a las condiciones de cada campaña. Un pago en exceso o un ajuste a tu favor genera un saldo que se aplica automáticamente al siguiente recibo mensual.</li><li><b>Recibos.</b> Los recibos que ves en la Plataforma son comprobantes internos de tu suscripción y no sustituyen la factura fiscal, que Redoctor emite conforme a la normativa tributaria venezolana con los datos de facturación que registres.</li><li><b>Cambios de precio.</b> Redoctor puede modificar los precios y las características de los Planes avisándote con al menos treinta (30) días de anticipación por correo electrónico o en la Plataforma. El nuevo precio aplica a partir del siguiente período.</li></ul>"
+        },
+        "reviews": {
+          "title": "8. Reseñas y calificaciones",
+          "body": "<p>Después de una consulta finalizada, el Paciente puede calificar al Especialista con una puntuación de una a cinco estrellas y un comentario opcional. Las reseñas son públicas, se muestran en el perfil del Especialista con el nombre de pila y la inicial del apellido del Paciente, y no pueden editarse una vez enviadas.</p><p>Las reseñas deben ser veraces, respetuosas y referirse a tu propia experiencia en la consulta. No está permitido incluir datos personales de terceros, diagnósticos de otras personas, insultos, amenazas, contenido discriminatorio o publicidad. Redoctor puede retirar las reseñas que incumplan estas normas o la ley, sin que ello implique revisar o garantizar el contenido de las demás.</p><p>Los Especialistas no pueden condicionar la atención a una reseña favorable ni ofrecer beneficios a cambio de reseñas.</p>"
+        },
+        "conduct": {
+          "title": "9. Usos prohibidos",
+          "body": "<p>Al usar la Plataforma te comprometes a no:</p><ul><li>proporcionar datos falsos, suplantar a otra persona o crear cuentas para terceros sin su autorización;</li><li>usar la Plataforma para fines ilícitos, para acosar, amenazar o discriminar a otros usuarios, o para enviar comunicaciones no solicitadas;</li><li>agendar citas sin intención de asistir, o dejar de asistir reiteradamente a citas confirmadas;</li><li>acceder a datos de otros usuarios, o intentar vulnerar, interferir o sobrecargar la Plataforma, sus servidores o sus mecanismos de seguridad;</li><li>copiar, extraer de forma automatizada, revender o explotar comercialmente el contenido de la Plataforma, incluidos los perfiles de los Especialistas;</li><li>usar la Plataforma como sustituto de una atención médica de emergencia.</li></ul>"
+        },
+        "ip": {
+          "title": "10. Propiedad intelectual y contenido",
+          "body": "<p>La Plataforma, su software, diseño, marcas, logotipos y textos son propiedad de Redoctor o de sus licenciantes y están protegidos por las leyes de propiedad intelectual. Te concedemos una licencia limitada, personal, no exclusiva, revocable e intransferible para usar la Plataforma conforme a estos Términos. Ningún otro derecho se entiende cedido.</p><p>El contenido que publicas (tu foto, tu descripción profesional, las fotos de tus consultorios, tus reseñas) sigue siendo tuyo. Al publicarlo nos concedes una licencia gratuita, no exclusiva y mundial para mostrarlo, reproducirlo y adaptarlo en la Plataforma y en los enlaces que se compartan a partir de ella, mientras ese contenido permanezca publicado. Garantizas que tienes los derechos y las autorizaciones necesarias sobre el contenido que publicas.</p>"
+        },
+        "communications": {
+          "title": "11. Comunicaciones",
+          "body": "<p>Redoctor te envía las comunicaciones necesarias para el servicio: invitaciones, confirmaciones, recordatorios y cambios de citas, el resumen diario de la agenda para Especialistas, avisos de verificación y de facturación, y avisos sobre tu cuenta o sobre estos Términos. Puedes darte de baja del resumen diario desde el enlace que incluye cada correo.</p><p>Solo te enviaremos consejos de salud y novedades si lo autorizaste al registrarte; puedes retirar esa autorización en cualquier momento desde el enlace de cada correo o escribiendo a soporte.</p><p>Los mensajes de WhatsApp con enlaces a citas los envía el Especialista desde su propio teléfono; Redoctor solo prepara el texto y el enlace.</p>"
+        },
+        "availability": {
+          "title": "12. Disponibilidad y cambios del servicio",
+          "body": "<p>Trabajamos para que la Plataforma esté disponible de forma continua, pero no garantizamos que funcione sin interrupciones ni errores. Podemos suspender temporalmente el servicio por mantenimiento, actualizaciones o causas ajenas a nuestro control, y podemos añadir, modificar o retirar funciones. Si un cambio afecta de forma sustancial a las funciones de un Plan, te lo avisaremos con anticipación.</p><p>Redoctor se encuentra en una etapa inicial de operación. Algunas funciones pueden ofrecerse en versión de prueba o estar disponibles solo en determinadas ciudades.</p>"
+        },
+        "liability": {
+          "title": "13. Responsabilidad",
+          "body": "<p>Redoctor pone a disposición de pacientes y Especialistas una herramienta para encontrarse y gestionar citas. En consecuencia, y en la máxima medida que permita la ley:</p><ul><li>Redoctor no es responsable de la atención médica, de los diagnósticos, tratamientos, recomendaciones o resultados de las consultas, ni de los actos u omisiones de los Especialistas o de los pacientes;</li><li>la verificación de un Especialista se limita a comprobar su identidad y la documentación de sus especialidades; Redoctor no garantiza la calidad de sus servicios ni la disponibilidad real de sus horarios;</li><li>Redoctor no es responsable de los pagos realizados entre pacientes y Especialistas, ni de las cancelaciones, retrasos o inasistencias de unos u otros;</li><li>Redoctor no responde por daños indirectos, lucro cesante o pérdida de datos derivados del uso o de la imposibilidad de uso de la Plataforma;</li><li>la responsabilidad total de Redoctor frente a un Especialista por cualquier reclamo relacionado con la Plataforma se limita al monto que ese Especialista haya pagado a Redoctor en los doce (12) meses anteriores al hecho que lo origine.</li></ul><p>Nada en estos Términos limita los derechos que te reconocen las normas venezolanas de protección a las personas en el acceso a bienes y servicios, ni la responsabilidad que no pueda limitarse por ley.</p>"
+        },
+        "indemnity": {
+          "title": "14. Indemnidad",
+          "body": "<p>Te comprometes a mantener indemne a Redoctor, sus socios, directores y empleados frente a cualquier reclamo, daño o gasto, incluidos honorarios razonables de abogados, que se derive de tu incumplimiento de estos Términos, de la información que publiques, del uso que hagas de la Plataforma o, si eres Especialista, del ejercicio de tu profesión.</p>"
+        },
+        "termination": {
+          "title": "15. Suspensión y terminación",
+          "body": "<p>Puedes dejar de usar la Plataforma y eliminar tu cuenta en cualquier momento. Redoctor puede suspender o cerrar tu cuenta, con aviso previo salvo urgencia, si incumples estos Términos, si tu información resulta falsa, si una autoridad lo ordena o si tu conducta pone en riesgo a otros usuarios o a la Plataforma.</p><p>Al cerrarse una cuenta, las citas futuras quedan canceladas y se notifica a la otra parte; los datos se conservan o eliminan conforme a la <privacy>Política de privacidad</privacy>. Las cláusulas que por su naturaleza deban subsistir (propiedad intelectual, responsabilidad, indemnidad, ley aplicable) seguirán vigentes.</p>"
+        },
+        "privacy": {
+          "title": "16. Protección de datos personales",
+          "body": "<p>El tratamiento de tus datos personales, incluidos los datos de salud que necesita una cita y la ubicación que decidas compartir para buscar, se rige por nuestra <privacy>Política de privacidad</privacy>, que forma parte de estos Términos. Al registrarte te pediremos los consentimientos necesarios, que puedes retirar en cualquier momento; sin el consentimiento para tratar los datos de tus citas no es posible prestarte el servicio.</p>"
+        },
+        "changes": {
+          "title": "17. Cambios a estos Términos",
+          "body": "<p>Podemos actualizar estos Términos para reflejar cambios en el servicio o en la ley. Publicaremos la versión vigente en la Plataforma con su fecha de actualización y, si el cambio es relevante, te lo avisaremos con al menos quince (15) días de anticipación por correo electrónico o en la Plataforma. Si sigues usando la Plataforma después de esa fecha, aceptas los Términos actualizados; si no estás de acuerdo, puedes eliminar tu cuenta.</p>"
+        },
+        "law": {
+          "title": "18. Ley aplicable y jurisdicción",
+          "body": "<p>Estos Términos se rigen por las leyes de la República Bolivariana de Venezuela. Cualquier controversia se intentará resolver primero de forma amistosa a través de los canales de soporte; de no lograrse, se someterá a los tribunales competentes de la ciudad de Caracas, sin perjuicio de los derechos irrenunciables que la ley te reconozca como usuario.</p>"
+        },
+        "general": {
+          "title": "19. Disposiciones generales",
+          "body": "<p>Estos Términos y la Política de privacidad constituyen el acuerdo completo entre tú y Redoctor sobre el uso de la Plataforma. Si alguna cláusula se declara inválida, las demás seguirán vigentes. Que Redoctor no ejerza un derecho no implica que renuncie a él. No puedes ceder tus derechos u obligaciones bajo estos Términos sin nuestro consentimiento. La versión en español de estos Términos prevalece sobre cualquier traducción.</p>"
+        },
+        "contact": {
+          "title": "20. Contacto",
+          "body": "<p>Para dudas sobre estos Términos o sobre el servicio, escríbenos a <mail>{email}</mail> o por <support>WhatsApp al {whatsapp}</support>.</p>"
+        }
+      }
+    },
+    "privacy": {
+      "metaTitle": "Política de privacidad · Redoctor",
+      "metaDescription": "Qué datos recoge Redoctor, para qué los usa, con quién los comparte, cuánto tiempo los conserva y qué derechos tienes sobre ellos, incluidos tus datos de salud.",
+      "title": "Política de privacidad",
+      "updatedAt": "14 de octubre de 2026",
+      "intro": "<p>En Redoctor tratamos datos personales y, en particular, datos de salud. Esta Política de privacidad explica qué datos recogemos cuando usas el sitio web redoctorapp.com y la aplicación móvil Redoctor (la «Plataforma»), para qué los usamos, con quién los compartimos, cuánto tiempo los conservamos y qué derechos tienes sobre ellos.</p><p>El responsable del tratamiento es {company}, RIF {rif}, con domicilio en {address} («Redoctor»). Puedes escribirnos sobre privacidad a <mail>{email}</mail>.</p><p>Esta Política forma parte de los <terms>Términos y condiciones de uso</terms>. Tratamos tus datos conforme a la Constitución de la República Bolivariana de Venezuela, que protege el honor, la vida privada y la intimidad y reconoce el derecho a conocer, actualizar y rectificar los datos propios; a la Ley sobre Mensajes de Datos y Firmas Electrónicas; a la Ley Especial contra los Delitos Informáticos; a las normas que rigen el secreto médico; y a los criterios de la Sala Constitucional del Tribunal Supremo de Justicia sobre el tratamiento de datos personales.</p>",
+      "sections": {
+        "scope": {
+          "title": "1. A quién aplica",
+          "body": "<p>Esta Política aplica a todas las personas que usan la Plataforma: pacientes, Especialistas, visitantes que buscan sin una cuenta y las personas a cargo cuyos datos registra un paciente. Si eres Especialista, aplica también a los datos de los pacientes que registras en la Plataforma, que tratamos por tu cuenta para operar tus citas.</p>"
+        },
+        "data": {
+          "title": "2. Qué datos tratamos",
+          "body": "<p><b>Datos de la cuenta.</b> Al iniciar sesión con Google o Apple recibimos tu nombre, tu correo electrónico, tu foto de perfil si la tienes y un identificador de ese proveedor. Redoctor no recibe ni guarda tu contraseña. Si usas la opción de Apple para ocultar tu correo, recibimos la dirección de reenvío que Apple genera.</p><p><b>Datos del paciente.</b> Para agendar o reclamar citas te pedimos nombres y apellidos, tipo y número de documento de identidad, teléfono móvil, fecha de nacimiento y sexo. De cada persona a tu cargo registramos nombres y apellidos, fecha de nacimiento, sexo y, a partir de los nueve años, su documento de identidad.</p><p><b>Datos de tus citas.</b> El Especialista, el consultorio, la fecha y la hora, el motivo de la consulta y las notas que tú o el Especialista escriban, el estado de la cita y su historial de confirmaciones, reprogramaciones y cancelaciones, y las invitaciones que recibes. <b>El motivo de la consulta es un dato de salud:</b> solo lo tratamos para operar la cita y solo lo ve el Especialista que te atiende.</p><p><b>Reseñas.</b> La calificación y el comentario que dejas después de una consulta, que se publican en el perfil del Especialista con tu nombre de pila y la inicial de tu apellido.</p><p><b>Datos del Especialista.</b> Tu nombre profesional, foto, descripción, especialidades, títulos, instituciones, licencias y números de colegiatura, experiencia, certificaciones y galería; los datos de tus consultorios (dirección, ubicación en el mapa, teléfonos, horarios, servicios y precios); los documentos y la imagen de tu documento de identidad con los que te verificamos; tus datos de facturación (nombre o razón social, documento o RIF y correo de facturación) y los pagos que reportas (referencia, banco, teléfono o cuenta de origen, fecha y monto). Los pacientes ven únicamente la información profesional aprobada.</p><p><b>Ubicación.</b> Solo si tocas «Usar mi ubicación» leemos la posición de tu dispositivo, y la redondeamos a aproximadamente un kilómetro antes de usarla para ordenar los resultados; no guardamos tu posición exacta. Si escribes una dirección, la enviamos a Google Places para obtener sus coordenadas. Tu navegador recuerda localmente tu último lugar y tus últimas búsquedas para ofrecértelos de nuevo; puedes borrarlos limpiando los datos del sitio.</p><p><b>Datos técnicos.</b> Tu dirección IP, el tipo de navegador o dispositivo, el sistema operativo y la fecha y hora de cada solicitud, que nuestros servidores registran para proteger la Plataforma y limitar el uso abusivo; y los errores técnicos que ocurran al usarla, sin datos personales.</p>"
+        },
+        "purposes": {
+          "title": "3. Para qué los usamos",
+          "body": "<ul><li><b>Prestarte el servicio:</b> crear y gestionar tu cuenta, mostrar los perfiles de los Especialistas, agendar, confirmar, reprogramar y cancelar citas, enviar invitaciones, recordatorios y avisos, y publicar las reseñas.</li><li><b>Verificar a los Especialistas:</b> comprobar su identidad y sus especialidades para que los pacientes encuentren perfiles confiables.</li><li><b>Gestionar los Planes:</b> emitir recibos, verificar los pagos reportados, aplicar cupones y saldos, y cumplir nuestras obligaciones contables y tributarias.</li><li><b>Proteger la Plataforma:</b> prevenir fraudes, abusos y accesos no autorizados, y limitar el uso automatizado.</li><li><b>Mejorar el servicio:</b> medir de forma agregada cómo se usa la Plataforma, sin identificar a las personas (ver la sección sobre analítica).</li><li><b>Comunicarnos contigo:</b> responder tus solicitudes de soporte y enviarte, solo si lo autorizaste, consejos de salud y novedades.</li><li><b>Cumplir la ley:</b> atender requerimientos de autoridades competentes y conservar los registros que la ley exige.</li></ul><p>Tratamos tus datos porque son necesarios para prestarte el servicio que nos pides, porque tenemos un interés legítimo en mantener la Plataforma segura y en mejorarla, porque la ley nos obliga o, en el caso de los datos de salud, la ubicación de tu dispositivo y las comunicaciones comerciales, porque nos diste tu consentimiento expreso. Puedes retirar tu consentimiento en cualquier momento; sin el consentimiento para tratar los datos de tus citas no podemos gestionarlas.</p>"
+        },
+        "sharing": {
+          "title": "4. Con quién los compartimos",
+          "body": "<p>No vendemos tus datos. Los compartimos únicamente en estos casos:</p><ul><li><b>Con el Especialista de tu cita:</b> tus datos de paciente, los de la persona a cargo que será atendida y el motivo de la consulta, para que pueda atenderte. El Especialista los trata bajo su propia responsabilidad profesional y su deber de secreto médico.</li><li><b>Con los pacientes:</b> si eres Especialista, la información profesional aprobada de tu perfil, que es pública y puede compartirse mediante un enlace.</li><li><b>Públicamente:</b> tus reseñas, con tu nombre de pila y la inicial de tu apellido.</li><li><b>Con proveedores que nos prestan servicios</b> y que tratan los datos siguiendo nuestras instrucciones: Google (Firebase Authentication para el inicio de sesión, Google Maps y Google Places para el mapa y las direcciones), Apple (inicio de sesión con Apple), los proveedores de alojamiento del sitio web y de nuestros servidores, el proveedor que envía nuestros correos electrónicos, y las herramientas de medición y de registro de errores descritas más abajo.</li><li><b>Con autoridades:</b> cuando una ley o una orden de autoridad competente nos obligue, o cuando sea necesario para proteger los derechos, la seguridad o la integridad de las personas o de la Plataforma.</li></ul><p>Los mensajes de WhatsApp con enlaces a citas los envía el Especialista desde su teléfono: Redoctor solo prepara el texto y el enlace, y el mensaje viaja por WhatsApp bajo las condiciones de ese servicio.</p>"
+        },
+        "transfers": {
+          "title": "5. Dónde se guardan tus datos",
+          "body": "<p>Nuestros servidores y los de algunos de nuestros proveedores pueden estar fuera de Venezuela, principalmente en los Estados Unidos de América. Cuando tus datos se transfieren a otro país, lo hacemos con proveedores que ofrecen medidas de seguridad y compromisos contractuales de confidencialidad, y seguimos siendo responsables de ellos.</p>"
+        },
+        "retention": {
+          "title": "6. Cuánto tiempo los conservamos",
+          "body": "<ul><li><b>Tu cuenta y tus perfiles:</b> mientras la cuenta exista. Si la eliminas, borramos tus datos personales en un plazo máximo de treinta (30) días, salvo los que debamos conservar por ley.</li><li><b>Tus citas:</b> mientras la cuenta exista, como historial tuyo y del Especialista. Al eliminar tu cuenta, el Especialista conserva únicamente los registros que su historia clínica y la ley le exijan.</li><li><b>Tus reseñas:</b> mientras el perfil del Especialista esté publicado; al eliminar tu cuenta dejan de mostrar tu nombre.</li><li><b>Datos de facturación y pagos de Especialistas:</b> el tiempo que exijan las normas contables y tributarias venezolanas, aun después de cerrar la cuenta.</li><li><b>Datos de verificación:</b> mientras el perfil del Especialista esté activo y el tiempo necesario para acreditar que la verificación se realizó.</li><li><b>Registros técnicos:</b> hasta noventa (90) días, salvo que sean necesarios para investigar un incidente de seguridad.</li></ul>"
+        },
+        "rights": {
+          "title": "7. Tus derechos",
+          "body": "<p>Puedes, en cualquier momento:</p><ul><li><b>Acceder</b> a los datos que tenemos sobre ti y conocer cómo los usamos.</li><li><b>Rectificar</b> los datos inexactos o incompletos; muchos puedes corregirlos tú mismo desde tu cuenta.</li><li><b>Eliminar</b> tu cuenta y tus datos, siguiendo las indicaciones de <delete>Eliminar mi cuenta</delete>.</li><li><b>Retirar tu consentimiento</b> para las comunicaciones comerciales, desde el enlace de cada correo, o para el tratamiento de tus datos de salud y ubicación, lo que implica dejar de usar las funciones de citas.</li><li><b>Oponerte</b> a un tratamiento basado en nuestro interés legítimo, explicándonos tu situación.</li></ul><p>Para ejercer estos derechos escríbenos a <mail>{email}</mail> o por <support>WhatsApp al {whatsapp}</support>, desde el correo o el número asociados a tu cuenta, para que podamos comprobar tu identidad. Responderemos en un plazo máximo de quince (15) días hábiles. Si consideras que no hemos atendido tu solicitud, puedes acudir a los tribunales y a las autoridades competentes en Venezuela.</p>"
+        },
+        "minors": {
+          "title": "8. Menores de edad",
+          "body": "<p>La Plataforma está dirigida a mayores de dieciocho (18) años. No creamos cuentas para menores. Los datos de un menor solo se registran como persona a cargo, por su representante legal y bajo la cuenta de este, y se usan únicamente para la gestión de sus citas. Si sabes que un menor ha creado una cuenta por sí mismo, escríbenos y la eliminaremos.</p>"
+        },
+        "health": {
+          "title": "9. Datos de salud y secreto médico",
+          "body": "<p>El motivo de la consulta, las notas de una cita y la propia existencia de una cita con un Especialista de una determinada especialidad son datos sensibles. Los tratamos solo para que la cita exista y se gestione, con acceso restringido al paciente, al Especialista que atiende y al personal de Redoctor estrictamente necesario para dar soporte, y nunca los usamos para publicidad ni los compartimos con terceros ajenos a la cita.</p><p>Redoctor no es un sistema de historia clínica ni un expediente médico. Lo que ocurre en la consulta, el diagnóstico y el tratamiento quedan registrados por el Especialista fuera de la Plataforma, bajo su deber de secreto médico y la normativa que rige su profesión.</p>"
+        },
+        "security": {
+          "title": "10. Cómo protegemos tus datos",
+          "body": "<p>Toda la comunicación con la Plataforma viaja cifrada (HTTPS). No guardamos contraseñas: el inicio de sesión lo realizan Google o Apple. El acceso a los datos está restringido por rol y queda registrado; los enlaces a citas e invitaciones no se indexan en buscadores y no se envían a las herramientas de medición ni de errores. Nuestros proveedores de infraestructura mantienen certificaciones de seguridad reconocidas. Aun así, ningún sistema es completamente seguro: si detectamos un incidente que afecte a tus datos, te lo comunicaremos y tomaremos las medidas necesarias.</p>"
+        },
+        "cookies": {
+          "title": "11. Cookies, almacenamiento local y analítica",
+          "body": "<p>El sitio web usa un número reducido de cookies y de datos guardados en tu navegador, todos necesarios para su funcionamiento y ninguno de publicidad:</p><ul><li><b>redoctor-session</b> y <b>redoctor-panel:</b> indican al servidor que probablemente tienes una sesión iniciada y si es la de un Especialista, para mostrarte la página correcta desde el primer instante. No contienen datos personales.</li><li><b>redoctor-splash:</b> recuerda que ya viste la animación de bienvenida en esta visita.</li><li><b>Datos locales del navegador:</b> el último método con el que iniciaste sesión, tus últimas búsquedas y el último lugar desde el que buscaste. Solo existen en tu navegador y puedes borrarlos limpiando los datos del sitio.</li></ul><p><b>Medición de uso.</b> Usamos PostHog para medir, de forma agregada, qué funciones se usan y en qué punto se abandonan los flujos. No registramos las páginas que visitas con su dirección, no grabamos sesiones, no capturamos lo que escribes, descartamos tu dirección IP y solo asociamos los eventos a tu identificador interno de usuario, nunca a tu nombre, correo o teléfono.</p><p><b>Registro de errores.</b> Usamos Sentry para conocer los errores técnicos de la Plataforma; los informes no incluyen datos personales, direcciones con credenciales ni el contenido de los formularios.</p><p>En la aplicación móvil usamos los servicios equivalentes de Firebase para el inicio de sesión y las notificaciones push, con los mismos criterios.</p>"
+        },
+        "communications": {
+          "title": "12. Comunicaciones",
+          "body": "<p>Te enviamos por correo electrónico las comunicaciones necesarias para el servicio: invitaciones, confirmaciones, recordatorios y cambios de citas, el resumen diario de la agenda si eres Especialista, y avisos de verificación, de facturación y de tu cuenta. Puedes darte de baja del resumen diario desde cada correo. Los consejos de salud y novedades solo te llegan si lo autorizaste al registrarte, y puedes retirar esa autorización cuando quieras.</p>"
+        },
+        "changes": {
+          "title": "13. Cambios a esta Política",
+          "body": "<p>Si cambiamos esta Política, publicaremos la versión vigente con su fecha de actualización y, cuando el cambio afecte de forma relevante a tus datos, te lo avisaremos por correo electrónico o en la Plataforma antes de que entre en vigor.</p>"
+        },
+        "contact": {
+          "title": "14. Contacto",
+          "body": "<p>Para cualquier consulta sobre privacidad escríbenos a <mail>{email}</mail> o por <support>WhatsApp al {whatsapp}</support>. También puedes escribirnos por correo postal a {company}, {address}.</p>"
+        }
+      }
+    },
+    "deleteAccount": {
+      "metaTitle": "Eliminar mi cuenta · Redoctor",
+      "metaDescription": "Cómo pedir la eliminación de tu cuenta de Redoctor y qué datos se eliminan.",
+      "title": "Eliminar mi cuenta",
+      "updatedAt": "14 de octubre de 2026",
+      "intro": "<p>Puedes pedir la eliminación de tu cuenta de Redoctor en cualquier momento. La solicitud la atiende nuestro equipo de soporte, y pronto podrás hacerla tú mismo desde tu cuenta.</p>",
+      "sections": {
+        "how": {
+          "title": "Cómo pedirla",
+          "body": "<ol><li>Escríbenos por <support>WhatsApp al {whatsapp}</support> o a <mail>{email}</mail> desde el correo con el que inicias sesión en Redoctor (tu cuenta de Google o de Apple), con el asunto «Eliminar mi cuenta».</li><li>Para comprobar que la solicitud es tuya, te pediremos confirmar algún dato de tu cuenta. Nunca te pediremos una contraseña: Redoctor no la tiene.</li><li>Eliminaremos tu cuenta en un plazo máximo de treinta (30) días y te lo confirmaremos por correo.</li></ol>"
+        },
+        "what": {
+          "title": "Qué se elimina",
+          "body": "<ul><li>Tu cuenta, tus perfiles de paciente o de especialista y tus datos personales: nombres, documento, teléfono, fecha de nacimiento, sexo y las personas a tu cargo.</li><li>Tus citas futuras quedan canceladas y se notifica a la otra parte. Tus citas pasadas dejan de estar asociadas a ti.</li><li>Tus reseñas dejan de mostrar tu nombre.</li><li>Si eres especialista, tu perfil deja de ser visible y tu plan queda cancelado. Conservamos únicamente los recibos y los datos de facturación que exigen las normas contables y tributarias, por el tiempo que estas establecen.</li></ul><p>Encuentras los detalles en nuestra <privacy>Política de privacidad</privacy>. Si solo quieres dejar de recibir correos, no hace falta eliminar tu cuenta: puedes darte de baja desde cada correo.</p>"
+        }
+      }
     }
   }
 }
