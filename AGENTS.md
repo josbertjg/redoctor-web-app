@@ -84,12 +84,13 @@ transactional emails the API sends.
 | M13 Specialist payment | `/panel/subscription` («Mi suscripción»: the plan, its state and its notice) and `/pay` (the payment, out of the paths the app opens, since no app may charge; the owner's split of 2026-10-13): choose a plan with a coupon, Pago Móvil and transfer data in Bs from the API, report the payment, see it in review; changing plan — from «Mi suscripción» (`?view=plans`) or from a missing feature's invitation (`?plan=`) — and undoing a scheduled change (2026-10-13); and the rest of the app's «Mi suscripción» the same day (§13, Decided): cancelling and resuming, dropping an unpaid subscription, a coupon on the plan in force, the billing data, the receipts (`/panel/subscription/invoices[/{id}]`, each one payable from its page), the balance (`/panel/subscription/balance`) and «Mis cupones» (`/panel/subscription/coupons`) |
 | M14 Specialist panel | `/panel` and its sections (2026-10-13): the home (the plan and its notice, today's patients, the statistics, what stays in the app), the day's agenda `/panel/agenda[/{date}]` and the history `/panel/appointments` (read only, each appointment opening `/a/{id}`), the statistics `/panel/reports` (the app's summary and four reports, PDF and CSV when the plan allows), «Mi perfil» `/panel/profile` (whether patients find the profile and, if not, why; the profile as the app shows it to its owner) and «Mis especialidades» `/panel/specialties` (each specialty and its review), both read only, the subscription (M13); a specialist stays in it until signing out |
 | M15 Booking | `/book/{specialistId}` (the owner's «vamos con el agendar desde /s», 2026-10-13; built 2026-10-14): a patient books with the specialist of a public profile in the app's four steps — the office, the day and hour, the reason and for whom (oneself, someone in one's care, someone new), the summary — and «¡Todo listo!»; the appointment is born pending and is confirmed on `/a/{id}` from 24 h before. The web's own page, out of `/s/*` (§6) |
+| M16 Search | `/search` (the owner's word, 2026-10-14: «darle vida a esa barra de búsqueda», with ZocDoc, Doctoralia and Webel as the references): the landing's search box live — a specialty of the catalog or a specialist's name offered as one types, the place («Usar mi ubicación», a Google place or one of the built-in cities, or the whole country) — and the results as patients know them: the cards (photo, name with the verified mark, specialties, rating, nearest office and how far, lowest price, the next days, each one a way into the booking), the app's filters (availability, distance), a Google map of the offices with «Buscar en esta zona», ten at a time. The web's own page, listed by no app (§6); public, the session asked for where the booking starts |
 | M12 Release | PostHog funnel by origin, tests on real phones from WhatsApp and Gmail, domain cutover |
 
-**Explicitly out of the pilot:** searching from the web (booking from a
-profile came on the owner's word, 2026-10-13: M15),
-favorites, notifications inbox, and acting on appointments from the
-specialist's panel (it reads them; the app changes them). They come after.
+**Explicitly out of the pilot:** favorites, notifications inbox, and acting
+on appointments from the specialist's panel (it reads them; the app changes
+them). They come after. Booking from a profile (M15) and searching from the
+web (M16) came on the owner's word (2026-10-13 and 2026-10-14).
 
 ### Non-negotiable product rules (decided with Josbert)
 
@@ -142,6 +143,13 @@ specialist's panel (it reads them; the app changes them). They come after.
 - Public profile `/s/{id}` offers «Agendar cita» (M15, the owner's word
   of 2026-10-13): the booking happens on `/book/{id}`, the web's own
   page, with the patient's session; a specialist is never offered it.
+- **Searching needs no account (owner, 2026-10-14).** The box and
+  `/search` answer anyone, as ZocDoc and Doctoralia do; the session is
+  asked for where the booking starts. The address carries what is looked
+  for — a text, or a specialty of the catalog —, the point searched from,
+  rounded to about a kilometre, and the filters; never who is searching
+  (§11). A search is not indexed (its address says what someone looked
+  for and from where).
 - **Another browser, another session.** Gmail, Instagram and Facebook open
   links in their own browsers. The web handles it: sign-in in one or two
   taps, a clear message instead of an error, straight back to the
@@ -232,6 +240,9 @@ app/                                  # The application: routes, UI and logic
     panel/appointments/page.tsx       #   the history, its filters in the address
     panel/reports/page.tsx            #   the statistics
     panel/profile/page.tsx · specialties/page.tsx   # «Mi perfil» and «Mis especialidades», read only (emails 18 and 16)
+  (search)/                           # module: the search for specialists (M16)
+    search/page.tsx · error.tsx       #   /search — the search in the address, the first page read on the server, the rest in the browser
+    _components/                      #   search-header (+ -header-bar), search-navigation (the address as the one state, the pending line), search-results, result-card, availability-strip, search-filters, map-panel, results-map, map-markers, results-states
     _components/                      #   profile pieces; panel-*, agenda-*, appointments-history, booking-action and book-at-office (the profile's «Agendar cita», `useBookingOffer`), edit-in-app-card, plan-offer-card; reports/ (the statistics' views, charts, filters, export and the plan that downloads); my-profile/ (the view, its state, identity, offices, prices, schedules and training blocks); my-specialties/ (the view, the specialty card, support)
   (account)/                          # module: account and legal (M10)
     account/layout.tsx · page.tsx     #   /account — layout = <RequireSession>
@@ -247,7 +258,9 @@ app/                                  # The application: routes, UI and logic
     layout.tsx
     home/[[...rest]]/                 #   the app's internal paths; every page under /panel/ is the panel's own (M13, M14)
     daily-summary/unsubscribe/page.tsx   # daily-summary opt-out — a Server Action
-  api/                                # route handlers only when the browser must not call the API (none yet)
+  api/                                # route handlers only when the browser must not call the API
+    search/route.ts · suggestions/route.ts   # the web's own search (M16): the API's public search through the web's server, cached (§4)
+    places/suggestions/route.ts · details/route.ts   # Google Places through the web's server (M16): the places a text names, Venezuela only, and the point of the one chosen; the key stays here (§11)
   ui/                                 # ALL shared UI
     button.tsx · back-link.tsx · text-field.tsx · identity-document-field.tsx · select-field.tsx · text-area.tsx · checkbox.tsx · choice-cards.tsx · stars-input.tsx · tabs.tsx · filter-chips.tsx · field-error.tsx · sheet.tsx · skeleton.tsx · toast.tsx · empty-state.tsx · status-card.tsx · link-card.tsx · avatar.tsx …
     messages-scope.tsx                #   a page's own client messages (§9)
@@ -255,6 +268,7 @@ app/                                  # The application: routes, UI and logic
     auth/                             #   session-provider, session-button, require-session, sign-in-buttons, sign-in-legal-note, account-error-state, in-app-browser-help, provider-logos
     app-bridge/                       #   open-in-app-button, store-badges, app-access (a specialist's way to the app), store-qr
     appointments/ · specialists/ · billing/ · reviews/   # domain components used by two or more modules (appointments/: headline, details, appointment-card; billing/: notice-panel, plan-emblem)
+    search/                           #   the search box (M16), on the landing and on /search: search-bar (+ what-field, where-field, suggestion-popup, highlight, use-combobox, use-location-suggestions — Google's places —, use-remembered), its words from the server (search-bar-words)
     analytics/ · og/                  #   link-origin-tracker; the Open Graph brand card (next/og)
     motion/                           #   the one door to Motion: provider, m, tokens, staggered-text (§8.11)
     icons.tsx                         #   the Icon primitive (not icon.tsx: that name is a Next.js metadata file)
@@ -262,19 +276,21 @@ app/                                  # The application: routes, UI and logic
   lib/                                # ALL non-React logic
     api/                              #   client.ts (fetch wrapper), errors.ts (ApiError + codes), retry.ts, write-once.ts
     schemas/                          #   zod schemas + inferred types per domain — THE contract with the API
-    data/                             #   server-only fetchers for Server Components (fetch + cache tags → DTOs)
+    data/                             #   server-only fetchers for Server Components (fetch + cache tags → DTOs); places.ts asks Google Places for the search's places (M16)
     queries/                          #   TanStack queryOptions + mutation functions per domain (client)
     actions/                          #   Server Actions — only where no user token is needed
     firebase/                         #   client.ts: Firebase Auth, loaded on demand (client-only)
     auth/                             #   account (the account's model and rules, no zod), session-hint (the session and panel cookies), last-provider, token (the bearer's source), destination, sign-up (the plan)
-    format/                           #   names, phone (+58), identity-document, date-of-birth — the forms' rules; money, appointment-time, dates — prices and billing amounts, days and hours; figures — the statistics' numbers, periods, weekdays and hours
+    format/                           #   names, phone (+58), identity-document, date-of-birth — the forms' rules; money, appointment-time, dates — prices and billing amounts, days and hours; figures — the statistics' numbers, periods, weekdays and hours; distance — «3,2 km»
+    search/                           #   the search's logic (M16): query.ts (the address ↔ the search ↔ the API's request), location.ts (the point, the app's radii), text.ts (matching case and accents aside), suggestions.ts, recent.ts and last-location.ts (what the browser remembers)
+    maps/                             #   google-maps.ts: the Maps JavaScript API for the results' map, loaded on demand with the page's nonce (client-only)
+    security/                         #   csp.ts (the nonce policy proxy.ts sends), rate-limit.ts (so many a minute per address, for the endpoints that spend Google's quota)
     billing/                          #   banks.ts: the app's list of Venezuelan banks (the API publishes none)
     reports/                          #   period.ts (the presets, the buckets), figures.ts (trends, the main currency, rankings), csv.ts (the spreadsheet)
     analytics/ · i18n/
     observability/                    #   report.ts (the seam), scrub.ts (what never leaves), sentry.ts
-    security/                         #   csp.ts (the nonce policy proxy.ts sends)
     env.ts · public-env.ts · routes.ts · deep-links.ts · site.ts · support.ts · clipboard.ts · utils.ts · calendar.ts (.ics, Google Calendar)
-  hooks/                              # shared client hooks: use-session, use-sign-in-tracking, use-focus-heading, use-infinite-scroll, use-link-origin, use-device, use-in-app-browser, use-person-checks (a person's data as the API checks it), use-price-words
+  hooks/                              # shared client hooks: use-session, use-sign-in-tracking, use-focus-heading, use-infinite-scroll, use-link-origin, use-device, use-in-app-browser, use-person-checks (a person's data as the API checks it), use-price-words, use-debounced-value, use-device-location (the position, asked for on a tap)
 tests/                                # setup.ts · msw/ (server + handlers per domain) · factories/ · e2e/ (Playwright)
 public/                               # .well-known/ (§6) · brand/ (logo.svg, logo-white.svg, icons) · illustrations/ · animations/ (the app's splash_logo.riv)
 proxy.ts                              # Next 16's name for middleware: the CSP nonce per request, /.well-known excluded — nothing else
@@ -348,10 +364,11 @@ Every route path is built from one place, `app/lib/routes.ts` (the app has
 
 ## 4. Server and client: who renders what
 
-- **Public pages** (`/`, `/s/[id]`, legal, bridges): **Server Components**,
-  `fetch` on the server with `next: { revalidate, tags }`. Server-side calls
-  are not subject to CORS, so the public profile works today even though the
-  API has not opened CORS yet (§5).
+- **Public pages** (`/`, `/s/[id]`, `/search`, legal, bridges): **Server
+  Components**, `fetch` on the server with `next: { revalidate, tags }`.
+  Server-side calls are not subject to CORS, so the public profile and the
+  search's first page work today even though the API has not opened CORS
+  yet (§5).
 - **Authenticated flows** (`/i`, `/a`, `/appointments`, `/account`, the
   booking, payment):
   **Client Components** + TanStack Query, calling the API from the browser
@@ -359,13 +376,25 @@ Every route path is built from one place, `app/lib/routes.ts` (the app has
   (REDOC-362). Until it ships, develop against MSW or the dev-only proxy in
   `next.config.ts` (`/api-proxy/* → NEXT_PUBLIC_API_URL`), which **must not
   exist in production builds**.
-- **Route handlers** only for things the browser must not do itself (none
-  are needed for the pilot). **Server Actions** only for writes that carry no
-  user token — the daily-summary opt-out, whose credential is the signed
-  token in the link. Every authenticated write runs in the browser: the API
-  is the backend and the Firebase token lives there.
+- **Route handlers** only for things the browser must not do itself. Two
+  cases, both the search's (M16): `/api/search` and `/api/search/suggestions`
+  hand the browser the API's public search — the pages after the first, the
+  names the box suggests — because the browser cannot call the API (its
+  CORS, REDOC-362) and because the web's server caches each search for
+  every visitor (the endpoint takes 30 requests a minute from one address,
+  and from Vercel every visitor is one): no session, no token, the same
+  query the page's address carries, and the API's own answer back, parsed
+  with the same contract on both sides. And `/api/places/suggestions` and
+  `/api/places/details` ask Google Places for the places the box offers
+  and the point of the one chosen, so the key stays on the server (§11);
+  never cached (each answer belongs to its billing session), so many a
+  minute per address (`app/lib/security/rate-limit.ts`). **Server Actions** only for writes that
+  carry no user token — the daily-summary opt-out, whose credential is the
+  signed token in the link. Every authenticated write runs in the browser:
+  the API is the backend and the Firebase token lives there.
 - **Metadata** per route with `generateMetadata`. Private pages (`/i`, `/a`,
-  `/appointments`, `/account`, `/book`, payment) are `noindex, nofollow`.
+  `/appointments`, `/account`, `/book`, payment) and a search (`/search`)
+  are `noindex, nofollow`.
 - Loading states are **skeletons with the final dimensions** (`loading.tsx`
   or Suspense boundaries), never spinners in the middle of empty space.
   Consequence to know: a page under a `loading.tsx` streams, so a
@@ -401,9 +430,16 @@ Every route path is built from one place, `app/lib/routes.ts` (the app has
   facet (2026-10-12); trusting `profiles.*.exists` alone locked patients
   out of `/appointments`.
 - Public endpoints used by SSR: `GET /specialists/{id}/public-profile`,
-  `GET /specialties/tree`. Everything about an appointment or an invitation
-  needs a session, except reading an invitation by its token (the token is
-  the credential).
+  `GET /specialties/tree`, and `GET /search/specialists` (M16: the
+  specialists visible around a point, the first free day first and then
+  the nearest, with the nearest office and its next twelve days; it wants
+  `lat` and `lng` and one of `search`, `specialtyId`, `name`,
+  `specialistId`; `radiusMeters` 100–300 000 or none for the whole country;
+  `search` matches specialists' and specialties' names by substring, case
+  aside but accents not — «medico» finds no «Médico» —; it takes 30
+  requests a minute from one address, measured 2026-10-14). Everything
+  about an appointment or an invitation needs a session, except reading an
+  invitation by its token (the token is the credential).
 - Error envelope: `{ code: 'ERR_xxxx', message, details? }`. Map to a typed
   `ApiError`; translate known codes to our copy (e.g. `ERR_2010` registration
   incomplete, `ERR_5052` subscription required, billing `ERR_50xx/51xx`);
@@ -488,10 +524,12 @@ and older read). The rule:
   the app's side. So do `/panel` itself (the web's home of the panel,
   M14) and the receipts, a receipt, the balance and «Mis cupones»
   (`/panel/subscription/invoices[/{id}]`, `/panel/subscription/balance`,
-  `/panel/subscription/coupons`, M13), and the booking (`/book/{id}`,
+  `/panel/subscription/coupons`, M13), the booking (`/book/{id}`,
   M15: out of `/s/*`, where the app has no booking path, so a shared
-  booking link would open the app on a «not found»): no link leaves the
-  web with them, and moving between the web's pages never opens the app.
+  booking link would open the app on a «not found») and the search
+  (`/search`, M16; the app claims `/s/*` with the slash, so `/search` is
+  not its): no link leaves the web with them, and moving between the
+  web's pages never opens the app.
 - **A page both have** goes into the app's manifest in the build that
   brings it, and into this list once that build is published: listed
   before, it would open an older build at its home on an iPhone. Then
@@ -941,9 +979,12 @@ accent / neutral / warning / error tones), `Avatar`, `StarsRating`,
   in `app/lib/format`.
 - **Analytics (PostHog)**: events named `web_<area>_<action>`
   (`web_link_opened`, `web_signin_completed`, `web_invitation_claimed`,
-  `web_appointment_confirmed`), with `origin` and `role` as properties.
-  **Never** names, emails, phones, IDs, tokens or appointment reasons. The
-  final event list is closed in M12 before building funnels.
+  `web_appointment_confirmed`, `web_search_performed`), with `origin` and
+  `role` as properties. **Never** names, emails, phones, IDs, tokens,
+  appointment reasons, nor what a search looked for or from where (a
+  search says only its kind — a text or a specialty —, the kind of point
+  and how many it found). The final event list is closed in M12 before
+  building funnels.
 
 ---
 
@@ -1013,9 +1054,28 @@ pnpm check          # typecheck + lint + format:check + test + build
   config, PostHog key, Sentry DSN, store ids). Server-only variables are
   validated in `env.ts` and never imported from client code.
 - Firebase web API key: restrict it in Google Cloud by HTTP referrer to
-  `redoctorapp.com` and the Vercel preview domain. Any Google Maps browser
-  key created for `/s/{id}` directions is a **new** key restricted by
-  referrer — never the app's key.
+  `redoctorapp.com` and the Vercel preview domain. The search's Google
+  keys (M16) are two: **Places is asked by the web's server alone**
+  (`GOOGLE_PLACES_API_KEY`, never `NEXT_PUBLIC_`: the Place Autocomplete
+  and Place Details web services the app calls, Venezuela only; the app's
+  key serves for now, on the owner's word of 2026-10-13, to be restricted
+  by IP or replaced by one of the web's own before launch), and **the map
+  needs a browser key** (`NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`), a **new** key
+  restricted by referrer the same way with the Maps JavaScript API — the
+  app's key cannot serve: it is restricted to the APIs the app uses, and
+  Google refuses it for this one (`ApiTargetBlockedMapError`, measured
+  2026-10-14; the map then says «No pudimos cargar el mapa», through
+  Google's `gm_authFailure`). Without the Places key the box offers no
+  places; without the map key the map stays off; with the map key, and
+  only then, the policy lets Google's origins in
+  (`app/lib/security/csp.ts`), and the API's script carries the page's
+  nonce.
+- **The device's position** is asked for only on a tap («Usar mi
+  ubicación»; `Permissions-Policy: geolocation=(self)`), rounded to two
+  decimals — about a kilometre — before anything keeps it, and travels
+  only in the search's own address and to the API as the search's point.
+  What this browser remembers (the last place, the last searches) stays in
+  its localStorage.
 - **Firebase's sign-in window sees the page's address (accepted, owner,
   2026-10-13).** `signInWithPopup` hands the address of the page it opens
   from, whole, to the auth handler as `redirectUrl`
@@ -1057,6 +1117,9 @@ Environments: `development` (local), `preview` (Vercel PR), `production`
 | `NEXT_PUBLIC_ANDROID_PACKAGE` | all | `com.redoctor.mobileapp` |
 | `NEXT_PUBLIC_SUPPORT_WHATSAPP` | all | `Redoctor\|+584227362867` (`Label\|number`); provisional until REDOC-357 |
 | `NEXT_PUBLIC_SUPPORT_PHONES` | all | `Soporte 1\|+584145598216,Soporte 2\|+584245582129`; provisional until REDOC-357 |
+| `GOOGLE_PLACES_API_KEY` | all (server only) | Google Places for the search's places (M16), asked by the web's server; never `NEXT_PUBLIC_`. The app's key for now (§11). **Empty** = the box offers no places |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | all | The search's map (M16): a browser key of the web's own, restricted by referrer, with the Maps JavaScript API. **Empty** = no map |
+| `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID` | all | Optional: a Cloud map style for the search's map; without one, Google's `DEMO_MAP_ID` (Advanced Markers need one) |
 | `API_PROXY_TARGET` | development only | Dev-only proxy for authenticated calls until CORS (REDOC-362); must be absent in preview/production. Without it, `next dev` proxies to `NEXT_PUBLIC_API_URL` |
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | GitHub Actions secret | Only if previews have Deployment Protection: Playwright and Lighthouse use it for one request and browse with Vercel's cookie |
 | `PLAYWRIGHT_BASE_URL` · `E2E_SPECIALIST_ID` | testing | Run the e2e suite against a deployed URL; the public profile the e2e and Lighthouse runs use (api-dev's test profile by default) |
@@ -1934,6 +1997,100 @@ written out in full, or Next.js does not inline it).
     «Mi perfil»; `ChoiceCards` takes a `value` (a group the page holds) and
     an option's `trailing` (a price across from its name); `BottomActions`
     a `width`; `OpenInAppButton` a `variant`.
+
+- **The search (M16) as built (the owner's «darle vida a esa barra de
+  búsqueda… al estilo de ZocDoc, Webel y Doctoralia», 2026-10-14):** the
+  app's «Buscar» and the search pages patients know, as the web's own
+  page `/search` in `(search)`, with the landing's box live.
+  - **The box** (`app/ui/search`, the same in the hero, in the docked bar
+    and on the search page): what is looked for and where, «Buscar». As
+    one types, from two letters and after the app's pause (400 ms): the
+    specialties of the catalog that match — found in the browser, case
+    and accents aside, the letters that matched in bold — and the
+    specialists whose name does (the API's `name=`, five, through
+    `/api/search/suggestions`), with «Buscar «lo escrito»» as the first
+    option so Enter and a tap do the same; empty, the last five searches
+    of this browser and the catalog's first specialties. A specialty
+    searches by its id; a text by itself; a specialist opens the profile.
+    The place: «Usar mi ubicación» (the browser asks; «Ubicación actual»;
+    a crosshair at the field's end asks from the first paint), «Toda
+    Venezuela», or a place typed — Google's places, Venezuela only,
+    through the web's server (`/api/places`, one session per
+    typing-and-pick, the key never in the browser); a place typed and not
+    picked is resolved on the search (Google's first), and a search right
+    after a pick waits for its point. The owner's word (2026-10-14): only
+    the device's position or a place of Google's, no built-in list of
+    cities (a first version had one as the fallback without a key; it
+    was dropped). The last place comes back on the next visit. Nothing typed and «Buscar»: the
+    app's «Debes realizar una búsqueda o seleccionar una especialidad».
+    The box's words are translated on the server and handed down
+    (`useSearchBarWords`): the landing sends no search copy to the browser.
+  - **The page:** the search in the address (`q`, `specialty`, `lat`,
+    `lng` rounded, `near`, `by=device`, `radius`, `from`), parsed with
+    the defaults for anything malformed; the first page read on the
+    server (cached a minute for every visitor) and the rest — ten at a
+    time, as the list's end comes into view — through `/api/search`; a
+    first page the server could not read is read again in the browser,
+    with «Reintentar». Changing the search — the box, the filters, the
+    map — changes the address (`router.push` inside a transition: the
+    results dim and a line moves under the header while the server
+    answers). The app's filters as chips with a sheet each:
+    «Disponibilidad» («Lo antes posible», or from a day) and «Distancia»
+    (15, 60, 150, 300 km, «Todo el país», the default; only with a point),
+    and «Restablecer». The title («N especialistas», what and where) and
+    the app's order said in words («Primero quienes tienen cupo más
+    pronto, y luego los más cercanos.»).
+  - **The card,** as the app's: photo, name with the verified mark (the
+    profile), every specialty, the rating with its count when there are
+    reviews, the nearest office with how far it is (which the app never
+    says) and «y N más», the lowest price («$ 45», «Desde $ 25», «A
+    consultar»), and the nearest office's next days — a free one opens the
+    booking on that day (`/book/{id}?office=&date=`, M15 reads `date`), a
+    full one says so, «Más fechas» opens the booking's calendar; nothing
+    in the next days says so too. The whole card opens the profile (the
+    owner's ask, 2026-10-14): the name's link stretches over it with a
+    pseudo-element, no link inside another, and the days sit above it.
+  - **The map** (Google Maps, only with the key): a pin on each
+    specialist's nearest office, the point searched from as a blue dot,
+    the pin of the card under the pointer standing out and a pin tapped
+    showing its specialist on the map with «Ver perfil»; the map moved
+    offers «Buscar en esta zona» (the map's middle, as far as the map
+    shows, in the app's stops). Beside the list from laptops up, behind a
+    «Mapa» button as a sheet on phones. The API loads when the map mounts,
+    never before, its script with the page's nonce; Advanced Markers with
+    Google's `DEMO_MAP_ID` until a map id is made.
+  - **Nothing matched:** the app's «Vaya, no encontramos coincidencias»,
+    with «Buscar en toda Venezuela» when the search had a point. Nothing
+    asked: «¿Qué especialista buscas?» with the catalog. The landing's
+    chips search their name (the mockup's sample names until the catalog
+    has six entries; then the catalog's own, each with an icon by its
+    name).
+  - **Where the web differs from the app, on purpose and to confirm:**
+    searching needs no account (the app's sheet asks to sign in); the
+    suggestions are grouped and the letters that matched are in bold (the
+    app lists them plain, specialists first); the text itself is an
+    option; Enter searches (in the app it does nothing); the recent
+    searches are the browser's, not the account's; the distance is shown;
+    the results sort is said; the filters apply on «Aplicar» and live in
+    the address (the app's reset when leaving); a search over the whole
+    country when no place is chosen (the app refuses to search without a
+    point); the map, which the app does not have; the rating «4,5» with
+    the comma (the app: «4.5»); «Especialidades destacadas» offers eight,
+    not the whole catalog.
+  - **Open:** the map's browser key (his to create in Google Cloud:
+    Maps JavaScript API enabled, the key restricted by referrer to
+    redoctorapp.com and the preview domain; the app's key is refused for
+    that API, so until then the map's column says it could not load —
+    Places works with the app's key on the server); the API's search is
+    accent-sensitive
+    and takes 30 requests a minute from one address — to raise with
+    Heyscar (REDOC: `unaccent`, a higher limit or `X-Forwarded-For`
+    trusted); the landing's hint «Especialidad, enfermedad, doctor» became
+    the app's «Busca por nombre o especialidad» (the API searches no
+    illness); api-dev has one visible specialist, in California, so every
+    search near a Venezuelan place finds nobody until there is supply.
+    `@types/google.maps` entered as a dev dependency (types alone, no
+    runtime): the Maps API is loaded from Google, never bundled.
 
 ### Improvements noted (not scheduled)
 

@@ -6,6 +6,7 @@ import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import { panelHintCookie } from '@/app/lib/auth/session-hint';
+import { getSearchCatalog } from '@/app/lib/data/specialties';
 import { routes } from '@/app/lib/routes';
 
 import { MotionProvider } from '@/app/ui/motion/provider';
@@ -29,9 +30,10 @@ export const metadata: Metadata = {
 
 /*
  * The landing (M9), after the middle mockup of Figma «LANDING PAGE»: the
- * sections in the mockup's order, each its own component. This stage is
- * the look and the structure; the search, the sign-in and the plans get
- * their logic in later steps (the TODOs inside each section).
+ * sections in the mockup's order, each its own component. The search box
+ * (M16) is live: a specialty or a name goes to `/search`, a specialist to
+ * their profile; the sign-in and the plans get their logic in later steps
+ * (the TODOs inside each section).
  *
  * A session's first visit opens with the splash veil (the app's logo); the
  * cookie it leaves says the next visits do not. The hero's words wait for it.
@@ -65,6 +67,8 @@ export default async function HomePage() {
       fetchPriority: 'low',
     });
   }
+  // The catalog for the search box; the landing stands without it.
+  const catalog = await getSearchCatalog();
 
   return (
     <MotionProvider>
@@ -81,9 +85,9 @@ export default async function HomePage() {
           the header sticky); the sections never do, so a shape can run from
           one section into the next (see decor.tsx). */}
       <div className="relative isolate flex flex-1 flex-col overflow-clip bg-primary">
-        <LandingHeader waitForSplash={showSplash} />
+        <LandingHeader waitForSplash={showSplash} catalog={catalog} />
         <main className="flex flex-col">
-          <Hero waitForSplash={showSplash} />
+          <Hero waitForSplash={showSplash} catalog={catalog} />
           <Summary />
           <HowItWorks />
           <Trust />

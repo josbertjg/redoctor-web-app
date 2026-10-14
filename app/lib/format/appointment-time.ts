@@ -61,6 +61,36 @@ export function formatAppointmentDayShort(date: string): string {
   return withoutWeekdayComma(shortDayFormat.format(utc));
 }
 
+const weekdayShortFormat = new Intl.DateTimeFormat(formatLocale, {
+  weekday: 'short',
+  timeZone: 'UTC',
+});
+
+const dayMonthShortFormat = new Intl.DateTimeFormat(formatLocale, {
+  day: 'numeric',
+  month: 'short',
+  timeZone: 'UTC',
+});
+
+function calendarDayToUtc(date: string): Date | null {
+  const match = calendarDay.exec(date);
+  if (!match) return null;
+  const [, year, month, day] = match;
+  return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+}
+
+/** «jue» from a calendar date, as a strip of days writes it. */
+export function formatWeekdayShort(date: string): string {
+  const utc = calendarDayToUtc(date);
+  return utc ? weekdayShortFormat.format(utc) : date;
+}
+
+/** «15 oct» from a calendar date. */
+export function formatDayMonthShort(date: string): string {
+  const utc = calendarDayToUtc(date);
+  return utc ? dayMonthShortFormat.format(utc) : date;
+}
+
 /** «3:00 p. m.» from a wall-clock time (HH:mm). */
 export function formatAppointmentTime(time: string): string {
   const match = wallClock.exec(time);

@@ -79,8 +79,11 @@ describe('isAppOwnedPath', () => {
     expect(isAppOwnedPath('/panel')).toBe(false);
     expect(isAppOwnedPath('/panel/invoices')).toBe(false);
     expect(isAppOwnedPath('/panel/subscription/invoices')).toBe(false);
-    // The booking is the web's own, out of the profile's `/s/*`.
+    // The booking and the search are the web's own, out of the profile's
+    // `/s/*` (`/search` starts with `/s`, not with `/s/`).
     expect(isAppOwnedPath('/book/123')).toBe(false);
+    expect(isAppOwnedPath('/search')).toBe(false);
+    expect(isAppOwnedPath('/search?q=cardio&lat=10.49&lng=-66.88')).toBe(false);
   });
 
   it('never takes the payment, at its address or at the one it had', () => {

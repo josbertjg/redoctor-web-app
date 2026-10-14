@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
@@ -32,7 +33,13 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/',
 }));
 
-const renderHome = async () => renderWithIntl(await HomePage());
+// The search box reads its suggestions through TanStack Query.
+const renderHome = async () =>
+  renderWithIntl(
+    <QueryClientProvider client={new QueryClient()}>
+      {await HomePage()}
+    </QueryClientProvider>,
+  );
 
 describe('HomePage', () => {
   it('renders the landing without accessibility violations', async () => {

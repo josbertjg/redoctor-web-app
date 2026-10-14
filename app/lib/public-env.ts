@@ -33,4 +33,15 @@ export const publicEnv = {
     projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? '',
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID ?? '',
   },
+  /**
+   * Google Maps for the search's map (M16). A browser key of the web's
+   * own, restricted by referrer (AGENTS.md §11), never the app's. Without
+   * it the map stays off (the places come through the server, with a key
+   * of its own). The map id styles the map (Google's `DEMO_MAP_ID` while
+   * none is made).
+   */
+  googleMaps: {
+    apiKey: optional(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY),
+    mapId: optional(process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID),
+  },
 };

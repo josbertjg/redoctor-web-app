@@ -18,6 +18,7 @@ import {
   isInactiveSpecialist,
   officeServicesQueryOptions,
 } from '@/app/lib/queries/booking';
+import { isCalendarDay } from '@/app/lib/reports/period';
 import { routes } from '@/app/lib/routes';
 import type { AppointmentResponse } from '@/app/lib/schemas/appointments';
 import type { BookingRequest } from '@/app/lib/schemas/booking';
@@ -95,6 +96,8 @@ export function BookingSteps({
   const namedOffice = offices.find(
     (office) => office.id === searchParams.get('office'),
   );
+  // A day the search's results named (M16): the step opens on it.
+  const namedDay = searchParams.get('date');
 
   const [officeId, setOfficeId] = useState(
     () => namedOffice?.id ?? offices[0]?.id ?? '',
@@ -106,8 +109,12 @@ export function BookingSteps({
       ? 'slot'
       : (steps[0] ?? 'slot'),
   );
-  /** The day the person chose; until then, the first free one. */
-  const [chosenDay, setChosenDay] = useState<string | null>(null);
+  /** The day the person chose, or the one named; until then, the first free one. */
+  const [chosenDay, setChosenDay] = useState<string | null>(() =>
+    namedDay !== null && isCalendarDay(namedDay) && namedDay >= today
+      ? namedDay
+      : null,
+  );
   const [shownMonth, setShownMonth] = useState<string | null>(null);
   const [time, setTime] = useState<string | null>(null);
   const [slotTaken, setSlotTaken] = useState(false);
@@ -196,7 +203,11 @@ export function BookingSteps({
         error.status === 403 &&
         error.code === 'ERR_2010'
       ) {
-        router.push(routes.signUp(routes.book(specialist.id, officeId)));
+        router.push(
+          routes.signUp(
+            routes.book(specialist.id, officeId, namedDay ?? undefined),
+          ),
+        );
         return;
       }
       // A specialist who stopped being active: the page says so.

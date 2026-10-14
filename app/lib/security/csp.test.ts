@@ -96,6 +96,31 @@ describe('buildContentSecurityPolicy', () => {
     );
   });
 
+  it('lets Google Maps in only when the search has a key', () => {
+    const off = buildContentSecurityPolicy(base);
+    expect(off).not.toContain('googleapis.com https://*.google.com');
+    expect(directive(off, 'style-src')).not.toContain(
+      'https://fonts.googleapis.com',
+    );
+
+    const on = buildContentSecurityPolicy({ ...base, googleMaps: true });
+    expect(directive(on, 'connect-src')).toEqual(
+      expect.arrayContaining([
+        'https://*.googleapis.com',
+        'https://*.google.com',
+        'https://*.gstatic.com',
+      ]),
+    );
+    expect(directive(on, 'style-src')).toContain(
+      'https://fonts.googleapis.com',
+    );
+    expect(directive(on, 'frame-src')).toContain('https://*.google.com');
+    // Its scripts come through 'strict-dynamic', never by host.
+    expect(directive(on, 'script-src')).not.toContain(
+      'https://*.googleapis.com',
+    );
+  });
+
   it('relaxes only what development needs', () => {
     const policy = buildContentSecurityPolicy({
       ...base,

@@ -53,12 +53,28 @@ export const routes = {
   /*
    * Booking from a specialist's profile (M15): the web's own page, out of
    * `/s/*`, which the app claims and where it has no such path. `office`
-   * comes chosen from the profile's «Agendar en este consultorio».
+   * comes chosen from the profile's «Agendar en este consultorio»; `date`
+   * (`YYYY-MM-DD`) from a day of the search's results (M16).
    */
-  book: (specialistId: string, officeId?: string) =>
-    officeId
-      ? (`/book/${segment(specialistId)}?office=${encodeURIComponent(officeId)}` as const)
-      : (`/book/${segment(specialistId)}` as const),
+  book: (specialistId: string, officeId?: string, date?: string) => {
+    const query = [
+      ...(officeId ? [`office=${encodeURIComponent(officeId)}`] : []),
+      ...(date ? [`date=${encodeURIComponent(date)}`] : []),
+    ].join('&');
+    return query
+      ? (`/book/${segment(specialistId)}?${query}` as const)
+      : (`/book/${segment(specialistId)}` as const);
+  },
+
+  /*
+   * The search for specialists (M16): the web's own page, listed by no app
+   * (§6). What is looked for, where and from when travel in its query
+   * (app/lib/search/query.ts); nothing a person is ever does.
+   */
+  search: (params?: URLSearchParams) => {
+    const query = params?.toString();
+    return query ? (`/search?${query}` as const) : ('/search' as const);
+  },
 
   /* Patient (M6, M10). */
   appointments: () => '/appointments' as const,

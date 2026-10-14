@@ -23,8 +23,10 @@ const securityHeaders = [
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   {
     key: 'Permissions-Policy',
+    // The search asks the device where it is («Usar mi ubicación», M16):
+    // this origin alone may, and only when the person taps.
     value:
-      'camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()',
+      'camera=(), microphone=(), geolocation=(self), payment=(), usb=(), browsing-topics=()',
   },
 ];
 
@@ -121,11 +123,14 @@ const nextConfig: NextConfig = {
       { source: '/:path*', headers: securityHeaders },
       // Links that carry a credential or an appointment are never indexed,
       // even by a crawler that reads no HTML (robots.ts lets them be fetched);
-      // nor is the booking, a flow behind a session.
+      // nor is the booking, a flow behind a session, nor a search: its
+      // address says what someone looked for and from where.
       ...[
         '/i/:path*',
         '/a/:path*',
         '/book/:path*',
+        '/search',
+        '/api/:path*',
         '/daily-summary/:path*',
         '/sign-in',
         '/sign-up',

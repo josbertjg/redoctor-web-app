@@ -24,6 +24,25 @@ export type ContentSecurityPolicyOptions = {
   firebaseAuthDomain: string;
   posthogHost?: string | undefined;
   sentryDsn?: string | undefined;
+  /** The search's map and places (M16): only with a Google Maps key. */
+  googleMaps?: boolean | undefined;
+};
+
+/*
+ * What the Maps JavaScript API needs under a strict policy, as Google
+ * documents it: its own scripts come through 'strict-dynamic' (our loader
+ * inserts them with the page's nonce), the tiles and glyphs are images, the
+ * Places and tile data travel over connect, Roboto comes from Google Fonts,
+ * and a few of its panes are frames.
+ */
+const googleMapsOrigins = {
+  connect: [
+    'https://*.googleapis.com',
+    'https://*.google.com',
+    'https://*.gstatic.com',
+  ],
+  style: ['https://fonts.googleapis.com'],
+  frame: ['https://*.google.com'],
 };
 
 const firebaseAuthApis = [
@@ -56,6 +75,7 @@ export function buildContentSecurityPolicy(
     ...firebaseAuthApis,
     ...(options.posthogHost ? posthogOrigins(options.posthogHost) : []),
     ...(options.sentryDsn ? [originOf(options.sentryDsn)] : []),
+    ...(options.googleMaps ? googleMapsOrigins.connect : []),
     // Fast Refresh talks over a websocket in development.
     ...(isDevelopment ? ['ws:'] : []),
   ];
@@ -72,14 +92,22 @@ export function buildContentSecurityPolicy(
       // React reconstructs server error stacks with eval in development only.
       ...(isDevelopment ? ["'unsafe-eval'"] : []),
     ],
-    'style-src': ["'self'", "'unsafe-inline'"],
+    'style-src': [
+      "'self'",
+      "'unsafe-inline'",
+      ...(options.googleMaps ? googleMapsOrigins.style : []),
+    ],
     // Photos and gallery images are URLs the API stores, on hosts this web
     // does not choose (Google, Firebase Storage…). An image cannot run code.
     'img-src': ["'self'", 'data:', 'blob:', 'https:'],
     'font-src': ["'self'", 'data:', 'https://fonts.gstatic.com'],
     'connect-src': [...new Set(connect)],
     // Firebase Auth completes Google and Apple sign-in through its iframe.
-    'frame-src': ["'self'", firebaseAuthOrigin],
+    'frame-src': [
+      "'self'",
+      firebaseAuthOrigin,
+      ...(options.googleMaps ? googleMapsOrigins.frame : []),
+    ],
     'worker-src': ["'self'", 'blob:'],
     'manifest-src': ["'self'"],
     'object-src': ["'none'"],

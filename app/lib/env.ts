@@ -53,6 +53,9 @@ export const env = createEnv({
     SENTRY_PROJECT: optional,
     SENTRY_AUTH_TOKEN: optional,
     API_PROXY_TARGET: url.optional(),
+    // Google Places for the search's places (M16), asked by the web's server
+    // alone: the key never reaches the browser. Empty: no places to offer.
+    GOOGLE_PLACES_API_KEY: optional,
   },
   client: {
     NEXT_PUBLIC_APP_ENV: appEnvironment,
@@ -75,12 +78,16 @@ export const env = createEnv({
     NEXT_PUBLIC_ANDROID_PACKAGE: nonEmpty,
     NEXT_PUBLIC_SUPPORT_WHATSAPP: supportWhatsapp,
     NEXT_PUBLIC_SUPPORT_PHONES: supportPhones,
+    // The search's map (M16), a browser key. Empty: the map stays off.
+    NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: optional,
+    NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID: optional,
   },
   runtimeEnv: {
     SENTRY_ORG: process.env.SENTRY_ORG,
     SENTRY_PROJECT: process.env.SENTRY_PROJECT,
     SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN,
     API_PROXY_TARGET: process.env.API_PROXY_TARGET,
+    GOOGLE_PLACES_API_KEY: process.env.GOOGLE_PLACES_API_KEY,
     NEXT_PUBLIC_APP_ENV: process.env.NEXT_PUBLIC_APP_ENV,
     NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
@@ -106,6 +113,9 @@ export const env = createEnv({
     NEXT_PUBLIC_ANDROID_PACKAGE: process.env.NEXT_PUBLIC_ANDROID_PACKAGE,
     NEXT_PUBLIC_SUPPORT_WHATSAPP: process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP,
     NEXT_PUBLIC_SUPPORT_PHONES: process.env.NEXT_PUBLIC_SUPPORT_PHONES,
+    NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:
+      process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
+    NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID: process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID,
   },
   emptyStringAsUndefined: true,
   createFinalSchema: (shape, isServer) =>

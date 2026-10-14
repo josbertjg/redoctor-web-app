@@ -20,6 +20,10 @@ describe('publicEnv', () => {
         projectId: env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
         appId: env.NEXT_PUBLIC_FIREBASE_APP_ID,
       },
+      googleMaps: {
+        apiKey: env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
+        mapId: env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID,
+      },
     });
   });
 });

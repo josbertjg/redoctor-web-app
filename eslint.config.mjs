@@ -26,6 +26,7 @@ const modules = [
   '(invitations)',
   '(appointments)',
   '(specialists)',
+  '(search)',
   '(account)',
   '(billing)',
   '(bridges)',

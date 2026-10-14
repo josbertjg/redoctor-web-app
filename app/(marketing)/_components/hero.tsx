@@ -3,12 +3,14 @@ import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 
 import type { TextSegment } from '@/app/ui/motion';
+import { SearchBar } from '@/app/ui/search/search-bar';
+import type { SearchCatalog } from '@/app/ui/search/search-bar-types';
+import { useSearchBarWords } from '@/app/ui/search/search-bar-words';
 
 import { AfterSplash } from './after-splash';
 import { beats } from './choreography';
 import { Swirl } from './decor';
 import { HeroTitle } from './hero-title';
-import { SearchBar } from './search-bar';
 import { SpecialtyChips } from './specialty-chips';
 import { heroSearchId } from '../_data/landing-content';
 
@@ -32,8 +34,15 @@ function accentSegments(markup: string): TextSegment[] {
  * one: the words and the cursor (hero-title.tsx), the search bar, the
  * specialist rising out of it, and the chips from the middle outwards.
  */
-export function Hero({ waitForSplash }: { waitForSplash: boolean }) {
+export function Hero({
+  waitForSplash,
+  catalog,
+}: {
+  waitForSplash: boolean;
+  catalog: SearchCatalog;
+}) {
   const t = useTranslations('landing.hero');
+  const words = useSearchBarWords();
   const title = accentSegments(
     t.markup('title', { accent: (chunks) => `<accent>${chunks}</accent>` }),
   );
@@ -84,12 +93,17 @@ export function Hero({ waitForSplash }: { waitForSplash: boolean }) {
               from="bottom"
               delay={beats.search}
             >
-              <SearchBar />
+              <SearchBar
+                label={t('search.label')}
+                words={words}
+                catalog={catalog}
+              />
             </AfterSplash>
           </div>
         </div>
         <SpecialtyChips
           waitForSplash={waitForSplash}
+          catalog={catalog}
           className="mt-4 w-full lg:mt-5"
         />
       </div>

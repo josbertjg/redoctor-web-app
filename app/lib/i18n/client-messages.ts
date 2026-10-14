@@ -139,6 +139,33 @@ export const pageNamespaces = {
     'input',
     'signUp',
   ],
+  // The search (M16): the results, their days and prices, the filters and
+  // the map, all read in the browser (the box gets its words from the
+  // server, `useSearchBarWords`: the landing shows it too and sends none
+  // of this).
+  search: [
+    'apiErrors',
+    'search',
+    'specialists',
+    'priceFormat',
+    'price',
+    'days',
+    'rating',
+    'filters',
+    'reset',
+    'availability',
+    'asSoonAsPossible',
+    'custom',
+    'from',
+    'distance',
+    'allTheCountry',
+    'available',
+    'notAvailable',
+    'location',
+    'currentLocation',
+    'geoLocation',
+    'refresh',
+  ],
   // The panel's home (M14): the plan and its notice, today's appointments.
   panelHome: ['apiErrors', 'billing', 'appointments', 'panel'],
   // The agenda and the history of the specialist's appointments (M14).

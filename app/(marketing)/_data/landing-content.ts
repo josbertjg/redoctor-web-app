@@ -21,6 +21,8 @@ import TvOptionsEditChannels from '@material-symbols/svg-400/rounded/tv_options_
 import Verified from '@material-symbols/svg-400/rounded/verified.svg?svgr';
 import Visibility from '@material-symbols/svg-400/rounded/visibility.svg?svgr';
 
+import { foldText } from '@/app/lib/search/text';
+
 import type { IconComponent } from '@/app/ui/icons';
 
 /*
@@ -49,7 +51,27 @@ export const landingSections = {
 /** Tinted circles behind the icons (background and icon color). */
 export type IconTone = 'blue' | 'green' | 'orange' | 'warning';
 
-/** Sample of the catalog (`GET /specialties/tree` in the logic step). */
+/** The icon a specialty of the catalog wears on its chip, by what its name says. */
+export function specialtyIcon(name: string): IconComponent {
+  const folded = foldText(name);
+  const found = specialtyIcons.find(([stem]) => folded.includes(stem));
+  return found ? found[1] : Stethoscope;
+}
+
+const specialtyIcons: readonly [stem: string, icon: IconComponent][] = [
+  ['cardio', Cardiology],
+  ['odonto', Dentistry],
+  ['oftalmo', Visibility],
+  ['psic', Psychology],
+  ['dermato', Dermatology],
+  ['pediat', Pediatrics],
+  ['nutri', Nutrition],
+  ['gineco', Gynecology],
+  ['trauma', Orthopedics],
+  ['ortoped', Orthopedics],
+];
+
+/** The mockup's sample names, until the catalog has enough of its own. */
 export const specialtyChips: { name: string; icon: IconComponent }[] = [
   { name: 'Medicina General', icon: Stethoscope },
   { name: 'Odontología', icon: Dentistry },

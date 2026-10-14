@@ -5,7 +5,9 @@ import { identityHandlers } from './identity';
 import { invitationsHandlers } from './invitations';
 import { notificationsHandlers } from './notifications';
 import { panelHandlers } from './panel';
+import { placesHandlers } from './places';
 import { reviewsHandlers } from './reviews';
+import { searchHandlers } from './search';
 import { specialistsHandlers } from './specialists';
 import { specialtiesHandlers } from './specialties';
 
@@ -26,4 +28,6 @@ export const handlers: HttpHandler[] = [
   ...bookingHandlers,
   ...billingHandlers,
   ...panelHandlers,
+  ...searchHandlers,
+  ...placesHandlers,
 ];

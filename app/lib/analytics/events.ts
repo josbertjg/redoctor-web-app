@@ -26,6 +26,18 @@ export type AnalyticsEvents = {
   };
   /** An appointment booked from a specialist's profile (M15): for oneself or for someone in one's care. */
   web_appointment_booked: { relationship: 'self' | 'dependent' };
+  /**
+   * A search for specialists run on the web (M16): by what — a text or a
+   * specialty of the catalog — and from where, and how many it found.
+   * Never the text, the specialty, the place or the point.
+   */
+  web_search_performed: {
+    criterion: 'text' | 'specialty';
+    location: 'device' | 'place' | 'area' | 'country';
+    results: number;
+  };
+  /** A suggestion taken from the search box: a specialty, or a specialist (straight to their profile). */
+  web_search_suggestion_taken: { kind: 'specialty' | 'specialist' };
   /** What the patient did with their appointment (M5). */
   web_appointment_confirmed: Record<string, never>;
   web_appointment_cancelled: Record<string, never>;

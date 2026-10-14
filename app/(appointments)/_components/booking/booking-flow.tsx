@@ -123,7 +123,13 @@ export function BookingFlow({
     return frame(
       <FinishSignUpFirst
         specialistName={specialist.name}
-        signUpHref={routes.signUp(routes.book(specialist.id, namedOffice?.id))}
+        signUpHref={routes.signUp(
+          routes.book(
+            specialist.id,
+            namedOffice?.id,
+            searchParams.get('date') ?? undefined,
+          ),
+        )}
         profileHref={profile}
       />,
     );
