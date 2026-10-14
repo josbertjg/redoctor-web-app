@@ -1,9 +1,15 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
-import { describe, expect, it, vi } from 'vitest';
+import { http, HttpResponse } from 'msw';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { forgetPlansRefusal } from '@/app/lib/data/plans';
+
+import { buildPlans } from '@/tests/factories/billing';
+import { apiUrl } from '@/tests/msw/api-url';
+import { server } from '@/tests/msw/server';
 import { renderWithIntl } from '@/tests/render';
 
 import HomePage from './page';
@@ -42,6 +48,12 @@ const renderHome = async () =>
   );
 
 describe('HomePage', () => {
+  // The API answers the plans to specialists only (MSW's default); the
+  // landing remembers that between reads, so each test starts afresh.
+  beforeEach(() => {
+    forgetPlansRefusal();
+  });
+
   it('renders the landing without accessibility violations', async () => {
     const { container } = await renderHome();
 
@@ -97,6 +109,79 @@ describe('HomePage', () => {
     expect(
       screen.getByText(/Redoctor es gratis para los pacientes/),
     ).toBeVisible();
+  });
+
+  it('keeps the mockup’s plans while the API answers them to specialists only', async () => {
+    await renderHome();
+
+    expect(
+      screen.getByRole('heading', { level: 3, name: 'Plan Profesional' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Recomendado')).toBeInTheDocument();
+    const buttons = screen.getAllByRole('link', { name: 'Seleccionar plan' });
+    expect(buttons).toHaveLength(3);
+    for (const button of buttons) {
+      expect(button).toHaveAttribute('href', '/pay?view=plans');
+    }
+  });
+
+  it('offers the API’s plans, the professional one recommended, each opening the payment with it chosen', async () => {
+    server.use(
+      http.get(apiUrl('/billing/plans'), () =>
+        HttpResponse.json({ plans: buildPlans() }),
+      ),
+    );
+
+    await renderHome();
+
+    expect(
+      screen.getByRole('heading', { level: 3, name: 'Esencial' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Antiguo')).not.toBeInTheDocument();
+    const professional = screen
+      .getByRole('heading', { level: 3, name: 'Profesional' })
+      .closest('article');
+    if (!professional) throw new Error('The plan has no card');
+    expect(professional).toHaveTextContent('Recomendado');
+    expect(professional).toHaveTextContent('30,00');
+    expect(professional).toHaveTextContent('Para consultas en varias sedes.');
+    expect(professional).toHaveTextContent('Máximo 3 consultorios');
+    expect(
+      within(professional).getByRole('link', { name: 'Seleccionar plan' }),
+    ).toHaveAttribute('href', '/pay?plan=profesional');
+  });
+
+  it('says so when the plans cannot be read', async () => {
+    server.use(
+      http.get(apiUrl('/billing/plans'), () =>
+        HttpResponse.json(
+          { code: 'ERR_9999', message: 'Something broke' },
+          { status: 500 },
+        ),
+      ),
+    );
+
+    await renderHome();
+
+    expect(
+      screen.getByRole('heading', {
+        level: 3,
+        name: 'Los planes no están disponibles ahora mismo',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'Seleccionar plan' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('leads a specialist to the sign-in and a patient to the search from «Comenzar»', async () => {
+    await renderHome();
+
+    const [specialist, patient] = screen.getAllByRole('link', {
+      name: 'Comenzar',
+    });
+    expect(specialist).toHaveAttribute('href', '/sign-in');
+    expect(patient).toHaveAttribute('href', '/search');
   });
 
   it('sends a specialist’s browser to the panel before painting the landing', async () => {

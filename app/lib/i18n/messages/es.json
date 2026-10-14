@@ -89,8 +89,8 @@
       },
       "items": {
         "favorites": "<accent>Guarda</accent> tus especialistas para volver a agendar",
-        "search": "<accent>Busca</accent> especialistas por especialidad y ubicación",
-        "book": "Agenda citas con tu especialista en <accent>segundos</accent>",
+        "search": "<accent>Busca</accent> especialistas desde la app para pacientes",
+        "book": "Agenda citas en <accent>segundos</accent> desde la app para pacientes",
         "app": "La app de Redoctor para pacientes, en <accent>tu teléfono</accent>",
         "cities": "<accent>Más ciudades</accent> de Venezuela y, luego, Latinoamérica"
       }
@@ -117,10 +117,9 @@
           "description": "Para clínicas y equipos que atienden en varios lugares."
         }
       },
-      "features": {
-        "search": "Aparecer en las búsquedas",
-        "offices": "Máximo 3 consultorios",
-        "reports": "Visualización y descarga de reportes administrativos"
+      "unavailable": {
+        "title": "Los planes no están disponibles ahora mismo",
+        "description": "Vuelve en unos minutos."
       }
     },
     "faq": {

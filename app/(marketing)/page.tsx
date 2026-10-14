@@ -6,6 +6,7 @@ import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import { panelHintCookie } from '@/app/lib/auth/session-hint';
+import { getLandingPlans } from '@/app/lib/data/plans';
 import { getSearchCatalog } from '@/app/lib/data/specialties';
 import { routes } from '@/app/lib/routes';
 
@@ -32,8 +33,9 @@ export const metadata: Metadata = {
  * The landing (M9), after the middle mockup of Figma «LANDING PAGE»: the
  * sections in the mockup's order, each its own component. The search box
  * (M16) is live: a specialty or a name goes to `/search`, a specialist to
- * their profile; the sign-in and the plans get their logic in later steps
- * (the TODOs inside each section).
+ * their profile; the plans are the API's when it answers the landing
+ * (pricing.tsx), and «Comenzar» leads a patient to the search and a
+ * specialist to the sign-in (how-it-works.tsx).
  *
  * A session's first visit opens with the splash veil (the app's logo); the
  * cookie it leaves says the next visits do not. The hero's words wait for it.
@@ -67,8 +69,12 @@ export default async function HomePage() {
       fetchPriority: 'low',
     });
   }
-  // The catalog for the search box; the landing stands without it.
-  const catalog = await getSearchCatalog();
+  // The catalog for the search box and the plans on offer, read together;
+  // the landing stands without either.
+  const [catalog, plans] = await Promise.all([
+    getSearchCatalog(),
+    getLandingPlans(),
+  ]);
 
   return (
     <MotionProvider>
@@ -92,7 +98,7 @@ export default async function HomePage() {
           <HowItWorks />
           <Trust />
           <Roadmap />
-          <Pricing />
+          <Pricing plans={plans} />
           <Faq />
         </main>
         <LandingFooter />

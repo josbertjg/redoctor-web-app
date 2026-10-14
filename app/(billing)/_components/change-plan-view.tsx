@@ -45,7 +45,7 @@ import { useFocusHeading } from '@/app/hooks/use-focus-heading';
 
 import { DetailList, type DetailItem } from './detail-list';
 import { PaySkeleton } from './pay-skeleton';
-import { planBenefits } from './plan-benefits';
+import { planBenefitWords } from './plan-benefits';
 
 type ChangePlanViewProps = {
   user: SessionUser;
@@ -365,7 +365,7 @@ function ChangeSummary({
           </div>
         </div>
         <ul className="flex flex-col gap-1.5">
-          {planBenefits(t, plan).map((benefit) => (
+          {planBenefitWords(t, plan).map((benefit) => (
             <li
               key={benefit}
               className="flex items-start gap-2 text-body-sm text-text-primary"

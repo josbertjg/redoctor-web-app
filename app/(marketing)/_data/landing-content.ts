@@ -28,9 +28,11 @@ import type { IconComponent } from '@/app/ui/icons';
 /*
  * What each section of the landing lists, with its icon or illustration
  * (Figma «LANDING PAGE», middle mockup). The copy lives in es.json under
- * `landing.*`; the keys here point at it. Specialties, plans and contacts
- * are sample data for the visual stage: the logic step reads the catalog
- * from the API and the rest from configuration.
+ * `landing.*`; the keys here point at it. The specialties and the plans
+ * come from the API when it answers the landing (the mockup's stand in
+ * meanwhile: the chips until the catalog has six, the plans until the API
+ * answers them to anyone); the contacts are the mockup's until the
+ * configuration endpoint (REDOC-357).
  */
 
 /**
@@ -206,18 +208,41 @@ export const roadmapItems: {
   },
 ];
 
-/** Sample plans (prices in USD per month, as the Figma mockup shows them). */
-export const plans: {
+/**
+ * The mockup's plans (USD a month), shown while the API answers its plans
+ * to signed-in specialists only (AGENTS.md §13): the limits each one is
+ * drawn with are the ones its benefits are derived from, as for the API's.
+ * They go the day the API answers the landing.
+ */
+export const samplePlans: {
   key: 'essential' | 'professional' | 'corporate';
   price: number;
   featured: boolean;
+  maxActiveClinics: number | null;
+  canExportReports: boolean;
 }[] = [
-  { key: 'essential', price: 19.99, featured: false },
-  { key: 'professional', price: 36.99, featured: true },
-  { key: 'corporate', price: 76.99, featured: false },
+  {
+    key: 'essential',
+    price: 19.99,
+    featured: false,
+    maxActiveClinics: 1,
+    canExportReports: false,
+  },
+  {
+    key: 'professional',
+    price: 36.99,
+    featured: true,
+    maxActiveClinics: 3,
+    canExportReports: true,
+  },
+  {
+    key: 'corporate',
+    price: 76.99,
+    featured: false,
+    maxActiveClinics: null,
+    canExportReports: true,
+  },
 ];
-
-export const planFeatures = ['search', 'offices', 'reports'] as const;
 
 export const faqItems = [
   'app',

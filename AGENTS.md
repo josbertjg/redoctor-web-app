@@ -276,7 +276,7 @@ app/                                  # The application: routes, UI and logic
   lib/                                # ALL non-React logic
     api/                              #   client.ts (fetch wrapper), errors.ts (ApiError + codes), retry.ts, write-once.ts
     schemas/                          #   zod schemas + inferred types per domain — THE contract with the API
-    data/                             #   server-only fetchers for Server Components (fetch + cache tags → DTOs); places.ts asks Google Places for the search's places (M16)
+    data/                             #   server-only fetchers for Server Components (fetch + cache tags → DTOs); places.ts asks Google Places for the search's places (M16); plans.ts reads the landing's plans with no session and remembers a refusal (M9)
     queries/                          #   TanStack queryOptions + mutation functions per domain (client)
     actions/                          #   Server Actions — only where no user token is needed
     firebase/                         #   client.ts: Firebase Auth, loaded on demand (client-only)
@@ -285,7 +285,7 @@ app/                                  # The application: routes, UI and logic
     search/                           #   the search's logic (M16): query.ts (the address ↔ the search ↔ the API's request), location.ts (the point, the app's radii), text.ts (matching case and accents aside), suggestions.ts, recent.ts and last-location.ts (what the browser remembers)
     maps/                             #   google-maps.ts: the Maps JavaScript API for the results' map, loaded on demand with the page's nonce (client-only)
     security/                         #   csp.ts (the nonce policy proxy.ts sends), rate-limit.ts (so many a minute per address, for the endpoints that spend Google's quota)
-    billing/                          #   banks.ts: the app's list of Venezuelan banks (the API publishes none)
+    billing/                          #   banks.ts: the app's list of Venezuelan banks (the API publishes none); plan-benefits.ts: what a plan includes, from its limits (the landing's plans and the payment's)
     reports/                          #   period.ts (the presets, the buckets), figures.ts (trends, the main currency, rankings), csv.ts (the spreadsheet)
     analytics/ · i18n/
     observability/                    #   report.ts (the seam), scrub.ts (what never leaves), sentry.ts
@@ -1181,13 +1181,15 @@ written out in full, or Next.js does not inline it).
   brand green on white is text only as `green-700` (the 500 fails AA, as
   the doc warns), and the green card of «Del mensaje a la consulta» is
   `green-600` so its white text reaches 3:1; the landing's buttons use the
-  new `shape="soft"`. Still
-  sample data: specialties (the API's catalog comes with the logic),
-  plans and prices (the mockup's; the doc keeps prices off the landing
-  while the app links here, §6), the footer channels (REDOC-357), the
-  plans' one-line descriptions (not in the mockup). «Entrar», «Comenzar»,
-  «Seleccionar plan», the search and the chips are visual until their
-  modules exist. Two sections are deliberately smaller than the mockup
+  new `shape="soft"`. Sample data
+  on that day: specialties, plans and prices (the mockup's; the doc keeps
+  prices off the landing while the app links here, §6), the footer
+  channels (REDOC-357), the plans' one-line descriptions (not in the
+  mockup); and «Entrar», «Comenzar», «Seleccionar plan», the search and
+  the chips visual until their modules existed. Since 2026-10-14 the
+  search and the chips (M16), the plans and «Comenzar» (Decided,
+  2026-10-14) are live; the footer channels still wait for REDOC-357.
+  Two sections are deliberately smaller than the mockup
   (owner's request, same day): «Del mensaje a la consulta» (container
   64 rem, title 42 px, words sized by the card through container queries)
   and «Así de simple» (container 56 rem, one type step smaller, 40 px
@@ -2091,6 +2093,48 @@ written out in full, or Next.js does not inline it).
     search near a Venezuelan place finds nobody until there is supply.
     `@types/google.maps` entered as a dev dependency (types alone, no
     runtime): the Maps API is loaded from Google, never bundled.
+
+- **The landing wired to what the API already has (the owner's word,
+  2026-10-14, after the review of what was still static):** the plans
+  and the two «Comenzar».
+  - **The plans** («Elige el plan ideal») are the API's when it answers
+    the landing: `GET /billing/plans` read on the server with no session
+    (`app/lib/data/plans.ts`, cached five minutes), the plans on offer
+    the cheapest first, each with its name, its monthly price, its
+    description and what it includes, derived from its limits as the
+    payment derives it (`app/lib/billing/plan-benefits.ts`, in the app's
+    words); the professional plan wears «Recomendado», since the API ranks
+    none; «Seleccionar plan» opens the payment with that plan chosen
+    (`/pay?plan={slug}`), which asks for the session and sends a new
+    account to the sign-up. **Today the API answers that GET to signed-in
+    specialists only** (a 401 without a token, measured 2026-10-14; the
+    OpenAPI says «Audiencia: Especialistas»): until Heyscar opens it, the
+    mockup's plans stand in (`samplePlans`, their benefits derived the
+    same way) and «Seleccionar plan» opens the payment's own list
+    (`/pay?view=plans`); the day it answers, the real plans take their
+    place with no change on the web, and `samplePlans` goes. An instance
+    remembers the refusal ten minutes (the Data Cache keeps only a 200, so
+    a refusal would cost the API one call per visit) and asks once, four
+    seconds at most, with no retries: the landing never waits long for a
+    section it can stand without. Any other failure, or no plan on offer,
+    shows «Los planes no están disponibles ahora mismo» in the section.
+  - **«Comenzar»** leads where each role starts: a specialist to
+    `/sign-in` (a new account goes on to the sign-up, which points
+    specialists to the app), a patient to `/search`, since searching needs
+    no account (§1).
+  - **To raise with Heyscar:** `GET /billing/plans` without a session
+    (the plans are public: the landing shows them to anyone). The footer's
+    channels wait for the configuration endpoint (REDOC-357), his too.
+  - **The copy the web overtook (the owner's calls, 2026-10-14):** the
+    roadmap's search and booking cards now say they come in the patients'
+    app («Busca especialistas desde la app para pacientes», «Agenda citas
+    en segundos desde la app para pacientes»), since the web has both
+    since M15 and M16; the patient card of «Así de simple» keeps the
+    invitation's four steps, the pilot's path.
+  - **The owner's call still open:** prices on the landing while the app
+    links here (the landing doc, §6). Nothing changed there, the prices
+    were already on the page; «Seleccionar plan» now makes the path from
+    the landing to the payment real.
 
 ### Improvements noted (not scheduled)
 

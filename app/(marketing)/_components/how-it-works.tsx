@@ -1,7 +1,11 @@
+import type { Route } from 'next';
+
 import Image from 'next/image';
+import Link from 'next/link';
 
 import { useTranslations } from 'next-intl';
 
+import { routes } from '@/app/lib/routes';
 import { cn } from '@/app/lib/utils';
 
 import { Button } from '@/app/ui/button';
@@ -25,6 +29,9 @@ import {
  * into view (role-card-motion.tsx, through the `data-piece` marks) and
  * answers the pointer: over the card the avatar nods and the steps lean
  * right one after another; over a step, it lifts and its badge grows.
+ * «Comenzar» leads where each role starts: a specialist to the sign-in (a
+ * new account goes on to the sign-up, which points specialists to the
+ * app), a patient to the search, which needs no account (AGENTS.md §1).
  */
 export function HowItWorks() {
   const t = useTranslations('landing.howItWorks');
@@ -61,6 +68,7 @@ export function HowItWorks() {
               label: t(`specialist.steps.${step.key}`),
             }))}
             cta={t('cta')}
+            href={routes.signIn()}
           />
         </RoleCardMotion>
         {/* A step beat behind its neighbour when the two share a row. */}
@@ -76,6 +84,7 @@ export function HowItWorks() {
               label: t(`patient.steps.${step.key}`),
             }))}
             cta={t('cta')}
+            href={routes.search()}
           />
         </RoleCardMotion>
       </div>
@@ -118,6 +127,8 @@ type RoleCardProps = {
     label: string;
   }[];
   cta: string;
+  /** Where «Comenzar» leads this role. */
+  href: Route;
 };
 
 function RoleCard({
@@ -126,6 +137,7 @@ function RoleCard({
   description,
   steps,
   cta,
+  href,
 }: RoleCardProps) {
   return (
     /* The hovers move `translate`, `rotate` and `scale` only, which the
@@ -193,16 +205,16 @@ function RoleCard({
           </li>
         ))}
       </ol>
-      {/* TODO(M2/M11): the specialist opens the app, the patient signs in.
-          Full height, as the mockup's 43 px, and a deeper hover than the
+      {/* Full height, as the mockup's 43 px, and a deeper hover than the
           primitive's one step (owner's request). */}
       <Button
+        asChild
         data-piece="cta"
         block
         shape="soft"
         className="mt-auto hover:bg-blue-700"
       >
-        {cta}
+        <Link href={href}>{cta}</Link>
       </Button>
     </article>
   );

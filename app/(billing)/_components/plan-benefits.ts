@@ -1,23 +1,22 @@
+import {
+  planBenefits,
+  type PlanBenefit,
+} from '@/app/lib/billing/plan-benefits';
 import type { Plan } from '@/app/lib/schemas/billing';
 
 import type { useTranslations } from 'next-intl';
 
 type Translate = ReturnType<typeof useTranslations<'billing'>>;
 
-/** What a plan includes, derived from its limits as the app derives it. */
-export function planBenefits(
+const words = (t: Translate, benefit: PlanBenefit): string =>
+  benefit.key === 'manyClinics'
+    ? t('plans.benefits.manyClinics', { count: benefit.count })
+    : t(`plans.benefits.${benefit.key}`);
+
+/** What a plan includes, in the app's words (derived in app/lib/billing). */
+export function planBenefitWords(
   t: Translate,
   plan: Pick<Plan, 'maxActiveClinics' | 'canExportReports'>,
 ): string[] {
-  const clinics =
-    plan.maxActiveClinics == null
-      ? t('plans.benefits.unlimitedClinics')
-      : plan.maxActiveClinics === 1
-        ? t('plans.benefits.oneClinic')
-        : t('plans.benefits.manyClinics', { count: plan.maxActiveClinics });
-  return [
-    t('plans.benefits.search'),
-    clinics,
-    ...(plan.canExportReports ? [t('plans.benefits.exportReports')] : []),
-  ];
+  return planBenefits(plan).map((benefit) => words(t, benefit));
 }

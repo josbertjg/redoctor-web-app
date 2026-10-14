@@ -26,7 +26,7 @@ import { Icon } from '@/app/ui/icons';
 import { Skeleton } from '@/app/ui/skeleton';
 import { StateChip } from '@/app/ui/state-chip';
 
-import { planBenefits } from './plan-benefits';
+import { planBenefitWords } from './plan-benefits';
 
 type PlansViewProps = {
   user: SessionUser;
@@ -157,7 +157,7 @@ export function PlansView({
                   selected={selected}
                   badge={badgeOf(plan)}
                   expanded={open}
-                  benefits={planBenefits(t, plan)}
+                  benefits={planBenefitWords(t, plan)}
                   onSelect={() => {
                     setChosenId(plan.id);
                   }}
