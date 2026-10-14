@@ -66,7 +66,7 @@ Patients have **no app** during the pilot. Everything a patient does happens
 here, arriving from a link the specialist sends by WhatsApp or from the
 transactional emails the API sends.
 
-### Scope of the web MVP (modules M1–M13)
+### Scope of the web MVP (modules M1–M15)
 
 | Module | What it is |
 | --- | --- |
@@ -77,15 +77,17 @@ transactional emails the API sends.
 | M5 Appointment `/a/{id}` | Confirm (from 24 h before), cancel, reschedule, directions, add to calendar |
 | M6 My appointments `/appointments` | Upcoming, past, pending reviews |
 | M7 Review | Stars, comment, "your review is public / anonymous by default" notice |
-| M8 Public profile `/s/{id}` | Read-only: photo, verified specialties, offices with directions, service prices, rating and reviews, "Pronto podrás agendar aquí" |
+| M8 Public profile `/s/{id}` | Read-only: photo, verified specialties, offices with directions, service prices, rating and reviews, and «Agendar cita» toward the booking (M15) |
 | M9 Landing | Designed by the designer; copy in the doc «Landing de Redoctor» |
 | M10 Legal and account | Privacy, terms, account deletion (texts from the lawyer) |
 | M11 Bridges | `/home/*` (pages that only open the app) and `/daily-summary/unsubscribe` (daily-summary email opt-out); `/panel/subscription`, `/panel/agenda`, `/panel/specialties` and `/panel/profile` were bridges until M14 made them pages |
 | M13 Specialist payment | `/panel/subscription` («Mi suscripción»: the plan, its state and its notice) and `/pay` (the payment, out of the paths the app opens, since no app may charge; the owner's split of 2026-10-13): choose a plan with a coupon, Pago Móvil and transfer data in Bs from the API, report the payment, see it in review; changing plan — from «Mi suscripción» (`?view=plans`) or from a missing feature's invitation (`?plan=`) — and undoing a scheduled change (2026-10-13); and the rest of the app's «Mi suscripción» the same day (§13, Decided): cancelling and resuming, dropping an unpaid subscription, a coupon on the plan in force, the billing data, the receipts (`/panel/subscription/invoices[/{id}]`, each one payable from its page), the balance (`/panel/subscription/balance`) and «Mis cupones» (`/panel/subscription/coupons`) |
 | M14 Specialist panel | `/panel` and its sections (2026-10-13): the home (the plan and its notice, today's patients, the statistics, what stays in the app), the day's agenda `/panel/agenda[/{date}]` and the history `/panel/appointments` (read only, each appointment opening `/a/{id}`), the statistics `/panel/reports` (the app's summary and four reports, PDF and CSV when the plan allows), «Mi perfil» `/panel/profile` (whether patients find the profile and, if not, why; the profile as the app shows it to its owner) and «Mis especialidades» `/panel/specialties` (each specialty and its review), both read only, the subscription (M13); a specialist stays in it until signing out |
+| M15 Booking | `/book/{specialistId}` (the owner's «vamos con el agendar desde /s», 2026-10-13; built 2026-10-14): a patient books with the specialist of a public profile in the app's four steps — the office, the day and hour, the reason and for whom (oneself, someone in one's care, someone new), the summary — and «¡Todo listo!»; the appointment is born pending and is confirmed on `/a/{id}` from 24 h before. The web's own page, out of `/s/*` (§6) |
 | M12 Release | PostHog funnel by origin, tests on real phones from WhatsApp and Gmail, domain cutover |
 
-**Explicitly out of the pilot:** searching and booking from the web,
+**Explicitly out of the pilot:** searching from the web (booking from a
+profile came on the owner's word, 2026-10-13: M15),
 favorites, notifications inbox, and acting on appointments from the
 specialist's panel (it reads them; the app changes them). They come after.
 
@@ -137,8 +139,9 @@ specialist's panel (it reads them; the app changes them). They come after.
   specialist reads «Así ven tu perfil tus pacientes». Signing in from a
   link goes back to it; from anywhere else, to the panel. Only «Cerrar
   sesión» leaves.
-- Public profile `/s/{id}` is read-only during the pilot and says "Pronto
-  podrás agendar aquí; por ahora pídele tu cita a tu especialista".
+- Public profile `/s/{id}` offers «Agendar cita» (M15, the owner's word
+  of 2026-10-13): the booking happens on `/book/{id}`, the web's own
+  page, with the patient's session; a specialist is never offered it.
 - **Another browser, another session.** Gmail, Instagram and Facebook open
   links in their own browsers. The web handles it: sign-in in one or two
   taps, a clear message instead of an error, straight back to the
@@ -216,11 +219,12 @@ app/                                  # The application: routes, UI and logic
     layout.tsx · error.tsx            #   the bar with the account; the error under it
     i/[token]/page.tsx                #   /i/{token} — read in the browser, claimed right there
     _components/                      #   invitation-flow, claim-form, invitation-details
-  (appointments)/                     # module: appointments (M5, M6, M7)
+  (appointments)/                     # module: appointments (M5, M6, M7) and booking (M15)
     layout.tsx · error.tsx            #   the bar with the account; the error under it
     a/[appointmentId]/page.tsx        #   /a/{id} — read in the browser with the patient's session
     appointments/layout.tsx · page.tsx · loading.tsx      # /appointments (M6, M7) — layout = <RequireSession facet="patient">
-    _components/                      #   appointment-flow, -view, -actions, -record; cancel-sheet, reschedule-sheet, month-calendar, calendar-menu; appointments-flow, -list, -skeleton; review-wall, review-form
+    book/[specialistId]/page.tsx · not-found.tsx   # /book/{id} (M15) — the profile and the catalog read on the server, the steps in the browser; an unknown profile is a real 404
+    _components/                      #   appointment-flow, -view, -actions, -record; cancel-sheet, reschedule-sheet, month-calendar, slot-picker (+ slot-choices, load-failure: the reschedule's and the booking's day and hour), calendar-menu; appointments-flow, -list, -skeleton; review-wall, review-form; booking/ (the flow and its notices, the four steps, the summary, «¡Todo listo!»)
   (specialists)/                      # module: public profile (M8) and the specialist's panel (M2, M14)
     s/[specialistId]/page.tsx · loading.tsx · not-found.tsx · opengraph-image.tsx   # /s/{id}
     panel/layout.tsx · page.tsx · error.tsx   # /panel — layout = <PanelFrame> (the bar, the sections, <RequireSession facet="specialist">); no loading.tsx, so a notFound() is a real 404
@@ -228,7 +232,7 @@ app/                                  # The application: routes, UI and logic
     panel/appointments/page.tsx       #   the history, its filters in the address
     panel/reports/page.tsx            #   the statistics
     panel/profile/page.tsx · specialties/page.tsx   # «Mi perfil» and «Mis especialidades», read only (emails 18 and 16)
-    _components/                      #   profile pieces; panel-*, agenda-*, appointments-history, booking-note, edit-in-app-card, plan-offer-card; reports/ (the statistics' views, charts, filters, export and the plan that downloads); my-profile/ (the view, its state, identity, offices, prices, schedules and training blocks); my-specialties/ (the view, the specialty card, support)
+    _components/                      #   profile pieces; panel-*, agenda-*, appointments-history, booking-action and book-at-office (the profile's «Agendar cita», `useBookingOffer`), edit-in-app-card, plan-offer-card; reports/ (the statistics' views, charts, filters, export and the plan that downloads); my-profile/ (the view, its state, identity, offices, prices, schedules and training blocks); my-specialties/ (the view, the specialty card, support)
   (account)/                          # module: account and legal (M10)
     account/layout.tsx · page.tsx     #   /account — layout = <RequireSession>
     privacy/page.tsx · terms/page.tsx · delete-account/page.tsx
@@ -245,7 +249,7 @@ app/                                  # The application: routes, UI and logic
     daily-summary/unsubscribe/page.tsx   # daily-summary opt-out — a Server Action
   api/                                # route handlers only when the browser must not call the API (none yet)
   ui/                                 # ALL shared UI
-    button.tsx · back-link.tsx · text-field.tsx · select-field.tsx · text-area.tsx · checkbox.tsx · choice-cards.tsx · stars-input.tsx · tabs.tsx · filter-chips.tsx · field-error.tsx · sheet.tsx · skeleton.tsx · toast.tsx · empty-state.tsx · status-card.tsx · link-card.tsx · avatar.tsx …
+    button.tsx · back-link.tsx · text-field.tsx · identity-document-field.tsx · select-field.tsx · text-area.tsx · checkbox.tsx · choice-cards.tsx · stars-input.tsx · tabs.tsx · filter-chips.tsx · field-error.tsx · sheet.tsx · skeleton.tsx · toast.tsx · empty-state.tsx · status-card.tsx · link-card.tsx · avatar.tsx …
     messages-scope.tsx                #   a page's own client messages (§9)
     layout/                           #   site-header, page-frame (a page's column and its main, in the guarded layouts), panel-frame and panel-nav (the specialist's panel around each section), bottom-actions
     auth/                             #   session-provider, session-button, require-session, sign-in-buttons, sign-in-legal-note, account-error-state, in-app-browser-help, provider-logos
@@ -270,7 +274,7 @@ app/                                  # The application: routes, UI and logic
     observability/                    #   report.ts (the seam), scrub.ts (what never leaves), sentry.ts
     security/                         #   csp.ts (the nonce policy proxy.ts sends)
     env.ts · public-env.ts · routes.ts · deep-links.ts · site.ts · support.ts · clipboard.ts · utils.ts · calendar.ts (.ics, Google Calendar)
-  hooks/                              # shared client hooks: use-session, use-sign-in-tracking, use-focus-heading, use-infinite-scroll, use-link-origin, use-device, use-in-app-browser
+  hooks/                              # shared client hooks: use-session, use-sign-in-tracking, use-focus-heading, use-infinite-scroll, use-link-origin, use-device, use-in-app-browser, use-person-checks (a person's data as the API checks it), use-price-words
 tests/                                # setup.ts · msw/ (server + handlers per domain) · factories/ · e2e/ (Playwright)
 public/                               # .well-known/ (§6) · brand/ (logo.svg, logo-white.svg, icons) · illustrations/ · animations/ (the app's splash_logo.riv)
 proxy.ts                              # Next 16's name for middleware: the CSP nonce per request, /.well-known excluded — nothing else
@@ -348,7 +352,8 @@ Every route path is built from one place, `app/lib/routes.ts` (the app has
   `fetch` on the server with `next: { revalidate, tags }`. Server-side calls
   are not subject to CORS, so the public profile works today even though the
   API has not opened CORS yet (§5).
-- **Authenticated flows** (`/i`, `/a`, `/appointments`, `/account`, payment):
+- **Authenticated flows** (`/i`, `/a`, `/appointments`, `/account`, the
+  booking, payment):
   **Client Components** + TanStack Query, calling the API from the browser
   with the Firebase ID token. These need the API's CORS allow-list
   (REDOC-362). Until it ships, develop against MSW or the dev-only proxy in
@@ -360,7 +365,7 @@ Every route path is built from one place, `app/lib/routes.ts` (the app has
   token in the link. Every authenticated write runs in the browser: the API
   is the backend and the Firebase token lives there.
 - **Metadata** per route with `generateMetadata`. Private pages (`/i`, `/a`,
-  `/appointments`, `/account`, payment) are `noindex, nofollow`.
+  `/appointments`, `/account`, `/book`, payment) are `noindex, nofollow`.
 - Loading states are **skeletons with the final dimensions** (`loading.tsx`
   or Suspense boundaries), never spinners in the middle of empty space.
   Consequence to know: a page under a `loading.tsx` streams, so a
@@ -461,7 +466,7 @@ docs point here instead of copying it.
 
 | Path | For | On the web | Who sends it |
 | --- | --- | --- | --- |
-| `/s/{specialistId}` | public | Full read-only profile (M8) + "Abrir en la app" | the app («Compartir perfil»); emails 14 and 17 |
+| `/s/{specialistId}` | public | The full profile (M8), its «Agendar cita» toward `/book/{id}` (M15, the web's own) and "Abrir en la app" | the app («Compartir perfil»); emails 14 and 17 |
 | `/i/{token}` | patient | Full invitation experience (M4); "Abrir en la app" once the app is published (patients have none in the pilot, §13) | the app (the specialist's WhatsApp); the API's `invitationUrl` |
 | `/a/{appointmentId}` | patient (and specialist in the app) | Full appointment experience (M5); its specialist reads it, with the patient in full and the way back to the agenda | the app (reminders, confirmation); emails 11–13 and 15 |
 | `/panel/subscription` | specialist | «Mi suscripción» (M13): the plan, its state, its notice and the way to pay | billing emails 01–05 and 07–09 (REDOC-356) |
@@ -483,8 +488,10 @@ and older read). The rule:
   the app's side. So do `/panel` itself (the web's home of the panel,
   M14) and the receipts, a receipt, the balance and «Mis cupones»
   (`/panel/subscription/invoices[/{id}]`, `/panel/subscription/balance`,
-  `/panel/subscription/coupons`, M13): no link leaves the web with them,
-  and moving between the web's pages never opens the app.
+  `/panel/subscription/coupons`, M13), and the booking (`/book/{id}`,
+  M15: out of `/s/*`, where the app has no booking path, so a shared
+  booking link would open the app on a «not found»): no link leaves the
+  web with them, and moving between the web's pages never opens the app.
 - **A page both have** goes into the app's manifest in the build that
   brings it, and into this list once that build is published: listed
   before, it would open an older build at its home on an iPhone. Then
@@ -1845,6 +1852,88 @@ written out in full, or Next.js does not inline it).
     with white words (2.8:1, the owner's brand rule), while `/s/{id}`'s
     specialty pill is green-700 since M8: one of the two should change,
     his call.
+
+### Decided (2026-10-14)
+
+- **Booking from a profile (M15) as built (the owner's «vamos con el
+  agendar desde /s», 2026-10-13):** the app's booking sheet as the web's
+  own page, `/book/{specialistId}`, in `(appointments)` (the bar with the
+  account), its `search.*` words:
+  - **Where:** `/s/{id}`'s «Agendar cita», and each office's «Agendar en
+    este consultorio» with two offices or more (`?office=`, which opens on
+    the day and hour). Out of `/s/*` on purpose: the app claims that path
+    and has no booking path, so a booking link would open the app on its
+    «not found»; `/book/*` is the web's alone (§6) until an app shows it.
+    `noindex` and `X-Robots-Tag`; an unknown profile is a real 404.
+  - **Before the steps:** what the API needs — an office, and the
+    specialty it requires (`specialtyId`, until REDOC-251), found on the
+    server as the app finds it (the profile's most specific verified
+    specialty, by name in the catalog, `bookingSpecialtyId`); without it,
+    «Por ahora no es posible agendar…». Then the session, asked for right
+    there (Google, Apple; the app's `search.noAuthDescription`), as on `/a`.
+    A specialist's account books nothing (§1): «Agendar es para pacientes»
+    with the way to the panel, and on their own profile the app's
+    «Es una vista previa». A patient whose sign-up is not finished gets
+    the app's «¡Un último paso para agendar tu cita!» → `/sign-up?redirect=
+    /book/{id}` (the sign-up asks the personal data for booking as for
+    claiming, in the booking's words: «Crea tu cuenta para agendar tu
+    cita», «Para agendar tu cita solo falta completar tus datos.», «Agendar
+    mi cita») and comes back.
+  - **The steps,** the step in the address (`?step=`, by `pushState`, so
+    the browser's back goes to the one before; what was chosen survives;
+    the reason and the person never travel in the address, §11): (1) «Selecciona un
+    consultorio», one chosen (skipped with a single office); (2) «Fecha y
+    hora», the reschedule's calendar and hours (`SlotPicker`, shared), the
+    first free day of this month or the next chosen, only the free hours;
+    (3) «Paciente», the reason with its price (`GET /scheduling/offices/
+    {id}/services`: per reason, its own price or the standard one) and «¿Para
+    quién es la cita?» — oneself, someone already in one's care (`GET
+    /scheduling/terceros`) or someone new (names, birth date, sex and, from
+    9 years and a month, the document: the API's rule); (4) «Resumen de tu
+    cita», each part with «Editar», the price and the app's notice that the
+    consultation is paid to the specialist, and the account it is saved
+    under (§1). «Agendar» sends `POST /scheduling/appointments` through the
+    write-once guard: a lost answer looks for it in the patient's
+    appointments of that day (`from` the day, `to` the next) before sending
+    again, and a 409 that is this very booking (a second tab) counts as
+    done. Then the app's «¡Todo listo!», «Ver mi cita» (`/a/{id}`, where it
+    is confirmed from 24 h before) and «Ver mis citas».
+  - **What the API answers is said in place:** an hour just taken
+    (ERR_4002) → back to the hours with the app's «Horario no disponible»;
+    a specialist who is not active (404 on the reads or the booking) → the
+    app's «Este especialista no se encuentra activo por el momento»; a
+    sign-up to finish (403 ERR_2010) → the sign-up, and back.
+  - **Where the web differs from the app, on purpose and to confirm:** a
+    page with the step in the address instead of a full-screen sheet; one
+    office skips the first step; neither the hour, nor the reason (unless
+    it is the only one), nor «¿Para quién es la cita?» comes chosen (the
+    app chooses the first hour, the first reason and «Para mí»; the web
+    chooses nothing for the person, as in M4 and M5); someone new has
+    two name fields with the API's rules (the app: one «Nombre y apellido»
+    split by a guess), the API's documents (no R, no 9 digits, which the
+    API refuses), no preselected sex, and a line when the document is not
+    needed (the app hides it silently); someone already in one's care is
+    chosen as is, never edited into a duplicate; a reason without a price
+    reads «A consultar» and «Precio a consultar» (the app shows nothing);
+    the dates carry the year and the hours no leading zero; a slot taken
+    chooses nothing (the app moves to the nearest free hour); a guest signs
+    in on the page and the booking goes on (the app's invitation sheet
+    does not resume it). On `/s`, «Abrir en la app» became the secondary
+    button, above «Agendar cita», and on a computer nothing (its note,
+    «Abre este enlace desde tu teléfono…», contradicted booking here).
+  - **Open:** the success keeps the app's «Hemos notificado a {name} de tu
+    cita…», while the API notifies no specialist of a patient's booking yet
+    (REDOC-165/360, as read on 2026-10-13): to check with Heyscar. A
+    specialist who is also a patient cannot book (the app's rule; the API
+    would let them).
+  - **Production** needs the API's CORS (REDOC-362), like every flow with a
+    session: the e2e covers the page without a session and the 404, the
+    component tests (MSW) the steps. With M15: `SlotPicker`, `SlotChoices`
+    and `LoadFailure` out of the reschedule sheet; `usePersonChecks`,
+    `usePriceWords` and `IdentityDocumentField` shared with the sign-up and
+    «Mi perfil»; `ChoiceCards` takes a `value` (a group the page holds) and
+    an option's `trailing` (a price across from its name); `BottomActions`
+    a `width`; `OpenInAppButton` a `variant`.
 
 ### Improvements noted (not scheduled)
 

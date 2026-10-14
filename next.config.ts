@@ -120,10 +120,12 @@ const nextConfig: NextConfig = {
     return [
       { source: '/:path*', headers: securityHeaders },
       // Links that carry a credential or an appointment are never indexed,
-      // even by a crawler that reads no HTML (robots.ts lets them be fetched).
+      // even by a crawler that reads no HTML (robots.ts lets them be fetched);
+      // nor is the booking, a flow behind a session.
       ...[
         '/i/:path*',
         '/a/:path*',
+        '/book/:path*',
         '/daily-summary/:path*',
         '/sign-in',
         '/sign-up',

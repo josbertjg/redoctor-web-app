@@ -13,6 +13,8 @@ import type { Office, OfficePricing } from '@/app/lib/schemas/offices';
 
 import { Icon } from '@/app/ui/icons';
 
+import { usePriceWords } from '@/app/hooks/use-price-words';
+
 import { OfficeCard, OfficeResults } from './office-results';
 import { ProfileBlock, ProfileBlockEmpty } from './profile-block';
 
@@ -67,12 +69,7 @@ function OfficePrices({
 }) {
   const t = useTranslations();
   const standard = pricing.mode === 'standard';
-  const words = {
-    from: (amount: string) => t('priceFormat.from', { amount }),
-    rangeShort: (min: string, max: string) =>
-      t('priceFormat.rangeShort', { min, max }),
-    range: (min: string, max: string) => t('priceFormat.range', { min, max }),
-  };
+  const words = usePriceWords();
 
   return (
     <OfficeCard

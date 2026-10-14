@@ -12,6 +12,8 @@ import type { AppointmentSummary } from '@/app/lib/schemas/appointments';
 
 import { Icon, type IconComponent } from '@/app/ui/icons';
 
+import { usePriceWords } from '@/app/hooks/use-price-words';
+
 /** One labelled fact of the patient's section (document, reason, notes…). */
 export type PatientFact = { term: string; value: string };
 
@@ -42,15 +44,7 @@ export function AppointmentDetails({
 }: AppointmentDetailsProps) {
   const t = useTranslations();
   const { office } = appointment;
-  const price = formatPrice(
-    appointment.price,
-    {
-      from: (amount) => t('priceFormat.from', { amount }),
-      rangeShort: (min, max) => t('priceFormat.rangeShort', { min, max }),
-      range: (min, max) => t('priceFormat.range', { min, max }),
-    },
-    'detailed',
-  );
+  const price = formatPrice(appointment.price, usePriceWords(), 'detailed');
 
   return (
     <dl className="flex animate-fade-up flex-col divide-y divide-divider rounded-2xl bg-pure-white px-5 shadow-md">

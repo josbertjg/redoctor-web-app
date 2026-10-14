@@ -31,7 +31,8 @@ type MonthCalendarProps = {
 
 const pad = (value: number) => String(value).padStart(2, '0');
 
-function shiftMonth(month: string, by: number): string {
+/** The month `by` months after (or before) a YYYY-MM. */
+export function shiftMonth(month: string, by: number): string {
   const [year = 0, number = 1] = month.split('-').map(Number);
   const date = new Date(Date.UTC(year, number - 1 + by, 1));
   return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}`;

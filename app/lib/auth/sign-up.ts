@@ -13,9 +13,10 @@ import {
  * testing, to the store once it is published.
  *
  * Like the app, the patient's sign-up comes in two parts: the names and the
- * consents, and later, only when a flow needs it, the personal data. The
- * one flow that needs it on the web is claiming an invitation (M4), and
- * then both parts share one screen (AGENTS.md §1: «one screen»).
+ * consents, and later, only when a flow needs it, the personal data. Two
+ * flows need it on the web, as in the app: claiming an invitation (M4) and
+ * booking from a profile (M15); then both parts share one screen
+ * (AGENTS.md §1: «one screen»).
  */
 
 export type SignUpPlan =
@@ -27,15 +28,26 @@ export type SignUpPlan =
   /** Nothing to ask: on to where the person was going. */
   | { step: 'done' };
 
-/** The flows that need a patient whose sign-up is complete: claiming an invitation. */
+/** A flow that needs a patient whose sign-up is complete. */
+export type SignUpPurpose = 'claim' | 'book';
+
+/**
+ * The flow a sign-up comes from, by where it returns: claiming an
+ * invitation (`/i/{token}`) or booking (`/book/{specialistId}`).
+ */
+export function signUpPurposeOf(
+  redirect: string | null | undefined,
+): SignUpPurpose | null {
+  if (typeof redirect !== 'string' || !isSafeRedirect(redirect)) return null;
+  if (redirect.startsWith('/i/')) return 'claim';
+  if (redirect.startsWith('/book/')) return 'book';
+  return null;
+}
+
 export function flowNeedsPersonalData(
   redirect: string | null | undefined,
 ): boolean {
-  return (
-    typeof redirect === 'string' &&
-    isSafeRedirect(redirect) &&
-    redirect.startsWith('/i/')
-  );
+  return signUpPurposeOf(redirect) !== null;
 }
 
 /**
@@ -46,7 +58,7 @@ export function flowNeedsPersonalData(
 export function invitationOf(
   redirect: string | null | undefined,
 ): { token: string; forSelf: boolean } | null {
-  if (!redirect || !flowNeedsPersonalData(redirect)) return null;
+  if (!redirect || signUpPurposeOf(redirect) !== 'claim') return null;
   const url = new URL(redirect, 'https://redoctorapp.invalid');
   const token = /^\/i\/([^/]+)$/.exec(url.pathname)?.[1];
   if (token === undefined) return null;

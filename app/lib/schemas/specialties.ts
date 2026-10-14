@@ -61,6 +61,6 @@ export function toSpecialtiesTree(
 }
 
 /** Every specialty of the tree, depth first, as a flat list. */
-export function flattenSpecialties(tree: Specialty[]): Specialty[] {
+export function flattenSpecialties(tree: readonly Specialty[]): Specialty[] {
   return tree.flatMap((node) => [node, ...flattenSpecialties(node.children)]);
 }

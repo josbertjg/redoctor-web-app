@@ -22,6 +22,8 @@ type OpenInAppButtonProps = {
   source?: 'link' | 'email';
   /** On a computer: the note to open it from the phone, or nothing (a page that already does what the app would). */
   desktop?: 'note' | 'none';
+  /** The button's look: the page's main action, or second to one (the profile's «Agendar cita»). */
+  variant?: 'primary' | 'white';
   className?: string;
 };
 
@@ -39,6 +41,7 @@ export function OpenInAppButton({
   path,
   source = 'link',
   desktop = 'note',
+  variant = 'primary',
   className,
 }: OpenInAppButtonProps) {
   const t = useTranslations('appBridge');
@@ -75,7 +78,12 @@ export function OpenInAppButton({
           {t(`desktopNote.${source}`)}
         </p>
       ) : (
-        <Button asChild block className="animate-fade-in sm:w-auto">
+        <Button
+          asChild
+          block
+          variant={variant}
+          className="animate-fade-in sm:w-auto"
+        >
           <a
             href={links.openApp}
             onClick={() => {

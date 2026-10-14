@@ -1,7 +1,7 @@
 import { queryOptions } from '@tanstack/react-query';
 
 import { apiFetch } from '../api/client';
-import { isApiError } from '../api/errors';
+import { isApiError, type ApiError } from '../api/errors';
 import { createWriteOnceGuard } from '../api/write-once';
 import {
   appointmentListResponseSchema,
@@ -234,6 +234,13 @@ export function rescheduleAppointment(
   });
 }
 
+/*
+ * An office answers 404 when its specialist is not active (no plan, out of
+ * the search): booking says so in place (queries/booking.ts), and nothing
+ * is reported.
+ */
+const officeGone = (error: ApiError) => error.status === 404;
+
 /** The days of a month (YYYY-MM) with free slots at an office. */
 export function availableDaysQueryOptions(
   user: TokenHolder,
@@ -249,6 +256,7 @@ export function availableDaysQueryOptions(
         query: { month },
         token: await user.getToken(),
         schema: availableDaysSchema,
+        expected: officeGone,
         signal,
       }),
     staleTime: 60_000,
@@ -270,6 +278,7 @@ export function daySlotsQueryOptions(
         query: { date },
         token: await user.getToken(),
         schema: daySlotsSchema,
+        expected: officeGone,
         signal,
       }),
     // Someone else may take a slot: a day is read again when it is chosen.

@@ -8,18 +8,27 @@ import type { SpecialistProfile } from '@/app/lib/schemas/specialists';
 
 import { Icon } from '@/app/ui/icons';
 
+import { BookAtOffice } from './book-at-office';
+
 /*
  * The specialist's offices: the app's office card plus what its office sheet
  * shows (the description), and «Cómo llegar» to the exact coordinates in
  * Google Maps, the promise of the app's share message. No static map: that
  * needs a browser key restricted to the web (AGENTS.md §11), not the app's.
+ * With two offices or more, each offers the app's «Agendar en este
+ * consultorio» (with one, it is the profile's «Agendar cita»).
  */
 export function OfficeList({
   offices,
+  booking,
 }: {
   offices: SpecialistProfile['offices'];
+  /** Whose profile it is, for «Agendar en este consultorio». */
+  booking: { specialistId: string; expectSpecialist: boolean };
 }) {
   const t = useTranslations('specialists');
+  const search = useTranslations('search');
+  const perOffice = offices.length > 1;
 
   return (
     <ul className="grid gap-3 sm:grid-cols-2">
@@ -51,6 +60,14 @@ export function OfficeList({
             <Icon icon={Directions} size={18} />
             {t('directions')}
           </a>
+          {perOffice ? (
+            <BookAtOffice
+              specialistId={booking.specialistId}
+              officeId={office.id}
+              label={search('bookAtThisOffice')}
+              expectSpecialist={booking.expectSpecialist}
+            />
+          ) : null}
         </li>
       ))}
     </ul>

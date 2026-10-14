@@ -9,21 +9,20 @@ import { specialistSession } from '@/tests/panel';
 
 import { SessionContext, type Session } from '@/app/hooks/use-session';
 
-import { BookingNote } from './booking-note';
+import { BookingAction } from './booking-action';
 
-const patientNote =
-  'Pronto podrás agendar aquí; por ahora pídele tu cita a tu especialista.';
+const bookLabel = 'Agendar cita';
 const ownNote = 'Así ven tu perfil tus pacientes.';
 
-function renderNote(
+function renderAction(
   session: Session,
   { specialistId = 'specialist-1', expectSpecialist = false } = {},
 ) {
   return render(
     <SessionContext.Provider value={session}>
-      <BookingNote
+      <BookingAction
         specialistId={specialistId}
-        patientNote={patientNote}
+        bookLabel={bookLabel}
         ownNote={ownNote}
         expectSpecialist={expectSpecialist}
       />
@@ -39,31 +38,36 @@ const resolving: Session = {
   accountStatus: 'idle',
 };
 
-describe('BookingNote', () => {
-  it('tells a patient or a visitor that booking is coming', () => {
-    renderNote(specialistSession(buildMeResponse()));
-    expect(screen.getByText(patientNote)).toBeInTheDocument();
+describe('BookingAction', () => {
+  it('offers a patient or a visitor to book, on the booking page', () => {
+    renderAction(specialistSession(buildMeResponse()));
+    expect(screen.getByRole('link', { name: bookLabel })).toHaveAttribute(
+      'href',
+      '/book/specialist-1',
+    );
   });
 
   it('never offers a specialist booking: their own profile is how patients see it', () => {
-    renderNote(specialistSession(buildSpecialistMeResponse()));
+    renderAction(specialistSession(buildSpecialistMeResponse()));
     expect(screen.getByText(ownNote)).toBeInTheDocument();
-    expect(screen.queryByText(patientNote)).not.toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 
   it('says nothing to a specialist on a colleague’s profile', () => {
-    const { container } = renderNote(
+    const { container } = renderAction(
       specialistSession(buildSpecialistMeResponse()),
       { specialistId: 'someone-else' },
     );
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('waits for the session in a specialist’s browser, instead of the patients’ line', () => {
-    renderNote(resolving, { expectSpecialist: true });
-    expect(screen.queryByText(patientNote)).not.toBeInTheDocument();
+  it('keeps the button’s place in a specialist’s browser until the session is known', () => {
+    const { container } = renderAction(resolving, { expectSpecialist: true });
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(container.firstElementChild).toHaveAttribute('aria-hidden', 'true');
 
-    renderNote(resolving);
-    expect(screen.getByText(patientNote)).toBeInTheDocument();
+    // Without the hint, booking is offered from the first frame.
+    renderAction(resolving);
+    expect(screen.getByRole('link', { name: bookLabel })).toBeInTheDocument();
   });
 });

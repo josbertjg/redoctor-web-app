@@ -19,6 +19,8 @@ export const availableDaysSchema = z.object({
   ),
 });
 
+export type AvailableDays = z.infer<typeof availableDaysSchema>;
+
 export const daySlotsSchema = z.object({
   date: z.string(),
   slots: z.array(

@@ -4,15 +4,23 @@ import { cn } from '@/app/lib/utils';
 
 type BottomActionsProps = {
   children: ReactNode;
+  /** The column the actions line up with: the page's content, or a narrow flow's. */
+  width?: 'content' | 'narrow';
   className?: string;
 };
+
+const widths = { content: 'max-w-content', narrow: 'max-w-lg' } as const;
 
 /*
  * The actions that stay at hand at the bottom of a long page (the app's fixed
  * bottom buttons): above the safe area on notched phones, opaque over the
  * content, entering with a fade (AGENTS.md §8.2, §8.5).
  */
-export function BottomActions({ children, className }: BottomActionsProps) {
+export function BottomActions({
+  children,
+  width = 'content',
+  className,
+}: BottomActionsProps) {
   return (
     <div
       className={cn(
@@ -20,7 +28,12 @@ export function BottomActions({ children, className }: BottomActionsProps) {
         className,
       )}
     >
-      <div className="mx-auto flex w-full max-w-content flex-col items-center gap-2">
+      <div
+        className={cn(
+          'mx-auto flex w-full flex-col items-center gap-2',
+          widths[width],
+        )}
+      >
         {children}
       </div>
     </div>

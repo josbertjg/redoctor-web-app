@@ -106,6 +106,39 @@ export const pageNamespaces = {
   // The patient's appointments (M6) and the review wall before them (M7):
   // the list, the cards and the rating, all read in the browser.
   appointments: ['apiErrors', 'appointments', 'reviews'],
+  // Booking from a profile (M15): its sign-in, the four steps (the
+  // reschedule's calendar and hours, the reasons and their prices, the
+  // person in one's care) and «¡Todo listo!».
+  book: [
+    'apiErrors',
+    'appointments',
+    'search',
+    'priceFormat',
+    'price',
+    'pickADate',
+    'morning',
+    'afternoon',
+    'evening',
+    'no_slots_available',
+    'next',
+    'back',
+    'edit',
+    'book',
+    'dateAndTime',
+    'office',
+    'noOptionsAvailable',
+    'patient',
+    'specialist',
+    'name',
+    'lastName',
+    'dateOfBirth',
+    'identityDocument',
+    'sex',
+    'male',
+    'female',
+    'input',
+    'signUp',
+  ],
   // The panel's home (M14): the plan and its notice, today's appointments.
   panelHome: ['apiErrors', 'billing', 'appointments', 'panel'],
   // The agenda and the history of the specialist's appointments (M14).

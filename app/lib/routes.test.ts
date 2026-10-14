@@ -22,6 +22,13 @@ describe('routes', () => {
     expect(routes.subscription()).toBe('/panel/subscription');
   });
 
+  it('builds the booking, with the office the profile named', () => {
+    expect(routes.book('a0af9566')).toBe('/book/a0af9566');
+    expect(routes.book('a0af9566', 'of 1')).toBe(
+      '/book/a0af9566?office=of%201',
+    );
+  });
+
   it('builds the payment, out of the panel’s paths', () => {
     expect(routes.subscriptionPay()).toBe('/pay');
     expect(routes.subscriptionPay('profesional')).toBe('/pay?plan=profesional');
@@ -66,6 +73,9 @@ describe('routes', () => {
     expect(isAppOwnedPath(routes.subscriptionInvoice('in-1'))).toBe(false);
     expect(isAppOwnedPath(routes.subscriptionBalance())).toBe(false);
     expect(isAppOwnedPath(routes.subscriptionCoupons())).toBe(false);
+    // The booking, out of `/s/*`: the app has no booking path to open.
+    expect(isAppOwnedPath(routes.book('a0af9566'))).toBe(false);
+    expect(isAppOwnedPath(routes.book('a0af9566', 'of-1'))).toBe(false);
   });
 
   it('encodes the opt-out token', () => {

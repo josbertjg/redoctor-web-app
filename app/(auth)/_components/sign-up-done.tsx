@@ -5,19 +5,29 @@ import { useId } from 'react';
 import CheckCircle from '@material-symbols/svg-400/rounded/check_circle.svg?svgr';
 import { useTranslations } from 'next-intl';
 
+import type { SignUpPurpose } from '@/app/lib/auth/sign-up';
+
 import { Button } from '@/app/ui/button';
 import { Icon } from '@/app/ui/icons';
 
 type SignUpDoneProps = {
-  /** The person came to claim an appointment: the button takes them back to it. */
-  claiming: boolean;
+  /** The flow the person came from: the button takes them back to it. */
+  purpose: SignUpPurpose | null;
   onContinue: () => void;
 };
 
+/** What comes next, and the button that leads there, for each flow. */
+const nextWords = {
+  claim: { steps: 'claimNextSteps', action: 'claimAppointment' },
+  book: { steps: 'bookNextSteps', action: 'bookAppointment' },
+  none: { steps: 'nextSteps', action: 'findSpecialists' },
+} as const;
+
 /** «¡Todo listo!», as the app says it once the patient's data is complete. */
-export function SignUpDone({ claiming, onContinue }: SignUpDoneProps) {
+export function SignUpDone({ purpose, onContinue }: SignUpDoneProps) {
   const t = useTranslations('finishPatientSignup');
   const headingId = useId();
+  const words = nextWords[purpose ?? 'none'];
 
   return (
     <section
@@ -33,11 +43,9 @@ export function SignUpDone({ claiming, onContinue }: SignUpDoneProps) {
       <p className="mt-2 text-title-md text-text-primary">
         {t('successfulRegistration')}
       </p>
-      <p className="mt-1 text-body-md text-text-secondary">
-        {t(claiming ? 'claimNextSteps' : 'nextSteps')}
-      </p>
+      <p className="mt-1 text-body-md text-text-secondary">{t(words.steps)}</p>
       <Button block shape="soft" className="mt-6" onClick={onContinue}>
-        {t(claiming ? 'claimAppointment' : 'findSpecialists')}
+        {t(words.action)}
       </Button>
     </section>
   );

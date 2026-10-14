@@ -104,6 +104,36 @@ describe('SignUpFlow', () => {
     ).toBeInTheDocument();
   });
 
+  it('asks the same to book, in the booking’s words', () => {
+    renderFlow(session(buildNewAccountMeResponse()), '/book/abc');
+    expect(
+      screen.getByRole('heading', {
+        name: 'Crea tu cuenta para agendar tu cita',
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it('asks a registered patient only the personal data to book', () => {
+    renderFlow(
+      session(
+        buildMeResponse({
+          registrationStatus: 'PENDING_COMPLETE_PATIENT',
+          profiles: {
+            patient: patientFacet({ status: 'PENDING_PERSONAL_DATA' }),
+            specialist: { exists: false },
+          },
+        }),
+      ),
+      '/book/abc',
+    );
+    expect(
+      screen.getByRole('heading', { name: 'Finalizar registro' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Para agendar tu cita solo falta completar tus datos.'),
+    ).toBeInTheDocument();
+  });
+
   it('starts from the invitation’s data when the appointment is theirs', async () => {
     renderFlow(
       session(

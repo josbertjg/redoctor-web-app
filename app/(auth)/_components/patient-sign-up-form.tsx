@@ -12,22 +12,14 @@ import { track } from '@/app/lib/analytics/track';
 import { failureMessageKey } from '@/app/lib/api/errors';
 import type { SessionUser } from '@/app/lib/firebase/client';
 import {
-  birthDateProblem,
   earliestBirthDate,
   latestAdultBirthDate,
 } from '@/app/lib/format/date-of-birth';
 import {
   cleanDocumentNumber,
-  documentNumberLength,
-  documentNumberProblem,
-  documentTypes,
   type DocumentType,
 } from '@/app/lib/format/identity-document';
-import {
-  cleanPersonName,
-  personNameMaxLength,
-  personNameProblem,
-} from '@/app/lib/format/names';
+import { cleanPersonName } from '@/app/lib/format/names';
 import {
   phoneProblem,
   toInternationalPhone,
@@ -44,7 +36,10 @@ import { Button } from '@/app/ui/button';
 import { Checkbox } from '@/app/ui/checkbox';
 import { ChoiceCards } from '@/app/ui/choice-cards';
 import { FieldError } from '@/app/ui/field-error';
+import { IdentityDocumentField } from '@/app/ui/identity-document-field';
 import { TextField } from '@/app/ui/text-field';
+
+import { usePersonChecks } from '@/app/hooks/use-person-checks';
 
 /** What the form asks: the names and consents, the personal data, or both. */
 export type SignUpParts = { register: boolean; personalData: boolean };
@@ -107,86 +102,42 @@ type PatientSignUpFormProps = {
 /** The form's rules, with the app's messages: the same checks the API makes. */
 function useSignUpResolver(parts: SignUpParts): Resolver<SignUpValues> {
   const t = useTranslations();
+  const person = usePersonChecks();
 
   return useMemo(() => {
-    const check = (problemOf: (value: string) => string | undefined) =>
-      z.string().superRefine((value, context) => {
-        const message = problemOf(value);
-        if (message !== undefined)
-          context.addIssue({ code: 'custom', message });
-      });
-
-    const name = check((value) => {
-      switch (personNameProblem(value)) {
-        case 'empty':
-          return t('input.empty');
-        case 'invalidFormat':
-          return t('input.name.invalidFormat');
-        case 'maxLength':
-          return t('input.maxLength', { maxLength: personNameMaxLength });
-        default:
-          return undefined;
-      }
-    });
     const consent = z.boolean().refine(Boolean, t('input.mustAccept'));
-    const dateOfBirth = check((value) => {
-      switch (birthDateProblem(value)) {
-        case 'empty':
-          return t('input.empty');
-        case 'invalid':
-          return t('input.dateOfBirth.invalid');
-        case 'tooYoung':
-          return t('input.dateOfBirth.tooYoung');
-        default:
-          return undefined;
-      }
-    });
-    const phone = check((value) => {
+    const phone = z.string().superRefine((value, context) => {
       switch (phoneProblem(value)) {
         case 'empty':
-          return t('input.empty');
+          context.addIssue({ code: 'custom', message: t('input.empty') });
+          return;
         case 'invalidFormat':
-          return t('input.phoneNumber.invalidFormat');
+          context.addIssue({
+            code: 'custom',
+            message: t('input.phoneNumber.invalidFormat'),
+          });
+          return;
         default:
-          return undefined;
+          return;
       }
     });
-    const documentNumber = check((value) => {
-      switch (documentNumberProblem(value)) {
-        case 'empty':
-          return t('input.empty');
-        case 'onlyDigits':
-          return t('input.identityDocument.onlyDigits');
-        case 'minLength':
-          return t('input.identityDocument.minLength', {
-            minLength: documentNumberLength.min,
-          });
-        case 'maxLength':
-          return t('input.identityDocument.maxLength', {
-            maxLength: documentNumberLength.max,
-          });
-        default:
-          return undefined;
-      }
-    });
-    const sex = z.string().refine((value) => value !== '', t('input.empty'));
 
     // A part the form does not ask is not checked.
     const skip = z.any();
     const schema = z.object({
-      firstName: parts.register ? name : skip,
-      lastName: parts.register ? name : skip,
+      firstName: parts.register ? person.name : skip,
+      lastName: parts.register ? person.name : skip,
       acceptedTerms: parts.register ? consent : skip,
       acceptedSensitiveData: parts.register ? consent : skip,
       acceptedNewsletter: skip,
-      dateOfBirth: parts.personalData ? dateOfBirth : skip,
+      dateOfBirth: parts.personalData ? person.dateOfBirth(true) : skip,
       phone: parts.personalData ? phone : skip,
       documentType: skip,
-      documentNumber: parts.personalData ? documentNumber : skip,
-      sex: parts.personalData ? sex : skip,
+      documentNumber: parts.personalData ? person.documentNumber : skip,
+      sex: parts.personalData ? person.sex : skip,
     });
     return zodResolver(schema);
-  }, [parts.register, parts.personalData, t]);
+  }, [parts.register, parts.personalData, person, t]);
 }
 
 /*
@@ -341,25 +292,9 @@ export function PatientSignUpForm({
             }
             {...register('phone')}
           />
-          <TextField
-            label={t('identityDocument')}
-            inputMode="numeric"
-            autoComplete="off"
-            placeholder={t('signUp.documentPlaceholder')}
+          <IdentityDocumentField
+            typeProps={register('documentType')}
             error={errors.documentNumber?.message}
-            leading={
-              <select
-                aria-label={t('signUp.documentType')}
-                className="h-full cursor-pointer border-r border-divider bg-transparent pr-1 pl-3 text-body-xs text-text-primary outline-none"
-                {...register('documentType')}
-              >
-                {documentTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-            }
             {...register('documentNumber')}
           />
           <ChoiceCards

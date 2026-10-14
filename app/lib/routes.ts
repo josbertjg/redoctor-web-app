@@ -50,6 +50,16 @@ export const routes = {
   appointment: (appointmentId: string) =>
     `/a/${segment(appointmentId)}` as const,
 
+  /*
+   * Booking from a specialist's profile (M15): the web's own page, out of
+   * `/s/*`, which the app claims and where it has no such path. `office`
+   * comes chosen from the profile's «Agendar en este consultorio».
+   */
+  book: (specialistId: string, officeId?: string) =>
+    officeId
+      ? (`/book/${segment(specialistId)}?office=${encodeURIComponent(officeId)}` as const)
+      : (`/book/${segment(specialistId)}` as const),
+
   /* Patient (M6, M10). */
   appointments: () => '/appointments' as const,
   account: () => '/account' as const,

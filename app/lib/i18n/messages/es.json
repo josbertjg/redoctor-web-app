@@ -310,6 +310,7 @@
     "metaTitle": "Crea tu cuenta",
     "title": "Crea tu cuenta de paciente",
     "claimTitle": "Crea tu cuenta para reclamar tu cita",
+    "bookTitle": "Crea tu cuenta para agendar tu cita",
     "documentType": "Tipo de documento",
     "phonePlaceholder": "414 123 4567",
     "documentPlaceholder": "12345678",
@@ -325,7 +326,10 @@
     "toClaim": "Para reclamar la cita solo falta completar tus datos.",
     "toClaimPrefilled": "Para reclamar la cita solo falta completar tus datos. Ya pusimos los de la invitación: revísalos antes de seguir.",
     "claimNextSteps": "Ya puedes reclamar tu cita.",
-    "claimAppointment": "Reclamar mi cita"
+    "claimAppointment": "Reclamar mi cita",
+    "toBook": "Para agendar tu cita solo falta completar tus datos.",
+    "bookNextSteps": "Ya puedes agendar tu cita.",
+    "bookAppointment": "Agendar mi cita"
   },
   "input": {
     "empty": "Este campo es requerido.",
@@ -427,7 +431,6 @@
   "specialists": {
     "metaDescription": "Perfil de {name} en Redoctor: especialidades, consultorios y opiniones de sus pacientes.",
     "ogImageAlt": "Perfil de un especialista en Redoctor",
-    "bookingSoon": "Pronto podrás agendar aquí; por ahora pídele tu cita a tu especialista.",
     "directions": "Cómo llegar",
     "directionsTo": "Cómo llegar a {office}",
     "noOffices": "Este especialista aún no tiene consultorios publicados.",
@@ -453,7 +456,39 @@
     "noAboutSpecialist": "Este especialista no cuenta ni con imágenes ni con una descripción de su experiencia.",
     "noReviewsYet": "Aún no hay reseñas disponibles",
     "beFirstToReview": "¡Sé uno de los primeros pacientes en compartir su experiencia con {name}!",
-    "shareSpecialistTooltip": "Compartir perfil"
+    "shareSpecialistTooltip": "Compartir perfil",
+    "bookAppointment": "Agendar cita",
+    "bookAtThisOffice": "Agendar en este consultorio",
+    "selectOffice": "Selecciona un consultorio",
+    "selectASlot": "Selecciona un horario",
+    "consultationReason": "Motivo de consulta",
+    "selectAReason": "Selecciona un motivo",
+    "whoIsTheAppointmentFor": "¿Para quién es la cita?",
+    "forMe": "Para mí",
+    "forAThirdParty": "Para un tercero",
+    "patientPersonalData": "Datos personales del paciente",
+    "noAuthDescription": "Para poder buscar especialistas, revisar sus horarios y agendar una consulta, primero necesitas acceder a tu cuenta. ¡Solo te tomará un momento!",
+    "finishSignupToBookTitle": "¡Un último paso para agendar tu cita!",
+    "finishSignupToBookDescription": "Para poder agendar tu cita y apartar tu lugar con {name}, solo necesitamos que completes unos pequeños datos en tu perfil. ¡Te tomará menos de un minuto!",
+    "finishMySignup": "Finalizar mi registro",
+    "completeLater": "Completar más tarde",
+    "priceOnRequest": "Precio a consultar",
+    "priceOnRequestShort": "A consultar",
+    "confirm": {
+      "title": "Resumen de tu cita",
+      "description": "Confirma los detalles y completa tu cita",
+      "priceDisclaimer": "Recuerda que el pago de la consulta se gestiona directamente con el profesional seleccionado. Redoctor no gestiona transacciones ni cobros. El valor de la consulta puede variar sin previo aviso, ya que cada profesional puede actualizar sus tarifas en cualquier momento."
+    },
+    "booked": {
+      "title": "¡Todo listo!",
+      "subtitle": "¡Tu cita ha sido agendada con éxito!",
+      "description": "Hemos notificado a <strong>{name}</strong> de tu cita, te espera el <strong>{date}</strong> {hour, select, one {a la} other {a las}} <strong>{time}</strong>. Recuerda estar atento y llegar 15 minutos antes para no perder tu cita.",
+      "seeMyAppointments": "Ver mis citas"
+    },
+    "slotTakenTitle": "Horario no disponible",
+    "slotTakenDescription": "El horario que seleccionaste acaba de ser ocupado. Por favor selecciona otro.",
+    "specialistUnavailableTitle": "Este especialista no se encuentra activo por el momento",
+    "specialistUnavailableDescription": "No podrás agendar una cita con él hasta que vuelva a estar activo."
   },
   "rating": {
     "review": "reseña",
@@ -1222,6 +1257,26 @@
       "all": "Todas",
       "allOffices": "Todos los consultorios",
       "clearAll": "Quitar"
+    },
+    "book": {
+      "metaTitle": "Agendar cita",
+      "metaDescription": "Elige el consultorio, el día y la hora, y agenda tu cita en Redoctor.",
+      "backToProfile": "Perfil del especialista",
+      "step": "Paso {current} de {total}",
+      "signIn": "Entra para agendar tu cita",
+      "forSpecialists": "Agendar es para pacientes",
+      "forSpecialistsDescription": "Tu cuenta es de especialista. Para agendar una cita como paciente, entra con otra cuenta de Google o Apple.",
+      "goToPanel": "Ir a mi panel",
+      "unavailable": "Por ahora no es posible agendar con este especialista desde la web",
+      "unavailableDescription": "Pídele tu cita directamente a tu especialista mientras lo resolvemos.",
+      "noOffices": "Este especialista aún no tiene consultorios publicados.",
+      "reasonsLoadError": "No pudimos cargar los motivos de consulta.",
+      "yourPeople": "¿Quién asistirá a la cita?",
+      "someoneElse": "Otra persona",
+      "choosePerson": "Elige a la persona o agrega a alguien nuevo.",
+      "tercerosLoadError": "No pudimos cargar a las personas a tu cargo. Puedes escribir sus datos.",
+      "noDocumentNeeded": "Aún no tiene 9 años y un mes: no hace falta su cédula.",
+      "failed": "No pudimos agendar tu cita. Inténtalo de nuevo en un momento."
     }
   },
   "priceFormat": {
@@ -1234,7 +1289,11 @@
     "metaTitle": "Mi perfil",
     "description": "Así te ven tus pacientes en Redoctor.",
     "preview": {
-      "button": "Vista previa"
+      "button": "Vista previa",
+      "notice": {
+        "title": "Es una vista previa",
+        "book": "Aquí tus pacientes agendan su cita contigo."
+      }
     },
     "share": {
       "copied": "Copiamos el enlace a tu perfil.",
@@ -1332,6 +1391,12 @@
   "price": "Precio",
   "cancel": "Cancelar",
   "back": "Volver",
+  "next": "Siguiente",
+  "edit": "Editar",
+  "book": "Agendar",
+  "dateAndTime": "Fecha y hora",
+  "office": "Consultorio",
+  "noOptionsAvailable": "No hay opciones disponibles en este momento",
   "version": "Versión: {version}",
   "pickADate": "Selecciona una fecha",
   "morning": "Mañana",

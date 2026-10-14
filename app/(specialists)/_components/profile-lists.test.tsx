@@ -14,9 +14,11 @@ import { SpecialtyList } from './specialty-list';
 const profile = buildSpecialistProfile();
 
 describe('OfficeList', () => {
+  const booking = { specialistId: profile.id, expectSpecialist: false };
+
   it('gives each office its directions in Google Maps', async () => {
     const { container } = renderWithIntl(
-      <OfficeList offices={profile.offices} />,
+      <OfficeList offices={profile.offices} booking={booking} />,
     );
 
     expect(screen.getByText('Piso 6, consultorio 604')).toBeInTheDocument();
@@ -26,7 +28,31 @@ describe('OfficeList', () => {
       'href',
       'https://www.google.com/maps/dir/?api=1&destination=10.4965%2C-66.8487',
     );
+    // One office: the profile's «Agendar cita» already books there.
+    expect(
+      screen.queryByRole('link', { name: 'Agendar en este consultorio' }),
+    ).not.toBeInTheDocument();
     expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('with two offices, books at the one chosen', () => {
+    const [first] = profile.offices;
+    if (first === undefined) throw new Error('The fixture has an office.');
+    const second = {
+      ...first,
+      id: 'office-2',
+      name: 'Centro Médico La Floresta',
+    };
+    renderWithIntl(<OfficeList offices={[first, second]} booking={booking} />);
+
+    const links = screen.getAllByRole('link', {
+      name: 'Agendar en este consultorio',
+    });
+    expect(links).toHaveLength(2);
+    expect(links[1]).toHaveAttribute(
+      'href',
+      `/book/${profile.id}?office=office-2`,
+    );
   });
 });
 

@@ -4,7 +4,7 @@ import { auditAccessibility } from './helpers';
 
 /*
  * The public profile (M8) against the real API (api-dev): rendered on the
- * server, read-only, with «Abrir en la app» and the pilot's booking note.
+ * server, with «Abrir en la app» and «Agendar cita» (M15).
  * The specialist is api-dev's test profile; override it with
  * E2E_SPECIALIST_ID when it changes. Names are not asserted: real data.
  */
@@ -34,10 +34,8 @@ test('a shared profile shows the specialist and the way to the app', async ({
   }
 
   await expect(
-    page.getByText(
-      'Pronto podrás agendar aquí; por ahora pídele tu cita a tu especialista.',
-    ),
-  ).toBeVisible();
+    page.getByRole('link', { name: 'Agendar cita' }),
+  ).toHaveAttribute('href', `/book/${specialistId}`);
   await expect(
     page.getByRole('link', { name: 'Abrir en la app' }),
   ).toHaveAttribute('href', /^(redoctor|intent):\/\//);

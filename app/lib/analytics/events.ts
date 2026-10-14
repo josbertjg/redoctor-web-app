@@ -24,6 +24,8 @@ export type AnalyticsEvents = {
     relationship: 'self' | 'dependent';
     confirmed: boolean;
   };
+  /** An appointment booked from a specialist's profile (M15): for oneself or for someone in one's care. */
+  web_appointment_booked: { relationship: 'self' | 'dependent' };
   /** What the patient did with their appointment (M5). */
   web_appointment_confirmed: Record<string, never>;
   web_appointment_cancelled: Record<string, never>;

@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId, useState } from 'react';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
 import { track } from '@/app/lib/analytics/track';
@@ -15,30 +15,20 @@ import {
 import { todayInCaracas } from '@/app/lib/format/date-of-birth';
 import {
   appointmentKeys,
-  availableDaysQueryOptions,
-  daySlotsQueryOptions,
   rescheduleAppointment,
 } from '@/app/lib/queries/appointments';
 import type {
   AppointmentResponse,
   AppointmentSummary,
 } from '@/app/lib/schemas/appointments';
-import {
-  dayPartOf,
-  freeDays,
-  type DayPart,
-  type DaySlot,
-} from '@/app/lib/schemas/availability';
 import { cn } from '@/app/lib/utils';
 
 import { Button } from '@/app/ui/button';
 import { FieldError } from '@/app/ui/field-error';
-import { useReducedMotion } from '@/app/ui/motion';
 import { Sheet } from '@/app/ui/sheet';
-import { Skeleton } from '@/app/ui/skeleton';
 import { toast } from '@/app/ui/toast';
 
-import { MonthCalendar } from './month-calendar';
+import { SlotPicker } from './slot-picker';
 
 type RescheduleSheetProps = {
   open: boolean;
@@ -47,8 +37,6 @@ type RescheduleSheetProps = {
   user: SessionUser;
   onRescheduled: (appointment: AppointmentResponse) => void;
 };
-
-const dayParts: readonly DayPart[] = ['morning', 'afternoon', 'evening'];
 
 /*
  * «Reprogramar cita», the app's reschedule sheet in one screen: the office
@@ -76,39 +64,6 @@ export function RescheduleSheet({
   const [problem, setProblem] = useState<string | null>(null);
   const problemId = useId();
   const officeId = appointment.office.id ?? '';
-  const hours = useRef<HTMLElement>(null);
-  const reducedMotion = useReducedMotion();
-
-  // The month fills a phone's screen: a chosen day brings its hours into
-  // view, or they would appear below the fold, unseen.
-  useEffect(() => {
-    if (day === null) return;
-    hours.current?.scrollIntoView({
-      block: 'nearest',
-      behavior: reducedMotion ? 'auto' : 'smooth',
-    });
-  }, [day, reducedMotion]);
-
-  const days = useQuery({
-    ...availableDaysQueryOptions(user, officeId, month),
-    enabled: open && officeId !== '',
-  });
-  const free = days.data ? freeDays(days.data.days) : new Set<string>();
-  // The chosen day is judged by its own month, not by the one on screen:
-  // browsing to the next month never hides the choice that will be sent.
-  const ofChosenMonth = useQuery({
-    ...availableDaysQueryOptions(user, officeId, day?.slice(0, 7) ?? month),
-    enabled: open && officeId !== '' && day !== null,
-  });
-  const dayIsFree =
-    day !== null &&
-    day >= today &&
-    ofChosenMonth.data !== undefined &&
-    freeDays(ofChosenMonth.data.days).has(day);
-  const slots = useQuery({
-    ...daySlotsQueryOptions(user, officeId, day ?? ''),
-    enabled: open && officeId !== '' && dayIsFree,
-  });
 
   const reschedule = useMutation({
     mutationFn: (slot: { date: string; startTime: string }) =>
@@ -142,7 +97,6 @@ export function RescheduleSheet({
     },
   });
 
-  const freeSlots = (slots.data?.slots ?? []).filter((slot) => slot.available);
   const showHint = problem === null && time === null;
 
   return (
@@ -208,170 +162,26 @@ export function RescheduleSheet({
           </div>
         </dl>
 
-        <section className="flex flex-col gap-2">
-          <h3 className="text-title-sm text-text-primary">{t('pickADate')}</h3>
-          <MonthCalendar
-            month={month}
-            today={today}
-            freeDays={free}
-            loading={days.isPending && officeId !== ''}
-            selected={day}
-            onMonthChange={setMonth}
-            onSelect={(date) => {
-              // The chosen day again keeps the chosen hour, as in the app.
-              if (date === day) return;
-              setDay(date);
-              setTime(null);
-              setProblem(null);
-            }}
-          />
-          {days.isError ? (
-            <LoadFailure
-              message={t('appointments.detail.daysLoadError')}
-              retrying={days.isFetching}
-              onRetry={() => {
-                void days.refetch();
-              }}
-            />
-          ) : null}
-        </section>
-
-        {day !== null ? (
-          <section ref={hours} className="flex animate-fade-up flex-col gap-3">
-            <h3 className="text-title-sm text-text-primary">
-              {t('appointments.detail.selectASlot')}
-            </h3>
-            {slots.isError || ofChosenMonth.isError ? (
-              <LoadFailure
-                message={t('appointments.detail.slotsLoadError')}
-                retrying={slots.isFetching || ofChosenMonth.isFetching}
-                onRetry={() => {
-                  void (ofChosenMonth.isError
-                    ? ofChosenMonth.refetch()
-                    : slots.refetch());
-                }}
-              />
-            ) : ofChosenMonth.isPending ? (
-              <div aria-busy="true" className="grid grid-cols-3 gap-2">
-                {Array.from({ length: 6 }, (_, index) => (
-                  <Skeleton key={index} className="h-control w-full" />
-                ))}
-              </div>
-            ) : !dayIsFree ? (
-              <p className="text-body-md text-text-secondary">
-                {t('no_slots_available')}
-              </p>
-            ) : slots.isPending ? (
-              <div aria-busy="true" className="grid grid-cols-3 gap-2">
-                {Array.from({ length: 6 }, (_, index) => (
-                  <Skeleton key={index} className="h-control w-full" />
-                ))}
-              </div>
-            ) : freeSlots.length === 0 ? (
-              <p className="text-body-md text-text-secondary">
-                {t('no_slots_available')}
-              </p>
-            ) : (
-              <SlotChoices
-                slots={freeSlots}
-                selected={time}
-                onSelect={(startTime) => {
-                  setTime(startTime);
-                  setProblem(null);
-                }}
-              />
-            )}
-          </section>
-        ) : null}
+        <SlotPicker
+          user={user}
+          officeId={officeId}
+          today={today}
+          month={month}
+          onMonthChange={setMonth}
+          day={day}
+          onDayChange={(date) => {
+            setDay(date);
+            setTime(null);
+            setProblem(null);
+          }}
+          time={time}
+          onTimeChange={(startTime) => {
+            setTime(startTime);
+            setProblem(null);
+          }}
+          enabled={open}
+        />
       </div>
     </Sheet>
-  );
-}
-
-/** A read that failed inside the sheet: said in place, with the way to try again. */
-function LoadFailure({
-  message,
-  retrying,
-  onRetry,
-}: {
-  message: string;
-  retrying: boolean;
-  onRetry: () => void;
-}) {
-  const t = useTranslations();
-  return (
-    <div
-      role="alert"
-      className="flex animate-fade-in flex-col items-start gap-2 rounded-lg bg-error-50 px-4 py-3"
-    >
-      <p className="text-body-md text-error-700">{message}</p>
-      <Button
-        variant="white"
-        size="small"
-        shape="soft"
-        loading={retrying}
-        onClick={onRetry}
-      >
-        {t('retry')}
-      </Button>
-    </div>
-  );
-}
-
-function SlotChoices({
-  slots,
-  selected,
-  onSelect,
-}: {
-  slots: readonly DaySlot[];
-  selected: string | null;
-  onSelect: (startTime: string) => void;
-}) {
-  const t = useTranslations();
-
-  return (
-    <div className="flex flex-col gap-4">
-      {dayParts.map((part) => {
-        const inPart = slots.filter(
-          (slot) => dayPartOf(slot.startTime) === part,
-        );
-        if (inPart.length === 0) return null;
-        return (
-          <fieldset key={part} className="flex flex-col gap-2">
-            <legend className="mb-2 text-label-md text-text-secondary">
-              {t(part)}
-            </legend>
-            <div className="grid grid-cols-3 gap-2">
-              {inPart.map((slot) => {
-                const startTime = slot.startTime.slice(0, 5);
-                return (
-                  <label
-                    key={startTime}
-                    className={cn(
-                      // `relative` keeps the hidden radio inside its label,
-                      // so focusing it never scrolls the sheet elsewhere.
-                      'relative flex min-h-touch cursor-pointer items-center justify-center rounded-md border-2 border-transparent bg-pure-white px-2 text-body-xs text-text-primary shadow-sm transition-colors duration-fast ease-house',
-                      'has-checked:border-primary has-checked:bg-blue-50 has-checked:text-primary has-focus-visible:ring-3 has-focus-visible:ring-ring/50',
-                    )}
-                  >
-                    <input
-                      type="radio"
-                      name="slot"
-                      value={startTime}
-                      checked={selected === startTime}
-                      onChange={() => {
-                        onSelect(startTime);
-                      }}
-                      className="sr-only"
-                    />
-                    {formatAppointmentTime(startTime)}
-                  </label>
-                );
-              })}
-            </div>
-          </fieldset>
-        );
-      })}
-    </div>
   );
 }

@@ -10,7 +10,11 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
 import { destinationAfterSignIn } from '@/app/lib/auth/destination';
-import { invitationOf, planSignUp } from '@/app/lib/auth/sign-up';
+import {
+  invitationOf,
+  planSignUp,
+  signUpPurposeOf,
+} from '@/app/lib/auth/sign-up';
 import { invitationQueryOptions } from '@/app/lib/queries/invitations';
 import { routes } from '@/app/lib/routes';
 import { isApplePrivateRelayEmail } from '@/app/lib/schemas/identity';
@@ -103,6 +107,7 @@ function SignUpStep({
   const session = useSession();
   const { account, user } = session;
 
+  const purpose = signUpPurposeOf(redirect);
   const claim = invitationOf(redirect);
   const invitation = useQuery({
     ...invitationQueryOptions(claim?.token ?? ''),
@@ -131,7 +136,7 @@ function SignUpStep({
   if (finished) {
     return (
       <SignUpDone
-        claiming={redirect !== null}
+        purpose={purpose}
         onContinue={() => {
           router.replace((redirect ?? routes.home()) as Route);
         }}
@@ -181,23 +186,26 @@ function SignUpStep({
       ? { register: plan.register, personalData: plan.personalData }
       : { register: true, personalData: false };
 
+  const booking = purpose === 'book';
   const title = !parts.register
     ? t('finishPatientSignup.title')
     : parts.personalData
-      ? t('signUp.claimTitle')
+      ? t(booking ? 'signUp.bookTitle' : 'signUp.claimTitle')
       : t('signUp.title');
   const defaults =
     parts.personalData && invitation.data
       ? personalDataFrom(toInvitation(invitation.data))
       : undefined;
   const prefilled = defaults !== undefined && Object.keys(defaults).length > 0;
-  const description = parts.personalData
-    ? t(
-        prefilled
-          ? 'finishPatientSignup.toClaimPrefilled'
-          : 'finishPatientSignup.toClaim',
-      )
-    : t('auth.signupPatientDescription');
+  const description = !parts.personalData
+    ? t('auth.signupPatientDescription')
+    : booking
+      ? t('finishPatientSignup.toBook')
+      : t(
+          prefilled
+            ? 'finishPatientSignup.toClaimPrefilled'
+            : 'finishPatientSignup.toClaim',
+        );
 
   return (
     <div className="flex w-full flex-col items-center">

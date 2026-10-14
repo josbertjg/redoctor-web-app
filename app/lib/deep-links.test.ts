@@ -79,6 +79,8 @@ describe('isAppOwnedPath', () => {
     expect(isAppOwnedPath('/panel')).toBe(false);
     expect(isAppOwnedPath('/panel/invoices')).toBe(false);
     expect(isAppOwnedPath('/panel/subscription/invoices')).toBe(false);
+    // The booking is the web's own, out of the profile's `/s/*`.
+    expect(isAppOwnedPath('/book/123')).toBe(false);
   });
 
   it('never takes the payment, at its address or at the one it had', () => {

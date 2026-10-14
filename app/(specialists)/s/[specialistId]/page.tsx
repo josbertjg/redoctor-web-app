@@ -18,7 +18,7 @@ import { BottomActions } from '@/app/ui/layout/bottom-actions';
 import { SiteHeader } from '@/app/ui/layout/site-header';
 import { Tabs } from '@/app/ui/tabs';
 
-import { BookingNote } from '../../_components/booking-note';
+import { BookingAction } from '../../_components/booking-action';
 import { CertificationList } from '../../_components/certification-list';
 import { Gallery } from '../../_components/gallery';
 import { OfficeList } from '../../_components/office-list';
@@ -33,10 +33,11 @@ import { ShowMoreText } from '../../_components/show-more-text';
 import { SpecialtyList } from '../../_components/specialty-list';
 
 /*
- * The public profile (M8): what the app's specialist screen shows, read-only,
- * rendered on the server (no CORS, cached for every visitor). Booking,
- * availability and prices stay out of the pilot: prices wait for services in
- * the public profile (REDOC-367).
+ * The public profile (M8): what the app's specialist screen shows, rendered
+ * on the server (no CORS, cached for every visitor), and its «Agendar cita»
+ * (M15), which books on `/book/{id}` with the patient's session. Prices and
+ * availability wait for services in the public profile (REDOC-367): the
+ * booking shows them, once signed in.
  */
 
 /*
@@ -84,7 +85,7 @@ export default async function SpecialistProfilePage({
 
   const t = await getTranslations();
   const moreLabels = { more: t('readMore'), less: t('showLess') };
-  // A specialist's browser: the booking line waits for the session (BookingNote).
+  // A specialist's browser: booking waits for the session (useBookingOffer).
   const expectSpecialist =
     (await cookies()).get(panelHintCookie)?.value === '1';
   const hasAbout = profile.gallery.length > 0 || profile.experience !== null;
@@ -117,7 +118,10 @@ export default async function SpecialistProfilePage({
             title={t('search.attentionOffices')}
           >
             {profile.offices.length > 0 ? (
-              <OfficeList offices={profile.offices} />
+              <OfficeList
+                offices={profile.offices}
+                booking={{ specialistId: profile.id, expectSpecialist }}
+              />
             ) : (
               <ProfilePlaceholder>
                 {t('specialists.noOffices')}
@@ -175,13 +179,19 @@ export default async function SpecialistProfilePage({
         </div>
 
         <BottomActions>
-          <BookingNote
+          {/* Above the booking: on a computer it gives its place up, and
+              «Agendar cita» stays where it is. */}
+          <OpenInAppButton
+            path={routes.specialist(profile.id)}
+            desktop="none"
+            variant="white"
+          />
+          <BookingAction
             specialistId={profile.id}
-            patientNote={t('specialists.bookingSoon')}
+            bookLabel={t('search.bookAppointment')}
             ownNote={t('specialists.ownProfileNote')}
             expectSpecialist={expectSpecialist}
           />
-          <OpenInAppButton path={routes.specialist(profile.id)} />
         </BottomActions>
       </main>
     </>

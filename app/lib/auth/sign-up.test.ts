@@ -1,7 +1,12 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 
-import { flowNeedsPersonalData, invitationOf, planSignUp } from './sign-up';
+import {
+  flowNeedsPersonalData,
+  invitationOf,
+  planSignUp,
+  signUpPurposeOf,
+} from './sign-up';
 import { meResponseSchema, toAccount } from '../schemas/identity';
 
 const account = (overrides: Record<string, unknown>) =>
@@ -33,11 +38,19 @@ const registeredPatient = account({
 });
 
 describe('flowNeedsPersonalData', () => {
-  it('is the invitation, and only a same-origin one', () => {
+  it('is the invitation or the booking, and only a same-origin one', () => {
     expect(flowNeedsPersonalData('/i/tok')).toBe(true);
+    expect(flowNeedsPersonalData('/book/abc?office=o1')).toBe(true);
     expect(flowNeedsPersonalData('/a/abc')).toBe(false);
     expect(flowNeedsPersonalData('//evil.example/i/x')).toBe(false);
     expect(flowNeedsPersonalData(null)).toBe(false);
+  });
+
+  it('tells the two flows apart, for the words the sign-up uses', () => {
+    expect(signUpPurposeOf('/i/tok?for=self')).toBe('claim');
+    expect(signUpPurposeOf('/book/abc')).toBe('book');
+    expect(signUpPurposeOf('/appointments')).toBeNull();
+    expect(invitationOf('/book/abc')).toBeNull();
   });
 });
 
@@ -51,13 +64,26 @@ describe('planSignUp', () => {
     });
   });
 
-  it('asks a registered patient for the personal data only when claiming', () => {
+  it('asks a registered patient for the personal data only when claiming or booking', () => {
     expect(planSignUp(registeredPatient, '/i/tok')).toEqual({
       step: 'patient',
       register: false,
       personalData: true,
     });
+    expect(planSignUp(registeredPatient, '/book/abc')).toEqual({
+      step: 'patient',
+      register: false,
+      personalData: true,
+    });
     expect(planSignUp(registeredPatient, null)).toEqual({ step: 'done' });
+  });
+
+  it('asks a brand-new account booking for both parts, as a patient', () => {
+    expect(planSignUp(brandNew, '/book/abc')).toEqual({
+      step: 'patient',
+      register: true,
+      personalData: true,
+    });
   });
 
   it('sends an open specialist sign-up to the app', () => {
