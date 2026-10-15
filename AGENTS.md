@@ -2089,9 +2089,11 @@ written out in full, or Next.js does not inline it).
   - **Nothing matched:** the app's «Vaya, no encontramos coincidencias»,
     with «Buscar en toda Venezuela» when the search had a point. Nothing
     asked: «¿Qué especialista buscas?» with the catalog. The landing's
-    chips search their name (the mockup's sample names until the catalog
-    has six entries; then the catalog's own, each with an icon by its
-    name).
+    chips are the catalog's own specialties, each with an icon by its
+    name, and only with four of them or more (the owner's rule,
+    2026-10-14 evening): with three or fewer the row shows nothing and
+    keeps its space, so the hero is never cut short (until then the
+    mockup's sample names stood in).
   - **Where the web differs from the app, on purpose and to confirm:**
     searching needs no account (the app's sheet asks to sign in); the
     suggestions are grouped and the letters that matched are in bold (the

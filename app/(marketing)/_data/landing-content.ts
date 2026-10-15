@@ -73,20 +73,6 @@ const specialtyIcons: readonly [stem: string, icon: IconComponent][] = [
   ['ortoped', Orthopedics],
 ];
 
-/** The mockup's sample names, until the catalog has enough of its own. */
-export const specialtyChips: { name: string; icon: IconComponent }[] = [
-  { name: 'Medicina General', icon: Stethoscope },
-  { name: 'Odontología', icon: Dentistry },
-  { name: 'Oftalmología', icon: Visibility },
-  { name: 'Psicología', icon: Psychology },
-  { name: 'Cardiología', icon: Cardiology },
-  { name: 'Dermatología', icon: Dermatology },
-  { name: 'Pediatría', icon: Pediatrics },
-  { name: 'Nutrición', icon: Nutrition },
-  { name: 'Ginecología', icon: Gynecology },
-  { name: 'Traumatología', icon: Orthopedics },
-];
-
 type Step<Key extends string> = {
   key: Key;
   icon: IconComponent;

@@ -23,15 +23,21 @@ function node(
   };
 }
 
-/* Shaped like the dev catalog: one root, «Medicina», with its specialties. */
-export function buildSpecialtiesTreeResponse(): TreeInput {
+const branches = [
+  node('s1', 'Medicina General', 'root'),
+  node('s2', 'Cardiología', 'root'),
+  node('s3', 'Ginecología y Obstetricia', 'root'),
+];
+
+/*
+ * Shaped like the dev catalog: one root, «Medicina», with its specialties
+ * (three by default: four entries in the flat catalog; fewer when a test
+ * wants a smaller one).
+ */
+export function buildSpecialtiesTreeResponse({
+  specialties = branches.length,
+}: { specialties?: number } = {}): TreeInput {
   return {
-    data: [
-      node('root', 'Medicina', null, [
-        node('s1', 'Medicina General', 'root'),
-        node('s2', 'Cardiología', 'root'),
-        node('s3', 'Ginecología y Obstetricia', 'root'),
-      ]),
-    ],
+    data: [node('root', 'Medicina', null, branches.slice(0, specialties))],
   };
 }

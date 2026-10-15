@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { forgetPlansRefusal } from '@/app/lib/data/plans';
 
 import { buildPlans } from '@/tests/factories/billing';
+import { buildSpecialtiesTreeResponse } from '@/tests/factories/specialties';
 import { apiUrl } from '@/tests/msw/api-url';
 import { server } from '@/tests/msw/server';
 import { renderWithIntl } from '@/tests/render';
@@ -172,6 +173,39 @@ describe('HomePage', () => {
     expect(
       screen.queryByRole('link', { name: 'Seleccionar plan' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('offers the catalog’s specialties under the search bar, each a search for it', async () => {
+    await renderHome();
+
+    const chips = within(
+      screen.getByRole('navigation', { name: 'Especialidades' }),
+    ).getAllByRole('link');
+
+    expect(chips.map((chip) => chip.textContent)).toEqual([
+      'Medicina',
+      'Medicina General',
+      'Cardiología',
+      'Ginecología y Obstetricia',
+    ]);
+    expect(chips[1]).toHaveAttribute('href', '/search?specialty=s1');
+  });
+
+  it('shows no specialty with three or fewer in the catalog, keeping the search', async () => {
+    server.use(
+      http.get(apiUrl('/specialties/tree'), () =>
+        HttpResponse.json(buildSpecialtiesTreeResponse({ specialties: 2 })),
+      ),
+    );
+
+    await renderHome();
+
+    expect(
+      screen.queryByRole('navigation', { name: 'Especialidades' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('search', { name: 'Buscar especialistas' }),
+    ).toBeInTheDocument();
   });
 
   it('leads a specialist to the sign-in and a patient to the search from «Comenzar»', async () => {

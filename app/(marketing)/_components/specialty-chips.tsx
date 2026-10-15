@@ -11,21 +11,25 @@ import type { SearchCatalog } from '@/app/ui/search/search-bar-types';
 
 import { AfterSplash } from './after-splash';
 import { beats } from './choreography';
-import { specialtyChips, specialtyIcon } from '../_data/landing-content';
+import { specialtyIcon } from '../_data/landing-content';
 
-/** With this many in the catalog, the chips are the catalog's own. */
-const catalogChipsFrom = 6;
+/** With fewer specialties in the catalog, the row shows nothing (the owner's rule). */
+const chipsFrom = 4;
 
 const chipsLimit = 10;
+
+/** The row's own vertical padding; a chip is a touch target tall. */
+const rowPadding = 'py-3';
 
 /*
  * The row of specialties under the search bar (Figma): white chips that
  * scroll sideways and fade at both ends, each one a search for its
  * specialty (M16). They enter from the middle of the row outwards: the two
  * central chips first (the central one, when they are odd), then each
- * pair further out, a beat apart. The names come from the catalog once it
- * has enough of them; until then the mockup's sample names, each a search
- * by its name.
+ * pair further out, a beat apart. The names are the catalog's own — never
+ * sample ones — and the row appears only with four specialties or more;
+ * with fewer, its space stays, so the hero keeps its shape (the owner's
+ * rule, 2026-10-14).
  */
 export function SpecialtyChips({
   waitForSplash,
@@ -37,22 +41,17 @@ export function SpecialtyChips({
   className?: string;
 }) {
   const t = useTranslations('landing.hero');
-  const chips =
-    catalog.length >= catalogChipsFrom
-      ? catalog.slice(0, chipsLimit).map((specialty) => ({
-          key: specialty.id,
-          name: specialty.name,
-          icon: specialtyIcon(specialty.name),
-          params: new URLSearchParams({
-            [searchParamNames.specialty]: specialty.id,
-          }),
-        }))
-      : specialtyChips.map((chip) => ({
-          key: chip.name,
-          name: chip.name,
-          icon: chip.icon,
-          params: new URLSearchParams({ [searchParamNames.text]: chip.name }),
-        }));
+
+  if (catalog.length < chipsFrom) return <ChipsSpace className={className} />;
+
+  const chips = catalog.slice(0, chipsLimit).map((specialty) => ({
+    id: specialty.id,
+    name: specialty.name,
+    icon: specialtyIcon(specialty.name),
+    params: new URLSearchParams({
+      [searchParamNames.specialty]: specialty.id,
+    }),
+  }));
   const middle = (chips.length - 1) / 2;
 
   return (
@@ -60,9 +59,14 @@ export function SpecialtyChips({
       aria-label={t('specialtiesLabel')}
       className={cn('flex justify-center', className)}
     >
-      <ul className="flex max-w-full snap-x scrollbar-none gap-4 overflow-x-auto mask-x-from-85% mask-x-to-100% px-gutter py-3">
+      <ul
+        className={cn(
+          'flex max-w-full snap-x scrollbar-none gap-4 overflow-x-auto mask-x-from-85% mask-x-to-100% px-gutter',
+          rowPadding,
+        )}
+      >
         {chips.map((chip, index) => (
-          <li key={chip.key} className="shrink-0 snap-start">
+          <li key={chip.id} className="shrink-0 snap-start">
             <AfterSplash
               waitForSplash={waitForSplash}
               from="nudge"
@@ -83,5 +87,17 @@ export function SpecialtyChips({
         ))}
       </ul>
     </nav>
+  );
+}
+
+/**
+ * The room one row of chips takes — its padding and a chip's touch height —
+ * when there are none to show: the search's section is not cut short.
+ */
+function ChipsSpace({ className }: { className?: string | undefined }) {
+  return (
+    <div aria-hidden="true" className={cn(rowPadding, className)}>
+      <div className="min-h-touch" />
+    </div>
   );
 }
