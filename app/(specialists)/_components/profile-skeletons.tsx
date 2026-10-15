@@ -1,7 +1,11 @@
 import { Skeleton } from '@/app/ui/skeleton';
 
-/* Placeholders with the final dimensions of each block (zero layout shift). */
-
+/*
+ * The reviews' placeholder, with their final dimensions (zero layout shift):
+ * they stream in behind the profile, under their own Suspense. The profile
+ * itself has no skeleton: it is read before anything goes out, so an unknown
+ * id is a real 404 (AGENTS.md §4).
+ */
 export function ReviewsSkeleton() {
   return (
     <div className="flex flex-col gap-6" aria-busy="true">
@@ -26,43 +30,6 @@ export function ReviewsSkeleton() {
           </li>
         ))}
       </ul>
-    </div>
-  );
-}
-
-export function ProfileHeroSkeleton() {
-  return (
-    <div className="flex flex-col items-center rounded-b-2xl bg-primary px-gutter pt-2 pb-8">
-      <Skeleton className="size-27.5 rounded-full bg-white-50/20" />
-      <Skeleton className="mt-4 h-8 w-56 bg-white-50/20" />
-      <Skeleton className="mt-2 h-8 w-44 rounded-full bg-white-50/20" />
-      {/* The office is a link a touch target tall; the rating, one line. */}
-      <div className="mt-1 flex h-11 items-center">
-        <Skeleton className="h-4 w-48 bg-white-50/20" />
-      </div>
-      <Skeleton className="mt-1 h-5 w-40 bg-white-50/20" />
-    </div>
-  );
-}
-
-export function ProfileSectionsSkeleton() {
-  return (
-    <div className="mx-auto flex w-full max-w-content flex-col gap-8 px-gutter py-6">
-      <div className="flex flex-col gap-2">
-        <Skeleton className="h-6 w-28" />
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-1/2" />
-      </div>
-      <div className="flex flex-col gap-2">
-        <Skeleton className="h-6 w-56" />
-        <Skeleton className="h-36 w-full rounded-lg" />
-      </div>
-      <div className="flex flex-col gap-2">
-        <Skeleton className="h-6 w-24" />
-        <ReviewsSkeleton />
-      </div>
     </div>
   );
 }

@@ -5,17 +5,20 @@ import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 
-import { getTranslations } from 'next-intl/server';
+import { getFormatter, getTranslations } from 'next-intl/server';
 
 import { smartAppBanner } from '@/app/lib/app-bridge';
 import { panelHintCookie } from '@/app/lib/auth/session-hint';
 import { getSpecialistProfile as readSpecialistProfile } from '@/app/lib/data/specialists';
 import { routes } from '@/app/lib/routes';
+import { specialistJsonLd } from '@/app/lib/seo/specialist';
+import { absoluteUrl } from '@/app/lib/site';
 
 import { LinkOriginTracker } from '@/app/ui/analytics/link-origin-tracker';
 import { OpenInAppButton } from '@/app/ui/app-bridge/open-in-app-button';
 import { BottomActions } from '@/app/ui/layout/bottom-actions';
 import { SiteHeader } from '@/app/ui/layout/site-header';
+import { JsonLd } from '@/app/ui/seo/json-ld';
 import { Tabs } from '@/app/ui/tabs';
 
 import { BookingAction } from '../../_components/booking-action';
@@ -23,6 +26,7 @@ import { CertificationList } from '../../_components/certification-list';
 import { Gallery } from '../../_components/gallery';
 import { OfficeList } from '../../_components/office-list';
 import { OFFICES_ANCHOR, ProfileHero } from '../../_components/profile-hero';
+import { profileMetaWords } from '../../_components/profile-metadata';
 import {
   ProfilePlaceholder,
   ProfileSection,
@@ -38,6 +42,12 @@ import { SpecialtyList } from '../../_components/specialty-list';
  * (M15), which books on `/book/{id}` with the patient's session. Prices and
  * availability wait for services in the public profile (REDOC-367): the
  * booking shows them, once signed in.
+ *
+ * The profile is read before anything goes out and nothing loads above the
+ * page, so an unknown id is a real 404 (AGENTS.md §4), as on `/book`; the
+ * reviews alone stream in behind it, under their own Suspense. For search
+ * engines the page carries its structured data (schema.org) and a title
+ * and description built from the profile; the sitemap lists it.
  */
 
 /*
@@ -55,12 +65,20 @@ export async function generateMetadata({
   const profile = await getSpecialistProfile(specialistId);
   if (!profile) notFound();
 
-  const t = await getTranslations();
+  const [t, format] = await Promise.all([getTranslations(), getFormatter()]);
   const path = routes.specialist(profile.id);
-  const description = t('specialists.metaDescription', { name: profile.name });
+  const { title, description } = profileMetaWords(profile, {
+    t: (key, values) => t(key as Parameters<typeof t>[0], values),
+    list: (items) => format.list(items, { type: 'conjunction' }),
+    number: (value) =>
+      format.number(value, {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      }),
+  });
 
   return {
-    title: profile.name,
+    title,
     description,
     // Canonical without `?origin=`: the channel tag never travels further.
     alternates: { canonical: path },
@@ -68,7 +86,7 @@ export async function generateMetadata({
       type: 'profile',
       siteName: t('metadata.siteName'),
       locale: 'es_VE',
-      title: profile.name,
+      title,
       description,
       url: path,
     },
@@ -92,6 +110,12 @@ export default async function SpecialistProfilePage({
 
   return (
     <>
+      <JsonLd
+        data={specialistJsonLd(
+          profile,
+          absoluteUrl(routes.specialist(profile.id)),
+        )}
+      />
       <LinkOriginTracker link="specialist" />
       <div className="bg-primary">
         <SiteHeader homeLabel={t('common.homeLabel')} tone="inverse" />

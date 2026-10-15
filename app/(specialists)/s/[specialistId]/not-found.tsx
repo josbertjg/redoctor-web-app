@@ -10,9 +10,10 @@ import { EmptyState } from '@/app/ui/empty-state';
 import { SiteHeader } from '@/app/ui/layout/site-header';
 
 /*
- * A profile that does not exist (deleted, or a broken link). As in the app,
- * nothing here can fix it, so there is no retry: a way home. The app offers
- * a search instead, which the web does not have during the pilot.
+ * A profile that does not exist (deleted, or a broken link): a real 404,
+ * since the page reads the profile before anything goes out (AGENTS.md §4).
+ * As in the app, nothing here can fix it, so there is no retry: a way home,
+ * where the search box is (M16).
  */
 export default async function SpecialistNotFound() {
   const t = await getTranslations();

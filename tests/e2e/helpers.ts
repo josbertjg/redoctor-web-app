@@ -3,6 +3,13 @@ import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 
 /**
+ * The public profile the specs read against the real API: api-dev's test
+ * profile, overridden with E2E_SPECIALIST_ID when it changes.
+ */
+export const e2eSpecialistId =
+  process.env.E2E_SPECIALIST_ID ?? 'a0af9566-a53d-4887-8d16-1dfc589c2f3d';
+
+/**
  * Waits until every finite animation has finished. Content fades in
  * (AGENTS.md §8.2): auditing contrast mid-fade would measure half-transparent
  * text. Infinite ones (skeleton pulse, spinners) are ignored.

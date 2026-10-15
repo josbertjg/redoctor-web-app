@@ -425,6 +425,12 @@
   },
   "specialists": {
     "metaDescription": "Perfil de {name} en Redoctor: especialidades, consultorios y opiniones de sus pacientes.",
+    "metaTitle": "{name}, {specialty}",
+    "metaSpecialties": "{name}: {specialties}.",
+    "metaVerified": "Especialista verificado.",
+    "metaOffices": "{count, plural, one {Consultorio: {names}.} other {Consultorios: {names}.}}",
+    "metaRating": "Calificación {rating} de 5 ({count, plural, one {# reseña} other {# reseñas}}).",
+    "metaBook": "Agenda tu cita en línea en Redoctor.",
     "ogImageAlt": "Perfil de un especialista en Redoctor",
     "directions": "Cómo llegar",
     "directionsTo": "Cómo llegar a {office}",

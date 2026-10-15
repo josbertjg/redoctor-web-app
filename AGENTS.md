@@ -77,7 +77,7 @@ transactional emails the API sends.
 | M5 Appointment `/a/{id}` | Confirm (from 24 h before), cancel, reschedule, directions, add to calendar |
 | M6 My appointments `/appointments` | Upcoming, past, pending reviews |
 | M7 Review | Stars, comment, "your review is public / anonymous by default" notice |
-| M8 Public profile `/s/{id}` | Read-only: photo, verified specialties, offices with directions, service prices, rating and reviews, and «Agendar cita» toward the booking (M15) |
+| M8 Public profile `/s/{id}` | Read-only: photo, verified specialties, offices with directions, service prices, rating and reviews, and «Agendar cita» toward the booking (M15). Found by search engines (2026-10-14): the sitemap lists every profile, each page carries its schema.org data and a title and description built from the profile, and an unknown id is a real 404 |
 | M9 Landing | Designed by the designer; copy in the doc «Landing de Redoctor» |
 | M10 Legal and account | `/terms`, `/privacy` and `/delete-account` (2026-10-14): the terms of use, the privacy policy and how to have an account deleted, drafted from what the web and the app do, as the base the lawyer reviews (the owner's word); the company's identification is a placeholder until he fills it (§13) |
 | M11 Bridges | `/home/*` (pages that only open the app) and `/daily-summary/unsubscribe` (daily-summary email opt-out); `/panel/subscription`, `/panel/agenda`, `/panel/specialties` and `/panel/profile` were bridges until M14 made them pages |
@@ -234,7 +234,7 @@ app/                                  # The application: routes, UI and logic
     book/[specialistId]/page.tsx · not-found.tsx   # /book/{id} (M15) — the profile and the catalog read on the server, the steps in the browser; an unknown profile is a real 404
     _components/                      #   appointment-flow, -view, -actions, -record; cancel-sheet, reschedule-sheet, month-calendar, slot-picker (+ slot-choices, load-failure: the reschedule's and the booking's day and hour), calendar-menu; appointments-flow, -list, -skeleton; review-wall, review-form; booking/ (the flow and its notices, the four steps, the summary, «¡Todo listo!»)
   (specialists)/                      # module: public profile (M8) and the specialist's panel (M2, M14)
-    s/[specialistId]/page.tsx · loading.tsx · not-found.tsx · opengraph-image.tsx   # /s/{id}
+    s/[specialistId]/page.tsx · not-found.tsx · opengraph-image.tsx   # /s/{id} — the profile read before anything goes out (no loading.tsx), so an unknown id is a real 404; its schema.org data and its words for search engines (_components/profile-metadata.ts)
     panel/layout.tsx · page.tsx · error.tsx   # /panel — layout = <PanelFrame> (the bar, the sections, <RequireSession facet="specialist">); no loading.tsx, so a notFound() is a real 404
     panel/agenda/page.tsx · [date]/page.tsx   # /panel/agenda (today), /panel/agenda/{YYYY-MM-DD} (email 10); deeper paths match nothing: 404
     panel/appointments/page.tsx       #   the history, its filters in the address
@@ -272,14 +272,14 @@ app/                                  # The application: routes, UI and logic
     app-bridge/                       #   open-in-app-button, store-badges, app-access (a specialist's way to the app), store-qr
     appointments/ · specialists/ · billing/ · reviews/   # domain components used by two or more modules (appointments/: headline, details, appointment-card; billing/: notice-panel, plan-emblem)
     search/                           #   the search box (M16), on the landing and on /search: search-bar (+ what-field, where-field, suggestion-popup, highlight, use-combobox, use-location-suggestions — Google's places —, use-remembered), its words from the server (search-bar-words)
-    analytics/ · og/                  #   link-origin-tracker; the Open Graph brand card (next/og)
+    analytics/ · og/ · seo/           #   link-origin-tracker; the Open Graph brand card (next/og); the JSON-LD data block a page carries for search engines
     motion/                           #   the one door to Motion: provider, m, tokens, staggered-text (§8.11)
     icons.tsx                         #   the Icon primitive (not icon.tsx: that name is a Next.js metadata file)
     fonts.ts · tokens.css · globals.css
   lib/                                # ALL non-React logic
     api/                              #   client.ts (fetch wrapper), errors.ts (ApiError + codes), retry.ts, write-once.ts
     schemas/                          #   zod schemas + inferred types per domain — THE contract with the API
-    data/                             #   server-only fetchers for Server Components (fetch + cache tags → DTOs); places.ts asks Google Places for the search's places (M16); plans.ts reads the landing's plans with no session and remembers a refusal (M9)
+    data/                             #   server-only fetchers for Server Components (fetch + cache tags → DTOs); places.ts asks Google Places for the search's places (M16); plans.ts reads the landing's plans with no session and remembers a refusal (M9); public-profiles.ts lists every public profile for the sitemap through the public search, a day at a time (M8)
     queries/                          #   TanStack queryOptions + mutation functions per domain (client)
     actions/                          #   Server Actions — only where no user token is needed
     firebase/                         #   client.ts: Firebase Auth, loaded on demand (client-only)
@@ -289,6 +289,7 @@ app/                                  # The application: routes, UI and logic
     maps/                             #   google-maps.ts: the Maps JavaScript API for the results' map, loaded on demand with the page's nonce (client-only)
     security/                         #   csp.ts (the nonce policy proxy.ts sends), rate-limit.ts (so many a minute per address, for the endpoints that spend Google's quota)
     billing/                          #   banks.ts: the app's list of Venezuelan banks (the API publishes none); plan-benefits.ts: what a plan includes, from its limits (the landing's plans and the payment's)
+    seo/                              #   json-ld.ts (a schema.org document, serialized so a person's text cannot close its tag), specialist.ts (a public profile as a Physician or a Dentist: name, photos, specialties, offices, rating)
     reports/                          #   period.ts (the presets, the buckets), figures.ts (trends, the main currency, rankings), csv.ts (the spreadsheet)
     analytics/ · i18n/
     observability/                    #   report.ts (the seam), scrub.ts (what never leaves), sentry.ts
@@ -397,20 +398,33 @@ Every route path is built from one place, `app/lib/routes.ts` (the app has
   the API is the backend and the Firebase token lives there.
 - **Metadata** per route with `generateMetadata`. Private pages (`/i`, `/a`,
   `/appointments`, `/account`, `/book`, payment) and a search (`/search`)
-  are `noindex, nofollow`.
+  are `noindex, nofollow`. **The sitemap** (`app/sitemap.ts`) lists the
+  landing, the legal pages and every public profile the API lists
+  (`app/lib/data/public-profiles.ts`), built per request from the Data
+  Cache (a day) and never at build time; a public profile carries its
+  schema.org data as JSON-LD (`app/lib/seo`, `app/ui/seo`) and a title and
+  description built from the profile (§13, Decided 2026-10-14).
 - Loading states are **skeletons with the final dimensions** (`loading.tsx`
   or Suspense boundaries), never spinners in the middle of empty space.
   Consequence to know: a page under a `loading.tsx` streams, so a
   `notFound()` inside it answers **200 + `noindex`** with the not-found UI
   (Next.js docs, not-found.md); only bots that cannot run JavaScript get a
-  real 404 (their metadata blocks). A real 404 needs the route not to match
-  or a check in `proxy.ts`. There is **no root `loading.tsx`** (decided
-  2026-10-08): every page is dynamic because of the CSP nonce, and a root
-  skeleton made each one flash grey bars for a few hundred ms before React
-  revealed the streamed content — on `/` too, with nothing to wait for. A
-  page without a loading state of its own now renders whole before its
-  HTML goes out. Only `/s/[specialistId]` keeps one, because its data comes
-  from the API; so it still answers 200 + `noindex` for an unknown id.
+  real 404 (their metadata blocks). A real 404 needs the check before the
+  first byte: no loading state above the page (the data awaited before
+  anything streams), the route not matching, or a check in `proxy.ts`.
+  There is **no root `loading.tsx`** (decided 2026-10-08): every page is
+  dynamic because of the CSP nonce, and a root skeleton made each one
+  flash grey bars for a few hundred ms before React revealed the streamed
+  content — on `/` too, with nothing to wait for. A page without a loading
+  state of its own renders whole before its HTML goes out. Since
+  2026-10-14 `/s/[specialistId]` has none either: the profile is read
+  before anything goes out (cached five minutes, the stale copy served
+  while it refreshes, so only a profile's first visit waits for the API),
+  an unknown id is a real 404, as on `/book/[specialistId]`, and only the
+  reviews stream in, under their own Suspense. What still answers 200 for
+  an unknown thing cannot do otherwise, and is noindex: `/a`, `/i` and a
+  receipt read with the browser's session or token, the agenda's malformed
+  date (today, as in the app) and the bridges (`/home/*`).
 - `error.tsx` and `not-found.tsx` at the root and in each route group, using
   the design system's empty/error state.
 
@@ -483,7 +497,10 @@ Every route path is built from one place, `app/lib/routes.ts` (the app has
   (REDOC-314/315/316), anonymous reviews (REDOC-251), account deletion
   `DELETE /identity/me` (REDOC-352), one checkout with a quote for paying
   and changing plan (REDOC-363/368: the payment's two steps and the
-  change of plan get rebuilt on it). The daily-summary opt-out endpoints
+  change of plan get rebuilt on it), and a public listing of the visible
+  specialists for the sitemap (ids and `updatedAt`; until then the web
+  derives it from the public search, `app/lib/data/public-profiles.ts`,
+  §13 Decided 2026-10-14). The daily-summary opt-out endpoints
   exist (`POST /notifications/daily-summary/unsubscribe|subscribe`) and
   the web's action calls them.
 
@@ -1172,8 +1189,9 @@ written out in full, or Next.js does not inline it).
 - **iOS and the specialist bridges:** no change to the prototype. The
   domain moves to this web as soon as possible, and this web must be ready
   for it (§6 "Domain cutover"). It moved on 2026-10-12.
-- **Unknown ids under a valid route answer 200 + `noindex`:** accepted for
-  now (see Improvements).
+- **Unknown ids under a valid route answer 200 + `noindex`:** accepted
+  then. Since 2026-10-14 an unknown profile is a real 404 (§4; Decided,
+  2026-10-14, «The profiles' SEO and the real 404»).
 - **First steps are development:** Vercel, Sentry, PostHog, the GitHub
   secret and Renovate wait until the web works in development. Vercel went
   first, with the domain, on 2026-10-12 (§6 "Domain cutover").
@@ -2208,6 +2226,59 @@ written out in full, or Next.js does not inline it).
     the company's identification. `/account` (the account's own page with
     the deletion button) waits for REDOC-352.
 
+- **The profiles' SEO and the real 404 (the owner's «vamos con el SEO de
+  los perfiles, y con el 404 real para perfiles y rutas desconocidas»,
+  2026-10-14):**
+  - **Found by search engines.** The sitemap (`app/sitemap.ts`) lists every
+    public profile the API lists, besides the landing and the legal pages:
+    the one way a crawler reaches a profile, since `/search` is not indexed
+    and no public page links to one. The API has no listing endpoint:
+    `app/lib/data/public-profiles.ts` unites five searches of
+    `GET /search/specialists` over the whole country, one per vowel (a, e,
+    i, o, u: no name and no specialty in Spanish lacks every one of them;
+    the search matches by substring — measured 2026-10-14: «Josbert
+    Guedez» has no «a», and `search=a` still finds him through
+    «Medicina»), 50 a page and three pages per vowel at most (150
+    specialists each; beyond that the API's listing is needed), each page
+    a day in the Data Cache, a search that fails leaving the others'
+    profiles in. Built per request (`connection()`), never at build time:
+    a build calls no API. **To ask of Heyscar:** a public listing of the
+    visible specialists (ids and `updatedAt`) for the sitemap.
+  - **Structured data.** Each profile carries schema.org as JSON-LD
+    (`app/lib/seo`, `app/ui/seo/json-ld.tsx`): a `Physician`, or a
+    `Dentist` when the first verified specialty hangs from «Odontología»,
+    with the name, the portrait and the gallery, the description, the
+    verified specialties (`medicalSpecialty`, the catalog's names), the
+    first office as `address` and `geo` (the country only when the
+    coordinates fall in Venezuela), every office as a `MedicalClinic`
+    under `location` when there are two or more, and `aggregateRating`
+    only with reviews. No review, no patient, no phone. A data block the
+    browser never runs, so the CSP's script rule does not apply; the
+    serializer escapes `<`, `>` and `&` so a person's text cannot close
+    the tag.
+  - **The words.** The title is «{name}, {first specialty}» (the template
+    adds «· Redoctor») and the description is built from the profile
+    (`_components/profile-metadata.ts`, `specialists.meta*`): «Ana Pérez:
+    Medicina Interna y Cardiología. Especialista verificado. Consultorios:
+    Clínica El Ávila, Centro Médico La Trinidad y 1 más. Calificación 4,5
+    de 5 (2 reseñas). Agenda tu cita en línea en Redoctor.»; the generic
+    sentence stays for a profile with nothing verified. Open Graph takes
+    the same words. `robots.txt` disallows `/api/` too (the web's own
+    endpoints, which spend Google's quota).
+  - **The real 404.** `/s/{id}`'s `loading.tsx` is gone (§4): the profile
+    is awaited before anything streams, so an unknown or malformed id
+    answers 404 with the segment's not-found page and Next's `noindex`,
+    as `/book/{id}` has since M15. The cost is the skeleton, which only a
+    profile's first visit would have shown (the profile is cached five
+    minutes and served stale while it refreshes). Unknown paths were 404
+    already (Next's root not-found), and what still answers 200 for an
+    unknown thing cannot do otherwise (§4).
+  - **Open:** indexable specialty pages («cardiólogos en Caracas», as
+    Doctoralia) when there is supply; a name in the profile's address
+    (`/s/{id}/ana-perez`) needs the app's resolver first (`/s/*` is its).
+    The owner's: Google Search Console (the domain property) and
+    submitting `https://redoctorapp.com/sitemap.xml`.
+
 ### Improvements noted (not scheduled)
 
 - The FAQ's closed answers are not in the HTML (Radix renders them on
@@ -2215,8 +2286,6 @@ written out in full, or Next.js does not inline it).
   break the closing animation as Radix measures it; worth a proper look
   when the landing's SEO is worked on.
 
-- A real 404 for unknown profiles and paths (§4): a check in `proxy.ts`, or
-  routes that do not match.
 - The e2e of the critical path with a mocked sign-in (§10: open `/i` →
   sign in → claim → confirm) needs a way to sign in under Playwright —
   the Firebase Auth emulator is the clean one. Until then the signed-in

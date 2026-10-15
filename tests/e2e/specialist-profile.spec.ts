@@ -1,15 +1,13 @@
 import { expect, test } from '@playwright/test';
 
-import { auditAccessibility } from './helpers';
+import { auditAccessibility, e2eSpecialistId as specialistId } from './helpers';
 
 /*
  * The public profile (M8) against the real API (api-dev): rendered on the
- * server, with «Abrir en la app» and «Agendar cita» (M15).
- * The specialist is api-dev's test profile; override it with
- * E2E_SPECIALIST_ID when it changes. Names are not asserted: real data.
+ * server, with «Abrir en la app» and «Agendar cita» (M15), its structured
+ * data for search engines, and a real 404 for a profile that is not there.
+ * Names are not asserted: real data.
  */
-const specialistId =
-  process.env.E2E_SPECIALIST_ID ?? 'a0af9566-a53d-4887-8d16-1dfc589c2f3d';
 const profilePath = `/s/${specialistId}`;
 
 test('a shared profile shows the specialist and the way to the app', async ({
@@ -72,12 +70,35 @@ test('the preview image of a profile is generated', async ({
   expect(image.headers()['content-type']).toBe('image/png');
 });
 
+test('the profile carries its structured data for search engines', async ({
+  page,
+}) => {
+  await page.goto(profilePath);
+
+  const name = await page.getByRole('heading', { level: 1 }).textContent();
+  const json = await page
+    .locator('script[type="application/ld+json"]')
+    .first()
+    .textContent();
+  const data = JSON.parse(json ?? '') as Record<string, unknown>;
+
+  expect(data['@context']).toBe('https://schema.org');
+  expect(['Physician', 'Dentist']).toContain(data['@type']);
+  expect(data.name).toBe(name?.trim());
+  expect(data.url).toMatch(new RegExp(`${profilePath}$`));
+});
+
+// The profile is read before anything goes out: a real 404, not a 200 with
+// the not-found UI streamed in (AGENTS.md §4).
 for (const missing of [
   '00000000-0000-4000-8000-000000000000',
   'not-a-profile',
 ]) {
-  test(`/s/${missing} says the profile is not available`, async ({ page }) => {
-    await page.goto(`/s/${missing}`);
+  test(`/s/${missing} is a real 404 that says the profile is not available`, async ({
+    page,
+  }) => {
+    const response = await page.goto(`/s/${missing}`);
+    expect(response?.status()).toBe(404);
 
     await expect(
       page.getByRole('heading', {

@@ -1,16 +1,14 @@
 import { expect, test } from '@playwright/test';
 
-import { auditAccessibility } from './helpers';
+import { auditAccessibility, e2eSpecialistId as specialistId } from './helpers';
 
 /*
  * Booking from a profile (M15) against the real API (api-dev): the page
  * renders the specialist on the server and asks for the session right
  * there. The steps need a session and the API's CORS (REDOC-362): the
  * component tests (MSW) cover them. The specialist is api-dev's test
- * profile; override it with E2E_SPECIALIST_ID when it changes.
+ * profile (tests/e2e/helpers.ts).
  */
-const specialistId =
-  process.env.E2E_SPECIALIST_ID ?? 'a0af9566-a53d-4887-8d16-1dfc589c2f3d';
 
 test('the booking asks a visitor to sign in, and is never indexed', async ({
   page,

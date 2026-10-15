@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { auditAccessibility } from './helpers';
+import { auditAccessibility, e2eSpecialistId } from './helpers';
 
 /*
  * The shell every page stands on: security headers, the per-request CSP
@@ -82,8 +82,15 @@ test('robots, sitemap and manifest are served', async ({ request }) => {
   expect(robots.status()).toBe(200);
   expect(await robots.text()).toContain('User-Agent: *');
 
+  // The sitemap lists the public pages and every public profile the API
+  // lists (api-dev's test profile among them).
   const sitemap = await request.get('/sitemap.xml');
   expect(sitemap.status()).toBe(200);
+  const xml = await sitemap.text();
+  for (const path of ['/', '/terms', '/privacy', '/delete-account']) {
+    expect(xml).toContain(`${path}</loc>`);
+  }
+  expect(xml).toContain(`/s/${e2eSpecialistId}</loc>`);
 
   const manifest = await request.get('/manifest.webmanifest');
   expect(manifest.status()).toBe(200);
