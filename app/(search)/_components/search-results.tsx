@@ -18,6 +18,7 @@ import {
 import { cn } from '@/app/lib/utils';
 
 import { Button } from '@/app/ui/button';
+import { useReducedMotion } from '@/app/ui/motion';
 import type { SearchCatalog } from '@/app/ui/search/search-bar-types';
 
 import { useInfiniteScroll } from '@/app/hooks/use-infinite-scroll';
@@ -64,6 +65,7 @@ export function SearchResults({
   const asked = hasCriteria(query);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const reducedMotion = useReducedMotion();
   // Another search: nothing is in hand any more.
   const [keyInHand, setKeyInHand] = useState(key);
   if (keyInHand !== key) {
@@ -115,10 +117,11 @@ export function SearchResults({
   // A pin tapped: its card comes into view.
   useEffect(() => {
     if (selectedId === null) return;
-    document
-      .getElementById(resultCardId(selectedId))
-      ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  }, [selectedId]);
+    document.getElementById(resultCardId(selectedId))?.scrollIntoView({
+      block: 'nearest',
+      behavior: reducedMotion ? 'auto' : 'smooth',
+    });
+  }, [selectedId, reducedMotion]);
 
   if (!asked) return <SearchStart catalog={catalog} />;
 

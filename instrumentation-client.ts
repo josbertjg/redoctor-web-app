@@ -9,6 +9,18 @@
  * would ship zod to every page just to read three strings.
  */
 
+/*
+ * zod checks once, on its first parse, whether it may compile parsers with
+ * `new Function`. The CSP refuses eval (AGENTS.md §11), so the check could
+ * only fail, and each failure left a `securitypolicyviolation` on the page.
+ * `jitless` skips the check, as zod advises for strict CSPs; parsing works
+ * as it already did. zod shares its configuration through this global, so
+ * setting it here needs no import of zod (whichever loads first, the object
+ * is the same one).
+ */
+const zodConfig = globalThis as { __zod_globalConfig?: { jitless?: boolean } };
+(zodConfig.__zod_globalConfig ??= {}).jitless = true;
+
 const sentryDsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 const environment = process.env.NEXT_PUBLIC_APP_ENV ?? 'development';
 

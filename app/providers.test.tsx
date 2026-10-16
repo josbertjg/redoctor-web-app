@@ -18,6 +18,13 @@ vi.mock('@/app/lib/firebase/client', () => ({
   signOutUser: () => Promise.resolve(),
 }));
 
+// The notifications open what a notice is about through the router.
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
+  usePathname: () => '/',
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 const notice = 'No pudimos conectarnos.';
 
 function FailingQuery({ id, kind }: { id: string; kind: ApiError['kind'] }) {
@@ -55,6 +62,11 @@ function renderProviders(children: ReactNode) {
       networkNotice={notice}
       sessionExpected={false}
       sessionExpiredNotice="Tu sesión ha caducado"
+      notificationNotices={{
+        actionFailed: 'No pudimos actualizar tus notificaciones.',
+        sessionClosedRemotely: 'Tu sesión se cerró desde otro dispositivo',
+      }}
+      appVersion="0.31.0"
     >
       {children}
     </Providers>,

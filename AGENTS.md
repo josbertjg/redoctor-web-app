@@ -85,12 +85,14 @@ transactional emails the API sends.
 | M14 Specialist panel | `/panel` and its sections (2026-10-13): the home (the plan and its notice, today's patients, the statistics, what stays in the app), the day's agenda `/panel/agenda[/{date}]` and the history `/panel/appointments` (read only, each appointment opening `/a/{id}`), the statistics `/panel/reports` (the app's summary and four reports, PDF and CSV when the plan allows), «Mi perfil» `/panel/profile` (whether patients find the profile and, if not, why; the profile as the app shows it to its owner) and «Mis especialidades» `/panel/specialties` (each specialty and its review), both read only, the subscription (M13); a specialist stays in it until signing out |
 | M15 Booking | `/book/{specialistId}` (the owner's «vamos con el agendar desde /s», 2026-10-13; built 2026-10-14): a patient books with the specialist of a public profile in the app's four steps — the office, the day and hour, the reason and for whom (oneself, someone in one's care, someone new), the summary — and «¡Todo listo!»; the appointment is born pending and is confirmed on `/a/{id}` from 24 h before. The web's own page, out of `/s/*` (§6) |
 | M16 Search | `/search` (the owner's word, 2026-10-14: «darle vida a esa barra de búsqueda», with ZocDoc, Doctoralia and Webel as the references): the landing's search box live — a specialty of the catalog or a specialist's name offered as one types, the place («Usar mi ubicación», a Google place or one of the built-in cities, or the whole country) — and the results as patients know them: the cards (photo, name with the verified mark, specialties, rating, nearest office and how far, lowest price, the next days, each one a way into the booking), the app's filters (availability, distance), a Google map of the offices with «Buscar en esta zona», ten at a time. The web's own page, listed by no app (§6); public, the session asked for where the booking starts |
+| M17 Notifications | The bell on every page with a session (the owner's word, 2026-10-14, «sumamente importante»): the unread count, the inbox as a menu that unfolds from it (the app's: read, read all, delete, empty), the API's live channel (Socket.IO) that brings each notice as it is born — a banner, the count, and what the notice leaves stale read again, as the app's `NotificationEffects` —, and the web push through a service worker of ours for when no tab is in view, offered from the menu and only with the VAPID key. No sound on the web |
 | M12 Release | PostHog funnel by origin, tests on real phones from WhatsApp and Gmail, domain cutover |
 
-**Explicitly out of the pilot:** favorites, notifications inbox, and acting
-on appointments from the specialist's panel (it reads them; the app changes
-them). They come after. Booking from a profile (M15) and searching from the
-web (M16) came on the owner's word (2026-10-13 and 2026-10-14).
+**Explicitly out of the pilot:** favorites, and acting on appointments from
+the specialist's panel (it reads them; the app changes them). They come
+after. Booking from a profile (M15), searching from the web (M16) and the
+notifications (M17, the inbox included) came on the owner's word
+(2026-10-13 and 2026-10-14).
 
 ### Non-negotiable product rules (decided with Josbert)
 
@@ -171,7 +173,8 @@ web (M16) came on the owner's word (2026-10-13 and 2026-10-14).
 | Env | `@t3-oss/env-nextjs` | `app/lib/env.ts`; build fails on a missing variable. Client components read public values from `app/lib/public-env.ts` (validated at build, keeps zod out of the browser) |
 | i18n | **next-intl 4** | Single locale `es`, no URL prefix, messages mirror the app's keys |
 | Forms | react-hook-form + `@hookform/resolvers/zod` | Field-level errors, same patterns as the app's inputs |
-| Auth | **Firebase Web SDK 13** (Auth only) | Google + Apple providers; project `redoctor-3acf8` (shared with the app) |
+| Auth | **Firebase Web SDK 13** (Auth and Cloud Messaging) | Google + Apple providers; project `redoctor-3acf8` (shared with the app). Auth loads only where it has something to say: with the session hint, or where a page offers to sign in (§9). Cloud Messaging only for the notifications' web push (M17), loaded on demand with a signed-in page and the VAPID key |
+| Realtime | **socket.io-client 4** | The API's notifications channel is Socket.IO (`/ws/notifications`, M17). Loaded on demand with a signed-in page (≈13 KB gzip, never on the landing); the reconnection is ours, with a fresh ID token per attempt (`app/lib/notifications/socket.ts`) |
 | Analytics | **PostHog** (`posthog-js`, slim build without external scripts) | Funnel by `origin`; no personal data (§11); off while the key is empty |
 | Errors | **Sentry** (`@sentry/nextjs` 11) | `dataCollection` all off (v11's successor of `sendDefaultPii: false`); same privacy rules as the app; off while the DSN is empty |
 | Icons | **Material Symbols Rounded** as inline SVG per icon (`@material-symbols/svg-400`) | Same family as the app; only the icons in use ship — never the variable icon font (several MB) |
@@ -265,10 +268,11 @@ app/                                  # The application: routes, UI and logic
     search/route.ts · suggestions/route.ts   # the web's own search (M16): the API's public search through the web's server, cached (§4)
     places/suggestions/route.ts · details/route.ts   # Google Places through the web's server (M16): the places a text names, Venezuela only, and the point of the one chosen; the key stays here (§11)
   ui/                                 # ALL shared UI
-    button.tsx · back-link.tsx · text-field.tsx · identity-document-field.tsx · select-field.tsx · text-area.tsx · checkbox.tsx · choice-cards.tsx · stars-input.tsx · tabs.tsx · filter-chips.tsx · field-error.tsx · sheet.tsx · skeleton.tsx · toast.tsx · empty-state.tsx · status-card.tsx · link-card.tsx · avatar.tsx …
+    button.tsx · back-link.tsx · text-field.tsx · identity-document-field.tsx · select-field.tsx · text-area.tsx · checkbox.tsx · choice-cards.tsx · stars-input.tsx · tabs.tsx · filter-chips.tsx · field-error.tsx · sheet.tsx · skeleton.tsx · toast.tsx · empty-state.tsx · status-card.tsx · link-card.tsx · avatar.tsx · count-badge.tsx · fading-edges.ts (the faded sides of a row that scrolls) …
     messages-scope.tsx                #   a page's own client messages (§9)
     layout/                           #   site-header, page-frame (a page's column and its main, in the guarded layouts), panel-frame and panel-nav (the specialist's panel around each section), bottom-actions
-    auth/                             #   session-provider, session-button, require-session, sign-in-buttons, sign-in-legal-note, account-error-state, in-app-browser-help, provider-logos
+    auth/                             #   session-provider, session-button (+ account-menu, loaded for a signed-in person only, and account-item), session-controls (the bell and the account, for a bar), require-session, sign-in-buttons, sign-in-legal-note, account-error-state, in-app-browser-help, provider-logos
+    notifications/                    #   the notifications (M17): notifications-provider (the inbox, the live channel, the effects, the push), notifications-bell (nothing for a stranger; bell-popover, the count and the menu from it, loads for a signed-in person), notifications-menu (+ -menu-skeleton), notification-banner (a live notice over the page, on the Toaster), notification-tone (icon and colour by family), use-push (the web push in this browser)
     app-bridge/                       #   open-in-app-button, store-badges, app-access (a specialist's way to the app), store-qr
     appointments/ · specialists/ · billing/ · reviews/   # domain components used by two or more modules (appointments/: headline, details, appointment-card; billing/: notice-panel, plan-emblem)
     search/                           #   the search box (M16), on the landing and on /search: search-bar (+ what-field, where-field, suggestion-popup, highlight, use-combobox, use-location-suggestions — Google's places —, use-remembered), its words from the server (search-bar-words)
@@ -282,7 +286,8 @@ app/                                  # The application: routes, UI and logic
     data/                             #   server-only fetchers for Server Components (fetch + cache tags → DTOs); places.ts asks Google Places for the search's places (M16); plans.ts reads the landing's plans with no session and remembers a refusal (M9); public-profiles.ts lists every public profile for the sitemap through the public search, a day at a time (M8)
     queries/                          #   TanStack queryOptions + mutation functions per domain (client)
     actions/                          #   Server Actions — only where no user token is needed
-    firebase/                         #   client.ts: Firebase Auth, loaded on demand (client-only)
+    firebase/                         #   client.ts: Firebase Auth; messaging.ts: Cloud Messaging for the push (the device token through our own worker); both loaded on demand (client-only)
+    notifications/                    #   the inbox's logic (M17): socket.ts (the live channel: Socket.IO, our own reconnection with a fresh token), effects.ts (what a notice leaves stale, the keys to read again, one refresh per target), destination.ts (where a notice leads, by its ids before its kind), inbox.ts (the inbox after each action), time.ts («Hace 5 min»), push.ts (what this browser remembers of the push: device id, registration, heartbeat, «Ahora no»)
     auth/                             #   account (the account's model and rules, no zod), session-hint (the session and panel cookies), last-provider, token (the bearer's source), destination, sign-up (the plan)
     format/                           #   names, phone (+58), identity-document, date-of-birth — the forms' rules; money, appointment-time, dates — prices and billing amounts, days and hours; figures — the statistics' numbers, periods, weekdays and hours; distance — «3,2 km»
     search/                           #   the search's logic (M16): query.ts (the address ↔ the search ↔ the API's request), location.ts (the point, the app's radii), text.ts (matching case and accents aside), suggestions.ts, recent.ts and last-location.ts (what the browser remembers)
@@ -294,9 +299,9 @@ app/                                  # The application: routes, UI and logic
     analytics/ · i18n/
     observability/                    #   report.ts (the seam), scrub.ts (what never leaves), sentry.ts
     env.ts · public-env.ts · routes.ts · deep-links.ts · site.ts · support.ts · clipboard.ts · utils.ts · calendar.ts (.ics, Google Calendar)
-  hooks/                              # shared client hooks: use-session, use-sign-in-tracking, use-focus-heading, use-infinite-scroll, use-link-origin, use-device, use-in-app-browser, use-person-checks (a person's data as the API checks it), use-price-words, use-debounced-value, use-device-location (the position, asked for on a tap)
-tests/                                # setup.ts · msw/ (server + handlers per domain) · factories/ · e2e/ (Playwright)
-public/                               # .well-known/ (§6) · brand/ (logo.svg, logo-white.svg, icons) · illustrations/ · animations/ (the app's splash_logo.riv)
+  hooks/                              # shared client hooks: use-session, use-notifications (the inbox, its count and the push, as the provider keeps them), use-sign-in-tracking, use-focus-heading, use-infinite-scroll, use-link-origin, use-device, use-in-app-browser, use-person-checks (a person's data as the API checks it), use-price-words, use-debounced-value, use-device-location (the position, asked for on a tap), use-fading-edges (which sides of a scrolling row have more beyond them)
+tests/                                # env.ts · dom.ts (what jsdom lacks, before React loads) · setup.ts · msw/ (server + handlers per domain) · factories/ · e2e/ (Playwright)
+public/                               # .well-known/ (§6) · brand/ (logo.svg, logo-white.svg, icons) · illustrations/ · animations/ (the app's splash_logo.riv) · notifications-sw.js (the push's service worker, plain JavaScript)
 proxy.ts                              # Next 16's name for middleware: the CSP nonce per request, /.well-known excluded — nothing else
 instrumentation.ts · instrumentation-client.ts   # Sentry and PostHog, each only when its variable is set
 next.config.ts · eslint.config.mjs · postcss.config.mjs · tsconfig.json · vitest.config.mts · playwright.config.ts
@@ -380,6 +385,15 @@ Every route path is built from one place, `app/lib/routes.ts` (the app has
   (REDOC-362). Until it ships, develop against MSW or the dev-only proxy in
   `next.config.ts` (`/api-proxy/* → NEXT_PUBLIC_API_URL`), which **must not
   exist in production builds**.
+- **The notifications** (M17) live in the browser with the session: the
+  inbox through TanStack Query (`GET /notifications/`, the one read that
+  feeds the bell and the menu), the live channel over WebSocket (Socket.IO
+  on the API's host; a WebSocket handshake is not subject to CORS, so it
+  works today), and the push through a service worker of ours
+  (`public/notifications-sw.js`), which shows a notice only while no tab is
+  in view. Nothing of this touches the server or the landing's JavaScript:
+  the inbox's reader, socket.io-client and Firebase Messaging load with the
+  first signed-in page.
 - **Route handlers** only for things the browser must not do itself. Two
   cases, both the search's (M16): `/api/search` and `/api/search/suggestions`
   hand the browser the API's public search — the pages after the first, the
@@ -388,7 +402,9 @@ Every route path is built from one place, `app/lib/routes.ts` (the app has
   every visitor (the endpoint takes 30 requests a minute from one address,
   and from Vercel every visitor is one): no session, no token, the same
   query the page's address carries, and the API's own answer back, parsed
-  with the same contract on both sides. And `/api/places/suggestions` and
+  with the same contract on both sides; so many a minute per address, each
+  endpoint counted apart (one address must not spend the API's minute for
+  everyone). And `/api/places/suggestions` and
   `/api/places/details` ask Google Places for the places the box offers
   and the point of the one chosen, so the key stays on the server (§11);
   never cached (each answer belongs to its billing session), so many a
@@ -457,6 +473,30 @@ Every route path is built from one place, `app/lib/routes.ts` (the app has
   requests a minute from one address, measured 2026-10-14). Everything
   about an appointment or an invitation needs a session, except reading an
   invitation by its token (the token is the credential).
+- **Notifications (M17), as the app reads them:** the inbox
+  `GET /notifications/?limit≤100` (no pagination: `{ notifications,
+  unreadCount }`, the count the person's and not the list's),
+  `PATCH /notifications/{id}/read` (a 404 for one already gone: the list
+  is old), `PATCH /notifications/read-all`, `DELETE /notifications/{id}`
+  and `DELETE /notifications/` (both idempotent). The live channel is
+  Socket.IO at `${API origin}/ws/notifications` — the API's host, not
+  `/api/v1` —, websocket transport, `auth: { token: <ID token> }`, events
+  `notification:created` `{ notification, unreadCount? }` and
+  `notification:unread` `{ unreadCount }`. Measured on api-dev
+  (2026-10-14): the server accepts the connection and only then checks the
+  token — a bad or missing one gets an `error` event («Unauthorized…»)
+  about 70 ms later and a disconnect by the server, which Socket.IO never
+  retries by itself —, so the reconnection is the web's own, with a fresh
+  token per attempt (2 s doubling to 60 s). The push registers this
+  browser with `POST /notifications/device-tokens` (`platform: WEB`, a
+  stable `deviceId`, the browser's name, the web's version), says it is in
+  use with `POST /notifications/device-tokens/heartbeat` every 12 h
+  (`registered: false` = a sign-out from afar) and leaves with
+  `DELETE /notifications/device-tokens` before the session ends. A notice's
+  `data` carries `kind` and the ids (`appointmentId`, `billingEventType`);
+  the web decides by the ids first, as the app does, so a kind born
+  tomorrow still works. `POST /notifications/test` fires a real notice to
+  the caller when the API has `NOTIFICATIONS_TEST_ENDPOINT_ENABLED`.
 - Error envelope: `{ code: 'ERR_xxxx', message, details? }`. Map to a typed
   `ApiError`; translate known codes to our copy (e.g. `ERR_2010` registration
   incomplete, `ERR_5052` subscription required, billing `ERR_50xx/51xx`);
@@ -500,7 +540,12 @@ Every route path is built from one place, `app/lib/routes.ts` (the app has
   change of plan get rebuilt on it), and a public listing of the visible
   specialists for the sitemap (ids and `updatedAt`; until then the web
   derives it from the public search, `app/lib/data/public-profiles.ts`,
-  §13 Decided 2026-10-14). The daily-summary opt-out endpoints
+  §13 Decided 2026-10-14), devices addressed by Firebase Installation ID
+  besides the registration token (Firebase 13 deprecates the token on the
+  web; the API takes tokens, so the web keeps `getToken`, §13 Decided
+  2026-10-14 «Notifications»), and the notifications channel checking the
+  token before accepting the connection (today it accepts, then refuses).
+  The daily-summary opt-out endpoints
   exist (`POST /notifications/daily-summary/unsubscribe|subscribe`) and
   the web's action calls them.
 
@@ -935,7 +980,21 @@ block; loading), `TextField` (40 px, radius 10, shadow sm, animated error
 line), `Sheet`, `Card`, `Skeleton`, `Toast` (floating, top, 5 s,
 dismissible), `EmptyState`, `Chip` / `FilterChip`, `StateChip` (positive /
 accent / neutral / warning / error tones), `Avatar`, `StarsRating`,
-`CountBadge`, `TintedNote`, `DetailRow`, `ScrollFadingEdges`.
+`CountBadge`, `TintedNote`, `DetailRow`, `ScrollFadingEdges` (as built:
+`useFadingEdges` + `fadingEdgesClass`, on the tabs that scroll and the
+search's strip of days).
+
+12. **Images and Vercel's quota (owner, 2026-10-15).** Vercel bills each
+    image its optimizer transforms: only our own static images that are
+    shown very often (the landing's) go through `next/image`'s optimizer,
+    as static imports (hashed, cached for good). A person's photo or any
+    uploaded image is always `unoptimized` (`Avatar`, `Gallery`; a Google
+    account photo is asked of Google at the size drawn, `sizedPhotoUrl`),
+    and SVGs never are (Next skips them). `next.config.ts` holds the line:
+    the optimizer takes `/_next/static/media/**` alone (`localPatterns`),
+    nothing remote (`remotePatterns: []`) and few widths, so a request for
+    any other image answers 400 instead of spending the quota. Before
+    adding an image, ask: static and shown very often? Only then optimized.
 
 ---
 
@@ -950,7 +1009,15 @@ accent / neutral / warning / error tones), `Avatar`, `StarsRating`,
   `app/providers.tsx`; `app/hooks/use-session.ts`; `<RequireSession>` from
   `app/ui/auth` in the layout of each segment that needs it): Firebase
   Auth loaded on demand (`app/lib/firebase/client.ts`, `import()` so the
-  landing's JS stays without it), `onIdTokenChanged`, the token never
+  landing's JS stays without it) and only where it has something to say
+  (2026-10-15): at once when the session hint says this browser has a
+  session; otherwise the page starts signed out and Firebase loads when a
+  page offers to sign in — the sign-in buttons call `prepareSignIn` as they
+  appear and wait for `firebaseReady`, so the provider's window still opens
+  inside the tap on Safari — or when the hint appears while the page was
+  away (a sign-in in another tab). A visitor who never signed in loads none
+  of it (on phones and Safari, Firebase's getAuth also opens its sign-in
+  frame at start: some 130 KB more). `onIdTokenChanged`, the token never
   stored by the web (`app/lib/auth/token.ts` asks Firebase for a fresh one),
   `/identity/me` through TanStack Query keyed by uid, resolved **before**
   the first paint of any authenticated route (the segment's skeleton; never
@@ -973,9 +1040,29 @@ accent / neutral / warning / error tones), `Avatar`, `StarsRating`,
   landing sends that browser to `/panel` on the server (§1), and the public
   profile holds its booking line until the session is known. The
   last provider used wears «Última vez» and goes first (localStorage).
-  Sign-out clears the Query cache, the hint, the PostHog identity and
-  Sentry's user — also when Firebase ends the session by itself (another
-  tab, a revoked account) or another person signs in. The `/me` reader
+- **Notifications** (`NotificationsProvider` in `app/ui/notifications`,
+  inside the session; `app/hooks/use-notifications.ts`): one query keyed by
+  the Firebase uid (`['notifications', 'inbox', uid]`) feeds the bell and
+  the menu; the live channel puts each new notice on top of the cached
+  inbox and moves the count, the writes move the inbox at once and tell
+  the API after (a refusal reads it again, or puts the row back; emptying
+  waits for the API). A notice names what it leaves stale
+  (`app/lib/notifications/effects.ts`): the appointments (and a
+  specialist's statistics), the subscription and the session for a billing
+  notice, the session for a profile notice, a patient's pending reviews
+  when a consultation ends — invalidated by key prefix, once per target,
+  600 ms after the last notice; also for what arrived while the tab was
+  hidden, found by reading the inbox again on the way back. The first inbox
+  is the past and refreshes nothing. Opening a notice reads it and goes
+  where its ids lead (`destination.ts`); the inbox is a menu, never a page,
+  and shows no banner while open.
+  Sign-out runs first what registered to run before it (`addSignOutTask`,
+  four seconds at most, with the reason: the person's, the API's refusal,
+  a device revoked from afar) — the push drops its device while the token
+  is still valid —, then clears the Query cache, the hint, the PostHog
+  identity and Sentry's user — also when Firebase ends the session by
+  itself (another tab, a revoked account) or another person signs in. The
+  `/me` reader
   (zod and the contract) loads on demand, with the first signed-in page;
   the account's rules live apart, without zod (`app/lib/auth/account.ts`).
   «Entrar» in a page's bar brings the person back to that page.
@@ -1064,8 +1151,14 @@ pnpm check          # typecheck + lint + format:check + test + build
   scrubbed in `before_send`. Turn on "Discard client IP data" in the
   PostHog project.
 - HTTP headers: a strict CSP with a per-request nonce set in `proxy.ts`
-  (allow Firebase Auth, PostHog, Sentry, Google Fonts; `'wasm-unsafe-eval'`
-  so the splash's Rive runtime can compile WebAssembly, never eval), and in
+  (allow Firebase Auth, PostHog, Sentry, Google Fonts, the API over HTTPS
+  and over WebSocket — `wss://` of its origin, for the notifications'
+  channel — and, only with the VAPID key, Cloud Messaging's registration
+  origins; `'wasm-unsafe-eval'`
+  so the splash's Rive runtime can compile WebAssembly, never eval — zod
+  runs `jitless`, set in `instrumentation-client.ts`, so its own check for
+  eval leaves no violation, and an e2e test keeps the public pages at
+  zero), and in
   `next.config.ts` HSTS, `frame-ancestors 'none'`,
   `Referrer-Policy: strict-origin-when-cross-origin`, a restrictive
   `Permissions-Policy`.
@@ -1090,6 +1183,13 @@ pnpm check          # typecheck + lint + format:check + test + build
   only then, the policy lets Google's origins in
   (`app/lib/security/csp.ts`), and the API's script carries the page's
   nonce.
+- **A notice's words may name a patient** (its title and body): they go
+  to the inbox, the banner and the browser's notification, never to
+  analytics, Sentry or a URL; what leaves the page about a notice is its
+  id. The push's device token and the push subscription are credentials
+  like the ID token: the token travels to the API alone, and the browser
+  drops it when the person signs out. The device id is this browser's,
+  made once and never sent anywhere but the API.
 - **The device's position** is asked for only on a tap («Usar mi
   ubicación»; `Permissions-Policy: geolocation=(self)`), rounded to two
   decimals — about a kilometre — before anything keeps it, and travels
@@ -1140,6 +1240,7 @@ Environments: `development` (local), `preview` (Vercel PR), `production`
 | `GOOGLE_PLACES_API_KEY` | all (server only) | Google Places for the search's places (M16), asked by the web's server; never `NEXT_PUBLIC_`. The app's key for now (§11). **Empty** = the box offers no places |
 | `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | all | The search's map (M16): a browser key of the web's own, restricted by referrer, with the Maps JavaScript API. **Empty** = no map |
 | `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID` | all | Optional: a Cloud map style for the search's map; without one, Google's `DEMO_MAP_ID` (Advanced Markers need one) |
+| `NEXT_PUBLIC_FIREBASE_VAPID_KEY` | all | The web push of the notifications (M17): the project's public VAPID key (Firebase Console → Project settings → Cloud Messaging → Web Push certificates). Public by design. **Empty** = no push; the bell, the inbox and the live channel work all the same |
 | `API_PROXY_TARGET` | development only | Dev-only proxy for authenticated calls until CORS (REDOC-362); must be absent in preview/production. Without it, `next dev` proxies to `NEXT_PUBLIC_API_URL` |
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | GitHub Actions secret | Only if previews have Deployment Protection: Playwright and Lighthouse use it for one request and browse with Vercel's cookie |
 | `PLAYWRIGHT_BASE_URL` · `E2E_SPECIALIST_ID` | testing | Run the e2e suite against a deployed URL; the public profile the e2e and Lighthouse runs use (api-dev's test profile by default) |
@@ -2280,6 +2381,118 @@ written out in full, or Next.js does not inline it).
     (`/s/{id}/ana-perez`) needs the app's resolver first (`/s/*` is its).
     The owner's: Google Search Console (the domain property) and
     submitting `https://redoctorapp.com/sitemap.xml`.
+
+- **The notifications (M17), as built (the owner's «análisis con respecto
+  a las notificaciones y al web socket… sumamente importante», 2026-10-14,
+  and his five answers that night: the inbox in the pilot, as a menu that
+  unfolds from the bell and never a sheet, no sound on the web, the bell on
+  every page with a session, the push right after):**
+  - **The bell** (`app/ui/notifications`): on every bar — the landing's
+    at every width, the search's from tablets up with the account, and the
+    bar with the account of the invitation, the appointments, the sign-up,
+    the legal pages and the panel (`SessionControls`) —, only for a
+    signed-in account with a sign-up behind it. It wears the unread count
+    (the app's `CountBadge`, kept while it fades out at zero) and its label
+    says it («Notificaciones, 2 sin leer»). A tap unfolds **the inbox as a
+    menu** (Radix Popover; the whole width on a phone): the title, how
+    many unread and «Marcar todas», the notices the newest first — unread
+    in bold with a blue dot and «Sin leer» for a screen reader, each a
+    button that reads it and opens what it is about, with its own
+    «Eliminar» — and «Vaciar notificaciones», which asks before it does.
+    Rows unfold and fold through Motion. The menu's code loads with the
+    first opening (prefetched when the pointer reaches the bell).
+  - **The live channel** (`app/lib/notifications/socket.ts`): the API's
+    Socket.IO namespace, connected while the tab is in view and resting
+    while hidden (back in view, or back online, it reconnects and the inbox
+    is read again if older than 15 s). A notice just created goes on top of
+    the inbox, counts, shows as **the app's banner** on the page's Toaster
+    (four seconds, a tap reads it and goes where it leads) unless the menu
+    is open, and refreshes what it leaves stale (§9). The unread count
+    moves when another device reads something.
+  - **Where a notice leads** (`destination.ts`): by its ids before its
+    kind, as the app's `NotificationRouteResolver`: an `appointmentId` to
+    `/a/{id}`; a billing notice, for a specialist, to the page where it is
+    resolved (the plans for a plan not activated or cancelled, «Mis
+    cupones» for coupons and discounts, the receipts for an adjustment, the
+    balance for its movements, «Mi suscripción» for the rest; nothing for
+    the admins' kinds); a `PROFILE_*` notice to «Mi perfil»; anything else
+    is only read.
+  - **The web push** (`use-push.ts`, `app/lib/firebase/messaging.ts`,
+    `public/notifications-sw.js`): only with `NEXT_PUBLIC_FIREBASE_VAPID_KEY`
+    and where the browser can (Safari on iOS only as a web app added to the
+    home screen). The permission is asked on a tap, never on arrival: the
+    menu offers «Activa las notificaciones» with «Activar» and «Ahora no»;
+    the «no» is remembered, and the offer comes back once per visit when a
+    notice arrives live with the push off, saying what was just missed (the
+    app's `remindIfDisabled`). Allowed, this browser is registered among
+    the person's devices on each signed-in visit (`platform: WEB`, a device
+    id made once and kept across sign-outs, «Chrome · macOS», the web's
+    version), beats every twelve hours — `registered: false` signs the
+    person out with «Tu sesión se cerró desde otro dispositivo» — and is
+    dropped before the session ends (`addSignOutTask`, §9), the browser
+    forgetting the token too. Our own worker, not Firebase's: it shows the
+    notice as the browser's notification only while no tab is in view
+    (with one, the channel shows it; the worker tells the tab in case the
+    channel is down), and a tap opens the page by the notice's ids. The
+    permission refused shows one line in the menu.
+  - **Where the web differs from the app, on purpose and to confirm:** no
+    sound nor vibration (the owner's call); the inbox as a menu, not a
+    screen, and «Eliminar» as a button where the app swipes; a `PROFILE_*`
+    notice leads to «Mi perfil» (the app only refreshes its session); the
+    stale data keeps showing while it refreshes (§8.2) where the app
+    switches to a skeleton; the permission is never asked on entry (the
+    app asks after the location's); the device's heartbeat also runs when
+    the tab comes back in view; «Dispositivos conectados» (the app's list
+    of the person's devices) is not built: no page of the web lists them.
+  - **Open:** Firebase 13 deprecates the registration token on the web in
+    favour of an identity by Installation ID (`register`/`onRegistered`),
+    which the backend's send API can target; the API's contract and the app
+    use tokens, so the web keeps `getToken` and `deleteToken` (marked, in
+    `app/lib/firebase/messaging.ts`) until Heyscar takes FIDs. To raise
+    with Heyscar too: the channel accepts a connection before checking its
+    token (it refuses 70 ms later; nothing is delivered meanwhile, but the
+    check belongs in the handshake). The owner's: the VAPID key in
+    `.env.local` and Vercel, and `NOTIFICATIONS_TEST_ENDPOINT_ENABLED` on
+    api-dev to try the whole chain from `POST /notifications/test`.
+
+### Decided (2026-10-15)
+
+- **The deep review of 2026-10-15 (the owner's «análisis profundo… que
+  todo funcione a la perfección», with his rule on images the same day).**
+  Measured on a production build (phone, gzip) and read area by area; what
+  it found was fixed and the flows kept:
+  - **Weight.** zod had come back to the landing, `/search` and `/sign-in`
+    (the search box's address parser, the account rules imported through
+    the contract): the parser is plain code now, the search's and places'
+    contracts load with the first answer, the rules come from
+    `app/lib/auth/account.ts`. Firebase Auth no longer loads for a visitor
+    without a session (§9), and the bell's popover and the account's
+    dropdown (Radix) come for a signed-in person only. The landing on a
+    phone went from 509 to 290 KB of JavaScript, the public profile from
+    393 to 231, the legal pages from 413 to 218, the 404 from 367 to 205.
+  - **Images (his rule):** §8.12; every person's photo unoptimized, the
+    optimizer closed to anything but our static imports.
+  - **CSP:** zod's eval check left a violation on every page that parsed;
+    `jitless` ends it, and an e2e test keeps the public pages at zero.
+  - **Search:** the web's search endpoints count a minute per address (a
+    flood from one address no longer spends the API's 30 a minute for
+    everyone); the box shows it is busy while it places a typed place with
+    Google, and a second tap waits instead of searching twice.
+  - **Notifications:** a read of the inbox already on its way no longer
+    undoes «Marcar todas», a read or a delete (it is called off and made
+    again after the write); the menu's header fades instead of vanishing,
+    the focus goes to the next row or the title when what held it leaves,
+    and each «Eliminar» says which notice it deletes.
+  - **Session:** «Entrar» in a bar brings back the page's query too (a
+    search's place and filters, a booking's office and day), never what
+    was typed.
+  - **Panel and lists:** the panel's home cards keep one rhythm; the
+    statistics' tabs and the search's days fade on the side with more
+    beyond them (the app's ScrollFadingEdges); the CSV keeps a reason
+    named «=…» as text (formula injection), figures keep their sign.
+  - **Open for the owner:** the public profile's blue header has no
+    account and so no bell for a signed-in patient (as designed in M8);
+    the docked bar's empty search moves the focus without a visible word.
 
 ### Improvements noted (not scheduled)
 

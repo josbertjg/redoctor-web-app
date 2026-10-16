@@ -3,9 +3,13 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 
 import { placesRequestLimit, resolvePlace } from '@/app/lib/data/places';
-import { allowRequest, requestAddress } from '@/app/lib/security/rate-limit';
+import {
+  allowRequest,
+  rateLimited,
+  requestAddress,
+} from '@/app/lib/security/rate-limit';
 
-import { placesFailure, sessionSchema, tooMany } from '../suggestions/route';
+import { placesFailure, sessionSchema } from '../suggestions/route';
 
 /*
  * The point of a place the box took in hand (M16): Google's Place Details,
@@ -20,7 +24,7 @@ const noStore = { 'Cache-Control': 'no-store' };
 
 export async function GET(request: NextRequest) {
   if (!allowRequest(requestAddress(request.headers), placesRequestLimit)) {
-    return tooMany();
+    return rateLimited();
   }
   const params = request.nextUrl.searchParams;
   const id = placeIdSchema.safeParse(params.get('id') ?? undefined);

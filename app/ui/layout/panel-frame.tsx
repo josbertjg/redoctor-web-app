@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { getTranslations } from 'next-intl/server';
 
 import { RequireSession } from '@/app/ui/auth/require-session';
-import { SessionButton } from '@/app/ui/auth/session-button';
+import { SessionControls } from '@/app/ui/auth/session-controls';
 import { MessagesScope } from '@/app/ui/messages-scope';
 
 import { PageFrame } from './page-frame';
@@ -35,7 +35,7 @@ export async function PanelFrame({
   return (
     <>
       <SiteHeader homeLabel={t('homeLabel')}>
-        <SessionButton />
+        <SessionControls />
       </SiteHeader>
       <MessagesScope namespaces={['panel']}>
         <PanelNav />

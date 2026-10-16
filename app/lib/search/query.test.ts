@@ -77,6 +77,24 @@ describe('parseSearchQuery', () => {
     expect(parseSearchQuery({ q: 'x'.repeat(101) }, today).text).toBeNull();
     expect(parseSearchQuery({ q: '   ' }, today).text).toBeNull();
   });
+
+  it('reads an empty or unbounded coordinate as no point, never as 0', () => {
+    for (const lat of ['', '  ', 'Infinity', 'NaN', '1e3']) {
+      expect(
+        parseSearchQuery({ q: 'ana', lat, lng: '-66.88' }, today).location,
+      ).toEqual(emptySearchQuery.location);
+    }
+  });
+
+  it('takes a catalog id in either case, and nothing else', () => {
+    const upper = specialtyId.toUpperCase();
+    expect(parseSearchQuery({ specialty: upper }, today).specialtyId).toBe(
+      upper,
+    );
+    expect(
+      parseSearchQuery({ specialty: `${specialtyId}x` }, today).specialtyId,
+    ).toBeNull();
+  });
 });
 
 describe('toSearchParams', () => {

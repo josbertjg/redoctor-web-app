@@ -3,13 +3,18 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 
 import { isApiError } from '@/app/lib/api/errors';
-import { searchSpecialists } from '@/app/lib/data/search';
+import { searchRequestLimit, searchSpecialists } from '@/app/lib/data/search';
 import { todayInCaracas } from '@/app/lib/format/date-of-birth';
 import {
   hasCriteria,
   parseSearchQuery,
   toSearchRequest,
 } from '@/app/lib/search/query';
+import {
+  allowRequest,
+  rateLimited,
+  requestAddress,
+} from '@/app/lib/security/rate-limit';
 
 /*
  * The web's own search endpoint (M16): the browser asks it for a page of
@@ -28,6 +33,12 @@ const cacheControl =
   'public, max-age=0, s-maxage=60, stale-while-revalidate=300';
 
 export async function GET(request: NextRequest) {
+  // The API takes 30 searches a minute from the web's server, shared by
+  // every visitor: one address varying its text must not spend them all.
+  const address = requestAddress(request.headers);
+  if (!allowRequest(`search:${address}`, searchRequestLimit)) {
+    return rateLimited();
+  }
   const params = request.nextUrl.searchParams;
   const query = parseSearchQuery(params, todayInCaracas());
   if (!hasCriteria(query)) {

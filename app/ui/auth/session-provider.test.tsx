@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -46,6 +48,7 @@ function Probe() {
       <p>status: {session.status}</p>
       <p>account: {session.accountStatus}</p>
       <p>name: {session.account?.name ?? '-'}</p>
+      <p>firebase: {session.firebaseReady ? 'ready' : 'not yet'}</p>
       <button
         type="button"
         onClick={() => {
@@ -54,11 +57,15 @@ function Probe() {
       >
         Salir
       </button>
+      <button type="button" onClick={session.prepareSignIn}>
+        Preparar
+      </button>
     </div>
   );
 }
 
-function renderProvider(expected = false) {
+/** A browser whose hint says it has a session, unless told otherwise. */
+function renderProvider(expected = true) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -81,6 +88,38 @@ afterEach(() => {
 });
 
 describe('SessionProvider', () => {
+  it('without the hint, starts signed out and loads Firebase only when the page offers to sign in', async () => {
+    renderProvider(false);
+    expect(screen.getByText('status: signed-out')).toBeInTheDocument();
+    expect(screen.getByText('firebase: not yet')).toBeInTheDocument();
+    // Nothing asked for Firebase: a visitor with no session loads none of it.
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(firebase.listener).toBeUndefined();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Preparar' }));
+    await waitFor(() => {
+      expect(firebase.listener).toBeDefined();
+    });
+    firebase.listener?.(null);
+
+    expect(await screen.findByText('firebase: ready')).toBeInTheDocument();
+    expect(screen.getByText('status: signed-out')).toBeInTheDocument();
+  });
+
+  it('without the hint, finds a session another tab opened once the page is back in view', async () => {
+    renderProvider(false);
+    document.cookie = 'redoctor-session=1; path=/';
+
+    document.dispatchEvent(new Event('visibilitychange'));
+    await waitFor(() => {
+      expect(firebase.listener).toBeDefined();
+    });
+    firebase.listener?.(user);
+
+    expect(await screen.findByText('status: signed-in')).toBeInTheDocument();
+    expect(await screen.findByText('name: Ana Pérez')).toBeInTheDocument();
+  });
+
   it('resolves to signed out when Firebase has nobody', async () => {
     renderProvider();
     expect(screen.getByText('status: resolving')).toBeInTheDocument();
@@ -163,5 +202,53 @@ describe('SessionProvider', () => {
     unmount();
 
     expect(firebase.stop).toHaveBeenCalled();
+  });
+
+  it('runs what was registered to run before signing out, with the reason, and Firebase after', async () => {
+    const order: string[] = [];
+    const task = vi.fn((reason: string) => {
+      order.push(`task:${reason}`);
+      return Promise.resolve();
+    });
+    firebase.signOutUser.mockImplementation(() => {
+      order.push('firebase');
+      return Promise.resolve();
+    });
+
+    function TaskProbe() {
+      const session = useSession();
+      const { addSignOutTask } = session;
+      useEffect(() => addSignOutTask(task), [addSignOutTask]);
+      return (
+        <button
+          type="button"
+          onClick={() => {
+            void session.signOut('revoked');
+          }}
+        >
+          Salir
+        </button>
+      );
+    }
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    renderWithIntl(
+      <QueryClientProvider client={client}>
+        <SessionProvider expected expiredNotice="Tu sesión ha caducado">
+          <TaskProbe />
+        </SessionProvider>
+      </QueryClientProvider>,
+    );
+    await waitFor(() => {
+      expect(firebase.listener).toBeDefined();
+    });
+    firebase.listener?.(user);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Salir' }));
+
+    await waitFor(() => {
+      expect(order).toEqual(['task:revoked', 'firebase']);
+    });
   });
 });

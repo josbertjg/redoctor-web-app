@@ -10,7 +10,7 @@ import {
   mustFinishPatientSignup,
   needsSignUp,
   type Account,
-} from './identity';
+} from '../auth/account';
 import { isDocumentType, type DocumentType } from '../format/identity-document';
 import { nationalDigits, phoneProblem } from '../format/phone';
 

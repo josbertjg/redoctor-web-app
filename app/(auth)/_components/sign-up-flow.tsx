@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
+import { isApplePrivateRelayEmail } from '@/app/lib/auth/account';
 import { destinationAfterSignIn } from '@/app/lib/auth/destination';
 import {
   invitationOf,
@@ -17,7 +18,6 @@ import {
 } from '@/app/lib/auth/sign-up';
 import { invitationQueryOptions } from '@/app/lib/queries/invitations';
 import { routes } from '@/app/lib/routes';
-import { isApplePrivateRelayEmail } from '@/app/lib/schemas/identity';
 import { personalDataFrom, toInvitation } from '@/app/lib/schemas/invitations';
 
 import { RequireSession } from '@/app/ui/auth/require-session';

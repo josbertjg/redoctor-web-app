@@ -24,6 +24,7 @@ const navigation = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: navigation.push, replace: vi.fn() }),
   usePathname: () => '/search',
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 const catalog = [{ id: searchIds.specialty, name: 'Cardiología' }];

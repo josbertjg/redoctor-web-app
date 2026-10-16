@@ -2,9 +2,11 @@
 import { NextRequest } from 'next/server';
 
 import { http, HttpResponse } from 'msw';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
+import { searchRequestLimit } from '@/app/lib/data/search';
 import { searchResponseSchema } from '@/app/lib/schemas/search';
+import { allowRequest, resetRateLimits } from '@/app/lib/security/rate-limit';
 
 import { apiUrl } from '@/tests/msw/api-url';
 import { server } from '@/tests/msw/server';
@@ -12,8 +14,14 @@ import { server } from '@/tests/msw/server';
 import { GET } from './route';
 import { GET as suggestions } from './suggestions/route';
 
-const request = (query: string) =>
-  new NextRequest(`http://localhost:3000/api/search${query}`);
+const request = (query: string, address?: string) =>
+  new NextRequest(`http://localhost:3000/api/search${query}`, {
+    ...(address ? { headers: { 'x-forwarded-for': address } } : {}),
+  });
+
+afterEach(() => {
+  resetRateLimits();
+});
 
 describe('GET /api/search', () => {
   it('answers the API’s page for a search in the address', async () => {
@@ -25,6 +33,21 @@ describe('GET /api/search', () => {
     const page = searchResponseSchema.parse(await response.json());
     expect(page.meta).toMatchObject({ page: 2, radiusMeters: 60_000 });
     expect(page.data[0]?.displayName).toBe('Luis Rojas');
+  });
+
+  it('stops an address that spent its minute, its suggestions counted apart', async () => {
+    const address = '203.0.113.9';
+    for (let i = 0; i < searchRequestLimit.limit; i += 1) {
+      allowRequest(`search:${address}`, searchRequestLimit);
+    }
+
+    const response = await GET(request('?q=ana', address));
+    expect(response.status).toBe(429);
+    expect(response.headers.get('Retry-After')).toBe('60');
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
+
+    const named = await suggestions(request('/suggestions?name=ana', address));
+    expect(named.status).toBe(200);
   });
 
   it('refuses a search with nothing to look for', async () => {

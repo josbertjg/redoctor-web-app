@@ -161,6 +161,10 @@ export function SearchBar({
   // A place just taken in hand, while Google places it: a search that
   // comes before the answer waits for it (an Enter right after the pick).
   const pendingPlace = useRef<Promise<SearchLocation | null> | null>(null);
+  // From the tap until the page moves: the place may be asked of Google
+  // first. The button shows it, and a second tap or Enter waits (§8.3).
+  const [locating, setLocating] = useState(false);
+  const busy = pending || locating;
 
   const locate = () => {
     pendingPlace.current = null;
@@ -226,7 +230,14 @@ export function SearchBar({
   const search = async (
     criteria: { text: string } | { specialty: SpecialtyRef },
   ) => {
-    const where = await resolveTyped();
+    if (busy) return;
+    setLocating(true);
+    let where: SearchLocation;
+    try {
+      where = await resolveTyped();
+    } finally {
+      setLocating(false);
+    }
     const radius = initialQuery?.radius ?? emptySearchQuery.radius;
     const query: SearchQuery = {
       text: 'text' in criteria ? criteria.text : null,
@@ -350,16 +361,16 @@ export function SearchBar({
         <Divider className={cn(style.divider, style.secondDivider)} />
         <button
           type="submit"
-          aria-busy={pending || undefined}
+          aria-busy={busy || undefined}
           className={cn(
             'flex items-center justify-center text-label-lg text-primary transition-[background-color,scale] duration-fast ease-house outline-none',
             style.button,
           )}
         >
           <Icon
-            icon={pending ? ProgressActivity : Search}
+            icon={busy ? ProgressActivity : Search}
             size={24}
-            className={cn(pending && 'animate-spin motion-reduce:animate-none')}
+            className={cn(busy && 'animate-spin motion-reduce:animate-none')}
           />
           <span className={style.label}>{words.submit}</span>
         </button>

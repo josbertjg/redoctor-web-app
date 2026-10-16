@@ -12,6 +12,7 @@ import { z } from 'zod';
 
 import { track } from '@/app/lib/analytics/track';
 import { failureMessageKey, isApiError } from '@/app/lib/api/errors';
+import type { Account } from '@/app/lib/auth/account';
 import type { SessionUser } from '@/app/lib/firebase/client';
 import {
   birthDateProblem,
@@ -25,7 +26,6 @@ import {
   selfClaimRefusalOf,
 } from '@/app/lib/queries/invitations';
 import { routes } from '@/app/lib/routes';
-import type { Account } from '@/app/lib/schemas/identity';
 import {
   invitationSexes,
   type ClaimBody,

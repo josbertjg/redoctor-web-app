@@ -1,6 +1,6 @@
+import type { AccountRole } from '../auth/account';
 import type { AuthProvider } from '../auth/last-provider';
 import type { LinkOrigin } from '../deep-links';
-import type { AccountRole } from '../schemas/identity';
 
 /*
  * The web's analytics events (AGENTS.md §9): `web_<area>_<action>`, with the

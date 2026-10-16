@@ -15,6 +15,7 @@ import { PanelNav } from './panel-nav';
 const location = vi.hoisted(() => ({ pathname: '/panel' }));
 vi.mock('next/navigation', () => ({
   usePathname: () => location.pathname,
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 function renderNav(pathname: string, session: Session = specialistSession()) {

@@ -6,7 +6,7 @@ import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 import { isSafeRedirect } from '@/app/lib/routes';
 
 import { AppAccess } from '@/app/ui/app-bridge/app-access';
-import { SessionButton } from '@/app/ui/auth/session-button';
+import { SessionControls } from '@/app/ui/auth/session-controls';
 import { SiteHeader } from '@/app/ui/layout/site-header';
 import { MessagesScope } from '@/app/ui/messages-scope';
 
@@ -35,7 +35,7 @@ export default async function SignUpPage({
   return (
     <>
       <SiteHeader homeLabel={t('homeLabel')}>
-        <SessionButton />
+        <SessionControls />
       </SiteHeader>
       <main className="flex flex-1 flex-col items-center justify-center px-gutter pb-16">
         <MessagesScope namespaces={pageNamespaces.signUp}>

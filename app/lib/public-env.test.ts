@@ -19,6 +19,8 @@ describe('publicEnv', () => {
         authDomain: env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
         projectId: env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
         appId: env.NEXT_PUBLIC_FIREBASE_APP_ID,
+        messagingSenderId: env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+        vapidKey: env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
       },
       googleMaps: {
         apiKey: env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,

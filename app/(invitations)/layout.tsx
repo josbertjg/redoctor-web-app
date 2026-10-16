@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 import { getTranslations } from 'next-intl/server';
 
-import { SessionButton } from '@/app/ui/auth/session-button';
+import { SessionControls } from '@/app/ui/auth/session-controls';
 import { SiteHeader } from '@/app/ui/layout/site-header';
 
 /*
@@ -20,7 +20,7 @@ export default async function InvitationsLayout({
   return (
     <>
       <SiteHeader homeLabel={t('homeLabel')}>
-        <SessionButton />
+        <SessionControls />
       </SiteHeader>
       {children}
     </>

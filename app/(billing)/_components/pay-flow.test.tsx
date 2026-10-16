@@ -41,6 +41,7 @@ const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
 vi.mock('next/navigation', () => ({
   useRouter: () => router,
   usePathname: () => '/pay',
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 const user = {
@@ -62,6 +63,9 @@ const signedIn: Session = {
   accountRetrying: false,
   retryAccount: vi.fn(),
   signOut: vi.fn(() => Promise.resolve()),
+  addSignOutTask: () => () => undefined,
+  firebaseReady: true,
+  prepareSignIn: () => undefined,
 };
 
 /** As app/providers.tsx builds it: no retries, so a failure shows at once. */

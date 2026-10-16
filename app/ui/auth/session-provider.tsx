@@ -1,6 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -11,6 +17,7 @@ import { canUseSpecialistArea } from '@/app/lib/auth/account';
 import {
   forgetPanelHint,
   forgetSessionHint,
+  hasSessionHint,
   rememberPanelHint,
   rememberSessionHint,
 } from '@/app/lib/auth/session-hint';
@@ -26,6 +33,8 @@ import {
   type AccountStatus,
   type Session,
   type SessionStatus,
+  type SignOutReason,
+  type SignOutTask,
 } from '@/app/hooks/use-session';
 
 /*
@@ -44,6 +53,13 @@ import {
  * Firebase can also end a session on its own — signed out in another tab, a
  * revoked or disabled account — or hand over to another person: whenever the
  * person changes, what was theirs is forgotten here too.
+ *
+ * Firebase starts only where it has something to say: at once when the
+ * hint says this browser has a session, and otherwise when the page offers
+ * to sign in (`prepareSignIn`, called by the sign-in buttons) or the hint
+ * appears while the page was away (a sign-in in another tab). A visitor who
+ * never signed in loads none of it: some 40 KB, and on phones and Safari,
+ * where Firebase opens its sign-in frame at start, some 130 KB more.
  */
 
 type SessionState = { status: SessionStatus; user: SessionUser | null };
@@ -64,6 +80,17 @@ function rejectsSession(error: unknown): boolean {
   );
 }
 
+/** What the tasks that run before signing out get, all together. */
+const SIGN_OUT_TASKS_TIMEOUT_MS = 4000;
+
+const withTimeout = (work: Promise<void>, ms: number) =>
+  Promise.race([
+    work,
+    new Promise<void>((resolve) => {
+      setTimeout(resolve, ms);
+    }),
+  ]);
+
 type SessionProviderProps = {
   /** The request carried the session hint cookie (app/lib/auth/session-hint). */
   expected: boolean;
@@ -79,19 +106,57 @@ export function SessionProvider({
 }: SessionProviderProps) {
   const queryClient = useQueryClient();
   const [state, setState] = useState<SessionState>({
-    status: 'resolving',
+    status: expected ? 'resolving' : 'signed-out',
     user: null,
   });
+  /** Firebase is wanted on this page: the hint, or a page that offers to sign in. */
+  const [active, setActive] = useState(expected);
+  /** Firebase has answered (or could not load): a sign-in tap may open its window. */
+  const [firebaseReady, setFirebaseReady] = useState(false);
+  const prepareSignIn = useCallback(() => {
+    setActive(true);
+  }, []);
   /** Whose session the page last saw (Firebase's uid), to notice a change of person. */
   const lastPerson = useRef<string | null>(null);
+  /** What runs before the session ends (the push drops its device). */
+  const signOutTasks = useRef(new Set<SignOutTask>());
+
+  const addSignOutTask = useCallback((task: SignOutTask) => {
+    signOutTasks.current.add(task);
+    return () => {
+      signOutTasks.current.delete(task);
+    };
+  }, []);
+
+  // Without the hint, a sign-in elsewhere (another tab) leaves it in the
+  // cookie: coming back to this page starts Firebase, which finds it.
+  useEffect(() => {
+    if (active) return;
+    const wakeOnHint = () => {
+      if (
+        document.visibilityState === 'visible' &&
+        hasSessionHint(document.cookie)
+      ) {
+        setActive(true);
+      }
+    };
+    document.addEventListener('visibilitychange', wakeOnHint);
+    window.addEventListener('focus', wakeOnHint);
+    return () => {
+      document.removeEventListener('visibilitychange', wakeOnHint);
+      window.removeEventListener('focus', wakeOnHint);
+    };
+  }, [active]);
 
   useEffect(() => {
+    if (!active) return;
     let cancelled = false;
     let stop: (() => void) | undefined;
     import('@/app/lib/firebase/client')
       .then(({ watchSession }) => {
         if (cancelled) return;
         stop = watchSession((user) => {
+          setFirebaseReady(true);
           setTokenSource(user ? user.getToken : null);
           if (user) {
             rememberSessionHint();
@@ -111,14 +176,16 @@ export function SessionProvider({
       })
       .catch(() => {
         // Firebase could not load (a blocked script, an old browser): the
-        // page works signed out.
-        if (!cancelled) setState({ status: 'signed-out', user: null });
+        // page works signed out, and a sign-in tries to load it again.
+        if (cancelled) return;
+        setFirebaseReady(true);
+        setState({ status: 'signed-out', user: null });
       });
     return () => {
       cancelled = true;
       stop?.();
     };
-  }, [queryClient]);
+  }, [active, queryClient]);
 
   const { user } = state;
   const query = useQuery({
@@ -146,10 +213,18 @@ export function SessionProvider({
     else forgetPanelHint();
   }, [account]);
 
-  const signOut = async () => {
+  const signOut = async (reason: SignOutReason = 'user') => {
     // Counted for the person leaving, before analytics forgets them.
     track('web_signout', {});
     try {
+      // With the token still valid, and never for long: a slow server
+      // cannot hold the person in.
+      await withTimeout(
+        Promise.allSettled(
+          [...signOutTasks.current].map((task) => task(reason)),
+        ).then(() => undefined),
+        SIGN_OUT_TASKS_TIMEOUT_MS,
+      );
       const { signOutUser } = await import('@/app/lib/firebase/client');
       await signOutUser();
     } finally {
@@ -167,7 +242,7 @@ export function SessionProvider({
   useEffect(() => {
     if (!rejected) return;
     toast(expiredNotice, { id: 'session-expired' });
-    void signOut();
+    void signOut('rejected');
     // signOut is a plain function of this render; the rejection is the signal.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rejected, expiredNotice]);
@@ -185,6 +260,8 @@ export function SessionProvider({
     status: state.status,
     expected,
     user,
+    firebaseReady,
+    prepareSignIn,
     account,
     accountStatus,
     accountError: query.error,
@@ -195,6 +272,7 @@ export function SessionProvider({
       void query.refetch();
     },
     signOut,
+    addSignOutTask,
   };
 
   return (

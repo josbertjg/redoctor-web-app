@@ -1,9 +1,5 @@
 import { isSafeRedirect, routes } from '../routes';
-import {
-  canUseSpecialistArea,
-  needsSignUp,
-  type Account,
-} from '../schemas/identity';
+import { canUseSpecialistArea, needsSignUp, type Account } from './account';
 
 /*
  * Where someone goes once signed in (owner's decision, 2026-10-12): an

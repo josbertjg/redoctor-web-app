@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 
 import { useTranslations } from 'next-intl';
 
@@ -45,7 +45,9 @@ const onServer = () => null;
  * Until the browser and the session are known, a placeholder of the same
  * size holds their place: the order depends on the device (the buttons
  * would swap under the finger after hydrating), and a tap before Firebase
- * has loaded waits too long for Safari to allow the provider's window.
+ * has loaded waits too long for Safari to allow the provider's window. The
+ * buttons ask for Firebase as they appear: a page without them never
+ * loads it for a visitor who has no session.
  */
 export function SignInButtons({ onSignedIn, className }: SignInButtonsProps) {
   const t = useTranslations('auth');
@@ -53,7 +55,7 @@ export function SignInButtons({ onSignedIn, className }: SignInButtonsProps) {
   const device = useDevice();
   const inApp = useInAppBrowser();
   const last = useSyncExternalStore(subscribe, readLastProvider, onServer);
-  const { status } = useSession();
+  const { status, firebaseReady, prepareSignIn } = useSession();
   const [busy, setBusy] = useState<AuthProvider | null>(null);
   const [failure, setFailure] = useState<AuthErrorKey | null>(null);
   const [seenStatus, setSeenStatus] = useState(status);
@@ -65,11 +67,15 @@ export function SignInButtons({ onSignedIn, className }: SignInButtonsProps) {
     if (seenStatus === 'signed-in' && status === 'signed-out') setBusy(null);
   }
 
+  useEffect(() => {
+    prepareSignIn();
+  }, [prepareSignIn]);
+
   if (inApp !== null) {
     return <InAppBrowserHelp app={inApp} className={className} />;
   }
 
-  if (device === null || status === 'resolving') {
+  if (device === null || status === 'resolving' || !firebaseReady) {
     return (
       <div className={cn('flex flex-col gap-3', className)} aria-busy="true">
         <Skeleton className="h-control-lg w-full" />

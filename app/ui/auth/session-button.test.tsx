@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { meResponseSchema, toAccount } from '@/app/lib/schemas/identity';
 
@@ -14,6 +14,20 @@ import {
   buildMeResponse,
   buildSpecialistMeResponse,
 } from '../../../tests/factories/identity';
+
+const navigation = vi.hoisted(() => ({
+  pathname: null as string | null,
+  search: '',
+}));
+vi.mock('next/navigation', () => ({
+  usePathname: () => navigation.pathname,
+  useSearchParams: () => new URLSearchParams(navigation.search),
+}));
+
+afterEach(() => {
+  navigation.pathname = null;
+  navigation.search = '';
+});
 
 const user = {
   id: 'uid-1',
@@ -35,6 +49,9 @@ function session(overrides: Partial<Session>): Session {
     accountRetrying: false,
     retryAccount: vi.fn(),
     signOut: vi.fn(() => Promise.resolve()),
+    addSignOutTask: () => () => undefined,
+    firebaseReady: true,
+    prepareSignIn: () => undefined,
     ...overrides,
   };
 }
@@ -55,6 +72,18 @@ describe('SessionButton', () => {
     expect(screen.getByRole('link', { name: 'Entrar' })).toHaveAttribute(
       'href',
       '/sign-in?redirect=%2Fpanel',
+    );
+  });
+
+  it('brings the person back with the page’s query, never with what was typed in a search', () => {
+    navigation.pathname = '/search';
+    navigation.search =
+      'q=cardiologo&specialty=a0000000-0000-4000-8000-000000000001&origin=whatsapp-invitation';
+    renderWithSession(session({ status: 'signed-out' }), <SessionButton />);
+
+    expect(screen.getByRole('link', { name: 'Entrar' })).toHaveAttribute(
+      'href',
+      `/sign-in?redirect=${encodeURIComponent('/search?specialty=a0000000-0000-4000-8000-000000000001')}`,
     );
   });
 
@@ -150,13 +179,14 @@ describe('SessionButton', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('wears the avatar as the menu button in a bar', () => {
+  it('wears the avatar as the menu button in a bar', async () => {
     renderWithSession(
       session({ status: 'signed-in', user, accountStatus: 'loading' }),
       <SessionButton />,
     );
 
-    const trigger = screen.getByRole('button', { name: 'Tu cuenta' });
+    // The menu's code comes for a signed-in person only.
+    const trigger = await screen.findByRole('button', { name: 'Tu cuenta' });
     expect(trigger).toHaveAttribute('aria-haspopup', 'menu');
     expect(screen.getByRole('img', { name: 'Ana Pérez' })).toHaveTextContent(
       'AP',

@@ -7,7 +7,8 @@
  * - Styles allow inline: Radix, Sonner and next/image set style attributes
  *   and inject <style> at runtime, and CSS cannot run code. Scripts are where
  *   the strictness matters.
- * - Network: the API, Firebase Auth and, only when configured, PostHog and
+ * - Network: the API (over HTTPS and, for the notifications' live channel,
+ *   over WebSocket), Firebase Auth and, only when configured, PostHog and
  *   Sentry.
  */
 
@@ -26,6 +27,8 @@ export type ContentSecurityPolicyOptions = {
   sentryDsn?: string | undefined;
   /** The search's map and places (M16): only with a Google Maps key. */
   googleMaps?: boolean | undefined;
+  /** The notifications' web push: only with the VAPID key. */
+  webPush?: boolean | undefined;
 };
 
 /*
@@ -50,7 +53,23 @@ const firebaseAuthApis = [
   'https://securetoken.googleapis.com',
 ];
 
+/**
+ * What Cloud Messaging needs to register this browser for the push
+ * (app/lib/firebase/messaging.ts): an installation id, then the device token.
+ */
+const firebaseMessagingApis = [
+  'https://firebaseinstallations.googleapis.com',
+  'https://fcmregistrations.googleapis.com',
+];
+
 const originOf = (url: string) => new URL(url).origin;
+
+/**
+ * The same origin over WebSocket: the notifications' live channel is
+ * Socket.IO on the API's host (app/lib/notifications/socket.ts), and a
+ * `wss:` connection is only covered by a `wss:` source.
+ */
+const websocketOriginOf = (url: string) => originOf(url).replace(/^http/, 'ws');
 
 function posthogOrigins(host: string): string[] {
   const origin = originOf(host);
@@ -71,11 +90,13 @@ export function buildContentSecurityPolicy(
   const connect = [
     "'self'",
     originOf(options.apiUrl),
+    websocketOriginOf(options.apiUrl),
     firebaseAuthOrigin,
     ...firebaseAuthApis,
     ...(options.posthogHost ? posthogOrigins(options.posthogHost) : []),
     ...(options.sentryDsn ? [originOf(options.sentryDsn)] : []),
     ...(options.googleMaps ? googleMapsOrigins.connect : []),
+    ...(options.webPush ? firebaseMessagingApis : []),
     // Fast Refresh talks over a websocket in development.
     ...(isDevelopment ? ['ws:'] : []),
   ];

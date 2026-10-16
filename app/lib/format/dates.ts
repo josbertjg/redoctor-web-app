@@ -51,6 +51,12 @@ export function formatDate(instant: string): string | null {
   return date ? dayFormat.format(date) : null;
 }
 
+/** «12 oct 2026»: a day in a list, where the long form would not fit. */
+export function formatShortDate(instant: string): string | null {
+  const date = parse(instant);
+  return date ? shortDayYearFormat.format(date) : null;
+}
+
 /** «3:00 p. m.» */
 export function formatTime(instant: string): string | null {
   const date = parse(instant);

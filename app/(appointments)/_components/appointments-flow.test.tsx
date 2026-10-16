@@ -47,6 +47,9 @@ const signedIn: Session = {
   accountRetrying: false,
   retryAccount: vi.fn(),
   signOut: vi.fn(() => Promise.resolve()),
+  addSignOutTask: () => () => undefined,
+  firebaseReady: true,
+  prepareSignIn: () => undefined,
 };
 
 /** As app/providers.tsx builds it: no retries, so a failure shows at once. */

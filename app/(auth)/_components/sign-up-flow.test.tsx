@@ -24,6 +24,7 @@ const router = vi.hoisted(() => ({ replace: vi.fn(), push: vi.fn() }));
 vi.mock('next/navigation', () => ({
   useRouter: () => router,
   usePathname: () => '/sign-up',
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 const user = {
@@ -46,6 +47,9 @@ function session(me: Parameters<typeof meResponseSchema.parse>[0]): Session {
     accountRetrying: false,
     retryAccount: vi.fn(),
     signOut: vi.fn(() => Promise.resolve()),
+    addSignOutTask: () => () => undefined,
+    firebaseReady: true,
+    prepareSignIn: () => undefined,
   };
 }
 

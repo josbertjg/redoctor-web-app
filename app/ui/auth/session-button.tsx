@@ -1,20 +1,22 @@
 'use client';
 
+import { lazy, Suspense, useEffect } from 'react';
+
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 import { useTranslations } from 'next-intl';
-import { DropdownMenu } from 'radix-ui';
 
 import { canUseSpecialistArea } from '@/app/lib/auth/account';
-import { routes } from '@/app/lib/routes';
+import { returnPath, routes } from '@/app/lib/routes';
 import { cn } from '@/app/lib/utils';
 
-import { Avatar } from '@/app/ui/avatar';
 import { Button } from '@/app/ui/button';
 import { Skeleton } from '@/app/ui/skeleton';
 
 import { useSession } from '@/app/hooks/use-session';
+
+import { accountItemClass } from './account-item';
 
 type SessionButtonProps = {
   /** Where to come back after signing in; the page's own path by default. */
@@ -29,20 +31,24 @@ type SessionButtonProps = {
 
 /**
  * A page signs the person in and brings them back to itself (AGENTS.md §1:
- * a patient returns to the link they came from). Not the landing — there the
- * account decides where to go (a specialist to `/panel`) — nor the sign-in
- * and sign-up pages themselves.
+ * a patient returns to the link they came from), its query too — a search's
+ * place and filters, a booking's office and day — but for what must not
+ * travel (`returnPath`). Not the landing — there the account decides where
+ * to go (a specialist to `/panel`) — nor the sign-in and sign-up pages
+ * themselves.
  */
-function returnPath(pathname: string | null): string | undefined {
+function backHere(pathname: string | null, search: string): string | undefined {
   if (pathname === null || pathname === routes.home()) return undefined;
   if (pathname === routes.signIn() || pathname === routes.signUp()) {
     return undefined;
   }
-  return pathname;
+  return returnPath(pathname, search);
 }
 
-const itemClass =
-  'flex min-h-touch w-full cursor-pointer items-center rounded-lg px-3 text-body-md text-text-primary transition-colors duration-fast ease-house outline-none select-none hover:bg-surface-variant focus-visible:ring-3 focus-visible:ring-ring/50 data-[highlighted]:bg-surface-variant';
+// The menu's code (Radix's dropdown) comes for a signed-in person only,
+// fetched ahead when the hint says one is likely.
+const loadAccountMenu = () => import('./account-menu');
+const AccountMenu = lazy(loadAccountMenu);
 
 /*
  * The session's place in a header (AGENTS.md §9): «Entrar» for whoever is
@@ -58,7 +64,14 @@ export function SessionButton({
 }: SessionButtonProps) {
   const t = useTranslations('auth');
   const pathname = usePathname();
+  // Null outside the App Router (a component rendered on its own, a test),
+  // whatever its type says.
+  const searchParams = useSearchParams() as URLSearchParams | null;
   const { status, expected, user, account, signOut } = useSession();
+
+  useEffect(() => {
+    if (expected && layout === 'bar') void loadAccountMenu();
+  }, [expected, layout]);
 
   if (status === 'signed-out' || (status === 'resolving' && !expected)) {
     return (
@@ -69,7 +82,11 @@ export function SessionButton({
         block={layout === 'list'}
         className={className}
       >
-        <Link href={routes.signIn(redirect ?? returnPath(pathname))}>
+        <Link
+          href={routes.signIn(
+            redirect ?? backHere(pathname, searchParams?.toString() ?? ''),
+          )}
+        >
           {t('signIn')}
         </Link>
       </Button>
@@ -101,21 +118,21 @@ export function SessionButton({
       <div className={cn('flex flex-col gap-1', className)}>
         <p className="px-3 py-2 text-label-md text-text-secondary">{name}</p>
         {patientArea ? (
-          <Link href={routes.appointments()} className={itemClass}>
+          <Link href={routes.appointments()} className={accountItemClass}>
             {t('menu.appointments')}
           </Link>
         ) : null}
         {specialistArea ? (
-          <Link href={routes.specialistHome()} className={itemClass}>
+          <Link href={routes.specialistHome()} className={accountItemClass}>
             {t('menu.specialistHome')}
           </Link>
         ) : null}
         {ownProfile ? (
-          <Link href={routes.specialistProfile()} className={itemClass}>
+          <Link href={routes.specialistProfile()} className={accountItemClass}>
             {t('menu.profile')}
           </Link>
         ) : null}
-        <button type="button" onClick={onSignOut} className={itemClass}>
+        <button type="button" onClick={onSignOut} className={accountItemClass}>
           {t('signOut')}
         </button>
       </div>
@@ -123,55 +140,18 @@ export function SessionButton({
   }
 
   return (
-    <DropdownMenu.Root>
-      <DropdownMenu.Trigger asChild>
-        <button
-          type="button"
-          aria-label={t('menu.label')}
-          className={cn(
-            'inline-flex min-h-touch min-w-touch items-center justify-center rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
-            className,
-          )}
-        >
-          <Avatar name={name} src={user.photo} size="md" />
-        </button>
-      </DropdownMenu.Trigger>
-      <DropdownMenu.Portal>
-        <DropdownMenu.Content
-          align="end"
-          sideOffset={8}
-          className="z-30 min-w-56 origin-top-right rounded-2xl bg-pure-white p-2 shadow-lg data-[state=closed]:animate-fade-out data-[state=open]:animate-scale-in"
-        >
-          <DropdownMenu.Label className="px-3 py-2 text-label-md text-text-secondary">
-            {name}
-          </DropdownMenu.Label>
-          {patientArea ? (
-            <DropdownMenu.Item asChild>
-              <Link href={routes.appointments()} className={itemClass}>
-                {t('menu.appointments')}
-              </Link>
-            </DropdownMenu.Item>
-          ) : null}
-          {specialistArea ? (
-            <DropdownMenu.Item asChild>
-              <Link href={routes.specialistHome()} className={itemClass}>
-                {t('menu.specialistHome')}
-              </Link>
-            </DropdownMenu.Item>
-          ) : null}
-          {ownProfile ? (
-            <DropdownMenu.Item asChild>
-              <Link href={routes.specialistProfile()} className={itemClass}>
-                {t('menu.profile')}
-              </Link>
-            </DropdownMenu.Item>
-          ) : null}
-          <DropdownMenu.Separator className="my-1 h-px bg-divider" />
-          <DropdownMenu.Item onSelect={onSignOut} className={itemClass}>
-            {t('signOut')}
-          </DropdownMenu.Item>
-        </DropdownMenu.Content>
-      </DropdownMenu.Portal>
-    </DropdownMenu.Root>
+    <Suspense
+      fallback={<Skeleton className={cn('size-10 rounded-full', className)} />}
+    >
+      <AccountMenu
+        name={name}
+        photo={user.photo}
+        patientArea={patientArea}
+        specialistArea={specialistArea}
+        ownProfile={ownProfile}
+        onSignOut={onSignOut}
+        className={className}
+      />
+    </Suspense>
   );
 }

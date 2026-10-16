@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 
 import { useTranslations } from 'next-intl';
@@ -10,6 +12,10 @@ import {
 import { routes } from '@/app/lib/routes';
 import type { SearchResultDay } from '@/app/lib/schemas/search';
 import { cn } from '@/app/lib/utils';
+
+import { fadingEdgesClass } from '@/app/ui/fading-edges';
+
+import { useFadingEdges } from '@/app/hooks/use-fading-edges';
 
 /** The app's strip shows the twelve; the card shows a handful and the way to the rest. */
 const shownDays = 5;
@@ -35,6 +41,7 @@ export function AvailabilityStrip({
 }: AvailabilityStripProps) {
   const t = useTranslations();
   const shown = days.slice(0, shownDays);
+  const { ref: row, fade } = useFadingEdges<HTMLDivElement>(shown.length > 0);
 
   if (shown.length === 0) {
     return (
@@ -49,10 +56,15 @@ export function AvailabilityStrip({
 
   return (
     <div
+      ref={row}
       role="group"
       aria-label={t('search.web.nextDays')}
+      data-fade={fade}
       // Above the card's own link (result-card.tsx): the days keep their taps.
-      className="relative z-10 -mx-4 flex snap-x scrollbar-none gap-2 overflow-x-auto px-4"
+      className={cn(
+        'relative z-10 -mx-4 flex snap-x scrollbar-none gap-2 overflow-x-auto px-4',
+        fadingEdgesClass,
+      )}
     >
       {shown.map((day) => {
         // One ink per pill, whole: its words read on its tint at 11 px (AA).

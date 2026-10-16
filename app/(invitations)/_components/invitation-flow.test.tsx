@@ -48,6 +48,9 @@ function signedIn(me = buildMeResponse()): Session {
     accountRetrying: false,
     retryAccount: vi.fn(),
     signOut: vi.fn(() => Promise.resolve()),
+    addSignOutTask: () => () => undefined,
+    firebaseReady: true,
+    prepareSignIn: () => undefined,
   };
 }
 

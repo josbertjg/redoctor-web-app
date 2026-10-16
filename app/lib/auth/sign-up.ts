@@ -4,7 +4,7 @@ import {
   needsSignUp,
   specialistMustFinishInApp,
   type Account,
-} from '../schemas/identity';
+} from './account';
 
 /*
  * What `/sign-up` asks of the person (M3, owner's scope of 2026-10-12):

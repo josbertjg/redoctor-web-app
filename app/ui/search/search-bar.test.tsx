@@ -17,6 +17,7 @@ const navigation = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: navigation.push, replace: vi.fn() }),
   usePathname: () => '/',
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 const catalog: SearchCatalog = [
@@ -191,6 +192,39 @@ describe('SearchBar', () => {
         '/search?q=ana&lat=10.65&lng=-71.64&near=Maracaibo',
       );
     });
+  });
+
+  it('shows it is busy while it places what was typed, and searches once', async () => {
+    const user = userEvent.setup();
+    renderBox();
+    await user.type(whereBox(), 'maracay');
+    await user.type(whatBox(), 'ana');
+
+    // Google answers late: the second tap comes while it is placing.
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.get('*/api/places/details', async () => {
+        await gate;
+        return HttpResponse.json({
+          coordinates: { lat: 10.65, lng: -71.64 },
+        });
+      }),
+    );
+    const submit = screen.getByRole('button', { name: 'Buscar' });
+    await user.click(submit);
+    await waitFor(() => {
+      expect(submit).toHaveAttribute('aria-busy', 'true');
+    });
+    await user.click(submit);
+    release();
+
+    await waitFor(() => {
+      expect(navigation.push).toHaveBeenCalled();
+    });
+    expect(navigation.push).toHaveBeenCalledOnce();
   });
 
   it('says when the places cannot be read, and keeps typing', async () => {

@@ -34,14 +34,21 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   typedRoutes: true,
+  /*
+   * Vercel bills every image its optimizer transforms (the owner's rule,
+   * 2026-10-15): only our own static images, the ones shown most (the
+   * landing's), go through it. A person's photo or an uploaded image is
+   * always `unoptimized` (Avatar, Gallery) and SVGs never are. So the
+   * optimizer takes static imports alone — hashed, cached for good — and
+   * nothing remote: a request for any other image, ours or anyone's,
+   * answers 400 instead of spending the quota. Few widths, one format and
+   * one quality (Next's defaults: WebP, 75) keep the variants to a handful;
+   * no image of ours is wider than 1920 px.
+   */
   images: {
-    // Specialist photos: Google account pictures and Firebase Storage.
-    remotePatterns: [
-      { protocol: 'https', hostname: '*.googleusercontent.com' },
-      { protocol: 'https', hostname: 'firebasestorage.googleapis.com' },
-      { protocol: 'https', hostname: 'storage.googleapis.com' },
-      { protocol: 'https', hostname: '*.firebasestorage.app' },
-    ],
+    localPatterns: [{ pathname: '/_next/static/media/**', search: '' }],
+    remotePatterns: [],
+    deviceSizes: [640, 828, 1080, 1200, 1920],
   },
   turbopack: {
     rules: {

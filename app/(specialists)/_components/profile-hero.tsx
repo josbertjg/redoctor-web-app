@@ -3,7 +3,6 @@ import Stethoscope from '@material-symbols/svg-400/rounded/stethoscope.svg?svgr'
 import VerifiedFill from '@material-symbols/svg-400/rounded/verified-fill.svg?svgr';
 import { useFormatter, useTranslations } from 'next-intl';
 
-import { sizedPhotoUrl } from '@/app/lib/photos';
 import type { SpecialistProfile } from '@/app/lib/schemas/specialists';
 
 import { Avatar } from '@/app/ui/avatar';
@@ -42,7 +41,7 @@ export function ProfileHero({ profile }: { profile: SpecialistProfile }) {
         decorative
         name={profile.name}
         // 4x the 110 px avatar: sharp on 3x screens.
-        src={profile.photoUrl && sizedPhotoUrl(profile.photoUrl, 440)}
+        src={profile.photoUrl}
         size="2xl"
         preload
         className="ring-4 ring-white-50/25"

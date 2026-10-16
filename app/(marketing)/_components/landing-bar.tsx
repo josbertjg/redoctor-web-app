@@ -11,6 +11,7 @@ import { cn } from '@/app/lib/utils';
 import { SessionButton } from '@/app/ui/auth/session-button';
 import { Logo } from '@/app/ui/logo';
 import { houseTransition, m, useReducedMotion } from '@/app/ui/motion';
+import { NotificationsBell } from '@/app/ui/notifications/notifications-bell';
 
 import { AfterSplash } from './after-splash';
 import { beats } from './choreography';
@@ -93,7 +94,9 @@ export function LandingBar({
           </ul>
         </nav>
         <div className="ml-auto flex shrink-0 items-center gap-2">
-          {/* «Entrar», or the account, from tablets up; the phone menu holds it. */}
+          {/* The bell at every width, for whoever is signed in; «Entrar», or
+              the account, from tablets up: the phone menu holds it. */}
+          <NotificationsBell />
           <SessionButton className="hidden sm:inline-flex" />
           <LandingNav
             links={links}

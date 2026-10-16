@@ -38,6 +38,7 @@ vi.mock('next/navigation', () => ({
   redirect: navigation.redirect,
   useRouter: () => ({ replace: navigation.replace, push: vi.fn() }),
   usePathname: () => '/',
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 // The search box reads its suggestions through TanStack Query.

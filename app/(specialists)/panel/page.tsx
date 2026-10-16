@@ -51,11 +51,14 @@ export default async function SpecialistHomePage() {
               />
             </header>
             <SpecialistOnly>
-              <div className="grid items-start gap-4 lg:grid-cols-2">
-                <PanelPlanCard />
-                <PanelTodayCard />
+              {/* The cards keep one rhythm: 16 px apart, as in the grid. */}
+              <div className="flex flex-col gap-4">
+                <div className="grid items-start gap-4 lg:grid-cols-2">
+                  <PanelPlanCard />
+                  <PanelTodayCard />
+                </div>
+                <PanelStatisticsCard />
               </div>
-              <PanelStatisticsCard className="mt-4" />
               <PanelProfileLinks />
             </SpecialistOnly>
           </div>

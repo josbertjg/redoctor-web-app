@@ -4,6 +4,7 @@ import { apiFetch } from '../api/client';
 import { searchResponseSchema, type SearchResponse } from '../schemas/search';
 
 import type { SearchRequest, SuggestionsRequest } from '../search/query';
+import type { RateLimit } from '../security/rate-limit';
 
 /*
  * Server-side readers of the public search (`GET /search/specialists`,
@@ -15,6 +16,13 @@ import type { SearchRequest, SuggestionsRequest } from '../search/query';
  */
 
 export const searchTag = 'search';
+
+/**
+ * How many searches (and, apart, suggestions) one address may ask of the
+ * web's own endpoints a minute: plenty for a person scrolling and
+ * refining, too few to spend the API's minute for everyone.
+ */
+export const searchRequestLimit: RateLimit = { limit: 60, windowMs: 60_000 };
 
 /** A search: a minute, as a schedule can change under it. */
 const SEARCH_REVALIDATE_SECONDS = 60;

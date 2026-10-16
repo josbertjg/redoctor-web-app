@@ -4,12 +4,11 @@ import { identityKeys } from './identity-keys';
 import { apiFetch } from '../api/client';
 import { isApiError } from '../api/errors';
 import { createWriteOnceGuard } from '../api/write-once';
+import { mustFinishPatientSignup, type Account } from '../auth/account';
 import {
   documentAvailabilitySchema,
   meResponseSchema,
-  mustFinishPatientSignup,
   toAccount,
-  type Account,
   type DocumentQuery,
   type PatientCompletionBody,
   type PatientRegistrationBody,

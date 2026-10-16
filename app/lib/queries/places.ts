@@ -1,12 +1,8 @@
 import { queryOptions } from '@tanstack/react-query';
 
-import {
-  placeDetailsResponseSchema,
-  placeSuggestionsResponseSchema,
-  type PlaceSuggestion,
-} from '../schemas/places';
 import { suggestionsMinLength } from '../search/suggestions';
 
+import type { PlaceSuggestion } from '../schemas/places';
 import type { Coordinates } from '../search/location';
 
 /*
@@ -16,7 +12,12 @@ import type { Coordinates } from '../search/location';
  * pick: Google bills them as one; the pick ends it, the next typing
  * starts another. One session at a time on a page: the page has one box
  * in hand at a time.
+ *
+ * The contract (zod) loads with the first answer to read, alongside the
+ * request: the box sits on the landing, whose first load carries no zod.
  */
+
+const placesContract = () => import('../schemas/places');
 
 let session: string | null = null;
 
@@ -68,12 +69,17 @@ export function placeSuggestionsQueryOptions(input: string) {
   return queryOptions({
     queryKey: placesKeys.suggestions(trimmed),
     queryFn: async ({ signal }): Promise<PlaceSuggestion[]> => {
-      const response = await readPlaces(
-        '/api/places/suggestions',
-        { input: trimmed, session: placesSession() },
-        signal,
-      );
-      return placeSuggestionsResponseSchema.parse(await response.json()).places;
+      const [response, contract] = await Promise.all([
+        readPlaces(
+          '/api/places/suggestions',
+          { input: trimmed, session: placesSession() },
+          signal,
+        ),
+        placesContract(),
+      ]);
+      return contract.placeSuggestionsResponseSchema.parse(
+        await response.json(),
+      ).places;
     },
     enabled: trimmed.length >= suggestionsMinLength,
     staleTime: 300_000,
@@ -93,11 +99,11 @@ export async function resolvePlace(
   const current = placesSession();
   endPlacesSession();
   try {
-    const response = await readPlaces('/api/places/details', {
-      id: place.id,
-      session: current,
-    });
-    const { coordinates } = placeDetailsResponseSchema.parse(
+    const [response, contract] = await Promise.all([
+      readPlaces('/api/places/details', { id: place.id, session: current }),
+      placesContract(),
+    ]);
+    const { coordinates } = contract.placeDetailsResponseSchema.parse(
       await response.json(),
     );
     return { coordinates, label: place.mainText };
@@ -113,11 +119,14 @@ export async function resolvePlace(
 export async function findPlace(input: string): Promise<ResolvedPlace | null> {
   const trimmed = input.trim();
   if (trimmed.length < suggestionsMinLength) return null;
-  const response = await readPlaces('/api/places/suggestions', {
-    input: trimmed,
-    session: placesSession(),
-  });
-  const [first] = placeSuggestionsResponseSchema.parse(
+  const [response, contract] = await Promise.all([
+    readPlaces('/api/places/suggestions', {
+      input: trimmed,
+      session: placesSession(),
+    }),
+    placesContract(),
+  ]);
+  const [first] = contract.placeSuggestionsResponseSchema.parse(
     await response.json(),
   ).places;
   return first ? resolvePlace(first) : null;

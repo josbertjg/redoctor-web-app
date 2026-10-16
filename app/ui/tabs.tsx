@@ -6,6 +6,10 @@ import { Tabs as RadixTabs } from 'radix-ui';
 
 import { cn } from '@/app/lib/utils';
 
+import { useFadingEdges } from '@/app/hooks/use-fading-edges';
+
+import { fadingEdgesClass } from './fading-edges';
+
 export type TabItem<Value extends string> = {
   value: Value;
   /** Already translated. */
@@ -37,7 +41,9 @@ const tabClass =
  * The app's tabs: an underlined row («Educación | Certificaciones» on a
  * profile, «Próximas | Pasadas» on the patient's appointments). Radix gives
  * the keyboard and ARIA behaviour of a tab list. Promoted from the profile's
- * TrainingTabs the day the appointments needed one (M6).
+ * TrainingTabs the day the appointments needed one (M6). A row that
+ * scrolls fades out on the side with more tabs beyond it (the app's
+ * ScrollFadingEdges), so a tab cut by the edge reads as «there is more».
  */
 export function Tabs<Value extends string>({
   label,
@@ -49,6 +55,7 @@ export function Tabs<Value extends string>({
   className,
 }: TabsProps<Value>) {
   const initial = defaultValue ?? items[0]?.value;
+  const { ref: row, fade } = useFadingEdges<HTMLDivElement>(scrollable);
 
   return (
     <RadixTabs.Root
@@ -64,10 +71,15 @@ export function Tabs<Value extends string>({
       className={cn('flex flex-col gap-4', className)}
     >
       <RadixTabs.List
+        ref={row}
         aria-label={label}
+        data-fade={scrollable ? fade : undefined}
         className={cn(
           'flex border-b border-divider',
-          scrollable && '[scrollbar-width:none] overflow-x-auto',
+          scrollable && [
+            '[scrollbar-width:none] overflow-x-auto',
+            fadingEdgesClass,
+          ],
         )}
       >
         {items.map((item) => (

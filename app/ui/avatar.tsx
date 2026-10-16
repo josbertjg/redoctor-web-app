@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { cva, type VariantProps } from 'class-variance-authority';
 
 import { initialsOf } from '@/app/lib/format/names';
+import { sizedPhotoUrl } from '@/app/lib/photos';
 import { cn } from '@/app/lib/utils';
 
 // The initials in grey-700: 6:1 on the surface (grey-600 measured 4.1:1,
@@ -43,6 +44,12 @@ type AvatarProps = VariantProps<typeof avatarVariants> & {
 /*
  * A photo that fades in over the initials; the initials stay when there is
  * no photo or it fails to load (CustomNetworkImage / Avatar in the app).
+ *
+ * A person's photo never goes through Vercel's image optimizer: each one
+ * would spend the plan's transformations, which stay for the landing's own
+ * images (next.config.ts). The browser loads it as it is, lazily, and a
+ * Google account photo is asked of Google at the size drawn (`sizedPhotoUrl`,
+ * three times the side for the sharpest screens).
  */
 export function Avatar({
   name,
@@ -72,11 +79,11 @@ export function Avatar({
       <span aria-hidden="true">{initialsOf(name)}</span>
       {showImage ? (
         <Image
-          src={src}
+          src={sizedPhotoUrl(src, side * 3)}
           alt=""
           width={side}
           height={side}
-          sizes={`${side}px`}
+          unoptimized
           preload={preload}
           onLoad={() => {
             setStatus('loaded');

@@ -7,6 +7,7 @@ import type { SearchQuery } from '@/app/lib/search/query';
 
 import { SessionButton } from '@/app/ui/auth/session-button';
 import { Logo } from '@/app/ui/logo';
+import { NotificationsBell } from '@/app/ui/notifications/notifications-bell';
 import type { SearchCatalog } from '@/app/ui/search/search-bar-types';
 import { useSearchBarWords } from '@/app/ui/search/search-bar-words';
 
@@ -51,6 +52,8 @@ export function SearchHeader({
           label={t('search.findSpecialists')}
           words={words}
         />
+        {/* The bell and the account from tablets up: on a phone the box takes the bar. */}
+        <NotificationsBell className="hidden sm:inline-flex" />
         <SessionButton className="hidden sm:inline-flex" />
       </div>
       <SearchProgress />

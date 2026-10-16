@@ -7,10 +7,10 @@ import NoAccounts from '@material-symbols/svg-400/rounded/no_accounts.svg?svgr';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
+import { canUseSpecialistArea, type Account } from '@/app/lib/auth/account';
 import type { SessionUser } from '@/app/lib/firebase/client';
 import { appointmentQueryOptions } from '@/app/lib/queries/appointments';
 import { toAppointmentSummary } from '@/app/lib/schemas/appointments';
-import { canUseSpecialistArea, type Account } from '@/app/lib/schemas/identity';
 
 import { AccountErrorState } from '@/app/ui/auth/account-error-state';
 import { SignInButtons } from '@/app/ui/auth/sign-in-buttons';

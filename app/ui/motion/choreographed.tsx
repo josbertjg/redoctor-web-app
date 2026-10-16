@@ -12,6 +12,24 @@ type HiddenStates = Record<string, DOMKeyframesDefinition>;
 /** A piece of a choreographed box, by the `data-piece` name its markup gives it. */
 export const piece = (name: string) => `[data-piece="${name}"]`;
 
+/**
+ * The sequence's steps whose pieces the box holds. A box may render without
+ * some of them — the plans' section when no plan can be shown, a plan with
+ * no «Recomendado» tag — and Motion refuses a selector that finds nothing
+ * (it throws outside production).
+ */
+function stepsInBox(
+  sequence: AnimationSequence,
+  box: HTMLElement,
+): AnimationSequence {
+  return sequence.filter(
+    (step) =>
+      !Array.isArray(step) ||
+      typeof step[0] !== 'string' ||
+      box.querySelector(step[0]) !== null,
+  );
+}
+
 type ChoreographedProps = {
   /**
    * Each piece's state before it enters, by selector inside the box — or a
@@ -33,7 +51,8 @@ type ChoreographedProps = {
  * is already on screen, reduced-motion users and environments without an
  * observer never see a hidden state (AGENTS.md §8.2). The pieces are plain
  * elements found by selector inside the box, so the box's content can come
- * from the server. Give `hidden` and `sequence` a stable identity (memo).
+ * from the server; a piece the box does not hold is left out, never an
+ * error. Give `hidden` and `sequence` a stable identity (memo).
  */
 export function Choreographed({
   hidden,
@@ -71,13 +90,14 @@ export function Choreographed({
 
     const states = typeof hidden === 'function' ? hidden(box) : hidden;
     for (const [selector, state] of Object.entries(states)) {
+      if (box.querySelector(selector) === null) continue;
       animate(selector, state, { duration: 0 });
     }
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (!entry?.isIntersecting) return;
         observer.disconnect();
-        void animate(sequence);
+        void animate(stepsInBox(sequence, box));
       },
       { threshold: share },
     );

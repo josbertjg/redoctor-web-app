@@ -24,14 +24,20 @@ export const publicEnv = {
   supportPhones: process.env.NEXT_PUBLIC_SUPPORT_PHONES ?? '',
   /**
    * The Firebase web app of the project shared with the mobile app, for Auth
-   * only (AGENTS.md §2). Public by design (§11): the key is restricted by
-   * referrer in Google Cloud. Analytics stays off, so no measurement id.
+   * and Cloud Messaging (AGENTS.md §2). Public by design (§11): the key is
+   * restricted by referrer in Google Cloud. Analytics stays off, so no
+   * measurement id. The sender id is what Cloud Messaging registers this
+   * browser with; the VAPID key signs the push, and without it the push
+   * stays off.
    */
   firebase: {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? '',
     authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? '',
     projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? '',
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID ?? '',
+    messagingSenderId:
+      process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? '',
+    vapidKey: optional(process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY),
   },
   /**
    * Google Maps for the search's map (M16). A browser key of the web's

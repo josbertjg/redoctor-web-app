@@ -26,7 +26,7 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
-    setupFiles: ['./tests/env.ts', './tests/setup.ts'],
+    setupFiles: ['./tests/env.ts', './tests/dom.ts', './tests/setup.ts'],
     include: ['app/**/*.test.{ts,tsx}', 'tests/**/*.test.{ts,tsx}'],
     exclude: ['tests/e2e/**', 'node_modules/**', '.next/**'],
     restoreMocks: true,

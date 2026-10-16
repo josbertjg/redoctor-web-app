@@ -22,9 +22,25 @@ export type CsvReport = {
 const separator = ';';
 const byteOrderMark = '\uFEFF';
 
-/** A field, quoted when it holds the separator, a quote or a line break. */
+/** What a spreadsheet would take for the start of a formula. */
+const formulaStart = /^[=+\-@\t\r]/;
+/** A figure as the web writes it («-12», «45,50», «-3 %»): it keeps its sign. */
+const figure = /^[-+]?\d[\d.,\s]*%?$/;
+
+/**
+ * A field, quoted when it holds the separator, a quote or a line break. A
+ * text that a spreadsheet would run as a formula (a reason named «=…»)
+ * starts with an apostrophe, so Excel shows it as the text it is.
+ */
 function field(value: string | number): string {
-  const text = String(value);
+  let text = String(value);
+  if (
+    typeof value === 'string' &&
+    formulaStart.test(text) &&
+    !figure.test(text)
+  ) {
+    text = `'${text}`;
+  }
   return /[;"\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 

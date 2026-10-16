@@ -81,6 +81,9 @@ export const env = createEnv({
     // The search's map (M16), a browser key. Empty: the map stays off.
     NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: optional,
     NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID: optional,
+    // The web push's public VAPID key (Firebase Cloud Messaging, "Web Push
+    // certificates"). Public by design. Empty: the push stays off.
+    NEXT_PUBLIC_FIREBASE_VAPID_KEY: optional,
   },
   runtimeEnv: {
     SENTRY_ORG: process.env.SENTRY_ORG,
@@ -116,6 +119,7 @@ export const env = createEnv({
     NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:
       process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
     NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID: process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID,
+    NEXT_PUBLIC_FIREBASE_VAPID_KEY: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
   },
   emptyStringAsUndefined: true,
   createFinalSchema: (shape, isServer) =>

@@ -22,6 +22,7 @@ const address = vi.hoisted(() => ({ pathname: '/panel' }));
 vi.mock('next/navigation', () => ({
   useRouter: () => router,
   usePathname: () => address.pathname,
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 afterEach(() => {
@@ -49,6 +50,9 @@ function session(overrides: Partial<Session>): Session {
     accountRetrying: false,
     retryAccount: vi.fn(),
     signOut: vi.fn(() => Promise.resolve()),
+    addSignOutTask: () => () => undefined,
+    firebaseReady: true,
+    prepareSignIn: () => undefined,
     ...overrides,
   };
 }

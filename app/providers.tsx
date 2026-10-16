@@ -13,13 +13,16 @@ import { isApiError } from '@/app/lib/api/errors';
 import { createNetworkNoticeThrottle } from '@/app/lib/api/network-notice';
 
 import { SessionProvider } from '@/app/ui/auth/session-provider';
+import { NotificationsProvider } from '@/app/ui/notifications/notifications-provider';
 import { toast, Toaster } from '@/app/ui/toast';
 
 /*
  * Client-side plumbing shared by every page. next-intl's provider wraps this
  * in app/layout.tsx; the session (Firebase, `/me`) lives inside the Query
- * client, which it clears on sign-out; PostHog and Sentry join through
- * instrumentation-client.ts, off while their variables are empty.
+ * client, which it clears on sign-out; the person's notifications — the
+ * inbox, its count and the live channel — live inside the session; PostHog
+ * and Sentry join through instrumentation-client.ts, off while their
+ * variables are empty.
  */
 
 /** One toast id: a notice still on screen is replaced, never stacked. */
@@ -61,6 +64,13 @@ type ProvidersProps = {
   sessionExpected: boolean;
   /** Said when the API rejects the session (i18n: `auth.sessionExpired`). */
   sessionExpiredNotice: string;
+  /**
+   * The notifications' notices, translated on the server (i18n:
+   * `notifications.actionFailed`, `notifications.sessionClosedRemotely`).
+   */
+  notificationNotices: { actionFailed: string; sessionClosedRemotely: string };
+  /** The web's version (app/lib/app-version.ts), for the device the push registers. */
+  appVersion: string;
 };
 
 export function Providers({
@@ -69,6 +79,8 @@ export function Providers({
   networkNotice,
   sessionExpected,
   sessionExpiredNotice,
+  notificationNotices,
+  appVersion,
 }: ProvidersProps) {
   // The locale never changes in a session: the notice is read once.
   const [queryClient] = useState(() => createQueryClient(networkNotice));
@@ -79,7 +91,12 @@ export function Providers({
         expected={sessionExpected}
         expiredNotice={sessionExpiredNotice}
       >
-        {children}
+        <NotificationsProvider
+          notices={notificationNotices}
+          appVersion={appVersion}
+        >
+          {children}
+        </NotificationsProvider>
       </SessionProvider>
       <Toaster
         regionLabel={toasterLabels.region}

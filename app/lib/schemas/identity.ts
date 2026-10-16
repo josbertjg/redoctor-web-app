@@ -211,22 +211,9 @@ export const documentQuerySchema = z.strictObject({
 
 export type DocumentQuery = z.infer<typeof documentQuerySchema>;
 
-// The account's model and rules live apart from the contract, without zod.
-export {
-  applePrivateRelayDomain,
-  canUseSpecialistArea,
-  hasNoFacet,
-  isApplePrivateRelayEmail,
-  mustFinishPatientSignup,
-  needsSignUp,
-  specialistMustFinishInApp,
-  toFacetStatus,
-  toRegistrationStatus,
-} from '../auth/account';
-export type {
-  Account,
-  AccountFacet,
-  AccountRole,
-  FacetStatus,
-  RegistrationStatus,
-} from '../auth/account';
+/*
+ * The account's model and rules (`needsSignUp`, `canUseSpecialistArea`…)
+ * live in app/lib/auth/account.ts, without zod, and are imported from
+ * there: a page that only needs a rule must not load this contract, which
+ * carries zod (some 30 KB) into the browser.
+ */

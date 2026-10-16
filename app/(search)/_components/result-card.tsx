@@ -11,7 +11,6 @@ import { useFormatter, useTranslations } from 'next-intl';
 
 import { formatDistance } from '@/app/lib/format/distance';
 import { formatPrice } from '@/app/lib/format/money';
-import { sizedPhotoUrl } from '@/app/lib/photos';
 import { routes } from '@/app/lib/routes';
 import type { SearchResult } from '@/app/lib/schemas/search';
 import { cn } from '@/app/lib/utils';
@@ -117,7 +116,7 @@ export function ResultCard({
       <div className="flex gap-4">
         <Avatar
           name={result.name}
-          src={result.photoUrl && sizedPhotoUrl(result.photoUrl, 256)}
+          src={result.photoUrl}
           size="lg"
           decorative
           className="shrink-0"

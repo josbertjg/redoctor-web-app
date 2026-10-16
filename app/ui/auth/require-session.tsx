@@ -7,12 +7,12 @@ import { usePathname, useRouter } from 'next/navigation';
 
 import { useTranslations } from 'next-intl';
 
-import { returnPath, routes } from '@/app/lib/routes';
 import {
   canUseSpecialistArea,
   needsSignUp,
   type Account,
-} from '@/app/lib/schemas/identity';
+} from '@/app/lib/auth/account';
+import { returnPath, routes } from '@/app/lib/routes';
 
 import { Button } from '@/app/ui/button';
 import { EmptyState } from '@/app/ui/empty-state';

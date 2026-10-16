@@ -35,4 +35,28 @@ describe('buildCsv', () => {
       '',
     ]);
   });
+
+  it('keeps a text a spreadsheet would run as a formula a text, and a figure its sign', () => {
+    const csv = buildCsv({
+      title: 'Reporte',
+      details: [],
+      tables: [
+        {
+          title: 'Motivos',
+          headers: ['Motivo', 'Cambio'],
+          rows: [
+            ['=HYPERLINK("https://example.com")', '-12 %'],
+            ['+1 control', -3],
+            ['@consulta', '45,50'],
+          ],
+        },
+      ],
+    });
+
+    expect(csv.slice(1).split('\r\n').slice(4, 7)).toEqual([
+      `"'=HYPERLINK(""https://example.com"")";-12 %`,
+      "'+1 control;-3",
+      "'@consulta;45,50",
+    ]);
+  });
 });

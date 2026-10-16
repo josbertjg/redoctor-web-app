@@ -180,7 +180,40 @@
     }
   },
   "notifications": {
-    "title": "Notificaciones"
+    "title": "Notificaciones",
+    "bell": "Notificaciones",
+    "bellUnread": "Notificaciones, {count, plural, one {# sin leer} other {# sin leer}}",
+    "unread": "{count, plural, one {# sin leer} other {# sin leer}}",
+    "unreadMark": "Sin leer.",
+    "markAllRead": "Marcar todas",
+    "emptyTitle": "No tienes notificaciones",
+    "emptyDescription": "Aquí verás los avisos de tus citas y de tu cuenta.",
+    "loadErrorTitle": "No pudimos cargar tus notificaciones",
+    "loadErrorDescription": "Revisa tu conexión e inténtalo de nuevo.",
+    "actionFailed": "No pudimos actualizar tus notificaciones. Inténtalo de nuevo.",
+    "delete": "Eliminar esta notificación",
+    "clear": {
+      "action": "Vaciar notificaciones",
+      "description": "Se borrarán todas tus notificaciones y no podrás recuperarlas.",
+      "confirm": "Vaciar",
+      "cancel": "Cancelar"
+    },
+    "time": {
+      "now": "Ahora",
+      "minutes": "Hace {count} min",
+      "hours": "Hace {count} h",
+      "yesterday": "Ayer",
+      "days": "Hace {count} días"
+    },
+    "sessionClosedRemotely": "Tu sesión se cerró desde otro dispositivo",
+    "permission": {
+      "title": "Activa las notificaciones",
+      "description": "Recibe los avisos de tus citas y de tu cuenta aunque Redoctor no esté abierto en este navegador. Puedes desactivarlas cuando quieras.",
+      "reminder": "Acabas de recibir un aviso. Con las notificaciones apagadas no te llegará ninguno mientras Redoctor no esté abierto en este navegador.",
+      "blocked": "Las notificaciones están bloqueadas en este navegador. Permítelas en los ajustes del sitio para recibirlas.",
+      "accept": "Activar",
+      "later": "Ahora no"
+    }
   },
   "apiErrors": {
     "network": "No pudimos conectarnos. Revisa tu conexión a internet e inténtalo de nuevo.",

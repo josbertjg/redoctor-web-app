@@ -6,6 +6,7 @@ import { connection } from 'next/server';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations } from 'next-intl/server';
 
+import { appVersion } from '@/app/lib/app-version';
 import { sessionHintCookie } from '@/app/lib/auth/session-hint';
 import { pickClientMessages } from '@/app/lib/i18n/client-messages';
 import { isIndexable, siteUrl } from '@/app/lib/site';
@@ -79,6 +80,11 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
             networkNotice={t('apiErrors.network')}
             sessionExpected={sessionExpected}
             sessionExpiredNotice={t('auth.sessionExpired')}
+            notificationNotices={{
+              actionFailed: t('notifications.actionFailed'),
+              sessionClosedRemotely: t('notifications.sessionClosedRemotely'),
+            }}
+            appVersion={appVersion}
           >
             {children}
           </Providers>

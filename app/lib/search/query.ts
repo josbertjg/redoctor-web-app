@@ -1,5 +1,3 @@
-import { z } from 'zod';
-
 import {
   defaultSearchRadius,
   isSearchRadius,
@@ -20,6 +18,10 @@ import { isCalendarDay } from '../reports/period';
  * or reloaded one shows the same results. Nothing a person is (names,
  * documents) ever travels in it; a device's position goes rounded to about
  * a kilometre (AGENTS.md §11).
+ *
+ * No zod here, on purpose: the landing's search box imports this module,
+ * and zod would add some 30 KB to every visitor's first load for checks a
+ * few lines do as well.
  */
 
 export const searchParamNames = {
@@ -61,20 +63,12 @@ export type SearchParamsInput =
 /** The most a person can type: enough for any name, too little for a story. */
 export const searchTextMaxLength = 100;
 
-const textSchema = z
-  .string()
-  .transform((value) => value.replace(/\s+/g, ' ').trim())
-  .pipe(z.string().min(1).max(searchTextMaxLength));
+/** The longest place name the address keeps. */
+const labelMaxLength = 120;
 
-const coordinatesSchema = z.object({
-  lat: z.coerce.number().min(-90).max(90),
-  lng: z.coerce.number().min(-180).max(180),
-});
-
-const labelSchema = z
-  .string()
-  .transform((value) => value.replace(/\s+/g, ' ').trim())
-  .pipe(z.string().min(1).max(120));
+/** A catalog id: an RFC 9562 UUID, as zod's `z.uuid()` reads it. */
+const uuidPattern =
+  /^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$/;
 
 function first(input: SearchParamsInput, name: string): string | undefined {
   if (input instanceof URLSearchParams) return input.get(name) ?? undefined;
@@ -82,17 +76,32 @@ function first(input: SearchParamsInput, name: string): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
+/** A text with its spaces collapsed, or null when nothing or too much is left. */
+function cleanText(
+  value: string | undefined,
+  maxLength: number,
+): string | null {
+  if (value === undefined) return null;
+  const text = value.replace(/\s+/g, ' ').trim();
+  return text.length > 0 && text.length <= maxLength ? text : null;
+}
+
+/** A coordinate within ±limit; an empty value is no coordinate (not 0). */
+function coordinate(value: string | undefined, limit: number): number | null {
+  if (value === undefined || value.trim() === '') return null;
+  const number = Number(value);
+  return Number.isFinite(number) && Math.abs(number) <= limit ? number : null;
+}
+
 function parseLocation(input: SearchParamsInput): SearchLocation {
-  const point = coordinatesSchema.safeParse({
-    lat: first(input, searchParamNames.lat),
-    lng: first(input, searchParamNames.lng),
-  });
-  if (!point.success) return wholeCountry;
-  const coordinates = roundCoordinates(point.data);
+  const lat = coordinate(first(input, searchParamNames.lat), 90);
+  const lng = coordinate(first(input, searchParamNames.lng), 180);
+  if (lat === null || lng === null) return wholeCountry;
+  const coordinates = roundCoordinates({ lat, lng });
   const by = first(input, searchParamNames.by);
   if (by === 'device') return { kind: 'device', coordinates };
-  const near = labelSchema.safeParse(first(input, searchParamNames.near));
-  if (near.success) return { kind: 'place', coordinates, label: near.data };
+  const label = cleanText(first(input, searchParamNames.near), labelMaxLength);
+  if (label !== null) return { kind: 'place', coordinates, label };
   return { kind: 'area', coordinates };
 }
 
@@ -105,10 +114,11 @@ export function parseSearchQuery(
   input: SearchParamsInput,
   today: string,
 ): SearchQuery {
-  const text = textSchema.safeParse(first(input, searchParamNames.text));
-  const specialty = z
-    .uuid()
-    .safeParse(first(input, searchParamNames.specialty));
+  const text = cleanText(
+    first(input, searchParamNames.text),
+    searchTextMaxLength,
+  );
+  const specialty = first(input, searchParamNames.specialty);
   const location = parseLocation(input);
 
   const radiusValue = first(input, searchParamNames.radius);
@@ -129,8 +139,9 @@ export function parseSearchQuery(
       : null;
 
   return {
-    text: text.success ? text.data : null,
-    specialtyId: specialty.success ? specialty.data : null,
+    text,
+    specialtyId:
+      specialty !== undefined && uuidPattern.test(specialty) ? specialty : null,
     location,
     radius,
     from,

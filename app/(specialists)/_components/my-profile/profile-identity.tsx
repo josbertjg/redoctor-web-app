@@ -8,7 +8,6 @@ import Stethoscope from '@material-symbols/svg-400/rounded/stethoscope.svg?svgr'
 import VerifiedFill from '@material-symbols/svg-400/rounded/verified-fill.svg?svgr';
 import { useTranslations } from 'next-intl';
 
-import { sizedPhotoUrl } from '@/app/lib/photos';
 import {
   hasPendingSpecialties,
   specialtiesReview,
@@ -50,7 +49,7 @@ export function ProfileIdentity({
         decorative
         name={name}
         // 4x the 96 px avatar: sharp on 3x screens.
-        src={photo && sizedPhotoUrl(photo, 384)}
+        src={photo}
         size="xl"
       />
       <div className="flex min-w-0 flex-col items-center gap-2.5 sm:items-start">

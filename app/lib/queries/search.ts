@@ -1,6 +1,5 @@
 import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query';
 
-import { searchResponseSchema, toSearchPage } from '../schemas/search';
 import {
   hasCriteria,
   searchQueryKey,
@@ -20,8 +19,11 @@ import type { SearchLocation } from '../search/location';
  * and the map's «Buscar en esta zona» read through the web's own
  * `/api/search` (app/api/search), never the API itself — its CORS is
  * closed, and the web's server caches each search for every visitor. The
- * answer is the API's own, parsed with the same contract.
+ * answer is the API's own, parsed with the same contract, which (with zod)
+ * loads with the first answer to read: the landing's search box ships none.
  */
+
+const searchContract = () => import('../schemas/search');
 
 export const searchKeys = {
   all: ['search'] as const,
@@ -48,12 +50,12 @@ async function readSearch(
 ) {
   const url = new URL(path, window.location.origin);
   url.search = params.toString();
-  const response = await fetch(url, {
-    signal,
-    headers: { Accept: 'application/json' },
-  });
+  const [response, contract] = await Promise.all([
+    fetch(url, { signal, headers: { Accept: 'application/json' } }),
+    searchContract(),
+  ]);
   if (!response.ok) throw new SearchUnavailableError(response.status);
-  return searchResponseSchema.parse(await response.json());
+  return contract.searchResponseSchema.parse(await response.json());
 }
 
 /** The pages of one search, ten at a time, as the list's end comes into view. */
@@ -63,7 +65,11 @@ export function searchResultsQueryOptions(query: SearchQuery) {
     queryFn: async ({ pageParam, signal }) => {
       const params = toSearchParams(query);
       params.set('page', String(pageParam));
-      return toSearchPage(await readSearch('/api/search', params, signal));
+      const [answer, { toSearchPage }] = await Promise.all([
+        readSearch('/api/search', params, signal),
+        searchContract(),
+      ]);
+      return toSearchPage(answer);
     },
     initialPageParam: 1,
     getNextPageParam: (last) =>

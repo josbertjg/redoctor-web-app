@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { auditAccessibility, e2eSpecialistId } from './helpers';
+import { auditAccessibility, e2eSpecialistId, waitForContent } from './helpers';
 
 /*
  * The shell every page stands on: security headers, the per-request CSP
@@ -45,6 +45,38 @@ test('each response gets a fresh nonce', async ({ request }) => {
   };
 
   expect(await nonceOf()).not.toBe(await nonceOf());
+});
+
+test('the public pages run under the CSP without a single violation', async ({
+  page,
+}) => {
+  // A blocked attempt is reported even when the code catches it: zod's
+  // eval check did so on every page until it was told not to try
+  // (instrumentation-client.ts).
+  await page.addInitScript(() => {
+    const seen: string[] = [];
+    Object.defineProperty(window, '__cspViolations', { value: seen });
+    document.addEventListener('securitypolicyviolation', (event) => {
+      seen.push(`${event.violatedDirective} ${event.blockedURI}`);
+    });
+  });
+
+  for (const path of [
+    '/',
+    '/sign-in',
+    '/search?q=medicina',
+    `/s/${e2eSpecialistId}`,
+    '/terms',
+  ]) {
+    await page.goto(path);
+    await waitForContent(page);
+    await page.waitForLoadState('networkidle');
+    const violations = await page.evaluate(
+      () =>
+        (window as unknown as { __cspViolations: string[] }).__cspViolations,
+    );
+    expect(violations, path).toEqual([]);
+  }
 });
 
 test('a phone in dark mode still gets the light theme', async ({ page }) => {

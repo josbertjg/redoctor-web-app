@@ -2,19 +2,21 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  meResponseSchema,
+  patientCompletionBodySchema,
+  patientRegistrationBodySchema,
+  toAccount,
+} from './identity';
+import {
   canUseSpecialistArea,
   hasNoFacet,
   isApplePrivateRelayEmail,
-  meResponseSchema,
   mustFinishPatientSignup,
   needsSignUp,
-  patientCompletionBodySchema,
-  patientRegistrationBodySchema,
   specialistMustFinishInApp,
-  toAccount,
   toFacetStatus,
   toRegistrationStatus,
-} from './identity';
+} from '../auth/account';
 
 const base = {
   id: 'user-1',

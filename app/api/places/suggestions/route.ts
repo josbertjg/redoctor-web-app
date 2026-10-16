@@ -9,7 +9,11 @@ import {
 } from '@/app/lib/data/places';
 import { searchTextMaxLength } from '@/app/lib/search/query';
 import { suggestionsMinLength } from '@/app/lib/search/suggestions';
-import { allowRequest, requestAddress } from '@/app/lib/security/rate-limit';
+import {
+  allowRequest,
+  rateLimited,
+  requestAddress,
+} from '@/app/lib/security/rate-limit';
 
 /*
  * The places the search box offers (M16): Google's Place Autocomplete,
@@ -38,16 +42,9 @@ export function placesFailure(error: unknown) {
   );
 }
 
-export function tooMany() {
-  return NextResponse.json(
-    { code: 'ERR_RATE_LIMITED' },
-    { status: 429, headers: { ...noStore, 'Retry-After': '60' } },
-  );
-}
-
 export async function GET(request: NextRequest) {
   if (!allowRequest(requestAddress(request.headers), placesRequestLimit)) {
-    return tooMany();
+    return rateLimited();
   }
   const params = request.nextUrl.searchParams;
   const input = inputSchema.safeParse(params.get('input') ?? undefined);

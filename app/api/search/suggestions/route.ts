@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { z } from 'zod';
 
-import { suggestSpecialists } from '@/app/lib/data/search';
+import { searchRequestLimit, suggestSpecialists } from '@/app/lib/data/search';
 import { todayInCaracas } from '@/app/lib/format/date-of-birth';
 import {
   parseSearchQuery,
@@ -10,6 +10,11 @@ import {
   toSuggestionsRequest,
 } from '@/app/lib/search/query';
 import { suggestionsMinLength } from '@/app/lib/search/suggestions';
+import {
+  allowRequest,
+  rateLimited,
+  requestAddress,
+} from '@/app/lib/security/rate-limit';
 
 import { upstreamFailure } from '../route';
 
@@ -29,6 +34,10 @@ const cacheControl =
   'public, max-age=0, s-maxage=300, stale-while-revalidate=600';
 
 export async function GET(request: NextRequest) {
+  const address = requestAddress(request.headers);
+  if (!allowRequest(`suggestions:${address}`, searchRequestLimit)) {
+    return rateLimited();
+  }
   const params = request.nextUrl.searchParams;
   const name = nameSchema.safeParse(params.get('name') ?? undefined);
   if (!name.success) {

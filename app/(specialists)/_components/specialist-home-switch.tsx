@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 
-import { specialistMustFinishInApp } from '@/app/lib/schemas/identity';
+import { specialistMustFinishInApp } from '@/app/lib/auth/account';
 
 import { useSession } from '@/app/hooks/use-session';
 

@@ -67,6 +67,8 @@ describe('buildContentSecurityPolicy', () => {
     expect(directive(policy, 'connect-src')).toEqual(
       expect.arrayContaining([
         'https://api-dev.redoctorapp.com',
+        // The notifications' live channel: Socket.IO over WebSocket.
+        'wss://api-dev.redoctorapp.com',
         'https://redoctor-3acf8.firebaseapp.com',
         'https://identitytoolkit.googleapis.com',
         'https://securetoken.googleapis.com',
@@ -118,6 +120,19 @@ describe('buildContentSecurityPolicy', () => {
     // Its scripts come through 'strict-dynamic', never by host.
     expect(directive(on, 'script-src')).not.toContain(
       'https://*.googleapis.com',
+    );
+  });
+
+  it('lets Cloud Messaging in only when the push has its key', () => {
+    const off = buildContentSecurityPolicy(base);
+    expect(off).not.toContain('fcmregistrations');
+
+    const on = buildContentSecurityPolicy({ ...base, webPush: true });
+    expect(directive(on, 'connect-src')).toEqual(
+      expect.arrayContaining([
+        'https://firebaseinstallations.googleapis.com',
+        'https://fcmregistrations.googleapis.com',
+      ]),
     );
   });
 

@@ -82,6 +82,13 @@ ones it shows, listed one by one; the payment lives at `/pay`, which no app
 opens. The old names redirect for good (AGENTS.md §6, the one list of
 public links).
 
+Every page with a session carries the notifications' bell (M17): the unread
+count, the inbox as a menu that unfolds from it, the API's live channel
+(Socket.IO) that brings each notice as it is born — a banner, the count, and
+what the notice leaves stale read again — and, with the VAPID key, the web
+push through a service worker of ours for when no tab is in view, offered
+from the menu. No sound on the web.
+
 Next: legal and account (M10) and the rest of AGENTS.md §1, one module at a
 time.
 
