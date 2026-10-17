@@ -5,6 +5,8 @@ import { getTranslations } from 'next-intl/server';
 import { routes } from '@/app/lib/routes';
 import { brandOpenGraph } from '@/app/lib/site';
 
+import { PageTransition } from '@/app/ui/motion/view-transitions';
+
 import { LegalDocument } from '../_components/legal-document';
 import { privacySections } from '../_data/legal-sections';
 
@@ -28,5 +30,9 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /** The privacy policy (M10): the catalog's `legal.privacy`. */
 export default function PrivacyPage() {
-  return <LegalDocument document="privacy" sections={privacySections} />;
+  return (
+    <PageTransition>
+      <LegalDocument document="privacy" sections={privacySections} />
+    </PageTransition>
+  );
 }

@@ -6,6 +6,7 @@ import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 
 import { AppAccess } from '@/app/ui/app-bridge/app-access';
 import { MessagesScope } from '@/app/ui/messages-scope';
+import { PageTransition } from '@/app/ui/motion/view-transitions';
 
 import { AdminNote } from '../_components/admin-note';
 import { PanelGreeting } from '../_components/panel-greeting';
@@ -36,35 +37,37 @@ export default async function SpecialistHomePage() {
   const t = await getTranslations();
 
   return (
-    <MessagesScope namespaces={pageNamespaces.panelHome}>
-      <SpecialistHomeSwitch
-        ready={
-          <div className="flex flex-col gap-6">
-            <header className="flex flex-col gap-2">
-              <PanelGreeting />
-              <p className="text-body-md text-text-secondary">
-                {t('panel.home.description')}
-              </p>
-              <AdminNote
-                message={t('specialistHome.adminNote')}
-                className="mt-2"
-              />
-            </header>
-            <SpecialistOnly>
-              {/* The cards keep one rhythm: 16 px apart, as in the grid. */}
-              <div className="flex flex-col gap-4">
-                <div className="grid items-start gap-4 lg:grid-cols-2">
-                  <PanelPlanCard />
-                  <PanelTodayCard />
+    <PageTransition>
+      <MessagesScope namespaces={pageNamespaces.panelHome}>
+        <SpecialistHomeSwitch
+          ready={
+            <div className="flex flex-col gap-6">
+              <header className="flex flex-col gap-2">
+                <PanelGreeting />
+                <p className="text-body-md text-text-secondary">
+                  {t('panel.home.description')}
+                </p>
+                <AdminNote
+                  message={t('specialistHome.adminNote')}
+                  className="mt-2"
+                />
+              </header>
+              <SpecialistOnly>
+                {/* The cards keep one rhythm: 16 px apart, as in the grid. */}
+                <div className="flex flex-col gap-4">
+                  <div className="grid items-start gap-4 lg:grid-cols-2">
+                    <PanelPlanCard />
+                    <PanelTodayCard />
+                  </div>
+                  <PanelStatisticsCard />
                 </div>
-                <PanelStatisticsCard />
-              </div>
-              <PanelProfileLinks />
-            </SpecialistOnly>
-          </div>
-        }
-        pending={<AppAccess variant="finish" className="mx-auto mt-6" />}
-      />
-    </MessagesScope>
+                <PanelProfileLinks />
+              </SpecialistOnly>
+            </div>
+          }
+          pending={<AppAccess variant="finish" className="mx-auto mt-6" />}
+        />
+      </MessagesScope>
+    </PageTransition>
   );
 }

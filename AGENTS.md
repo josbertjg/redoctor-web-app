@@ -179,7 +179,7 @@ notifications (M17, the inbox included) came on the owner's word
 | Errors | **Sentry** (`@sentry/nextjs` 11) | `dataCollection` all off (v11's successor of `sendDefaultPii: false`); same privacy rules as the app; off while the DSN is empty |
 | Icons | **Material Symbols Rounded** as inline SVG per icon (`@material-symbols/svg-400`) | Same family as the app; only the icons in use ship — never the variable icon font (several MB) |
 | Font | **Urbanist** via `next/font/google` | Weights 300–700, `display: swap`, exposed as `--font-urbanist` |
-| Animation | **Motion** (`framer-motion` 14, the library behind the `motion` wrapper) | One door, `app/ui/motion` (§8.11): `MotionProvider` loads the features after the first render, `m`, the hooks, timings read from `tokens.css`, `StaggeredText`. Nothing imports `framer-motion` elsewhere (lint). `framer-motion` and not `motion`: the wrapper's `export *` barrel defeats Turbopack's tree shaking (40 KB in the initial JS instead of 10, measured). CSS keeps hover, accordion and menu; the marquee rolls by CSS until JavaScript takes it over to be dragged |
+| Animation | **Motion** (`framer-motion` 14, the library behind the `motion` wrapper) | One door, `app/ui/motion` (§8.11): `MotionProvider` loads the features after the first render, `m`, the hooks, timings read from `tokens.css`, `StaggeredText`. Nothing imports `framer-motion` elsewhere (lint). `framer-motion` and not `motion`: the wrapper's `export *` barrel defeats Turbopack's tree shaking (40 KB in the initial JS instead of 10, measured). CSS keeps hover, accordion and menu; the marquee rolls by CSS until JavaScript takes it over to be dragged. Changing page: React's `<ViewTransition>` (19.3, in Next 16.4) and CSS, no library (§8.13) |
 | Splash | **Rive** (`@rive-app/react-canvas-lite`) | The app's own `splash_logo.riv` (`public/animations`), landing only, a session's first visit (§13). Its runtime compiles WebAssembly: `'wasm-unsafe-eval'` in the CSP |
 | Unit/component tests | **Vitest 5** + Testing Library + **MSW 3** | jsdom; `jest-axe` for accessibility; MSW handlers built from the OpenAPI shapes |
 | E2E | **Playwright** + `@axe-core/playwright` | Mobile viewports first (iPhone 13 / Pixel 7 profiles) |
@@ -271,13 +271,13 @@ app/                                  # The application: routes, UI and logic
     button.tsx · back-link.tsx · text-field.tsx · identity-document-field.tsx · select-field.tsx · text-area.tsx · checkbox.tsx · choice-cards.tsx · stars-input.tsx · tabs.tsx · filter-chips.tsx · field-error.tsx · sheet.tsx · skeleton.tsx · toast.tsx · empty-state.tsx · status-card.tsx · link-card.tsx · avatar.tsx · count-badge.tsx · fading-edges.ts (the faded sides of a row that scrolls) …
     messages-scope.tsx                #   a page's own client messages (§9)
     layout/                           #   site-header, page-frame (a page's column and its main, in the guarded layouts), panel-frame and panel-nav (the specialist's panel around each section), bottom-actions
-    auth/                             #   session-provider, session-button (+ account-menu, loaded for a signed-in person only, and account-item), session-controls (the bell and the account, for a bar), require-session, sign-in-buttons, sign-in-legal-note, account-error-state, in-app-browser-help, provider-logos
+    auth/                             #   session-provider, session-button (+ account-menu, loaded for a signed-in person only, and account-item), session-controls (the bell and the account, for a bar), require-session, sign-in-buttons, use-sign-in-arrival (an in-place sign-in under the blue wipe), sign-in-legal-note, account-error-state, in-app-browser-help, provider-logos
     notifications/                    #   the notifications (M17): notifications-provider (the inbox, the live channel, the effects, the push), notifications-bell (nothing for a stranger; bell-popover, the count and the menu from it, loads for a signed-in person), notifications-menu (+ -menu-skeleton), notification-banner (a live notice over the page, on the Toaster), notification-tone (icon and colour by family), use-push (the web push in this browser)
     app-bridge/                       #   open-in-app-button, store-badges, app-access (a specialist's way to the app), store-qr
     appointments/ · specialists/ · billing/ · reviews/   # domain components used by two or more modules (appointments/: headline, details, appointment-card; billing/: notice-panel, plan-emblem)
     search/                           #   the search box (M16), on the landing and on /search: search-bar (+ what-field, where-field, suggestion-popup, highlight, use-combobox, use-location-suggestions — Google's places —, use-remembered), its words from the server (search-bar-words)
     analytics/ · og/ · seo/           #   link-origin-tracker; the Open Graph brand card (next/og); the JSON-LD data block a page carries for search engines
-    motion/                           #   the one door to Motion: provider, m, tokens, staggered-text (§8.11)
+    motion/                           #   the one door to Motion: provider, m, tokens, staggered-text (§8.11); the page transitions (§8.13): view-transitions (server-safe), page-transitions.css, directions, skeleton-hold, screen-wipe, navigation-progress (+ navigation-events)
     icons.tsx                         #   the Icon primitive (not icon.tsx: that name is a Next.js metadata file)
     fonts.ts · tokens.css · globals.css
   lib/                                # ALL non-React logic
@@ -972,7 +972,7 @@ primitive in `app/ui` that takes size and color from the tokens.
     screen enters at the share of it the screen can show (`Choreographed`).
     Animated text goes through `StaggeredText`: assistive technology reads
     the sentence, the letters are hidden from it; a price that counts up is
-    read whole, never mid-count.
+    read whole, never mid-count. Changing page is not Motion's: rule 13.
 
 Composites to mirror from the app (names first, then build when a module
 needs them): `Button` (primary / secondary / white / error; small / large;
@@ -995,6 +995,89 @@ search's strip of days).
     nothing remote (`remotePatterns: []`) and few widths, so a request for
     any other image answers 400 instead of spending the quota. Before
     adding an image, ask: static and shown very often? Only then optimized.
+
+13. **Page transitions (owner, 2026-10-16): one animation per kind of
+    change, and the colour wipe for the big moments.** The browser's View
+    Transitions through React's `<ViewTransition>` (React 19.3, in Next
+    16.4: Next navigates inside transitions and hands a `<Link
+    transitionTypes>` to React); no JavaScript of ours runs them, Motion
+    takes no part, and a browser without them changes the page at once.
+    All of it lives in `app/ui/motion`: `view-transitions.tsx` (server-safe:
+    pages import it), `page-transitions.css` (every rule and every name),
+    `directions.ts`, `skeleton-hold.ts`, `screen-wipe.tsx`,
+    `navigation-progress.tsx` (+ `navigation-events.ts`); client code
+    imports these files directly, never through the Motion barrel. What
+    each change gets:
+    - **Any page:** `PageTransition` around what the page shows under its
+      bars, never the bar: the old page leaves in 150 ms, the new one rises
+      14 px into place (400 ms, the entrance curve); the same page with new
+      content (a search answered, data arrived) crossfades. The landing
+      only fades (`entrance="fade"`): its pieces bring their own entrance.
+      **Every new page wraps its content in it** (a `not-found` too).
+    - **A layout that wraps its pages in an element** wraps that element
+      in `FrameTransition` (as `PageFrame` does with its `<main>`). React
+      runs a <ViewTransition>'s enter or exit only when no element of what
+      is inserted or removed contains it: a page inside a layout's `<main>`
+      cannot leave when the whole layout goes (the panel's and the
+      subscription's frames, «Mis citas»), so the frame leaves and arrives
+      in its place; between pages of the same frame it stays still. Name
+      nothing inside an element that may leave with it expecting an exit.
+    - **A step forward or back:** `StepTransition step={…}` around the
+      step's title and its content (not its count or progress bar), and
+      every change of step through `moveStep('forward' | 'back', change)` —
+      a state, or a `pushState` (Next syncs it inside a transition): the
+      shared axis, 40 px sideways (the booking, the payment, the sign-up).
+      A link that walks a sequence says its way with `transitionTypes=
+      {[navForward]}` or `{[navBack]}` (the agenda's days). The browser's
+      own back and forward rise, as any page.
+    - **One thing on two pages:** `SharedTransition` with the same
+      `sharedNames.…` on both, and it travels (a search result's photo and
+      name to its profile, and back). A name exists once per page.
+    - **The bars hold still:** each kind has its name (`vt-site-header`,
+      `vt-site-header-inverse`, `vt-landing-header`, `vt-search-header`,
+      the panel's three layers — its surface, the mark that slides to the
+      section on screen, the names above it); a bar only one page has
+      fades. A new bar takes its own `vt-*` name in page-transitions.css.
+    - **Data read in the browser:** `useSkeletonHold(pending)` beside the
+      pending check (`if (query.isPending || holding)`), and the skeleton
+      crossfades into the content (React waits for a running transition
+      first). Whatever watches an element that mounts with the content
+      follows the element's mount (a state ref, as `useInfiniteScroll`),
+      never only the data. A view that scrolls to its top or focuses its
+      heading does it in a layout effect (`useFocusHeading`), before the
+      transition captures it.
+    - **While the server answers:** a thin line along the top after
+      150 ms (`NavigationProgress`, mounted once in app/providers.tsx).
+    - **The big moments:** `wipeScreen({ tone, whileCovered })`, the app's
+      ScreenWipe — a circle of colour from the control pressed covers the
+      screen, the change happens under it (`nextNavigation(ms)` to open
+      once a new page lands), and it opens through the same point. Blue
+      (`primary`) to sign in or out; green (`success`) for what went well:
+      an appointment booked, the sign-up finished, an invitation claimed, a
+      payment reported or a plan activated. Once or twice a visit, never
+      for an ordinary change, and always after the API said yes: an error
+      is said where it happened, never under the colour. **Nothing the
+      moment changes reaches the screen before the colour does:** the
+      circle starts as a dot on the control pressed, and whatever moves
+      there in its first frames reads as a flicker. The control stays busy
+      until the page moves on (`loading={mutation.isPending ||
+      mutation.isSuccess}` when the success always leads to the wipe); data
+      the moment changes is read again inside `whileCovered` (the account
+      after a sign-up, the billing after a payment); a session that arrives
+      in place is held (`useSignInArrival` returns the session the page
+      renders from); the sign-in buttons keep the order and the chip they
+      appeared with; the account menu stays open for the colour to cover
+      it. The colour is whole while it covers: its mask exists only while
+      it opens, the hole's soft edge inside the hole.
+    - **Less motion:** the tokens drop every distance and movement and keep
+      the fades; no wipe. Safari's own swipe back runs alone (the page's
+      transition steps aside, `data-native-transition`), and `<html>`'s
+      smooth scroll is off while Next moves to a new page's top
+      (`data-scroll-behavior`).
+    Timings are tokens (`--duration-page-*`, `--duration-axis`,
+    `--duration-morph`, `--duration-wipe-*`, `--ease-exit`, `--ease-enter`,
+    `--ease-wipe-*`); the live demo of the ten options the owner chose from
+    is in the memory notes.
 
 ---
 
@@ -2493,6 +2576,82 @@ written out in full, or Next.js does not inline it).
   - **Open for the owner:** the public profile's blue header has no
     account and so no bell for a signed-in patient (as designed in M8);
     the docked bar's empty search moves the focus without a visible word.
+
+### Decided (2026-10-16)
+
+- **Page transitions (the owner's «que el cambiar de página no sea
+  simplemente parpadeo», 2026-10-16).** Analysed against the web's motion
+  and the app's (its push on both systems, 350 ms in and 300 back; its
+  colour ScreenWipe), with a live demo of ten options; his pick, «la
+  combinación con barrido»: one animation per kind of change for the
+  everyday, and the colour wipe for the big moments (§8.13, the how-to).
+  As built:
+  - **Every page** (the 27 and the three `not-found`) wraps its content in
+    `PageTransition`; the bars hold still and the panel's sections slide
+    their mark to the section on screen, even between the panel's layout
+    and the subscription's.
+  - **Steps** go sideways: the booking's (`?step=`), the payment's (the
+    plans, the change, the method, the payment), the sign-up's (the role,
+    the form); the agenda's days too, by their links.
+  - **A search result opens its profile** with its photo and name
+    travelling to the profile's, and back.
+  - **Data read in the browser** crossfades from its skeleton: the
+    appointment, «Mis citas», the invitation, every panel page and the
+    home's cards, «Mi suscripción», the receipts, a receipt, the balance,
+    «Mis cupones», the payment and the change of plan, and the session's
+    guard (the page then enters as on a navigation).
+  - **The line along the top** while a page takes more than 150 ms.
+  - **The wipe:** blue on signing in (the sign-in page, and in place on the
+    appointment, the invitation and the booking: it opens once the API
+    says who signed in) and on signing out; green on an appointment
+    booked, the sign-up finished, an invitation claimed, a payment
+    reported or a plan activated (with a coupon).
+  - **A bug of today, fixed with it:** since Next 16, Next no longer turns
+    off `<html>`'s smooth scroll on a navigation, so a page opened from a
+    scrolled one appeared at that height and then glided up;
+    `data-scroll-behavior="smooth"` brings the override back.
+  - **Three fixes it needed:** the infinite scroll watches its list's
+    foot from when it mounts (`useInfiniteScroll` follows the element, not
+    only the data: a held skeleton mounts the foot one render later);
+    `useFocusHeading` focuses before the view paints (a layout effect), as
+    do the payment's scroll to the top; and `PageFrame`'s `<main>` carries
+    its own transition (`FrameTransition`): React animates no
+    <ViewTransition> that a removed element contains, so leaving the panel
+    for the subscription (two layouts, each with its `<main>`) or «Mis
+    citas» for another page showed the new page with no exit of the old
+    one — found by watching each navigation in a real browser, and kept in
+    §8.13.
+  - **The flicker at the wipe's centre (the owner's report the same day:
+    «un pequeño parpadeo justo en el centro de donde inicia la animación»,
+    signing in with Google or Apple),** found frame by frame in a real
+    browser (the provider's window faked, the animations slowed, the
+    screen read at its own pixels) and fixed at its two roots. **The colour
+    was never whole:** the reveal's mask sat on the overlay while it
+    covered too, its soft edge outside the hole, so a hole of 0 left a
+    see-through dot exactly at the centre (6 to 11 device pixels on a
+    phone, Chromium and WebKit alike) where the busy button's spinner, and
+    then the page changing under the colour, flickered — in every wipe.
+    The mask exists only while the colour opens now, its edge inside the
+    hole. **What the moment changes reached the screen first:** the
+    sign-in in place swapped its buttons for a skeleton 1 ms after the
+    circle started (now 474 ms later, under the colour), the button
+    pressed went back to its words as its request ended (booking, claim,
+    payment, sign-up), the sign-up's account read again made the page
+    leave before «¡Todo listo!» (a bug of this work's first version: the
+    done screen was skipped), the payment's billing read again and a plan
+    activated at once changed the step around the circle, the sign-in
+    buttons reordered and grew «Última vez» after an Apple sign-in, and
+    the account menu shrank where the blue started. Each now waits for the
+    colour (§8.13).
+  - **Where the web differs from the app, on purpose and to confirm:** the
+    app pushes every screen from the side; the web rises, since its page
+    arrives after the server answers (a push that waits feels late), a
+    computer's width makes a long slide, and Safari's swipe back already
+    animates; the sideways axis is kept for steps. The wipe's green is the
+    app's walkthrough's; its blue, the web's own for signing in and out.
+  - **Not tried here:** Safari on a phone (View Transitions in Safari 18
+    and later) and a real Firefox; the e2e and the unit tests run in
+    Chromium, WebKit and jsdom.
 
 ### Improvements noted (not scheduled)
 

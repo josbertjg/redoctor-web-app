@@ -21,6 +21,7 @@ import {
 
 import { Button } from '@/app/ui/button';
 import { EmptyState } from '@/app/ui/empty-state';
+import { useSkeletonHold } from '@/app/ui/motion/skeleton-hold';
 
 import { useFocusHeading } from '@/app/hooks/use-focus-heading';
 import { useSession } from '@/app/hooks/use-session';
@@ -47,6 +48,9 @@ function PatientAppointments({ user }: { user: SessionUser }) {
   const queryClient = useQueryClient();
   const pending = useQuery(pendingReviewsQueryOptions(user));
   const list = useQuery(appointmentsQueryOptions(user));
+  // The skeleton crossfades into what arrives (AGENTS.md §8, rule 13).
+  const holdingReviews = useSkeletonHold(pending.isPending);
+  const holdingList = useSkeletonHold(list.isPending);
   // What is ahead is decided once per page, like the appointment's actions.
   const [now] = useState(() => new Date());
   // Each rating sent here moves the focus to what comes next — the next
@@ -62,7 +66,7 @@ function PatientAppointments({ user }: { user: SessionUser }) {
   );
 
   function content() {
-    if (pending.isPending) return <AppointmentsSkeleton />;
+    if (pending.isPending || holdingReviews) return <AppointmentsSkeleton />;
 
     const toRate = pending.data ?? [];
     if (toRate.length > 0) {
@@ -84,7 +88,7 @@ function PatientAppointments({ user }: { user: SessionUser }) {
       );
     }
 
-    if (list.isPending) return <AppointmentsSkeleton />;
+    if (list.isPending || holdingList) return <AppointmentsSkeleton />;
 
     // Only when there is nothing to show: a failed re-read keeps the list.
     if (list.isLoadingError) {

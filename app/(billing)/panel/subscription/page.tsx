@@ -5,6 +5,7 @@ import { getTranslations } from 'next-intl/server';
 import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 
 import { MessagesScope } from '@/app/ui/messages-scope';
+import { PageTransition } from '@/app/ui/motion/view-transitions';
 
 import { SubscriptionFlow } from '../../_components/subscription-flow';
 
@@ -23,8 +24,10 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default function SubscriptionPage() {
   return (
-    <MessagesScope namespaces={pageNamespaces.subscription}>
-      <SubscriptionFlow />
-    </MessagesScope>
+    <PageTransition>
+      <MessagesScope namespaces={pageNamespaces.subscription}>
+        <SubscriptionFlow />
+      </MessagesScope>
+    </PageTransition>
   );
 }

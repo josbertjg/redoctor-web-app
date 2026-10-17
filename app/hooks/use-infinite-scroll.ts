@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type InfiniteScrollOptions = {
   /** There is a next page, and none is on its way or failed. */
@@ -18,16 +18,18 @@ const reach = '0px 0px 240px 0px';
 /**
  * A list that loads its next page by itself as its end comes into view
  * (the owner's call, 2026-10-13; the app's lists ask near the end of the
- * scroll). The returned ref goes on the list's foot. Each observer asks
- * once and stops: the next one waits for the page to land, so a page is
- * never asked for twice.
+ * scroll). The returned ref goes on the list's foot, and the foot is
+ * watched from the moment it mounts — also when it mounts after the list's
+ * data (a skeleton held for its crossfade, AGENTS.md §8, rule 13). Each
+ * observer asks once and stops: the next one waits for the page to land,
+ * so a page is never asked for twice.
  */
 export function useInfiniteScroll<T extends Element = HTMLDivElement>({
   enabled,
   onLoadMore,
   loaded,
 }: InfiniteScrollOptions) {
-  const foot = useRef<T>(null);
+  const [foot, setFoot] = useState<T | null>(null);
   const loadMore = useRef(onLoadMore);
 
   useEffect(() => {
@@ -35,10 +37,9 @@ export function useInfiniteScroll<T extends Element = HTMLDivElement>({
   });
 
   useEffect(() => {
-    const node = foot.current;
     if (
       !enabled ||
-      node === null ||
+      foot === null ||
       typeof IntersectionObserver === 'undefined'
     ) {
       return;
@@ -51,11 +52,11 @@ export function useInfiniteScroll<T extends Element = HTMLDivElement>({
       },
       { rootMargin: reach },
     );
-    observer.observe(node);
+    observer.observe(foot);
     return () => {
       observer.disconnect();
     };
-  }, [enabled, loaded]);
+  }, [enabled, loaded, foot]);
 
-  return foot;
+  return setFoot;
 }

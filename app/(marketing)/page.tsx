@@ -11,6 +11,7 @@ import { getSearchCatalog } from '@/app/lib/data/specialties';
 import { routes } from '@/app/lib/routes';
 
 import { MotionProvider } from '@/app/ui/motion/provider';
+import { PageTransition } from '@/app/ui/motion/view-transitions';
 
 import { Faq } from './_components/faq';
 import { Hero } from './_components/hero';
@@ -89,20 +90,24 @@ export default async function HomePage() {
       {showSplash && <SplashVeil />}
       {/* The page clips the background shapes at its own edges (`clip` keeps
           the header sticky); the sections never do, so a shape can run from
-          one section into the next (see decor.tsx). */}
-      <div className="relative isolate flex flex-1 flex-col overflow-clip bg-primary">
-        <LandingHeader waitForSplash={showSplash} catalog={catalog} />
-        <main className="flex flex-col">
-          <Hero waitForSplash={showSplash} catalog={catalog} />
-          <Summary />
-          <HowItWorks />
-          <Trust />
-          <Roadmap />
-          <Pricing plans={plans} />
-          <Faq />
-        </main>
-        <LandingFooter />
-      </div>
+          one section into the next (see decor.tsx). Its pieces bring their
+          own entrance: the page only fades as it comes and goes (AGENTS.md
+          §8, rule 13). */}
+      <PageTransition entrance="fade">
+        <div className="relative isolate flex flex-1 flex-col overflow-clip bg-primary">
+          <LandingHeader waitForSplash={showSplash} catalog={catalog} />
+          <main className="flex flex-col">
+            <Hero waitForSplash={showSplash} catalog={catalog} />
+            <Summary />
+            <HowItWorks />
+            <Trust />
+            <Roadmap />
+            <Pricing plans={plans} />
+            <Faq />
+          </main>
+          <LandingFooter />
+        </div>
+      </PageTransition>
     </MotionProvider>
   );
 }

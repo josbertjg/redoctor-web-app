@@ -62,9 +62,14 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     // data-theme="light": the dark aliases of tokens.css stay defined but off,
     // as in the app, until a theme toggle exists (AGENTS.md §7).
+    // data-scroll-behavior: the smooth scroll stays for the landing's anchors,
+    // and Next.js turns it off while it moves to the top of a new page (since
+    // Next 16 only when asked): a page never glides up from the last one's
+    // height.
     <html
       lang="es"
       data-theme="light"
+      data-scroll-behavior="smooth"
       className={cn(
         urbanist.variable,
         'h-full antialiased motion-safe:scroll-smooth',

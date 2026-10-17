@@ -15,6 +15,7 @@ import {
 
 import { BackLink } from '@/app/ui/back-link';
 import { EmptyState } from '@/app/ui/empty-state';
+import { useSkeletonHold } from '@/app/ui/motion/skeleton-hold';
 import { Skeleton } from '@/app/ui/skeleton';
 
 import { useSession } from '@/app/hooks/use-session';
@@ -55,6 +56,8 @@ function Header() {
 function SpecialistSpecialties({ user }: { user: SessionUser }) {
   const t = useTranslations('mySpecialties');
   const profile = useQuery(myProfileQueryOptions(user));
+  // The skeleton crossfades into what arrives (AGENTS.md §8, rule 13).
+  const holding = useSkeletonHold(profile.isPending);
 
   if (profile.isError) {
     return (
@@ -72,7 +75,7 @@ function SpecialistSpecialties({ user }: { user: SessionUser }) {
       </div>
     );
   }
-  if (profile.isPending) return <MySpecialtiesSkeleton />;
+  if (profile.isPending || holding) return <MySpecialtiesSkeleton />;
 
   // No professional profile yet (`null`): nothing registered.
   const specialties = byReviewUrgency(profile.data?.specialties ?? []);

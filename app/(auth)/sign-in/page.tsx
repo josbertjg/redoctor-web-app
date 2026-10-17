@@ -7,6 +7,7 @@ import { isSafeRedirect } from '@/app/lib/routes';
 
 import { SiteHeader } from '@/app/ui/layout/site-header';
 import { MessagesScope } from '@/app/ui/messages-scope';
+import { PageTransition } from '@/app/ui/motion/view-transitions';
 
 import { SignInCard } from '../_components/sign-in-card';
 
@@ -33,11 +34,13 @@ export default async function SignInPage({
   return (
     <>
       <SiteHeader homeLabel={t('homeLabel')} />
-      <main className="flex flex-1 flex-col items-center justify-center px-gutter pb-16">
-        <MessagesScope namespaces={pageNamespaces.signIn}>
-          <SignInCard redirect={target} />
-        </MessagesScope>
-      </main>
+      <PageTransition>
+        <main className="flex flex-1 flex-col items-center justify-center px-gutter pb-16">
+          <MessagesScope namespaces={pageNamespaces.signIn}>
+            <SignInCard redirect={target} />
+          </MessagesScope>
+        </main>
+      </PageTransition>
     </>
   );
 }

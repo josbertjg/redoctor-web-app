@@ -7,6 +7,7 @@ import { getTranslations } from 'next-intl/server';
 import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 
 import { MessagesScope } from '@/app/ui/messages-scope';
+import { PageTransition } from '@/app/ui/motion/view-transitions';
 
 import {
   ReportsSkeleton,
@@ -24,11 +25,13 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 export default function ReportsPage() {
   return (
-    <MessagesScope namespaces={pageNamespaces.reports}>
-      {/* The period lives in the address: read in the browser, under a boundary. */}
-      <Suspense fallback={<ReportsSkeleton />}>
-        <ReportsView />
-      </Suspense>
-    </MessagesScope>
+    <PageTransition>
+      <MessagesScope namespaces={pageNamespaces.reports}>
+        {/* The period lives in the address: read in the browser, under a boundary. */}
+        <Suspense fallback={<ReportsSkeleton />}>
+          <ReportsView />
+        </Suspense>
+      </MessagesScope>
+    </PageTransition>
   );
 }

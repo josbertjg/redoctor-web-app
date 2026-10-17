@@ -16,6 +16,7 @@ import { brandOpenGraph } from '@/app/lib/site';
 
 import { MessagesScope } from '@/app/ui/messages-scope';
 import { MotionProvider } from '@/app/ui/motion/provider';
+import { PageTransition } from '@/app/ui/motion/view-transitions';
 
 import { SearchHeader } from '../_components/search-header';
 import { SearchNavigationProvider } from '../_components/search-navigation';
@@ -83,15 +84,17 @@ export default async function SearchPage({
             query={query}
             specialtyName={specialtyName}
           />
-          <main className="flex flex-1 flex-col">
-            <SearchResults
-              query={query}
-              specialtyName={specialtyName}
-              initialPage={initialPage}
-              catalog={catalog}
-              today={today}
-            />
-          </main>
+          <PageTransition>
+            <main className="flex flex-1 flex-col">
+              <SearchResults
+                query={query}
+                specialtyName={specialtyName}
+                initialPage={initialPage}
+                catalog={catalog}
+                today={today}
+              />
+            </main>
+          </PageTransition>
         </SearchNavigationProvider>
       </MotionProvider>
     </MessagesScope>

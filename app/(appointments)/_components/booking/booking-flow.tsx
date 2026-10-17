@@ -19,11 +19,9 @@ import { routes } from '@/app/lib/routes';
 import { AccountErrorState } from '@/app/ui/auth/account-error-state';
 import { SignInButtons } from '@/app/ui/auth/sign-in-buttons';
 import { SignInLegalNote } from '@/app/ui/auth/sign-in-legal-note';
+import { useSignInArrival } from '@/app/ui/auth/use-sign-in-arrival';
 import { BackLink } from '@/app/ui/back-link';
 import { StatusCard } from '@/app/ui/status-card';
-
-import { useSession } from '@/app/hooks/use-session';
-import { useSignInTracking } from '@/app/hooks/use-sign-in-tracking';
 
 import { BookingFrame } from './booking-frame';
 import {
@@ -59,8 +57,8 @@ export function BookingFlow({
   ownerNotice,
 }: BookingFlowProps) {
   const t = useTranslations();
-  const session = useSession();
-  const onSignedIn = useSignInTracking();
+  // The page as it was until a sign-in made here is under the colour.
+  const { session, onSignedIn } = useSignInArrival();
   const searchParams = useSearchParams();
   const { account, user } = session;
   const namedOffice = specialist.offices.find(

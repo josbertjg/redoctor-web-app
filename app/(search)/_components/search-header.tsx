@@ -35,7 +35,7 @@ export function SearchHeader({
   const words = useSearchBarWords();
 
   return (
-    <header className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm">
+    <header className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm vt-search-header">
       <div className="mx-auto flex w-full max-w-landing items-center gap-3 px-gutter pt-3 pb-2 sm:gap-4 sm:py-3">
         <Link
           href={routes.home()}

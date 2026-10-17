@@ -11,6 +11,7 @@ import { bookingSpecialtyId } from '@/app/lib/schemas/booking';
 import { brandOpenGraph } from '@/app/lib/site';
 
 import { MessagesScope } from '@/app/ui/messages-scope';
+import { PageTransition } from '@/app/ui/motion/view-transitions';
 
 import { BookingFlow } from '../../_components/booking/booking-flow';
 
@@ -54,29 +55,33 @@ export default async function BookPage({
   ]);
 
   return (
-    <main className="flex flex-1 flex-col">
-      <MessagesScope namespaces={pageNamespaces.book}>
-        <BookingFlow
-          specialist={{
-            id: profile.id,
-            name: profile.name,
-            photoUrl: profile.photoUrl,
-            verified: profile.verified,
-            specialties: profile.specialties.map((specialty) => specialty.name),
-            offices: profile.offices.map((office) => ({
-              id: office.id,
-              name: office.name,
-              address: office.address,
-              description: office.description,
-            })),
-          }}
-          specialtyId={bookingSpecialtyId(profile.specialties, tree)}
-          ownerNotice={{
-            title: notice('title'),
-            description: notice('book'),
-          }}
-        />
-      </MessagesScope>
-    </main>
+    <PageTransition>
+      <main className="flex flex-1 flex-col">
+        <MessagesScope namespaces={pageNamespaces.book}>
+          <BookingFlow
+            specialist={{
+              id: profile.id,
+              name: profile.name,
+              photoUrl: profile.photoUrl,
+              verified: profile.verified,
+              specialties: profile.specialties.map(
+                (specialty) => specialty.name,
+              ),
+              offices: profile.offices.map((office) => ({
+                id: office.id,
+                name: office.name,
+                address: office.address,
+                description: office.description,
+              })),
+            }}
+            specialtyId={bookingSpecialtyId(profile.specialties, tree)}
+            ownerNotice={{
+              title: notice('title'),
+              description: notice('book'),
+            }}
+          />
+        </MessagesScope>
+      </main>
+    </PageTransition>
   );
 }

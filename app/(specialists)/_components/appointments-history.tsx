@@ -34,6 +34,7 @@ import { EmptyState } from '@/app/ui/empty-state';
 import { FieldError } from '@/app/ui/field-error';
 import { FilterChips } from '@/app/ui/filter-chips';
 import { Icon } from '@/app/ui/icons';
+import { useSkeletonHold } from '@/app/ui/motion/skeleton-hold';
 import { SelectField } from '@/app/ui/select-field';
 import { Skeleton } from '@/app/ui/skeleton';
 import { TextField } from '@/app/ui/text-field';
@@ -185,6 +186,8 @@ function HistoryList({ user }: { user: SessionUser }) {
     // A new filter keeps the list on screen until the answer replaces it.
     placeholderData: keepPreviousData,
   });
+  // The skeleton crossfades into what arrives (AGENTS.md §8, rule 13).
+  const holding = useSkeletonHold(query.isPending);
 
   // The latest first, as the app's «Más recientes».
   const appointments = (query.data ?? [])
@@ -304,7 +307,7 @@ function HistoryList({ user }: { user: SessionUser }) {
   );
 
   function content() {
-    if (query.isPending) return <AppointmentListSkeleton />;
+    if (query.isPending || holding) return <AppointmentListSkeleton />;
 
     if (query.isLoadingError) {
       return (

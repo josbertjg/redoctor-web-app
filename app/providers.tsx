@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { Suspense, useState, type ReactNode } from 'react';
 
 import {
   MutationCache,
@@ -13,6 +13,8 @@ import { isApiError } from '@/app/lib/api/errors';
 import { createNetworkNoticeThrottle } from '@/app/lib/api/network-notice';
 
 import { SessionProvider } from '@/app/ui/auth/session-provider';
+import { NavigationProgress } from '@/app/ui/motion/navigation-progress';
+import { ScreenWipe } from '@/app/ui/motion/screen-wipe';
 import { NotificationsProvider } from '@/app/ui/notifications/notifications-provider';
 import { toast, Toaster } from '@/app/ui/toast';
 
@@ -20,9 +22,10 @@ import { toast, Toaster } from '@/app/ui/toast';
  * Client-side plumbing shared by every page. next-intl's provider wraps this
  * in app/layout.tsx; the session (Firebase, `/me`) lives inside the Query
  * client, which it clears on sign-out; the person's notifications — the
- * inbox, its count and the live channel — live inside the session; PostHog
- * and Sentry join through instrumentation-client.ts, off while their
- * variables are empty.
+ * inbox, its count and the live channel — live inside the session; the
+ * line while a page loads and the colour wipe of the big moments are
+ * mounted once here (AGENTS.md §8, rule 13); PostHog and Sentry join
+ * through instrumentation-client.ts, off while their variables are empty.
  */
 
 /** One toast id: a notice still on screen is replaced, never stacked. */
@@ -98,6 +101,11 @@ export function Providers({
           {children}
         </NotificationsProvider>
       </SessionProvider>
+      {/* The address it reads (useSearchParams) never holds the page back. */}
+      <Suspense fallback={null}>
+        <NavigationProgress />
+      </Suspense>
+      <ScreenWipe />
       <Toaster
         regionLabel={toasterLabels.region}
         closeLabel={toasterLabels.close}

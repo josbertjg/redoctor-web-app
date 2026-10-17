@@ -16,6 +16,8 @@ import {
   type MyProfile,
 } from '@/app/lib/schemas/specialists';
 
+import { useSkeletonHold } from '@/app/ui/motion/skeleton-hold';
+
 import { useSession } from '@/app/hooks/use-session';
 
 import { EditInAppCard } from '../edit-in-app-card';
@@ -69,6 +71,8 @@ function SpecialistProfile({ user }: { user: SessionUser }) {
     ...myOfficesQueryOptions(user),
     staleTime: 60_000,
   });
+  // The skeleton crossfades into what arrives (AGENTS.md §8, rule 13).
+  const holding = useSkeletonHold(profile.isPending || offices.isPending);
 
   if (profile.isError || offices.isError) {
     return (
@@ -87,7 +91,9 @@ function SpecialistProfile({ user }: { user: SessionUser }) {
       </div>
     );
   }
-  if (profile.isPending || offices.isPending) return <MyProfileSkeleton />;
+  if (profile.isPending || offices.isPending || holding) {
+    return <MyProfileSkeleton />;
+  }
 
   const data = profile.data ?? blankProfile;
   const name = data.name ?? account?.name ?? '';

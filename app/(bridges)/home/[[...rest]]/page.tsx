@@ -6,6 +6,8 @@ import { getTranslations } from 'next-intl/server';
 import { smartAppBanner } from '@/app/lib/app-bridge';
 import { routes } from '@/app/lib/routes';
 
+import { PageTransition } from '@/app/ui/motion/view-transitions';
+
 import { BridgeContent } from '../../_components/bridge-content';
 
 /*
@@ -27,12 +29,14 @@ export default async function HomeBridgePage({
   const t = await getTranslations('bridges.home');
 
   return (
-    <BridgeContent
-      icon={OpenInNew}
-      title={t('title')}
-      description={t('description')}
-      path={path}
-      source="link"
-    />
+    <PageTransition>
+      <BridgeContent
+        icon={OpenInNew}
+        title={t('title')}
+        description={t('description')}
+        path={path}
+        source="link"
+      />
+    </PageTransition>
   );
 }

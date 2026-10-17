@@ -40,6 +40,7 @@ import { Checkbox } from '@/app/ui/checkbox';
 import { EmptyState } from '@/app/ui/empty-state';
 import { FieldError } from '@/app/ui/field-error';
 import { Icon } from '@/app/ui/icons';
+import { useSkeletonHold } from '@/app/ui/motion/skeleton-hold';
 
 import { useFocusHeading } from '@/app/hooks/use-focus-heading';
 
@@ -116,6 +117,9 @@ export function ChangePlanView({
       ? { active: activeOffices, count: limit }
       : null;
   const [accepted, setAccepted] = useState(false);
+  // The skeleton crossfades into what arrives (AGENTS.md §8, rule 13).
+  const holdingPlans = useSkeletonHold(plans.isPending);
+  const holdingPreview = useSkeletonHold(preview.isPending);
   const [askedToAccept, setAskedToAccept] = useState(false);
   const [done, setDone] = useState<PlanChanged | null>(null);
   const change = useMutation({
@@ -169,7 +173,7 @@ export function ChangePlanView({
   function content() {
     if (done) return <ChangeDone changed={done} planName={plan?.name ?? ''} />;
 
-    if (plans.isPending) return <PaySkeleton />;
+    if (plans.isPending || holdingPlans) return <PaySkeleton />;
     if (plans.isError) {
       return (
         <LoadError
@@ -193,7 +197,7 @@ export function ChangePlanView({
       );
     }
 
-    if (preview.isPending) return <PaySkeleton />;
+    if (preview.isPending || holdingPreview) return <PaySkeleton />;
     if (preview.isError) {
       return isRefusal(preview.error) ? (
         <EmptyState

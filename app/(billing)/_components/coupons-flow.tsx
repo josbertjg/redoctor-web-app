@@ -31,6 +31,7 @@ import { BackLink } from '@/app/ui/back-link';
 import { Button } from '@/app/ui/button';
 import { EmptyState } from '@/app/ui/empty-state';
 import { Icon } from '@/app/ui/icons';
+import { useSkeletonHold } from '@/app/ui/motion/skeleton-hold';
 import { Skeleton } from '@/app/ui/skeleton';
 import { StateChip } from '@/app/ui/state-chip';
 import { TextField } from '@/app/ui/text-field';
@@ -88,6 +89,8 @@ function MyCoupons({ user }: { user: SessionUser }) {
   const tRoot = useTranslations();
   const queryClient = useQueryClient();
   const coupons = useQuery(myCouponsQueryOptions(user));
+  // The skeleton crossfades into what arrives (AGENTS.md §8, rule 13).
+  const holding = useSkeletonHold(coupons.isPending);
   const [code, setCode] = useState('');
   /** What is wrong before asking the API: nothing typed, or a length no code has. */
   const [problem, setProblem] = useState<'missing' | 'length' | null>(null);
@@ -198,7 +201,7 @@ function MyCoupons({ user }: { user: SessionUser }) {
   );
 
   function list() {
-    if (coupons.isPending) {
+    if (coupons.isPending || holding) {
       return (
         <div aria-busy="true" className="flex flex-col gap-3">
           <CouponCardSkeleton />

@@ -8,6 +8,7 @@ import { routes } from '@/app/lib/routes';
 import { Button } from '@/app/ui/button';
 import { EmptyState } from '@/app/ui/empty-state';
 import { SiteHeader } from '@/app/ui/layout/site-header';
+import { PageTransition } from '@/app/ui/motion/view-transitions';
 
 /*
  * A profile that does not exist (deleted, or a broken link): a real 404,
@@ -21,28 +22,30 @@ export default async function SpecialistNotFound() {
   return (
     <>
       <SiteHeader homeLabel={t('common.homeLabel')} />
-      <main className="flex flex-1 flex-col justify-center pb-16">
-        <EmptyState
-          headingLevel={1}
-          illustration={
-            <Image
-              src="/illustrations/no-data-found.svg"
-              alt=""
-              width={132}
-              height={146}
-              preload
-              className="h-auto w-32"
-            />
-          }
-          title={t('specialists.notFound.title')}
-          description={t('specialists.notFound.description')}
-          action={
-            <Button asChild>
-              <Link href={routes.home()}>{t('not_found.go_home')}</Link>
-            </Button>
-          }
-        />
-      </main>
+      <PageTransition>
+        <main className="flex flex-1 flex-col justify-center pb-16">
+          <EmptyState
+            headingLevel={1}
+            illustration={
+              <Image
+                src="/illustrations/no-data-found.svg"
+                alt=""
+                width={132}
+                height={146}
+                preload
+                className="h-auto w-32"
+              />
+            }
+            title={t('specialists.notFound.title')}
+            description={t('specialists.notFound.description')}
+            action={
+              <Button asChild>
+                <Link href={routes.home()}>{t('not_found.go_home')}</Link>
+              </Button>
+            }
+          />
+        </main>
+      </PageTransition>
     </>
   );
 }

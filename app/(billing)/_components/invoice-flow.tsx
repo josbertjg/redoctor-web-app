@@ -39,6 +39,7 @@ import { BackLink } from '@/app/ui/back-link';
 import { Button } from '@/app/ui/button';
 import { EmptyState } from '@/app/ui/empty-state';
 import { Icon, type IconComponent } from '@/app/ui/icons';
+import { useSkeletonHold } from '@/app/ui/motion/skeleton-hold';
 import { Skeleton } from '@/app/ui/skeleton';
 import { StateChip } from '@/app/ui/state-chip';
 
@@ -125,9 +126,11 @@ function Receipt({
   const t = useTranslations('billing');
   const tRoot = useTranslations();
   const invoice = useQuery(invoiceQueryOptions(user, invoiceId));
+  // The skeleton crossfades into what arrives (AGENTS.md §8, rule 13).
+  const holding = useSkeletonHold(invoice.isPending);
   const head = <ReceiptHead />;
 
-  if (invoice.isPending) return <InvoiceSkeleton />;
+  if (invoice.isPending || holding) return <InvoiceSkeleton />;
 
   // Only when there is nothing to show: a failed re-read keeps the receipt.
   if (invoice.isLoadingError) {

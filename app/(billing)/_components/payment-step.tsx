@@ -63,6 +63,7 @@ type PaymentStepProps = {
   payment: StartedPayment;
   /** The amount in bolívares expired and a new one was fixed: the page shows it. */
   onPaymentRefreshed: (payment: StartedPayment) => void;
+  /** The report was taken: the page moves on, and the button stays busy until it has. */
   onReported: (outcome: PaymentOutcome) => void;
   /** Another report is already in review — another phone, a lost answer: the page shows the subscription. */
   onInReview: () => void;
@@ -520,7 +521,7 @@ export function PaymentStep({
             type="submit"
             block
             shape="soft"
-            loading={report.isPending || refresh.isPending}
+            loading={report.isPending || report.isSuccess || refresh.isPending}
           >
             {t('acquire.confirm.action')}
           </Button>

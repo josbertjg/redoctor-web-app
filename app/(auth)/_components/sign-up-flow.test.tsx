@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { screen } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -21,6 +21,16 @@ import {
 import { validToken } from '../../../tests/msw/handlers/identity';
 
 const router = vi.hoisted(() => ({ replace: vi.fn(), push: vi.fn() }));
+const wipe = vi.hoisted(() => ({
+  covered: null as (() => unknown) | null,
+}));
+vi.mock('@/app/ui/motion/screen-wipe', () => ({
+  // The colour stays on screen until a test runs what happens under it.
+  wipeScreen: ({ whileCovered }: { whileCovered: () => unknown }) => {
+    wipe.covered = whileCovered;
+    return new Promise<void>(() => undefined);
+  },
+}));
 vi.mock('next/navigation', () => ({
   useRouter: () => router,
   usePathname: () => '/sign-up',
@@ -35,6 +45,9 @@ const user = {
   provider: 'google' as const,
   getToken: () => Promise.resolve(validToken),
 };
+
+const isEqual = (a: unknown, b: unknown) =>
+  JSON.stringify(a) === JSON.stringify(b);
 
 function session(me: Parameters<typeof meResponseSchema.parse>[0]): Session {
   return {
@@ -197,6 +210,67 @@ describe('SignUpFlow', () => {
     );
 
     expect(screen.getByText('Termina en la app')).toBeInTheDocument();
+  });
+
+  it('ends under the colour: «¡Todo listo!» first, then the account read again', async () => {
+    const readAgain = vi.spyOn(QueryClient.prototype, 'invalidateQueries');
+    const accountReadAgain = () =>
+      readAgain.mock.calls.some(([filters]) =>
+        isEqual(filters?.queryKey, ['identity', 'me', user.id]),
+      );
+    renderFlow(
+      session(buildNewAccountMeResponse()),
+      `/i/${invitationTokens.pending}?for=dependent`,
+    );
+
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Nombre' }),
+      'Ana',
+    );
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Apellido' }),
+      'Pérez',
+    );
+    await userEvent.type(
+      screen.getByLabelText('Fecha de nacimiento'),
+      '1990-01-15',
+    );
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Teléfono' }),
+      '0414-123.45.67',
+    );
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Cédula de identidad' }),
+      '12.345.678',
+    );
+    await userEvent.click(screen.getByRole('radio', { name: 'Mujer' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: /He leído/ }));
+    await userEvent.click(screen.getByRole('checkbox', { name: /Autorizo/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Finalizar' }));
+
+    // Saved, and the colour on its way: the page holds still, its button
+    // busy, and nothing yet reads the account — a fresh one before the end
+    // would move the page away.
+    await waitFor(() => {
+      expect(wipe.covered).not.toBeNull();
+    });
+    expect(screen.getByRole('button', { name: 'Finalizar' })).toHaveAttribute(
+      'aria-busy',
+      'true',
+    );
+    expect(accountReadAgain()).toBe(false);
+    expect(router.replace).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await wipe.covered?.();
+    });
+
+    expect(
+      screen.getByRole('heading', { name: '¡Todo listo!' }),
+    ).toBeInTheDocument();
+    expect(accountReadAgain()).toBe(true);
+    expect(router.replace).not.toHaveBeenCalled();
+    readAgain.mockRestore();
   });
 
   it('moves a complete account on to where it was going', () => {

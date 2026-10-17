@@ -6,6 +6,7 @@ import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 import { parseInvoiceId } from '@/app/lib/schemas/billing';
 
 import { MessagesScope } from '@/app/ui/messages-scope';
+import { PageTransition } from '@/app/ui/motion/view-transitions';
 
 import { InvoiceFlow } from '../../../../_components/invoice-flow';
 
@@ -26,8 +27,10 @@ export default async function InvoicePage({
 }: PageProps<'/panel/subscription/invoices/[invoiceId]'>) {
   const { invoiceId } = await params;
   return (
-    <MessagesScope namespaces={pageNamespaces.subscription}>
-      <InvoiceFlow invoiceId={parseInvoiceId(invoiceId)} />
-    </MessagesScope>
+    <PageTransition>
+      <MessagesScope namespaces={pageNamespaces.subscription}>
+        <InvoiceFlow invoiceId={parseInvoiceId(invoiceId)} />
+      </MessagesScope>
+    </PageTransition>
   );
 }

@@ -18,6 +18,7 @@ import { mayOwe, subscriptionNotice } from '@/app/lib/schemas/billing';
 
 import { Button } from '@/app/ui/button';
 import { EmptyState } from '@/app/ui/empty-state';
+import { useSkeletonHold } from '@/app/ui/motion/skeleton-hold';
 
 import { useSession } from '@/app/hooks/use-session';
 
@@ -46,8 +47,11 @@ function SpecialistSubscription({ user }: { user: SessionUser }) {
   const payable = useQuery(payableInvoiceQueryOptions(user, subscription));
   // What the deadlines count from is decided once per page, like the appointment's actions.
   const [now] = useState(() => new Date());
+  // The skeleton crossfades into what arrives (AGENTS.md §8, rule 13).
+  const holdingPlan = useSkeletonHold(current.isPending);
+  const holdingReceipt = useSkeletonHold(payable.isLoading);
 
-  if (current.isPending) return <PaySkeleton />;
+  if (current.isPending || holdingPlan) return <PaySkeleton />;
 
   // Only when there is nothing to show: a failed re-read keeps the subscription.
   if (current.isLoadingError) {
@@ -80,7 +84,7 @@ function SpecialistSubscription({ user }: { user: SessionUser }) {
   }
 
   // The receipt owed is being read: it decides what the notice says.
-  if (payable.isLoading) return <PaySkeleton />;
+  if (payable.isLoading || holdingReceipt) return <PaySkeleton />;
 
   // Unreadable receipt: the notice comes from the subscription alone. A
   // plan that owes nothing has no receipt to tell about, whatever an

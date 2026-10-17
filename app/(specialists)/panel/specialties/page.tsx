@@ -6,6 +6,7 @@ import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 
 import { AppAccess } from '@/app/ui/app-bridge/app-access';
 import { MessagesScope } from '@/app/ui/messages-scope';
+import { PageTransition } from '@/app/ui/motion/view-transitions';
 
 import { MySpecialtiesView } from '../../_components/my-specialties/my-specialties-view';
 import { SpecialistHomeSwitch } from '../../_components/specialist-home-switch';
@@ -23,11 +24,13 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 export default function MySpecialtiesPage() {
   return (
-    <MessagesScope namespaces={pageNamespaces.mySpecialties}>
-      <SpecialistHomeSwitch
-        ready={<MySpecialtiesView />}
-        pending={<AppAccess variant="finish" className="mx-auto mt-6" />}
-      />
-    </MessagesScope>
+    <PageTransition>
+      <MessagesScope namespaces={pageNamespaces.mySpecialties}>
+        <SpecialistHomeSwitch
+          ready={<MySpecialtiesView />}
+          pending={<AppAccess variant="finish" className="mx-auto mt-6" />}
+        />
+      </MessagesScope>
+    </PageTransition>
   );
 }

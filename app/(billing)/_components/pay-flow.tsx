@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -24,6 +24,9 @@ import {
 
 import { Button } from '@/app/ui/button';
 import { EmptyState } from '@/app/ui/empty-state';
+import { moveStep } from '@/app/ui/motion/directions';
+import { useSkeletonHold } from '@/app/ui/motion/skeleton-hold';
+import { StepTransition } from '@/app/ui/motion/view-transitions';
 
 import { useFocusHeading } from '@/app/hooks/use-focus-heading';
 import { useSession } from '@/app/hooks/use-session';
@@ -146,11 +149,15 @@ function SpecialistPayment({
     if (start !== null) setView(start);
   }
 
-  useEffect(() => {
+  // Before the step paints (a layout effect), so its transition starts at the top.
+  useLayoutEffect(() => {
     window.scrollTo({ top: 0 });
   }, [view?.kind]);
+  // The skeleton crossfades into the first view (AGENTS.md §8, rule 13).
+  const holding = useSkeletonHold(view === null);
+  const shown = view === null || holding ? null : view;
   // The view's title takes the focus when the person moves between them.
-  const frame = useFocusHeading(view?.kind ?? 'loading');
+  const frame = useFocusHeading(shown?.kind ?? 'loading');
 
   const toSubscription = () => {
     router.push(routes.subscription());
@@ -166,7 +173,9 @@ function SpecialistPayment({
   return (
     // `contents`: a handle for the focus, no box of its own.
     <div ref={frame} className="contents">
-      {content()}
+      <StepTransition step={shown?.kind ?? 'loading'}>
+        {content()}
+      </StepTransition>
     </div>
   );
 
@@ -197,6 +206,7 @@ function SpecialistPayment({
       }
       return <PaySkeleton />;
     }
+    if (holding) return <PaySkeleton />;
 
     switch (view.kind) {
       case 'plans':
@@ -210,15 +220,17 @@ function SpecialistPayment({
             }
             preferredSlug={request.plan}
             onSelect={(plan) => {
-              setView(
-                view.changing
-                  ? { kind: 'change', planSlug: plan.slug, fromPlans: true }
-                  : {
-                      kind: 'pay',
-                      mode: { kind: 'contract', plan },
-                      fromPlans: true,
-                    },
-              );
+              moveStep('forward', () => {
+                setView(
+                  view.changing
+                    ? { kind: 'change', planSlug: plan.slug, fromPlans: true }
+                    : {
+                        kind: 'pay',
+                        mode: { kind: 'contract', plan },
+                        fromPlans: true,
+                      },
+                );
+              });
             }}
             onBack={toSubscription}
           />
@@ -233,16 +245,20 @@ function SpecialistPayment({
             planSlug={view.planSlug}
             backToPlans={view.fromPlans}
             onPay={(changed) => {
-              setView({
-                kind: 'pay',
-                mode: { kind: 'invoice', subscription: changed },
-                fromPlans: false,
+              moveStep('forward', () => {
+                setView({
+                  kind: 'pay',
+                  mode: { kind: 'invoice', subscription: changed },
+                  fromPlans: false,
+                });
               });
             }}
             onBack={
               view.fromPlans
                 ? () => {
-                    setView({ kind: 'plans', changing: true });
+                    moveStep('back', () => {
+                      setView({ kind: 'plans', changing: true });
+                    });
                   }
                 : toSubscription
             }
@@ -257,7 +273,9 @@ function SpecialistPayment({
             onBack={
               view.fromPlans
                 ? () => {
-                    setView({ kind: 'plans', changing: false });
+                    moveStep('back', () => {
+                      setView({ kind: 'plans', changing: false });
+                    });
                   }
                 : toOrigin
             }
@@ -283,7 +301,9 @@ function SpecialistPayment({
                     variant="white"
                     shape="soft"
                     onClick={() => {
-                      setView({ kind: 'plans', changing: true });
+                      moveStep('forward', () => {
+                        setView({ kind: 'plans', changing: true });
+                      });
                     }}
                   >
                     {t('mySubscription.changePlan.title')}

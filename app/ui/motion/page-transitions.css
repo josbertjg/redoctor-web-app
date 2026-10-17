@@ -1,0 +1,306 @@
+/*
+ * Page transitions (AGENTS.md §8, rule 13): what moves when the page changes,
+ * as the browser's View Transitions run it for React's <ViewTransition>
+ * (app/ui/motion/view-transitions.tsx). One animation per kind of change:
+ *
+ * - `.page` — any page that enters or leaves: the old one goes quickly, the
+ *   new one rises into place (the landing's entrances, shorter).
+ * - `.page-forward`, `.page-back` — a step forward or back (the booking's,
+ *   the payment's, the agenda's days): the shared axis, 40 px sideways.
+ * - `.page-update` — the same page with new content (the data arrived, a
+ *   search answered): a crossfade, so what did not change stays still.
+ * - `.morph` — one thing travels between two pages (a result's photo and
+ *   name to its profile).
+ * - `.chrome` — the bars: still when both pages have them, a fade when only
+ *   one does.
+ *
+ * Every timing is a token (tokens.css); under reduced motion the tokens drop
+ * every distance and movement, and the fades stay.
+ */
+
+/* The transition never takes a click: what is not moving answers. */
+::view-transition {
+  pointer-events: none;
+}
+
+/* ---------- A page enters or leaves ---------------------------------- */
+::view-transition-old(.page) {
+  animation:
+    vt-fade-out var(--duration-page-exit) var(--ease-exit) both,
+    vt-lift var(--duration-page-exit) var(--ease-exit) both;
+}
+::view-transition-new(.page) {
+  animation:
+    vt-fade-in var(--duration-page-enter) var(--ease-house)
+      var(--delay-page-enter) both,
+    vt-rise var(--duration-page-move) var(--ease-entrance) both;
+}
+
+/* The landing brings its own entrance (its choreography): only a fade. */
+::view-transition-old(.page-fade) {
+  animation: vt-fade-out var(--duration-page-exit) var(--ease-exit) both;
+}
+::view-transition-new(.page-fade) {
+  animation: vt-fade-in var(--duration-page-enter) var(--ease-house) both;
+}
+
+/* ---------- A step forward or back: the shared axis -------------------- */
+::view-transition-old(.page-forward),
+::view-transition-old(.page-back) {
+  mix-blend-mode: normal;
+  animation:
+    vt-fade-out var(--duration-page-exit) var(--ease-exit) both,
+    vt-slide-out var(--duration-axis) var(--ease-entrance) both;
+}
+::view-transition-new(.page-forward),
+::view-transition-new(.page-back) {
+  mix-blend-mode: normal;
+  animation:
+    vt-fade-in var(--duration-axis-fade) var(--ease-enter) var(--delay-axis)
+      both,
+    vt-slide-in var(--duration-axis) var(--ease-entrance) both;
+}
+/* Forward, the old leaves to the left and the new comes from the right. */
+::view-transition-old(.page-forward) {
+  --vt-shift: calc(var(--distance-axis) * -1);
+}
+::view-transition-new(.page-forward) {
+  --vt-shift: var(--distance-axis);
+}
+::view-transition-old(.page-back) {
+  --vt-shift: var(--distance-axis);
+}
+::view-transition-new(.page-back) {
+  --vt-shift: calc(var(--distance-axis) * -1);
+}
+
+/* ---------- The same page, new content: a crossfade -------------------- */
+::view-transition-group(.page-update) {
+  animation-duration: var(--duration-base);
+  animation-timing-function: var(--ease-house);
+}
+::view-transition-old(.page-update) {
+  animation: vt-fade-out var(--duration-base) var(--ease-house) both;
+}
+::view-transition-new(.page-update) {
+  animation: vt-fade-in var(--duration-base) var(--ease-house) both;
+}
+
+/* ---------- One thing travels between two pages ------------------------ */
+::view-transition-group(.morph) {
+  z-index: 3;
+  animation-duration: var(--duration-morph);
+  animation-timing-function: var(--ease-entrance);
+}
+::view-transition-old(.morph),
+::view-transition-new(.morph) {
+  animation-duration: var(--duration-morph);
+  animation-timing-function: var(--ease-entrance);
+}
+
+/* ---------- The bars ------------------------------------------------------
+ * The same bar on both pages never moves: the new one shows as it is, live.
+ * A bar only one page has (`:only-child`: no counterpart) fades with the
+ * page around it.
+ */
+::view-transition-group(.chrome) {
+  z-index: 2;
+  animation: none;
+}
+::view-transition-old(.chrome) {
+  display: none;
+}
+::view-transition-new(.chrome) {
+  animation: none;
+}
+::view-transition-old(.chrome):only-child {
+  display: block;
+  animation: vt-fade-out var(--duration-page-exit) var(--ease-exit) both;
+}
+::view-transition-new(.chrome):only-child {
+  animation: vt-fade-in var(--duration-page-enter) var(--ease-house) both;
+}
+
+/* The panel's sections: the white surface below (a bar), the mark of the
+   section on screen sliding to the new one, and the sections' names above
+   it (a bar too, its own layer so the mark never covers a name). */
+::view-transition-group(panel-nav-pill) {
+  z-index: 3;
+  animation-duration: var(--duration-axis);
+  animation-timing-function: var(--ease-entrance);
+}
+::view-transition-old(panel-nav-pill):only-child {
+  animation: vt-fade-out var(--duration-page-exit) var(--ease-exit) both;
+}
+::view-transition-new(panel-nav-pill):only-child {
+  animation: vt-fade-in var(--duration-page-enter) var(--ease-house) both;
+}
+::view-transition-group(panel-nav.chrome) {
+  z-index: 4;
+}
+
+/* The line while the server answers, and the colour wipe over any page
+   transition that runs under it: always on top, always live. */
+::view-transition-group(nav-progress),
+::view-transition-group(screen-wipe) {
+  z-index: 5;
+  animation: none;
+}
+::view-transition-old(nav-progress),
+::view-transition-old(screen-wipe) {
+  display: none;
+}
+::view-transition-new(nav-progress),
+::view-transition-new(screen-wipe) {
+  animation: none;
+}
+
+/* ---------- Safari's own swipe back --------------------------------------
+ * The browser already animated the page under the finger: a second
+ * animation would replay it (app/ui/motion/navigation-progress.tsx).
+ */
+:root[data-native-transition]::view-transition-group(*),
+:root[data-native-transition]::view-transition-old(*),
+:root[data-native-transition]::view-transition-new(*) {
+  animation: none !important;
+}
+
+/* ---------- The names ----------------------------------------------------- */
+@utility vt-site-header {
+  view-transition-name: site-header;
+  view-transition-class: chrome;
+}
+/* The public profile's header, white on its blue: another bar. */
+@utility vt-site-header-inverse {
+  view-transition-name: site-header-inverse;
+  view-transition-class: chrome;
+}
+@utility vt-landing-header {
+  view-transition-name: landing-header;
+  view-transition-class: chrome;
+}
+@utility vt-search-header {
+  view-transition-name: search-header;
+  view-transition-class: chrome;
+}
+@utility vt-panel-nav-surface {
+  view-transition-name: panel-nav-surface;
+  view-transition-class: chrome;
+}
+@utility vt-panel-nav-pill {
+  view-transition-name: panel-nav-pill;
+}
+@utility vt-panel-nav {
+  view-transition-name: panel-nav;
+  view-transition-class: chrome;
+}
+@utility vt-nav-progress {
+  view-transition-name: nav-progress;
+}
+@utility vt-screen-wipe {
+  view-transition-name: screen-wipe;
+}
+
+/* ---------- The keyframes --------------------------------------------- */
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-rise {
+  from {
+    translate: 0 var(--distance-page-rise);
+  }
+}
+@keyframes vt-lift {
+  to {
+    translate: 0 calc(var(--distance-page-lift) * -1);
+  }
+}
+@keyframes vt-slide-in {
+  from {
+    translate: var(--vt-shift) 0;
+  }
+}
+@keyframes vt-slide-out {
+  to {
+    translate: var(--vt-shift) 0;
+  }
+}
+
+/* ---------- The line while the server answers ----------------------------
+ * (app/ui/motion/navigation-progress.tsx) As thin and as blue as the
+ * search's pending line: it fills most of the way while it waits, the rest
+ * once the page lands, and fades.
+ */
+@utility nav-progress {
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  z-index: 60;
+  height: calc(var(--spacing) * 0.5);
+  background-color: var(--color-primary);
+  transform-origin: left;
+  scale: 0 1;
+  opacity: 0;
+  pointer-events: none;
+
+  &[data-state='loading'] {
+    scale: 0.85 1;
+    opacity: 1;
+    transition:
+      scale var(--duration-progress-fill) var(--ease-enter),
+      opacity var(--duration-fast) var(--ease-house);
+  }
+  &[data-state='done'] {
+    scale: 1 1;
+    opacity: 0;
+    transition:
+      scale var(--duration-fast) var(--ease-house),
+      opacity var(--duration-base) var(--ease-house) var(--duration-fast);
+  }
+}
+
+/* ---------- The colour wipe (app/ui/motion/screen-wipe.tsx) -------------- */
+@property --wipe-hole {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@utility screen-wipe {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background-color: var(--color-primary);
+
+  /* Green, the colour of what went well, as the app's own wipe. */
+  &[data-tone='success'] {
+    background-color: var(--color-secondary);
+  }
+  /* The page opens through a hole that grows from the same point. The mask
+     exists only while it opens, and the hole's soft edge lies inside the
+     hole: a hole of 0 is closed. While it covers, the colour is whole, its
+     centre too — the control pressed and the page changing under it never
+     show through — and the page beneath takes no tap; once it opens, what
+     shows answers at once. */
+  &[data-phase='revealing'] {
+    pointer-events: none;
+    -webkit-mask-image: radial-gradient(
+      circle at var(--wipe-x, 50%) var(--wipe-y, 50%),
+      transparent calc(var(--wipe-hole) - 0.5px),
+      var(--color-pure-black) var(--wipe-hole)
+    );
+    mask-image: radial-gradient(
+      circle at var(--wipe-x, 50%) var(--wipe-y, 50%),
+      transparent calc(var(--wipe-hole) - 0.5px),
+      var(--color-pure-black) var(--wipe-hole)
+    );
+    transition: --wipe-hole var(--duration-wipe-reveal) var(--ease-wipe-reveal);
+  }
+}

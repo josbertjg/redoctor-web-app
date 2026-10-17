@@ -18,6 +18,7 @@ import { LinkOriginTracker } from '@/app/ui/analytics/link-origin-tracker';
 import { OpenInAppButton } from '@/app/ui/app-bridge/open-in-app-button';
 import { BottomActions } from '@/app/ui/layout/bottom-actions';
 import { SiteHeader } from '@/app/ui/layout/site-header';
+import { PageTransition } from '@/app/ui/motion/view-transitions';
 import { JsonLd } from '@/app/ui/seo/json-ld';
 import { Tabs } from '@/app/ui/tabs';
 
@@ -120,104 +121,108 @@ export default async function SpecialistProfilePage({
       <div className="bg-primary">
         <SiteHeader homeLabel={t('common.homeLabel')} tone="inverse" />
       </div>
-      <main className="flex flex-1 flex-col">
-        <ProfileHero profile={profile} />
-        <div className="mx-auto flex w-full max-w-content flex-col gap-8 px-gutter py-6">
-          <ProfileSection title={t('description')}>
-            {profile.description ? (
-              <ShowMoreText
-                text={profile.description}
-                limit={200}
-                labels={moreLabels}
-              />
-            ) : (
-              <ProfilePlaceholder>
-                {t('search.noDescription')}
-              </ProfilePlaceholder>
-            )}
-          </ProfileSection>
+      <PageTransition>
+        <main className="flex flex-1 flex-col">
+          <ProfileHero profile={profile} />
+          <div className="mx-auto flex w-full max-w-content flex-col gap-8 px-gutter py-6">
+            <ProfileSection title={t('description')}>
+              {profile.description ? (
+                <ShowMoreText
+                  text={profile.description}
+                  limit={200}
+                  labels={moreLabels}
+                />
+              ) : (
+                <ProfilePlaceholder>
+                  {t('search.noDescription')}
+                </ProfilePlaceholder>
+              )}
+            </ProfileSection>
 
-          <ProfileSection
-            id={OFFICES_ANCHOR}
-            title={t('search.attentionOffices')}
-          >
-            {profile.offices.length > 0 ? (
-              <OfficeList
-                offices={profile.offices}
-                booking={{ specialistId: profile.id, expectSpecialist }}
-              />
-            ) : (
-              <ProfilePlaceholder>
-                {t('specialists.noOffices')}
-              </ProfilePlaceholder>
-            )}
-          </ProfileSection>
+            <ProfileSection
+              id={OFFICES_ANCHOR}
+              title={t('search.attentionOffices')}
+            >
+              {profile.offices.length > 0 ? (
+                <OfficeList
+                  offices={profile.offices}
+                  booking={{ specialistId: profile.id, expectSpecialist }}
+                />
+              ) : (
+                <ProfilePlaceholder>
+                  {t('specialists.noOffices')}
+                </ProfilePlaceholder>
+              )}
+            </ProfileSection>
 
-          <ProfileSection title={t('reviews.title')}>
-            <Suspense fallback={<ReviewsSkeleton />}>
-              <ReviewsSection
-                specialistId={profile.id}
-                specialistName={profile.name}
-              />
-            </Suspense>
-          </ProfileSection>
+            <ProfileSection title={t('reviews.title')}>
+              <Suspense fallback={<ReviewsSkeleton />}>
+                <ReviewsSection
+                  specialistId={profile.id}
+                  specialistName={profile.name}
+                />
+              </Suspense>
+            </ProfileSection>
 
-          <ProfileSection title={t('specialistProfile.aboutSpecialist')}>
-            {hasAbout ? (
-              <div className="flex flex-col gap-3">
-                {profile.gallery.length > 0 ? (
-                  <Gallery images={profile.gallery} name={profile.name} />
-                ) : null}
-                {profile.experience ? (
-                  <ShowMoreText
-                    text={profile.experience}
-                    limit={300}
-                    labels={moreLabels}
-                  />
-                ) : null}
-              </div>
-            ) : (
-              <ProfilePlaceholder>
-                {t('search.noAboutSpecialist')}
-              </ProfilePlaceholder>
-            )}
-          </ProfileSection>
+            <ProfileSection title={t('specialistProfile.aboutSpecialist')}>
+              {hasAbout ? (
+                <div className="flex flex-col gap-3">
+                  {profile.gallery.length > 0 ? (
+                    <Gallery images={profile.gallery} name={profile.name} />
+                  ) : null}
+                  {profile.experience ? (
+                    <ShowMoreText
+                      text={profile.experience}
+                      limit={300}
+                      labels={moreLabels}
+                    />
+                  ) : null}
+                </div>
+              ) : (
+                <ProfilePlaceholder>
+                  {t('search.noAboutSpecialist')}
+                </ProfilePlaceholder>
+              )}
+            </ProfileSection>
 
-          <Tabs
-            label={t('specialists.trainingLabel', { name: profile.name })}
-            items={[
-              {
-                value: 'education',
-                label: t('education'),
-                content: <SpecialtyList specialties={profile.specialties} />,
-              },
-              {
-                value: 'certifications',
-                label: t('certifications'),
-                content: (
-                  <CertificationList certifications={profile.certifications} />
-                ),
-              },
-            ]}
-          />
-        </div>
+            <Tabs
+              label={t('specialists.trainingLabel', { name: profile.name })}
+              items={[
+                {
+                  value: 'education',
+                  label: t('education'),
+                  content: <SpecialtyList specialties={profile.specialties} />,
+                },
+                {
+                  value: 'certifications',
+                  label: t('certifications'),
+                  content: (
+                    <CertificationList
+                      certifications={profile.certifications}
+                    />
+                  ),
+                },
+              ]}
+            />
+          </div>
 
-        <BottomActions>
-          {/* Above the booking: on a computer it gives its place up, and
-              «Agendar cita» stays where it is. */}
-          <OpenInAppButton
-            path={routes.specialist(profile.id)}
-            desktop="none"
-            variant="white"
-          />
-          <BookingAction
-            specialistId={profile.id}
-            bookLabel={t('search.bookAppointment')}
-            ownNote={t('specialists.ownProfileNote')}
-            expectSpecialist={expectSpecialist}
-          />
-        </BottomActions>
-      </main>
+          <BottomActions>
+            {/* Above the booking: on a computer it gives its place up, and
+                «Agendar cita» stays where it is. */}
+            <OpenInAppButton
+              path={routes.specialist(profile.id)}
+              desktop="none"
+              variant="white"
+            />
+            <BookingAction
+              specialistId={profile.id}
+              bookLabel={t('search.bookAppointment')}
+              ownNote={t('specialists.ownProfileNote')}
+              expectSpecialist={expectSpecialist}
+            />
+          </BottomActions>
+        </main>
+      </PageTransition>
     </>
   );
 }

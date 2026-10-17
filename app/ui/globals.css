@@ -5,6 +5,7 @@
  */
 @import 'tailwindcss';
 @import './tokens.css';
+@import './motion/page-transitions.css';
 
 /*
  * The semantic names shadcn/Radix components expect, mapped onto our tokens.

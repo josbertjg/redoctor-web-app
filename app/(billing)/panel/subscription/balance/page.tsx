@@ -5,6 +5,7 @@ import { getTranslations } from 'next-intl/server';
 import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 
 import { MessagesScope } from '@/app/ui/messages-scope';
+import { PageTransition } from '@/app/ui/motion/view-transitions';
 
 import { BalanceFlow } from '../../../_components/balance-flow';
 
@@ -20,8 +21,10 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 export default function BalancePage() {
   return (
-    <MessagesScope namespaces={pageNamespaces.subscription}>
-      <BalanceFlow />
-    </MessagesScope>
+    <PageTransition>
+      <MessagesScope namespaces={pageNamespaces.subscription}>
+        <BalanceFlow />
+      </MessagesScope>
+    </PageTransition>
   );
 }

@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 
 import { getTranslations } from 'next-intl/server';
 
+import { PageTransition } from '@/app/ui/motion/view-transitions';
+
 import {
   DailySummaryOptOut,
   type DailySummaryLabels,
@@ -44,11 +46,13 @@ export default async function DailySummaryOptOutPage({
   };
 
   return (
-    <main className="flex flex-1 flex-col justify-center pb-16">
-      <DailySummaryOptOut
-        token={typeof token === 'string' && token !== '' ? token : undefined}
-        labels={labels}
-      />
-    </main>
+    <PageTransition>
+      <main className="flex flex-1 flex-col justify-center pb-16">
+        <DailySummaryOptOut
+          token={typeof token === 'string' && token !== '' ? token : undefined}
+          labels={labels}
+        />
+      </main>
+    </PageTransition>
   );
 }

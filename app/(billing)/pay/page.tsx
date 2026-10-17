@@ -6,6 +6,7 @@ import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 import { parseInvoiceId, parsePlanSlug } from '@/app/lib/schemas/billing';
 
 import { MessagesScope } from '@/app/ui/messages-scope';
+import { PageTransition } from '@/app/ui/motion/view-transitions';
 
 import { PayFlow } from '../_components/pay-flow';
 
@@ -30,14 +31,16 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function PayPage({ searchParams }: PageProps<'/pay'>) {
   const { plan, view, invoice } = await searchParams;
   return (
-    <MessagesScope namespaces={pageNamespaces.pay}>
-      <PayFlow
-        request={{
-          plan: parsePlanSlug(plan),
-          plans: view === 'plans',
-          invoice: parseInvoiceId(invoice),
-        }}
-      />
-    </MessagesScope>
+    <PageTransition>
+      <MessagesScope namespaces={pageNamespaces.pay}>
+        <PayFlow
+          request={{
+            plan: parsePlanSlug(plan),
+            plans: view === 'plans',
+            invoice: parseInvoiceId(invoice),
+          }}
+        />
+      </MessagesScope>
+    </PageTransition>
   );
 }

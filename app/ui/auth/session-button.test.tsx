@@ -192,4 +192,26 @@ describe('SessionButton', () => {
       'AP',
     );
   });
+
+  it('signs out from the bar with the menu still open, for the colour to cover', async () => {
+    const value = session({
+      status: 'signed-in',
+      user,
+      account: toAccount(meResponseSchema.parse(buildMeResponse())),
+      accountStatus: 'ready',
+    });
+    renderWithSession(value, <SessionButton />);
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Tu cuenta' }),
+    );
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: 'Cerrar sesión' }),
+    );
+
+    expect(value.signOut).toHaveBeenCalledOnce();
+    // The blue wipe grows from the item: the menu goes with the session,
+    // under the colour, instead of shrinking where the colour starts.
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+  });
 });

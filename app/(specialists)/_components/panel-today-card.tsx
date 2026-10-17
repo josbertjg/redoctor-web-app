@@ -18,6 +18,7 @@ import {
 
 import { AppointmentCard } from '@/app/ui/appointments/appointment-card';
 import { Button } from '@/app/ui/button';
+import { useSkeletonHold } from '@/app/ui/motion/skeleton-hold';
 import { Skeleton } from '@/app/ui/skeleton';
 
 import { useSession } from '@/app/hooks/use-session';
@@ -45,8 +46,12 @@ function TodayCard({ user }: { user: SessionUser }) {
   const query = useQuery(
     specialistAppointmentsQueryOptions(user, { from: today, to: today }),
   );
+  // The skeleton crossfades into what arrives (AGENTS.md §8, rule 13).
+  const holding = useSkeletonHold(query.isPending);
 
-  if (query.isPending) return <Skeleton className="h-48 rounded-2xl" />;
+  if (query.isPending || holding) {
+    return <Skeleton className="h-48 rounded-2xl" />;
+  }
 
   if (query.isLoadingError) {
     return (

@@ -25,6 +25,8 @@ import { AppointmentCard } from '@/app/ui/appointments/appointment-card';
 import { Button } from '@/app/ui/button';
 import { EmptyState } from '@/app/ui/empty-state';
 import { Icon } from '@/app/ui/icons';
+import { useSkeletonHold } from '@/app/ui/motion/skeleton-hold';
+import { navBack, navForward } from '@/app/ui/motion/view-transitions';
 
 import { useFocusHeading } from '@/app/hooks/use-focus-heading';
 import { useSession } from '@/app/hooks/use-session';
@@ -60,6 +62,8 @@ function Agenda({ user, day }: { user: SessionUser; day: string | null }) {
   const query = useQuery(
     specialistAppointmentsQueryOptions(user, { from: date, to: date }),
   );
+  // The skeleton crossfades into what arrives (AGENTS.md §8, rule 13).
+  const holding = useSkeletonHold(query.isPending);
   // The day's title takes the focus when the person moves to another day.
   const frame = useFocusHeading(date);
 
@@ -72,7 +76,7 @@ function Agenda({ user, day }: { user: SessionUser; day: string | null }) {
   );
 
   function content() {
-    if (query.isPending) return <AppointmentListSkeleton />;
+    if (query.isPending || holding) return <AppointmentListSkeleton />;
 
     if (query.isLoadingError) {
       return (
@@ -127,8 +131,11 @@ function DayNavigator({ date, today }: { date: string; today: string }) {
   return (
     <div className="flex flex-col gap-2 rounded-2xl bg-pure-white p-2 shadow-md">
       <div className="flex items-center gap-2">
+        {/* The days go sideways, like turning a calendar's page (AGENTS.md
+            §8, rule 13). */}
         <Link
           href={{ pathname: routes.agenda(addDays(date, -1)) }}
+          transitionTypes={[navBack]}
           aria-label={t('previousDay')}
           className={step}
         >
@@ -142,6 +149,7 @@ function DayNavigator({ date, today }: { date: string; today: string }) {
         </h2>
         <Link
           href={{ pathname: routes.agenda(addDays(date, 1)) }}
+          transitionTypes={[navForward]}
           aria-label={t('nextDay')}
           className={step}
         >
@@ -156,7 +164,12 @@ function DayNavigator({ date, today }: { date: string; today: string }) {
           shape="soft"
           className="animate-fade-in self-center"
         >
-          <Link href={{ pathname: routes.agenda() }}>{t('backToToday')}</Link>
+          <Link
+            href={{ pathname: routes.agenda() }}
+            transitionTypes={[date > today ? navBack : navForward]}
+          >
+            {t('backToToday')}
+          </Link>
         </Button>
       )}
     </div>

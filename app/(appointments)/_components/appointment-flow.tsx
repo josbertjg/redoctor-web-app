@@ -15,12 +15,11 @@ import { toAppointmentSummary } from '@/app/lib/schemas/appointments';
 import { AccountErrorState } from '@/app/ui/auth/account-error-state';
 import { SignInButtons } from '@/app/ui/auth/sign-in-buttons';
 import { SignInLegalNote } from '@/app/ui/auth/sign-in-legal-note';
+import { useSignInArrival } from '@/app/ui/auth/use-sign-in-arrival';
 import { Button } from '@/app/ui/button';
 import { EmptyState } from '@/app/ui/empty-state';
+import { useSkeletonHold } from '@/app/ui/motion/skeleton-hold';
 import { StatusCard } from '@/app/ui/status-card';
-
-import { useSession } from '@/app/hooks/use-session';
-import { useSignInTracking } from '@/app/hooks/use-sign-in-tracking';
 
 import { AppointmentSkeleton } from './appointment-skeleton';
 import { AppointmentFrame, AppointmentView } from './appointment-view';
@@ -33,8 +32,8 @@ import { AppointmentFrame, AppointmentView } from './appointment-view';
  */
 export function AppointmentFlow({ appointmentId }: { appointmentId: string }) {
   const t = useTranslations();
-  const session = useSession();
-  const onSignedIn = useSignInTracking();
+  // The page as it was until a sign-in made here is under the colour.
+  const { session, onSignedIn } = useSignInArrival();
   const { account, user } = session;
 
   const switchAccount = () => {
@@ -91,8 +90,10 @@ function SignedInAppointment({
 }) {
   const t = useTranslations();
   const query = useQuery(appointmentQueryOptions(user, appointmentId));
+  // The skeleton crossfades into the appointment (AGENTS.md §8, rule 13).
+  const holding = useSkeletonHold(query.isPending);
 
-  if (query.isPending) return <AppointmentSkeleton />;
+  if (query.isPending || holding) return <AppointmentSkeleton />;
 
   // Only when there is nothing to show: a failed re-read after a write keeps
   // the appointment on screen (the connection notice already said why).

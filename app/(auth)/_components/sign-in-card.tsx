@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 
 import type { Route } from 'next';
 
@@ -17,9 +17,14 @@ import { AccountErrorState } from '@/app/ui/auth/account-error-state';
 import { SignInButtons } from '@/app/ui/auth/sign-in-buttons';
 import { SignInLegalNote } from '@/app/ui/auth/sign-in-legal-note';
 import { Icon } from '@/app/ui/icons';
+import { nextNavigation } from '@/app/ui/motion/navigation-events';
+import { wipeScreen } from '@/app/ui/motion/screen-wipe';
 import { Skeleton } from '@/app/ui/skeleton';
 
 import { useSession } from '@/app/hooks/use-session';
+
+/** However long the next page takes, the wipe opens after this. */
+const LANDING_TIMEOUT_MS = 4000;
 
 type SignInCardProps = {
   /** A same-origin path to return to, already checked by the page. */
@@ -41,14 +46,35 @@ export function SignInCard({ redirect }: SignInCardProps) {
   /** The provider the person just tapped; none for a session that was already there. */
   const [chosen, setChosen] = useState<AuthProvider | null>(null);
 
+  /** The person moved on once: a fresher `/me` never moves them again. */
+  const left = useRef(false);
+
   const { account, status, accountStatus } = session;
 
   useEffect(() => {
-    if (account === null) return;
-    if (chosen !== null) {
-      track('web_signin_completed', { provider: chosen, role: account.role });
+    if (account === null) {
+      left.current = false;
+      return;
     }
-    router.replace(destinationAfterSignIn(account, redirect) as Route);
+    if (left.current) return;
+    left.current = true;
+    const destination = destinationAfterSignIn(account, redirect) as Route;
+    // A session that was already there just moves on.
+    if (chosen === null) {
+      router.replace(destination);
+      return;
+    }
+    track('web_signin_completed', { provider: chosen, role: account.role });
+    // Signing in is a big moment: the next page arrives under the blue wipe
+    // (AGENTS.md §8, rule 13), which opens once it has landed.
+    void wipeScreen({
+      tone: 'primary',
+      whileCovered: async () => {
+        const landed = nextNavigation(LANDING_TIMEOUT_MS);
+        router.replace(destination);
+        await landed;
+      },
+    });
   }, [account, chosen, redirect, router]);
 
   if (status === 'signed-in' && accountStatus === 'error') {

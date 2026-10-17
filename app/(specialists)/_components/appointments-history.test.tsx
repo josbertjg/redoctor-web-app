@@ -11,6 +11,7 @@ import { buildAppointment, officeId } from '@/tests/factories/appointments';
 import {
   enterAll,
   stubIntersectionObserver,
+  watching,
 } from '@/tests/intersection-observer';
 import { freezeClock, renderPanel } from '@/tests/panel';
 
@@ -98,9 +99,17 @@ describe('AppointmentsHistory', () => {
       screen.queryByRole('button', { name: 'Ver más' }),
     ).not.toBeInTheDocument();
 
+    // The list arrives in a transition (its skeleton crossfades into it):
+    // its foot is watched once it has mounted.
+    await waitFor(() => {
+      expect(watching()).toBeGreaterThan(0);
+    });
     enterAll();
     expect(await screen.findByText('Paciente 15')).toBeInTheDocument();
     expect(screen.getAllByText(/^Paciente \d+$/)).toHaveLength(20);
+    await waitFor(() => {
+      expect(watching()).toBeGreaterThan(0);
+    });
     enterAll();
     expect(await screen.findByText('Paciente 1')).toBeInTheDocument();
     expect(screen.getAllByText(/^Paciente \d+$/)).toHaveLength(25);

@@ -52,6 +52,22 @@ describe('PanelNav', () => {
     expect(await axe(container)).toHaveNoViolations();
   });
 
+  it('puts the mark under the section on screen alone, and none on a page of no section', () => {
+    // The mark is what slides to the next section in a page transition.
+    const reports = renderNav('/panel/reports');
+    const marks = reports.container.querySelectorAll('.vt-panel-nav-pill');
+    expect(marks).toHaveLength(1);
+    expect(marks[0]?.parentElement).toContainElement(
+      screen.getByRole('link', { name: 'Estadísticas' }),
+    );
+    reports.unmount();
+
+    const profile = renderNav('/panel/profile');
+    expect(
+      profile.container.querySelectorAll('.vt-panel-nav-pill'),
+    ).toHaveLength(0);
+  });
+
   it('keeps the subscription marked on its payment page', () => {
     renderNav('/pay');
 

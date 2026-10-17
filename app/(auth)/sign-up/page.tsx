@@ -9,6 +9,7 @@ import { AppAccess } from '@/app/ui/app-bridge/app-access';
 import { SessionControls } from '@/app/ui/auth/session-controls';
 import { SiteHeader } from '@/app/ui/layout/site-header';
 import { MessagesScope } from '@/app/ui/messages-scope';
+import { PageTransition } from '@/app/ui/motion/view-transitions';
 
 import { SignUpFlow } from '../_components/sign-up-flow';
 
@@ -37,15 +38,17 @@ export default async function SignUpPage({
       <SiteHeader homeLabel={t('homeLabel')}>
         <SessionControls />
       </SiteHeader>
-      <main className="flex flex-1 flex-col items-center justify-center px-gutter pb-16">
-        <MessagesScope namespaces={pageNamespaces.signUp}>
-          <SignUpFlow
-            redirect={target}
-            joinApp={<AppAccess variant="join" />}
-            finishApp={<AppAccess variant="finish" />}
-          />
-        </MessagesScope>
-      </main>
+      <PageTransition>
+        <main className="flex flex-1 flex-col items-center justify-center px-gutter pb-16">
+          <MessagesScope namespaces={pageNamespaces.signUp}>
+            <SignUpFlow
+              redirect={target}
+              joinApp={<AppAccess variant="join" />}
+              finishApp={<AppAccess variant="finish" />}
+            />
+          </MessagesScope>
+        </main>
+      </PageTransition>
     </>
   );
 }

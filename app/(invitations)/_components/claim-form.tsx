@@ -39,6 +39,7 @@ import { Button } from '@/app/ui/button';
 import { Checkbox } from '@/app/ui/checkbox';
 import { ChoiceCards } from '@/app/ui/choice-cards';
 import { FieldError } from '@/app/ui/field-error';
+import { wipeScreen } from '@/app/ui/motion/screen-wipe';
 import { TextField } from '@/app/ui/text-field';
 
 type ClaimValues = {
@@ -149,13 +150,6 @@ export function ClaimForm({
         body,
       ),
     onSuccess: (response, { body }) => {
-      queryClient.setQueryData(invitationKeys.detail(token), response);
-      // The appointment is now this account's: «Mis citas» and its page read
-      // it as it is, not as they were before the claim.
-      queryClient.setQueryData(
-        appointmentKeys.detail(user.id, response.appointment.id),
-        { kind: 'found', appointment: response.appointment },
-      );
       void queryClient.invalidateQueries({
         queryKey: appointmentKeys.list(user.id),
       });
@@ -166,7 +160,23 @@ export function ClaimForm({
         relationship: body.relationship === 'SELF' ? 'self' : 'dependent',
         confirmed,
       });
-      onClaimed({ confirmed });
+      // A big moment: the claimed appointment arrives under the green wipe
+      // (AGENTS.md §8, rule 13). The button stays busy until then
+      // (`isSuccess`): back to its words, it would flash where the colour
+      // starts growing.
+      void wipeScreen({
+        tone: 'success',
+        whileCovered: () => {
+          queryClient.setQueryData(invitationKeys.detail(token), response);
+          // The appointment is now this account's: «Mis citas» and its page
+          // read it as it is, not as they were before the claim.
+          queryClient.setQueryData(
+            appointmentKeys.detail(user.id, response.appointment.id),
+            { kind: 'found', appointment: response.appointment },
+          );
+          onClaimed({ confirmed });
+        },
+      });
     },
     onError: (error, { body }) => {
       const reason = selfClaimRefusalOf(error);
@@ -348,7 +358,12 @@ export function ClaimForm({
           message={failure}
           className="text-center"
         />
-        <Button type="submit" block shape="soft" loading={claim.isPending}>
+        <Button
+          type="submit"
+          block
+          shape="soft"
+          loading={claim.isPending || claim.isSuccess}
+        >
           {mustSignUp ? t('continue') : t('appointments.invitation.claim')}
         </Button>
       </div>

@@ -22,6 +22,7 @@ import {
 import { NoticePanel } from '@/app/ui/billing/notice-panel';
 import { PlanEmblem } from '@/app/ui/billing/plan-emblem';
 import { Button } from '@/app/ui/button';
+import { useSkeletonHold } from '@/app/ui/motion/skeleton-hold';
 import { Skeleton } from '@/app/ui/skeleton';
 import { StateChip } from '@/app/ui/state-chip';
 
@@ -51,8 +52,10 @@ function PlanCard({ user }: { user: SessionUser }) {
   const payable = useQuery(payableInvoiceQueryOptions(user, subscription));
   // What the deadlines count from is decided once, like on «Mi suscripción».
   const [now] = useState(() => new Date());
+  // The skeleton crossfades into what arrives (AGENTS.md §8, rule 13).
+  const holding = useSkeletonHold(current.isPending || payable.isLoading);
 
-  if (current.isPending || payable.isLoading) {
+  if (current.isPending || payable.isLoading || holding) {
     return <Skeleton className="h-36 rounded-2xl" />;
   }
 

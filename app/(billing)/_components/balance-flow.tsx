@@ -11,6 +11,7 @@ import { routes } from '@/app/lib/routes';
 import { BackLink } from '@/app/ui/back-link';
 import { Button } from '@/app/ui/button';
 import { EmptyState } from '@/app/ui/empty-state';
+import { useSkeletonHold } from '@/app/ui/motion/skeleton-hold';
 import { Skeleton } from '@/app/ui/skeleton';
 
 import { useSession } from '@/app/hooks/use-session';
@@ -55,8 +56,10 @@ function Balance({ user }: { user: SessionUser }) {
   const t = useTranslations('billing');
   const tRoot = useTranslations();
   const balance = useInfiniteQuery(balanceQueryOptions(user));
+  // The skeleton crossfades into what arrives (AGENTS.md §8, rule 13).
+  const holding = useSkeletonHold(balance.isPending);
 
-  if (balance.isPending) return <BalanceSkeleton />;
+  if (balance.isPending || holding) return <BalanceSkeleton />;
 
   const head = (
     <>

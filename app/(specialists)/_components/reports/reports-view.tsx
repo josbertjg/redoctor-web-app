@@ -27,6 +27,7 @@ import { routes } from '@/app/lib/routes';
 import type { SpecialistReport } from '@/app/lib/schemas/reports';
 import { cn } from '@/app/lib/utils';
 
+import { useSkeletonHold } from '@/app/ui/motion/skeleton-hold';
 import { Skeleton } from '@/app/ui/skeleton';
 import { Tabs } from '@/app/ui/tabs';
 
@@ -139,6 +140,8 @@ function Reports({ user }: { user: SessionUser }) {
     // A new period keeps the figures on screen until the answer replaces them.
     placeholderData: keepPreviousData,
   });
+  // The skeleton crossfades into what arrives (AGENTS.md §8, rule 13).
+  const holding = useSkeletonHold(query.isPending);
   const [tab, setTab] = useState<ReportTab>('summary');
   const [printing, setPrinting] = useState(false);
 
@@ -223,7 +226,7 @@ function Reports({ user }: { user: SessionUser }) {
   );
 
   function content() {
-    if (query.isPending) return <ReportsSkeleton />;
+    if (query.isPending || holding) return <ReportsSkeleton />;
 
     if (query.isLoadingError) {
       return (

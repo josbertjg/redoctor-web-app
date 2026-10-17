@@ -5,6 +5,7 @@ import { getTranslations } from 'next-intl/server';
 import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 
 import { MessagesScope } from '@/app/ui/messages-scope';
+import { PageTransition } from '@/app/ui/motion/view-transitions';
 
 import { AppointmentsFlow } from '../_components/appointments-flow';
 
@@ -22,8 +23,10 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default function PatientAppointmentsPage() {
   return (
-    <MessagesScope namespaces={pageNamespaces.appointments}>
-      <AppointmentsFlow />
-    </MessagesScope>
+    <PageTransition>
+      <MessagesScope namespaces={pageNamespaces.appointments}>
+        <AppointmentsFlow />
+      </MessagesScope>
+    </PageTransition>
   );
 }

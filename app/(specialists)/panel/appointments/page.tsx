@@ -7,6 +7,7 @@ import { getTranslations } from 'next-intl/server';
 import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 
 import { MessagesScope } from '@/app/ui/messages-scope';
+import { PageTransition } from '@/app/ui/motion/view-transitions';
 
 import {
   AppointmentsHistory,
@@ -25,11 +26,13 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 export default function SpecialistAppointmentsPage() {
   return (
-    <MessagesScope namespaces={pageNamespaces.agenda}>
-      {/* The filters live in the address: read in the browser, under a boundary. */}
-      <Suspense fallback={<HistorySkeleton />}>
-        <AppointmentsHistory />
-      </Suspense>
-    </MessagesScope>
+    <PageTransition>
+      <MessagesScope namespaces={pageNamespaces.agenda}>
+        {/* The filters live in the address: read in the browser, under a boundary. */}
+        <Suspense fallback={<HistorySkeleton />}>
+          <AppointmentsHistory />
+        </Suspense>
+      </MessagesScope>
+    </PageTransition>
   );
 }

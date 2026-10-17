@@ -5,7 +5,7 @@ import { useId, useMemo, useState } from 'react';
 import Link from 'next/link';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useForm, type Resolver } from 'react-hook-form';
 import { z } from 'zod';
@@ -29,7 +29,6 @@ import {
 } from '@/app/lib/format/phone';
 import {
   completePatientRegistration,
-  identityKeys,
   isDocumentAvailable,
   registerPatient,
 } from '@/app/lib/queries/identity';
@@ -102,6 +101,11 @@ type PatientSignUpFormProps = {
   /** Values to start from, like the invitation's (M4). */
   defaults?: Partial<SignUpValues> | undefined;
   submitLabel: string;
+  /**
+   * Saved, and the token carries it. Reading the account again is what
+   * moves the page on, so the page does it when it moves on — under the
+   * colour, when the end is a big moment. The button stays busy until then.
+   */
   onDone: () => void;
 };
 
@@ -164,7 +168,6 @@ export function PatientSignUpForm({
   onDone,
 }: PatientSignUpFormProps) {
   const t = useTranslations();
-  const queryClient = useQueryClient();
   const formErrorId = useId();
   const resolver = useSignUpResolver(parts);
   const [today] = useState(() => ({
@@ -220,9 +223,6 @@ export function PatientSignUpForm({
       }
       // The token's claims carry the registration status the API reads.
       await refreshToken(user);
-      await queryClient.invalidateQueries({
-        queryKey: identityKeys.me(user.id),
-      });
     },
     onSuccess: onDone,
     onError: (error) => {
@@ -363,7 +363,12 @@ export function PatientSignUpForm({
       ) : null}
 
       <FieldError id={formErrorId} message={failure} className="text-center" />
-      <Button type="submit" block shape="soft" loading={save.isPending}>
+      <Button
+        type="submit"
+        block
+        shape="soft"
+        loading={save.isPending || save.isSuccess}
+      >
         {submitLabel}
       </Button>
     </form>

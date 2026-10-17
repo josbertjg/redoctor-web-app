@@ -27,6 +27,9 @@ import { cn } from '@/app/lib/utils';
 import { Button } from '@/app/ui/button';
 import { FieldError } from '@/app/ui/field-error';
 import { BottomActions } from '@/app/ui/layout/bottom-actions';
+import { moveStep } from '@/app/ui/motion/directions';
+import { wipeScreen } from '@/app/ui/motion/screen-wipe';
+import { StepTransition } from '@/app/ui/motion/view-transitions';
 
 import { useFocusHeading } from '@/app/hooks/use-focus-heading';
 
@@ -146,12 +149,16 @@ export function BookingSteps({
 
   const container = useFocusHeading(booked === null ? step : 'booked');
 
+  // Sideways, the way the step goes (AGENTS.md §8, rule 13); the browser's
+  // own back and forward rise, as a page does.
   const goTo = (next: BookingStep) => {
-    setProblem(null);
-    const params = new URLSearchParams(window.location.search);
-    params.set('step', next);
-    params.set('office', officeId);
-    window.history.pushState(null, '', `?${params.toString()}`);
+    moveStep(stepOrder[next] > stepOrder[step] ? 'forward' : 'back', () => {
+      setProblem(null);
+      const params = new URLSearchParams(window.location.search);
+      params.set('step', next);
+      params.set('office', officeId);
+      window.history.pushState(null, '', `?${params.toString()}`);
+    });
   };
 
   const book = useMutation({
@@ -179,7 +186,15 @@ export function BookingSteps({
       track('web_appointment_booked', {
         relationship: request.attendee.kind === 'self' ? 'self' : 'dependent',
       });
-      setBooked(appointment);
+      // A big moment: «¡Todo listo!» arrives under the green wipe. «Agendar»
+      // stays busy until then (`isSuccess`): back to its words, it would
+      // flash where the colour starts growing.
+      void wipeScreen({
+        tone: 'success',
+        whileCovered: () => {
+          setBooked(appointment);
+        },
+      });
     },
     onError: (error, request) => {
       if (isApiError(error) && error.code === 'ERR_4002') {
@@ -319,7 +334,7 @@ export function BookingSteps({
           <Button
             shape="soft"
             className="flex-1"
-            loading={book.isPending}
+            loading={book.isPending || book.isSuccess}
             aria-describedby={problem === null ? undefined : problemId}
             onClick={submit}
           >
@@ -355,72 +370,83 @@ export function BookingSteps({
               />
             ))}
           </div>
-          <h2 className="mt-1 text-title-lg text-text-primary">
-            {titles[step]}
-          </h2>
-          {step === 'summary' ? (
-            <p className="text-body-md text-text-secondary">
-              {t('search.confirm.description')}
-            </p>
-          ) : null}
+          {/* The step's title and its content go sideways together; the
+              count and the bar above them stay, and fill. */}
+          <StepTransition step={step}>
+            <div className="mt-1 flex flex-col gap-2">
+              <h2 className="text-title-lg text-text-primary">
+                {titles[step]}
+              </h2>
+              {step === 'summary' ? (
+                <p className="text-body-md text-text-secondary">
+                  {t('search.confirm.description')}
+                </p>
+              ) : null}
+            </div>
+          </StepTransition>
         </div>
 
-        {step === 'office' ? (
-          <OfficeStep
-            offices={offices}
-            officeId={officeId}
-            onOfficeChange={changeOffice}
-          />
-        ) : step === 'slot' ? (
-          <SlotStep
-            slotTaken={slotTaken}
-            user={user}
-            officeId={officeId}
-            today={today}
-            month={month}
-            onMonthChange={setShownMonth}
-            day={day}
-            onDayChange={(date) => {
-              setChosenDay(date);
-              setTime(null);
-              setProblem(null);
-            }}
-            time={time}
-            onTimeChange={(startTime) => {
-              // The hour belongs to the day on screen, chosen or suggested.
-              setChosenDay(day);
-              setTime(startTime);
-              setSlotTaken(false);
-              setProblem(null);
-            }}
-          />
-        ) : step === 'patient' ? (
-          <PatientStep
-            user={user}
-            officeId={officeId}
-            today={today}
-            defaults={patientValues}
-            onDone={(choice) => {
-              setPatientValues(choice.values);
-              setPatient(choice);
-              goTo('summary');
-            }}
-          />
-        ) : day !== null && time !== null && patient !== null ? (
-          <SummaryStep
-            office={office}
-            canChangeOffice={offices.length > 1}
-            day={day}
-            time={time}
-            reason={
-              services.data?.find((reason) => reason.id === patient.reasonId) ??
-              null
-            }
-            attendee={patient.attendee}
-            savedUnder={savedUnder}
-            onEdit={goTo}
-          />
-        ) : null}
+        <StepTransition step={step}>
+          <div className="flex flex-col">
+            {step === 'office' ? (
+              <OfficeStep
+                offices={offices}
+                officeId={officeId}
+                onOfficeChange={changeOffice}
+              />
+            ) : step === 'slot' ? (
+              <SlotStep
+                slotTaken={slotTaken}
+                user={user}
+                officeId={officeId}
+                today={today}
+                month={month}
+                onMonthChange={setShownMonth}
+                day={day}
+                onDayChange={(date) => {
+                  setChosenDay(date);
+                  setTime(null);
+                  setProblem(null);
+                }}
+                time={time}
+                onTimeChange={(startTime) => {
+                  // The hour belongs to the day on screen, chosen or suggested.
+                  setChosenDay(day);
+                  setTime(startTime);
+                  setSlotTaken(false);
+                  setProblem(null);
+                }}
+              />
+            ) : step === 'patient' ? (
+              <PatientStep
+                user={user}
+                officeId={officeId}
+                today={today}
+                defaults={patientValues}
+                onDone={(choice) => {
+                  setPatientValues(choice.values);
+                  setPatient(choice);
+                  goTo('summary');
+                }}
+              />
+            ) : day !== null && time !== null && patient !== null ? (
+              <SummaryStep
+                office={office}
+                canChangeOffice={offices.length > 1}
+                day={day}
+                time={time}
+                reason={
+                  services.data?.find(
+                    (reason) => reason.id === patient.reasonId,
+                  ) ?? null
+                }
+                attendee={patient.attendee}
+                savedUnder={savedUnder}
+                onEdit={goTo}
+              />
+            ) : null}
+          </div>
+        </StepTransition>
       </div>
     </BookingFrame>
   );

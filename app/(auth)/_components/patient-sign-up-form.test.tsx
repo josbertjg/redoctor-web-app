@@ -133,6 +133,43 @@ describe('PatientSignUpForm', () => {
     expect(user.getToken).toHaveBeenCalledWith(true);
   });
 
+  it('stays busy once saved, and leaves reading the account to the page', async () => {
+    const accountReads: string[] = [];
+    server.events.on('request:start', ({ request }) => {
+      if (
+        request.method === 'GET' &&
+        new URL(request.url).pathname.endsWith('/identity/me')
+      ) {
+        accountReads.push(request.url);
+      }
+    });
+    const { onDone } = renderForm({ register: true, personalData: false });
+
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Nombre' }),
+      'Ana',
+    );
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Apellido' }),
+      'Pérez',
+    );
+    await userEvent.click(screen.getByRole('checkbox', { name: /He leído/ }));
+    await userEvent.click(screen.getByRole('checkbox', { name: /Autorizo/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+
+    await waitFor(() => {
+      expect(onDone).toHaveBeenCalledOnce();
+    });
+    // The page moves on now (under the colour, at the end of a sign-up):
+    // back to its words, the button would flash where the colour starts.
+    expect(screen.getByRole('button', { name: 'Continuar' })).toHaveAttribute(
+      'aria-busy',
+      'true',
+    );
+    // The account read again is what moves the page: the page asks for it.
+    expect(accountReads).toEqual([]);
+  });
+
   async function fillPersonalData(documentNumber = '12.345.678') {
     await userEvent.type(
       screen.getByLabelText('Fecha de nacimiento'),

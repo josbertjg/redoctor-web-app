@@ -7,6 +7,10 @@ import type { SpecialistProfile } from '@/app/lib/schemas/specialists';
 
 import { Avatar } from '@/app/ui/avatar';
 import { Icon } from '@/app/ui/icons';
+import {
+  sharedNames,
+  SharedTransition,
+} from '@/app/ui/motion/view-transitions';
 import { StarsRating } from '@/app/ui/stars-rating';
 
 /** The id of the offices section, where the header's offices line leads. */
@@ -37,23 +41,29 @@ export function ProfileHero({ profile }: { profile: SpecialistProfile }) {
       aria-labelledby="specialist-name"
       className="flex flex-col items-center rounded-b-2xl bg-primary px-gutter pt-2 pb-8 text-center text-on-primary"
     >
-      <Avatar
-        decorative
-        name={profile.name}
-        // 4x the 110 px avatar: sharp on 3x screens.
-        src={profile.photoUrl}
-        size="2xl"
-        preload
-        className="ring-4 ring-white-50/25"
-      />
+      {/* The photo and the name arrive from the search's card (AGENTS.md §8,
+          rule 13). */}
+      <SharedTransition name={sharedNames.specialistPhoto(profile.id)}>
+        <Avatar
+          decorative
+          name={profile.name}
+          // 4x the 110 px avatar: sharp on 3x screens.
+          src={profile.photoUrl}
+          size="2xl"
+          preload
+          className="ring-4 ring-white-50/25"
+        />
+      </SharedTransition>
       <div className="mt-4 flex max-w-full items-center justify-center gap-1">
         {/* Two lines before cutting: a full name rarely fits one on a phone. */}
-        <h1
-          id="specialist-name"
-          className="line-clamp-2 text-headline-sm font-bold text-balance"
-        >
-          {profile.name}
-        </h1>
+        <SharedTransition name={sharedNames.specialistName(profile.id)}>
+          <h1
+            id="specialist-name"
+            className="line-clamp-2 text-headline-sm font-bold text-balance"
+          >
+            {profile.name}
+          </h1>
+        </SharedTransition>
         {profile.verified ? (
           <Icon
             icon={VerifiedFill}

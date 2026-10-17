@@ -5,6 +5,7 @@ import { getTranslations } from 'next-intl/server';
 import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 
 import { MessagesScope } from '@/app/ui/messages-scope';
+import { PageTransition } from '@/app/ui/motion/view-transitions';
 
 import { AgendaDay } from '../../_components/agenda-day';
 
@@ -20,8 +21,10 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 export default function AgendaTodayPage() {
   return (
-    <MessagesScope namespaces={pageNamespaces.agenda}>
-      <AgendaDay day={null} />
-    </MessagesScope>
+    <PageTransition>
+      <MessagesScope namespaces={pageNamespaces.agenda}>
+        <AgendaDay day={null} />
+      </MessagesScope>
+    </PageTransition>
   );
 }

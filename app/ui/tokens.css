@@ -313,6 +313,15 @@
     --duration-fast: 1ms;
     --duration-base: 1ms;
     --duration-slow: 1ms;
+    /* Page transitions keep their fades and lose every movement (AGENTS.md
+       §8, rule 13): nothing travels, rises or slides. */
+    --duration-page-move: 1ms;
+    --duration-axis: 1ms;
+    --duration-morph: 1ms;
+    --duration-progress-fill: 1ms;
+    --distance-page-rise: 0px;
+    --distance-page-lift: 0px;
+    --distance-axis: 0px;
   }
 }
 
@@ -329,6 +338,37 @@
      into place instead of snapping. */
   --duration-entrance: 500ms;
   --ease-entrance: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* Page transitions (app/ui/motion/page-transitions.css). The page that
+     leaves goes quickly, out of the way; the one that arrives fades in once
+     the old one is nearly gone and rises into place. */
+  --duration-page-exit: 150ms;
+  --duration-page-enter: 250ms;
+  --delay-page-enter: 100ms;
+  --duration-page-move: 400ms;
+  --distance-page-rise: 14px;
+  --distance-page-lift: 6px;
+  /* A step forward or back (the booking's, the payment's): the shared axis. */
+  --duration-axis: 350ms;
+  --duration-axis-fade: 210ms;
+  --delay-axis: 120ms;
+  --distance-axis: 40px;
+  /* What travels from one page to the next (a result's photo to its profile). */
+  --duration-morph: 420ms;
+  /* The line while the server answers: most of the way, slowing down. */
+  --duration-progress-fill: 2500ms;
+  /* What leaves accelerates; what arrives decelerates. */
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --ease-enter: cubic-bezier(0.2, 0, 0, 1);
+  /* The colour wipe of the big moments, as the app's ScreenWipe: it covers
+     speeding up, holds while the page changes under it, and opens slowing
+     down. */
+  --duration-wipe-cover: 450ms;
+  --duration-wipe-hold: 120ms;
+  --duration-wipe-reveal: 500ms;
+  --ease-wipe-cover: cubic-bezier(0.32, 0, 0.67, 0);
+  --ease-wipe-reveal: cubic-bezier(0.33, 1, 0.68, 1);
+
   --duration-splash: 1500ms;
   --duration-splash-fallback: 2500ms;
   --duration-cursor-pause: 5000ms;

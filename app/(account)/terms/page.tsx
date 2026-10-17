@@ -5,6 +5,8 @@ import { getTranslations } from 'next-intl/server';
 import { routes } from '@/app/lib/routes';
 import { brandOpenGraph } from '@/app/lib/site';
 
+import { PageTransition } from '@/app/ui/motion/view-transitions';
+
 import { LegalDocument } from '../_components/legal-document';
 import { termsSections } from '../_data/legal-sections';
 
@@ -28,5 +30,9 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /** The terms and conditions of use (M10): the catalog's `legal.terms`. */
 export default function TermsPage() {
-  return <LegalDocument document="terms" sections={termsSections} />;
+  return (
+    <PageTransition>
+      <LegalDocument document="terms" sections={termsSections} />
+    </PageTransition>
+  );
 }

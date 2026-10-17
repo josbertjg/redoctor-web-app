@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useTranslations } from 'next-intl';
 
@@ -29,10 +29,6 @@ type SignInButtonsProps = {
   className?: string;
 };
 
-// The memory does not change while the page is open: nothing to listen to.
-const subscribe = () => () => undefined;
-const onServer = () => null;
-
 /*
  * «Continuar con Google» and «Continuar con Apple», as the app draws them:
  * each in its brand's colours, the last-used provider first with the
@@ -54,7 +50,11 @@ export function SignInButtons({ onSignedIn, className }: SignInButtonsProps) {
   const errors = useTranslations('apiErrors.firebaseAuthErrors');
   const device = useDevice();
   const inApp = useInAppBrowser();
-  const last = useSyncExternalStore(subscribe, readLastProvider, onServer);
+  // The memory as it was when the buttons appeared. Signing in writes it,
+  // and read again the buttons would swap places and grow the chip under
+  // the colour that grows from the one pressed. The server has none: the
+  // placeholder stands until the device is known.
+  const [last] = useState(readLastProvider);
   const { status, firebaseReady, prepareSignIn } = useSession();
   const [busy, setBusy] = useState<AuthProvider | null>(null);
   const [failure, setFailure] = useState<AuthErrorKey | null>(null);

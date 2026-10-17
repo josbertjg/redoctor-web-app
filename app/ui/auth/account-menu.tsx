@@ -90,7 +90,16 @@ export default function AccountMenu({
             </DropdownMenu.Item>
           ) : null}
           <DropdownMenu.Separator className="my-1 h-px bg-divider" />
-          <DropdownMenu.Item onSelect={onSignOut} className={accountItemClass}>
+          {/* The menu stays open: the blue wipe grows from this item and
+              covers it, and the menu goes with the session, under the
+              colour — closing, it would shrink where the colour starts. */}
+          <DropdownMenu.Item
+            onSelect={(event) => {
+              event.preventDefault();
+              onSignOut();
+            }}
+            className={accountItemClass}
+          >
             {t('signOut')}
           </DropdownMenu.Item>
         </DropdownMenu.Content>

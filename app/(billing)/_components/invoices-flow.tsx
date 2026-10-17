@@ -21,6 +21,7 @@ import { BackLink } from '@/app/ui/back-link';
 import { Button } from '@/app/ui/button';
 import { EmptyState } from '@/app/ui/empty-state';
 import { FilterChips } from '@/app/ui/filter-chips';
+import { useSkeletonHold } from '@/app/ui/motion/skeleton-hold';
 import { Skeleton } from '@/app/ui/skeleton';
 
 import { useSession } from '@/app/hooks/use-session';
@@ -68,6 +69,8 @@ function InvoicesList({ user }: { user: SessionUser }) {
     placeholderData: keepPreviousData,
   });
   const items = invoices.data?.pages.flatMap((page) => page.items) ?? [];
+  // The skeleton crossfades into what arrives (AGENTS.md §8, rule 13).
+  const holding = useSkeletonHold(invoices.isPending);
 
   const choose = (next: InvoiceFilter | null) => {
     router.replace(routes.subscriptionInvoices(next ?? undefined), {
@@ -103,7 +106,7 @@ function InvoicesList({ user }: { user: SessionUser }) {
   );
 
   function list() {
-    if (invoices.isPending) {
+    if (invoices.isPending || holding) {
       return (
         <div aria-busy="true" className="flex flex-col gap-3">
           <InvoiceCardSkeleton />

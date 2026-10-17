@@ -61,7 +61,7 @@ export function LandingBar({
     <header
       ref={bar}
       data-docked={docked || undefined}
-      className="group/bar sticky top-3 z-20 px-gutter transition-[top,padding] duration-slow ease-house data-docked:top-0 data-docked:px-0 sm:top-5"
+      className="group/bar sticky top-3 z-20 px-gutter transition-[top,padding] duration-slow ease-house vt-landing-header data-docked:top-0 data-docked:px-0 sm:top-5"
     >
       <AfterSplash
         waitForSplash={waitForSplash}

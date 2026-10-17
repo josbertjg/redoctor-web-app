@@ -26,13 +26,14 @@ import { AppointmentHeadline } from '@/app/ui/appointments/appointment-headline'
 import { AccountErrorState } from '@/app/ui/auth/account-error-state';
 import { SignInButtons } from '@/app/ui/auth/sign-in-buttons';
 import { SignInLegalNote } from '@/app/ui/auth/sign-in-legal-note';
+import { useSignInArrival } from '@/app/ui/auth/use-sign-in-arrival';
 import { Button } from '@/app/ui/button';
 import { EmptyState } from '@/app/ui/empty-state';
+import { useSkeletonHold } from '@/app/ui/motion/skeleton-hold';
 import { StatusCard } from '@/app/ui/status-card';
 
 import { useFocusHeading } from '@/app/hooks/use-focus-heading';
 import { useSession } from '@/app/hooks/use-session';
-import { useSignInTracking } from '@/app/hooks/use-sign-in-tracking';
 
 import { ClaimForm } from './claim-form';
 import { InvitationDetails } from './invitation-details';
@@ -61,11 +62,13 @@ export function InvitationFlow({
   initialRelationship,
 }: InvitationFlowProps) {
   const t = useTranslations();
-  const session = useSession();
+  // The page as it was until a sign-in made here is under the colour.
+  const { session, onSignedIn } = useSignInArrival();
   const query = useQuery(invitationQueryOptions(token));
+  // The skeleton crossfades into the invitation (AGENTS.md §8, rule 13).
+  const holding = useSkeletonHold(query.isPending);
   /** The claim just made here: its words say so («¡Listo! La cita ya es tuya»). */
   const [claimed, setClaimed] = useState<{ confirmed: boolean } | null>(null);
-  const onSignedIn = useSignInTracking();
 
   const invitation =
     query.data === undefined || query.data === null
@@ -76,7 +79,7 @@ export function InvitationFlow({
   // After a claim made here, the focus goes to its news; loading never moves it.
   const frame = useFocusHeading(claimed);
 
-  if (query.isPending) {
+  if (query.isPending || holding) {
     return (
       <Frame ref={frame}>
         <InvitationSkeleton />

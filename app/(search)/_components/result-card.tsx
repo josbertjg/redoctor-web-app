@@ -17,6 +17,10 @@ import { cn } from '@/app/lib/utils';
 
 import { Avatar } from '@/app/ui/avatar';
 import { Icon } from '@/app/ui/icons';
+import {
+  sharedNames,
+  SharedTransition,
+} from '@/app/ui/motion/view-transitions';
 import { StarsRating } from '@/app/ui/stars-rating';
 
 import { usePriceWords } from '@/app/hooks/use-price-words';
@@ -114,13 +118,17 @@ export function ResultCard({
       )}
     >
       <div className="flex gap-4">
-        <Avatar
-          name={result.name}
-          src={result.photoUrl}
-          size="lg"
-          decorative
-          className="shrink-0"
-        />
+        {/* The photo and the name travel to the profile's as it opens
+            (AGENTS.md §8, rule 13), and back to the card on the way back. */}
+        <SharedTransition name={sharedNames.specialistPhoto(result.id)}>
+          <Avatar
+            name={result.name}
+            src={result.photoUrl}
+            size="lg"
+            decorative
+            className="shrink-0"
+          />
+        </SharedTransition>
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <h2 className="flex items-start gap-1 text-title-md text-text-primary">
             {/* The whole card opens the profile: the name's link stretches
@@ -131,7 +139,10 @@ export function ResultCard({
               href={routes.specialist(result.id)}
               className="wrap-break-word outline-none after:absolute after:inset-0 after:rounded-2xl after:content-[''] hover:underline focus-visible:after:ring-3 focus-visible:after:ring-ring/50"
             >
-              {result.name}
+              {/* A box of its own, the name alone: what travels. */}
+              <SharedTransition name={sharedNames.specialistName(result.id)}>
+                <span className="block">{result.name}</span>
+              </SharedTransition>
             </Link>
             {result.verified ? (
               <Icon

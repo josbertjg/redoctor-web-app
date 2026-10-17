@@ -30,6 +30,9 @@ export function SiteHeader({
     <header
       className={cn(
         'mx-auto flex w-full max-w-content items-center justify-between gap-4 px-gutter py-3 print:hidden',
+        // Holds still while the page under it changes (AGENTS.md §8, rule
+        // 13); the profile's white-on-blue bar is another bar, and fades.
+        tone === 'inverse' ? 'vt-site-header-inverse' : 'vt-site-header',
         className,
       )}
     >

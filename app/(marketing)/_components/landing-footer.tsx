@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import { useTranslations } from 'next-intl';
 
 import { appVersion } from '@/app/lib/app-version';
@@ -63,22 +65,24 @@ export function LandingFooter() {
           </li>
         </ul>
         <hr className="my-8 border-blue-300" />
+        {/* The web's own pages: they open without reloading, with the page
+            transition (AGENTS.md §8, rule 13). */}
         <nav aria-label={t('legalLabel')}>
           <ul className="flex flex-wrap gap-x-6 gap-y-2 text-body-xxs font-medium">
             <li>
-              <a href={routes.terms()} className={linkClass}>
+              <Link href={routes.terms()} className={linkClass}>
                 {t('terms')}
-              </a>
+              </Link>
             </li>
             <li>
-              <a href={routes.privacy()} className={linkClass}>
+              <Link href={routes.privacy()} className={linkClass}>
                 {t('privacy')}
-              </a>
+              </Link>
             </li>
             <li>
-              <a href={routes.deleteAccount()} className={linkClass}>
+              <Link href={routes.deleteAccount()} className={linkClass}>
                 {t('deleteAccount')}
-              </a>
+              </Link>
             </li>
           </ul>
         </nav>

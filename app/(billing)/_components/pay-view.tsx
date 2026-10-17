@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 
 import ArrowBack from '@material-symbols/svg-400/rounded/arrow_back.svg?svgr';
 import CloudOff from '@material-symbols/svg-400/rounded/cloud_off.svg?svgr';
@@ -36,6 +36,10 @@ import {
 import { Button } from '@/app/ui/button';
 import { EmptyState } from '@/app/ui/empty-state';
 import { Icon } from '@/app/ui/icons';
+import { moveStep } from '@/app/ui/motion/directions';
+import { wipeScreen } from '@/app/ui/motion/screen-wipe';
+import { useSkeletonHold } from '@/app/ui/motion/skeleton-hold';
+import { StepTransition } from '@/app/ui/motion/view-transitions';
 import { StateChip } from '@/app/ui/state-chip';
 import { toast } from '@/app/ui/toast';
 
@@ -108,8 +112,11 @@ export function PayView({ user, mode, onBack, onExit }: PayViewProps) {
   );
   // The receipt to pay: the one chosen on its page, or the one owed.
   const payable = receiptId === null ? owedBySubscription : receipt;
+  // The skeleton crossfades into what arrives (AGENTS.md §8, rule 13).
+  const holdingReceipt = useSkeletonHold(payable.isPending);
 
-  useEffect(() => {
+  // Before the step paints (a layout effect), so its transition starts at the top.
+  useLayoutEffect(() => {
     window.scrollTo({ top: 0 });
   }, [step]);
   // Each step's title takes the focus: the button that led there is gone.
@@ -139,6 +146,21 @@ export function PayView({ user, mode, onBack, onExit }: PayViewProps) {
     });
     void queryClient.invalidateQueries({
       queryKey: billingKeys.balance(user.id),
+    });
+  };
+
+  // The payment's end is a big moment: its outcome arrives under the green
+  // wipe (AGENTS.md §8, rule 13), with the billing read again — a receipt
+  // read before it would change the page around the colour's first frames.
+  // The button pressed stays busy until then.
+  const finish = (result: PaymentOutcome) => {
+    void wipeScreen({
+      tone: 'success',
+      whileCovered: () => {
+        refreshBilling();
+        setOutcome(result);
+        setStep('done');
+      },
     });
   };
 
@@ -187,7 +209,9 @@ export function PayView({ user, mode, onBack, onExit }: PayViewProps) {
   };
 
   const onCreated = (created: Subscribed, wasFree: boolean) => {
-    setSubscribed(created);
+    // A plan active at once leaves nothing to pay: the page keeps its step
+    // until the activation arrives under the colour (`finish`).
+    if (created.invoice !== null) setSubscribed(created);
     refreshBilling();
     track('web_subscription_created', {
       coupon: coupon !== null,
@@ -219,16 +243,17 @@ export function PayView({ user, mode, onBack, onExit }: PayViewProps) {
 
   const onStarted = (result: StartResult) => {
     if (result.kind === 'activated') {
-      setOutcome({
+      finish({
         kind: 'activated',
         planName,
         couponCode: coupon?.terms.code ?? null,
       });
-      setStep('done');
       return;
     }
-    setPayment({ method: result.method, started: result.started });
-    setStep('pay');
+    moveStep('forward', () => {
+      setPayment({ method: result.method, started: result.started });
+      setStep('pay');
+    });
   };
 
   const onStartFailed = (error: unknown) => {
@@ -258,12 +283,11 @@ export function PayView({ user, mode, onBack, onExit }: PayViewProps) {
 
   const onActivated = (created: Subscribed) => {
     if (created.invoice === null) {
-      setOutcome({
+      finish({
         kind: 'activated',
         planName,
         couponCode: coupon?.terms.code ?? null,
       });
-      setStep('done');
     }
     // Else the API charged something after all: the receipt's totals take over and the methods show.
   };
@@ -298,7 +322,7 @@ export function PayView({ user, mode, onBack, onExit }: PayViewProps) {
     if (step === 'done' && outcome) return <PaymentDone outcome={outcome} />;
 
     if (mode.kind === 'invoice') {
-      if (payable.isPending) return <PaySkeleton />;
+      if (payable.isPending || holdingReceipt) return <PaySkeleton />;
       // A receipt chosen by a link that leads nowhere: nothing to pay here.
       const missing =
         receiptId !== null &&
@@ -371,7 +395,9 @@ export function PayView({ user, mode, onBack, onExit }: PayViewProps) {
             onClick={
               paying
                 ? () => {
-                    setStep('method');
+                    moveStep('back', () => {
+                      setStep('method');
+                    });
                   }
                 : onBack
             }
@@ -391,70 +417,80 @@ export function PayView({ user, mode, onBack, onExit }: PayViewProps) {
           <p className="text-label-md text-text-secondary">
             {t('acquire.step', { current: paying ? 2 : 1, total: 2 })}
           </p>
-          <h1 className="text-headline-sm text-text-primary">
-            {paying
-              ? t('acquire.instructions.title')
-              : t('acquire.method.title')}
-          </h1>
-          <p className="text-body-md text-text-secondary">
-            {paying
-              ? t('acquire.instructions.description')
-              : t('acquire.method.description')}
-          </p>
+          {/* The step's title and its content go sideways together; the
+              count above them stays. */}
+          <StepTransition step={paying ? 'pay' : 'method'}>
+            <div className="flex flex-col gap-1">
+              <h1 className="text-headline-sm text-text-primary">
+                {paying
+                  ? t('acquire.instructions.title')
+                  : t('acquire.method.title')}
+              </h1>
+              <p className="text-body-md text-text-secondary">
+                {paying
+                  ? t('acquire.instructions.description')
+                  : t('acquire.method.description')}
+              </p>
+            </div>
+          </StepTransition>
         </header>
 
-        {paying ? (
-          <PaymentStep
-            user={user}
-            invoice={invoice}
-            method={payment.method}
-            payment={payment.started}
-            onPaymentRefreshed={(started) => {
-              setPayment({ method: payment.method, started });
-            }}
-            onReported={(result) => {
-              setOutcome(result);
-              setStep('done');
-              refreshBilling();
-            }}
-            onInReview={() => {
-              refreshBilling();
-              onExit();
-            }}
-          />
-        ) : (
-          <MethodStep
-            plan={plan}
-            coupon={canUseCoupon ? coupon : null}
-            invoice={invoice}
-            free={free}
-            startingMethod={start.isPending ? start.variables : null}
-            activating={activate.isPending}
-            noRate={noRate}
-            failure={startFailureKey ? tRoot(startFailureKey) : null}
-            onSelect={(method) => {
-              if (start.isPending || activate.isPending) return;
-              start.mutate(method, {
-                onSuccess: onStarted,
-                onError: onStartFailed,
-              });
-            }}
-            onActivateFree={() => {
-              if (start.isPending || activate.isPending) return;
-              activate.mutate(undefined, {
-                onSuccess: onActivated,
-                onError: onActivateFailed,
-              });
-            }}
-            onCoupon={
-              canUseCoupon
-                ? () => {
-                    setCouponOpen(true);
-                  }
-                : null
-            }
-          />
-        )}
+        <StepTransition step={paying ? 'pay' : 'method'}>
+          <div className="flex flex-col">
+            {paying ? (
+              <PaymentStep
+                user={user}
+                invoice={invoice}
+                method={payment.method}
+                payment={payment.started}
+                onPaymentRefreshed={(started) => {
+                  setPayment({ method: payment.method, started });
+                }}
+                onReported={finish}
+                onInReview={() => {
+                  refreshBilling();
+                  onExit();
+                }}
+              />
+            ) : (
+              <MethodStep
+                plan={plan}
+                coupon={canUseCoupon ? coupon : null}
+                invoice={invoice}
+                free={free}
+                startingMethod={
+                  start.isPending || start.data?.kind === 'activated'
+                    ? (start.variables ?? null)
+                    : null
+                }
+                activating={activate.isPending || activate.isSuccess}
+                noRate={noRate}
+                failure={startFailureKey ? tRoot(startFailureKey) : null}
+                onSelect={(method) => {
+                  if (start.isPending || activate.isPending) return;
+                  start.mutate(method, {
+                    onSuccess: onStarted,
+                    onError: onStartFailed,
+                  });
+                }}
+                onActivateFree={() => {
+                  if (start.isPending || activate.isPending) return;
+                  activate.mutate(undefined, {
+                    onSuccess: onActivated,
+                    onError: onActivateFailed,
+                  });
+                }}
+                onCoupon={
+                  canUseCoupon
+                    ? () => {
+                        setCouponOpen(true);
+                      }
+                    : null
+                }
+              />
+            )}
+          </div>
+        </StepTransition>
 
         {plan ? (
           <CouponSheet

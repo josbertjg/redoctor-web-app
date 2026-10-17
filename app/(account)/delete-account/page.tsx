@@ -5,6 +5,8 @@ import { getTranslations } from 'next-intl/server';
 import { routes } from '@/app/lib/routes';
 import { brandOpenGraph } from '@/app/lib/site';
 
+import { PageTransition } from '@/app/ui/motion/view-transitions';
+
 import { LegalDocument } from '../_components/legal-document';
 import { deleteAccountSections } from '../_data/legal-sections';
 
@@ -32,10 +34,12 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 export default function DeleteAccountPage() {
   return (
-    <LegalDocument
-      document="deleteAccount"
-      sections={deleteAccountSections}
-      contents={false}
-    />
+    <PageTransition>
+      <LegalDocument
+        document="deleteAccount"
+        sections={deleteAccountSections}
+        contents={false}
+      />
+    </PageTransition>
   );
 }

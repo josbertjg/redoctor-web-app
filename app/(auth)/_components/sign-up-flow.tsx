@@ -6,7 +6,7 @@ import type { Route } from 'next';
 
 import { useRouter } from 'next/navigation';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
 import { isApplePrivateRelayEmail } from '@/app/lib/auth/account';
@@ -16,12 +16,16 @@ import {
   planSignUp,
   signUpPurposeOf,
 } from '@/app/lib/auth/sign-up';
+import { identityKeys } from '@/app/lib/queries/identity-keys';
 import { invitationQueryOptions } from '@/app/lib/queries/invitations';
 import { routes } from '@/app/lib/routes';
 import { personalDataFrom, toInvitation } from '@/app/lib/schemas/invitations';
 
 import { RequireSession } from '@/app/ui/auth/require-session';
 import { Button } from '@/app/ui/button';
+import { moveStep } from '@/app/ui/motion/directions';
+import { wipeScreen } from '@/app/ui/motion/screen-wipe';
+import { StepTransition } from '@/app/ui/motion/view-transitions';
 import { toast } from '@/app/ui/toast';
 
 import { useFocusHeading } from '@/app/hooks/use-focus-heading';
@@ -75,15 +79,31 @@ function SignUpSteps(props: SignUpFlowProps) {
   return (
     // `contents`: a handle for the focus, no box of its own.
     <div ref={step} className="contents">
-      <SignUpStep
-        {...props}
-        role={role}
-        onRole={setRole}
-        finished={finished}
-        onFinished={() => {
-          setFinished(true);
-        }}
-      />
+      {/* A role chosen goes forward, back to the roles goes back; the end
+          is a big moment, under the green wipe (AGENTS.md §8, rule 13). */}
+      <StepTransition step={`${String(role)}:${String(finished)}`}>
+        <SignUpStep
+          {...props}
+          role={role}
+          onRole={(next) => {
+            moveStep(next === null ? 'back' : 'forward', () => {
+              setRole(next);
+            });
+          }}
+          finished={finished}
+          onFinished={(readAccount) => {
+            void wipeScreen({
+              tone: 'success',
+              // «¡Todo listo!» first, then the account read again: a fresh
+              // account on a page that has not finished moves it away.
+              whileCovered: async () => {
+                setFinished(true);
+                await readAccount();
+              },
+            });
+          }}
+        />
+      </StepTransition>
     </div>
   );
 }
@@ -100,10 +120,12 @@ function SignUpStep({
   role: SignUpRole | null;
   onRole: (role: SignUpRole | null) => void;
   finished: boolean;
-  onFinished: () => void;
+  /** The sign-up is done; `readAccount` reads the account again, under the colour. */
+  onFinished: (readAccount: () => Promise<void>) => void;
 }) {
   const t = useTranslations();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const session = useSession();
   const { account, user } = session;
 
@@ -216,12 +238,19 @@ function SignUpStep({
           defaults={defaults}
           submitLabel={parts.personalData ? t('finish') : t('continue')}
           onDone={() => {
+            // The account read again moves the page on: never before the
+            // page knows where it goes.
+            const readAccount = () =>
+              queryClient.invalidateQueries({
+                queryKey: identityKeys.me(user.id),
+              });
             if (parts.personalData) {
-              onFinished();
+              onFinished(readAccount);
               return;
             }
             // The fresh account leaves this page by itself (`leaving`).
             toast(t('auth.registrationCompletedSuccessfully'));
+            void readAccount();
           }}
         />
       </PatientCard>

@@ -16,6 +16,7 @@ import { returnPath, routes } from '@/app/lib/routes';
 
 import { Button } from '@/app/ui/button';
 import { EmptyState } from '@/app/ui/empty-state';
+import { useSkeletonHold } from '@/app/ui/motion/skeleton-hold';
 
 import { useSession } from '@/app/hooks/use-session';
 
@@ -83,6 +84,12 @@ export function RequireSession({
     else if (toPanel) router.replace(routes.specialistHome());
   }, [signedOut, mustSignUp, toPanel, returnTo, pathname, router]);
 
+  // The skeleton gives way to the page in a transition, so the page enters
+  // as on any navigation (AGENTS.md §8, rule 13).
+  const holding = useSkeletonHold(
+    session.status !== 'signed-in' || session.account === null,
+  );
+
   if (session.status !== 'signed-in') return fallback;
 
   if (session.accountStatus === 'error') {
@@ -90,7 +97,7 @@ export function RequireSession({
   }
 
   const { account } = session;
-  if (account === null || mustSignUp || toPanel) return fallback;
+  if (account === null || mustSignUp || toPanel || holding) return fallback;
 
   if (!isAllowed(account, facet)) {
     const area = facet === 'specialist' ? 'specialist' : 'patient';

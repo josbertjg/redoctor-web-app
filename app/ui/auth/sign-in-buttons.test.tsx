@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
@@ -81,6 +83,39 @@ describe('SignInButtons', () => {
     expect(window.localStorage.getItem('redoctor-last-provider')).toBe(
       'google',
     );
+  });
+
+  it('keeps the order it appeared with while the person signs in', async () => {
+    firebase.signInWith.mockResolvedValue({ status: 'signed-in', user });
+    /** The page renders again once the session arrives. */
+    function Page() {
+      const [arrived, setArrived] = useState(false);
+      return (
+        <div data-arrived={arrived}>
+          <SignInButtons
+            onSignedIn={() => {
+              setArrived(true);
+            }}
+          />
+        </div>
+      );
+    }
+    const { container } = renderWithIntl(<Page />);
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Continuar con Apple' }),
+    );
+    await waitFor(() => {
+      expect(container.querySelector('[data-arrived="true"]')).not.toBeNull();
+    });
+
+    // Remembered for the next visit, and nothing moves now: the colour
+    // grows from the button pressed, where it was.
+    expect(window.localStorage.getItem('redoctor-last-provider')).toBe('apple');
+    expect(
+      screen.getAllByRole('button').map((button) => button.textContent),
+    ).toEqual(['Continuar con Google', 'Continuar con Apple']);
+    expect(screen.queryByText('Última vez')).not.toBeInTheDocument();
   });
 
   it('says nothing when the person closes the window', async () => {

@@ -32,3 +32,9 @@ export { Entrance } from './entrance';
 export { useReducedMotion } from './reduced-motion';
 export { StaggeredText, type TextSegment } from './staggered-text';
 export { houseTransition, readDuration, readEase } from './tokens';
+/*
+ * The page transitions (AGENTS.md §8, rule 13) need no Motion: their files
+ * are imported on their own — view-transitions (server-safe), directions,
+ * skeleton-hold, screen-wipe, navigation-events —, so a page that only
+ * changes never loads the library for it.
+ */

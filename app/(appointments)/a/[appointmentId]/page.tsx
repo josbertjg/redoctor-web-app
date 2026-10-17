@@ -7,6 +7,7 @@ import { brandOpenGraph } from '@/app/lib/site';
 
 import { LinkOriginTracker } from '@/app/ui/analytics/link-origin-tracker';
 import { MessagesScope } from '@/app/ui/messages-scope';
+import { PageTransition } from '@/app/ui/motion/view-transitions';
 
 import { AppointmentFlow } from '../../_components/appointment-flow';
 
@@ -44,11 +45,13 @@ export default async function AppointmentPage({
   return (
     <>
       <LinkOriginTracker link="appointment" />
-      <main className="mx-auto flex w-full max-w-lg flex-1 flex-col px-gutter pt-6 pb-16">
-        <MessagesScope namespaces={pageNamespaces.appointment}>
-          <AppointmentFlow appointmentId={appointmentId} />
-        </MessagesScope>
-      </main>
+      <PageTransition>
+        <main className="mx-auto flex w-full max-w-lg flex-1 flex-col px-gutter pt-6 pb-16">
+          <MessagesScope namespaces={pageNamespaces.appointment}>
+            <AppointmentFlow appointmentId={appointmentId} />
+          </MessagesScope>
+        </main>
+      </PageTransition>
     </>
   );
 }

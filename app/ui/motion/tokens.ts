@@ -15,7 +15,10 @@ export type DurationToken =
   | 'splash'
   | 'splash-fallback'
   | 'cursor-pause'
-  | 'marquee';
+  | 'marquee'
+  | 'wipe-cover'
+  | 'wipe-hold'
+  | 'wipe-reveal';
 
 const durations: Record<DurationToken, number> = {
   fast: 0.2,
@@ -26,16 +29,24 @@ const durations: Record<DurationToken, number> = {
   'splash-fallback': 2.5,
   'cursor-pause': 5,
   marquee: 45,
+  'wipe-cover': 0.45,
+  'wipe-hold': 0.12,
+  'wipe-reveal': 0.5,
 };
 
 type Bezier = [number, number, number, number];
 
-export type EaseToken = 'house' | 'entrance';
+export type EaseToken = 'house' | 'entrance' | 'wipe-cover' | 'wipe-reveal';
 
-/** ease-in-out for UI feedback, and the stronger one the entrances take. */
+/**
+ * ease-in-out for UI feedback, the stronger one the entrances take, and the
+ * colour wipe's: covering speeds up, opening slows down.
+ */
 const eases: Record<EaseToken, Bezier> = {
   house: [0.42, 0, 0.58, 1],
   entrance: [0.65, 0, 0.35, 1],
+  'wipe-cover': [0.32, 0, 0.67, 0],
+  'wipe-reveal': [0.33, 1, 0.68, 1],
 };
 
 function readToken(name: string): string | undefined {
