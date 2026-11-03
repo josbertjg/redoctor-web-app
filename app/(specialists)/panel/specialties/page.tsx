@@ -6,6 +6,7 @@ import { getSupportContact } from '@/app/lib/data/support';
 import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 
 import { AppAccess } from '@/app/ui/app-bridge/app-access';
+import { PanelSurface } from '@/app/ui/layout/panel-surface';
 import { MessagesScope } from '@/app/ui/messages-scope';
 import { PageTransition } from '@/app/ui/motion/view-transitions';
 
@@ -29,7 +30,11 @@ export default async function MySpecialtiesPage() {
     <PageTransition>
       <MessagesScope namespaces={pageNamespaces.mySpecialties}>
         <SpecialistHomeSwitch
-          ready={<MySpecialtiesView />}
+          ready={
+            <PanelSurface>
+              <MySpecialtiesView />
+            </PanelSurface>
+          }
           pending={
             <AppAccess
               variant="finish"

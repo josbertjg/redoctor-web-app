@@ -33,6 +33,8 @@ type RequireSessionProps = {
   returnTo?: string | undefined;
   /** The sign-up page itself: an account with no sign-up behind it is who it is for, so it gets in instead of being sent there. */
   allowUnregistered?: boolean;
+  /** Where the segment paints on a colour (the panel's blue): the surface its own states sit on. */
+  stateClassName?: string;
   children: ReactNode;
 };
 
@@ -55,6 +57,7 @@ export function RequireSession({
   fallback,
   returnTo,
   allowUnregistered = false,
+  stateClassName,
   children,
 }: RequireSessionProps) {
   const t = useTranslations();
@@ -92,8 +95,11 @@ export function RequireSession({
 
   if (session.status !== 'signed-in') return fallback;
 
+  const surface =
+    stateClassName === undefined ? {} : { className: stateClassName };
+
   if (session.accountStatus === 'error') {
-    return <AccountErrorState headingLevel={1} />;
+    return <AccountErrorState headingLevel={1} {...surface} />;
   }
 
   const { account } = session;
@@ -104,6 +110,7 @@ export function RequireSession({
     return (
       <EmptyState
         headingLevel={1}
+        {...surface}
         title={t(`auth.wrongArea.${area}.title`)}
         description={t(`auth.wrongArea.${area}.description`)}
         action={

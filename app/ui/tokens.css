@@ -273,6 +273,7 @@
   --spacing-gutter: 16px; /* side padding at every width */
   --container-content: 42rem; /* reading width of a patient page */
   --container-landing: 79rem; /* the landing's content width (Figma: 1262px at 1440) */
+  --container-panel: 72rem; /* the panel's column beside its sidebar (Figma: 911px at 1280) */
   --spacing-control: 40px; /* inputs and small buttons → h-control */
   --spacing-control-lg: 48px; /* large (block) buttons → h-control-lg */
   --spacing-touch: 44px; /* minimum tap target → min-h-touch, min-w-touch */

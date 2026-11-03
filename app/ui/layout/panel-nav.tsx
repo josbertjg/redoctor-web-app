@@ -59,23 +59,70 @@ const sections: readonly Section[] = [
 /*
  * The panel's sections, as the app's tabs for a specialist (Inicio, Citas,
  * Estadísticas; the subscription where the app has the profile, which is
- * still edited there). The section on screen is marked for every reader
+ * still edited there). From laptops up they run down the white sidebar of
+ * the designer's frame (`vertical`); on phones and tablets, as tabs under
+ * the bar (`horizontal`). The section on screen is marked for every reader
  * (`aria-current`). An admin's account without the specialist facet has no
  * agenda, statistics or plan of its own: its panel is the one page.
  */
-export function PanelNav({ className }: { className?: string }) {
+export function PanelNav({
+  orientation = 'horizontal',
+  className,
+}: {
+  orientation?: 'vertical' | 'horizontal';
+  className?: string;
+}) {
   const t = useTranslations('panel.nav');
   const pathname = usePathname();
   const { account } = useSession();
   if (account !== null && !account.specialist.exists) return null;
 
+  if (orientation === 'vertical') {
+    return (
+      <nav
+        aria-label={t('label')}
+        data-orientation="vertical"
+        className={cn('print:hidden', className)}
+      >
+        {/* The mark of the section on screen slides to the next one, even
+            into another layout's copy of this nav (AGENTS.md §8, rule 13). */}
+        <ul className="flex flex-col gap-1 vt-panel-nav">
+          {sections.map((section) => {
+            const current = section.isCurrent(pathname);
+            return (
+              <li key={section.key} className="relative">
+                {current ? (
+                  <span
+                    aria-hidden="true"
+                    className="absolute inset-0 rounded-lg bg-blue-50 vt-panel-nav-pill"
+                  />
+                ) : null}
+                <Link
+                  href={{ pathname: section.href }}
+                  aria-current={current ? 'page' : undefined}
+                  className={cn(
+                    'relative flex min-h-10 items-center gap-2.5 rounded-lg px-2.5 text-body-md transition-colors duration-fast ease-house outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+                    current
+                      ? 'font-bold text-primary'
+                      : 'text-grey-500 hover:bg-surface hover:text-text-primary',
+                  )}
+                >
+                  <Icon icon={section.icon} size={16} className="shrink-0" />
+                  <span className="truncate">{t(section.key)}</span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+    );
+  }
+
   return (
     <nav
       aria-label={t('label')}
-      className={cn(
-        'mx-auto w-full max-w-content px-gutter print:hidden',
-        className,
-      )}
+      data-orientation="horizontal"
+      className={cn('w-full print:hidden', className)}
     >
       {/* Three layers for the page transitions (AGENTS.md §8, rule 13): the
           white surface, the mark of the section on screen — it slides to

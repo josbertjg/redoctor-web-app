@@ -55,6 +55,13 @@ export function addDays(date: string, days: number): string {
   return fromUtc(toUtc(date) + days * dayInMs);
 }
 
+/** The week a calendar day falls in, Monday to Sunday (the app's home, the web's month grid). */
+export function weekOf(date: string): string[] {
+  const fromMonday = (new Date(toUtc(date)).getUTCDay() + 6) % 7;
+  const monday = addDays(date, -fromMonday);
+  return Array.from({ length: 7 }, (_, index) => addDays(monday, index));
+}
+
 /** The days a range covers, both ends included. */
 export function rangeDays({ from, to }: DateRange): number {
   return Math.round((toUtc(to) - toUtc(from)) / dayInMs) + 1;

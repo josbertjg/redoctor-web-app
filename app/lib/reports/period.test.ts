@@ -8,6 +8,7 @@ import {
   isCalendarDay,
   presetRange,
   rangeDays,
+  weekOf,
 } from './period';
 
 // Wednesday 14 October 2026.
@@ -97,5 +98,21 @@ describe('calendar days', () => {
     expect(addDays('2026-10-31', 1)).toBe('2026-11-01');
     expect(addDays('2026-03-01', -1)).toBe('2026-02-28');
     expect(rangeDays({ from: '2026-10-01', to: '2026-10-14' })).toBe(14);
+  });
+});
+
+describe('weekOf', () => {
+  it('gives the week a day falls in, Monday to Sunday', () => {
+    expect(weekOf('2026-11-04')).toEqual([
+      '2026-11-02',
+      '2026-11-03',
+      '2026-11-04',
+      '2026-11-05',
+      '2026-11-06',
+      '2026-11-07',
+      '2026-11-08',
+    ]);
+    expect(weekOf('2026-11-08')[0]).toBe('2026-11-02');
+    expect(weekOf('2026-11-09')[0]).toBe('2026-11-09');
   });
 });

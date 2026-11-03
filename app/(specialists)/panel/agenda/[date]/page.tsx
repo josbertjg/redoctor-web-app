@@ -5,6 +5,7 @@ import { getTranslations } from 'next-intl/server';
 import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 import { isCalendarDay } from '@/app/lib/reports/period';
 
+import { PanelSurface } from '@/app/ui/layout/panel-surface';
 import { MessagesScope } from '@/app/ui/messages-scope';
 import { PageTransition } from '@/app/ui/motion/view-transitions';
 
@@ -29,7 +30,9 @@ export default async function AgendaDayPage({
   return (
     <PageTransition>
       <MessagesScope namespaces={pageNamespaces.agenda}>
-        <AgendaDay day={isCalendarDay(date) ? date : null} />
+        <PanelSurface>
+          <AgendaDay day={isCalendarDay(date) ? date : null} />
+        </PanelSurface>
       </MessagesScope>
     </PageTransition>
   );

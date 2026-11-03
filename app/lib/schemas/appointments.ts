@@ -295,6 +295,11 @@ const terminalStatuses: ReadonlySet<AppointmentStatus> = new Set([
   'NO_SHOW',
 ]);
 
+/** Still asks something of someone: not cancelled, finished nor missed (the app's «abiertas»). */
+export function isOpenAppointment(appointment: { status: AppointmentStatus }) {
+  return !terminalStatuses.has(appointment.status);
+}
+
 /** The app's chip for each status: its words (`appointments.status.*`) and its tone. */
 export const statusChips = {
   PENDING_CONFIRMATION: { label: 'pending', tone: 'warning' },

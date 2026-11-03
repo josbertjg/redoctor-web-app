@@ -14,7 +14,7 @@ import { PaySkeleton } from './_components/pay-skeleton';
  */
 export default function BillingLayout({ children }: { children: ReactNode }) {
   return (
-    <PanelFrame width="narrow" fallback={<PaySkeleton />}>
+    <PanelFrame surface="narrow" fallback={<PaySkeleton />}>
       {children}
     </PanelFrame>
   );

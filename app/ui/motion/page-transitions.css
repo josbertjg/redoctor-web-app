@@ -194,6 +194,15 @@
   view-transition-name: panel-nav;
   view-transition-class: chrome;
 }
+/* The panel's blue frame (2026-11-03): its sidebar and its bar hold still. */
+@utility vt-panel-sidebar {
+  view-transition-name: panel-sidebar;
+  view-transition-class: chrome;
+}
+@utility vt-panel-bar {
+  view-transition-name: panel-bar;
+  view-transition-class: chrome;
+}
 @utility vt-nav-progress {
   view-transition-name: nav-progress;
 }

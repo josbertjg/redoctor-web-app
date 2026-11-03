@@ -18,11 +18,15 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-function renderNav(pathname: string, session: Session = specialistSession()) {
+function renderNav(
+  pathname: string,
+  session: Session = specialistSession(),
+  orientation: 'vertical' | 'horizontal' = 'horizontal',
+) {
   location.pathname = pathname;
   return renderWithPageMessages(
     <SessionContext.Provider value={session}>
-      <PanelNav />
+      <PanelNav orientation={orientation} />
     </SessionContext.Provider>,
     ['panel'],
   );
@@ -66,6 +70,30 @@ describe('PanelNav', () => {
     expect(
       profile.container.querySelectorAll('.vt-panel-nav-pill'),
     ).toHaveLength(0);
+  });
+
+  it('lists the sections down the sidebar, the one on screen marked', async () => {
+    const { container } = renderNav(
+      '/panel/reports',
+      specialistSession(),
+      'vertical',
+    );
+
+    const links = screen.getAllByRole('link');
+    expect(links.map((link) => link.textContent)).toEqual([
+      'Inicio',
+      'Citas',
+      'Estadísticas',
+      'Suscripción',
+    ]);
+    expect(screen.getByRole('link', { name: 'Estadísticas' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(
+      screen.getByRole('navigation', { name: 'Tu panel' }),
+    ).toHaveAttribute('data-orientation', 'vertical');
+    expect(await axe(container)).toHaveNoViolations();
   });
 
   it('keeps the subscription marked on its payment page', () => {

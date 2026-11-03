@@ -168,7 +168,14 @@ export const pageNamespaces = {
     'refresh',
   ],
   // The panel's home (M14): the plan and its notice, today's appointments.
-  panelHome: ['apiErrors', 'billing', 'appointments', 'panel'],
+  panelHome: [
+    'apiErrors',
+    'billing',
+    'appointments',
+    'panel',
+    'home',
+    'profile',
+  ],
   // The agenda and the history of the specialist's appointments (M14).
   agenda: ['apiErrors', 'appointments', 'panel', 'identityDocument'],
   // The statistics (M14): the filters, the four reports, the downloads

@@ -1,139 +1,108 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useId } from 'react';
 
+import Image from 'next/image';
 import Link from 'next/link';
 
-import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
-import type { SessionUser } from '@/app/lib/firebase/client';
-import {
-  payableInvoiceQueryOptions,
-  subscriptionQueryOptions,
-} from '@/app/lib/queries/billing';
 import { routes } from '@/app/lib/routes';
 import {
-  mayOwe,
-  subscriptionNotice,
   subscriptionStatusChips,
+  type Subscription,
 } from '@/app/lib/schemas/billing';
 
-import { NoticePanel } from '@/app/ui/billing/notice-panel';
 import { PlanEmblem } from '@/app/ui/billing/plan-emblem';
 import { Button } from '@/app/ui/button';
-import { useSkeletonHold } from '@/app/ui/motion/skeleton-hold';
-import { Skeleton } from '@/app/ui/skeleton';
 import { StateChip } from '@/app/ui/state-chip';
 
-import { useSession } from '@/app/hooks/use-session';
-
-import { PanelCardError } from './panel-card-error';
-
 /*
- * The plan on the panel's home, as the app's home puts it first: the
- * notice with what to do when there is one (a receipt to pay, a payment in
- * review or rejected), then the plan with its state and the way to «Mi
- * suscripción». Without a plan, the app's «¡Llega a más pacientes desde
- * hoy!» and the plans.
+ * The app's «¡Llega a más pacientes desde hoy!» (its home's ChoosePlanCard)
+ * as the designer drew it: green, the figure of a checklist taking its
+ * last tick, and the way to the plans. Shown when a plan can be taken: none
+ * yet or none in force, the sign-up done and a specialty verified.
  */
-export function PanelPlanCard() {
-  const { user } = useSession();
-  if (user === null) return null;
-  return <PlanCard user={user} />;
+export function ChoosePlanCard() {
+  const t = useTranslations('home.choosePlanCard');
+  const headingId = useId();
+
+  return (
+    <section
+      aria-labelledby={headingId}
+      className="relative isolate flex min-h-51 animate-fade-up overflow-hidden rounded-xl bg-green-500 px-6 py-6 shadow-md sm:px-7"
+    >
+      <div className="relative z-10 flex max-w-64 flex-col items-start gap-4">
+        <div className="flex flex-col gap-1.5">
+          <h2
+            id={headingId}
+            className="text-subtitle-s font-bold text-balance text-pure-white"
+          >
+            {t('title')}
+          </h2>
+          <p className="text-body-md text-pure-white">{t('description')}</p>
+        </div>
+        <Button asChild shape="soft" size="small">
+          <Link href={routes.subscriptionPay()}>{t('button')}</Link>
+        </Button>
+      </div>
+      <Image
+        src="/illustrations/panel/plans.svg"
+        alt=""
+        aria-hidden="true"
+        width={285}
+        height={196}
+        className="pointer-events-none absolute right-0 -bottom-2 hidden w-56 sm:block lg:w-62"
+      />
+    </section>
+  );
 }
 
-function PlanCard({ user }: { user: SessionUser }) {
+/*
+ * The plan in force, as the panel's home showed it: its crown, its name,
+ * its state and the way to «Mi suscripción».
+ */
+export function CurrentPlanCard({
+  subscription,
+}: {
+  subscription: Subscription;
+}) {
   const t = useTranslations('panel.home.plan');
   const tBilling = useTranslations('billing');
   const headingId = useId();
-  const current = useQuery(subscriptionQueryOptions(user));
-  const subscription = current.data?.subscription ?? null;
-  const payable = useQuery(payableInvoiceQueryOptions(user, subscription));
-  // What the deadlines count from is decided once, like on «Mi suscripción».
-  const [now] = useState(() => new Date());
-  // The skeleton crossfades into what arrives (AGENTS.md §8, rule 13).
-  const holding = useSkeletonHold(current.isPending || payable.isLoading);
-
-  if (current.isPending || payable.isLoading || holding) {
-    return <Skeleton className="h-36 rounded-2xl" />;
-  }
-
-  if (current.isLoadingError) {
-    return (
-      <PanelCardError
-        message={t('loadError')}
-        retrying={current.isFetching}
-        onRetry={() => {
-          void current.refetch();
-        }}
-      />
-    );
-  }
-
-  if (subscription === null || subscription.status === 'INCOMPLETE_EXPIRED') {
-    return (
-      <section
-        aria-labelledby={headingId}
-        className="flex animate-fade-up flex-col gap-3 rounded-2xl bg-pure-white p-5 shadow-md"
-      >
-        <h2 id={headingId} className="text-title-md text-text-primary">
-          {t('noPlanTitle')}
-        </h2>
-        <p className="text-body-md text-text-secondary">
-          {t('noPlanDescription')}
-        </p>
-        <Button asChild shape="soft" className="self-start">
-          <Link href={routes.subscriptionPay()}>{t('seePlans')}</Link>
-        </Button>
-      </section>
-    );
-  }
-
   const chip = subscriptionStatusChips[subscription.status];
-  const notice = subscriptionNotice({
-    subscription,
-    payable: mayOwe(subscription) ? (payable.data ?? null) : null,
-    now,
-  });
 
   return (
-    <div className="flex flex-col gap-3">
-      {notice ? (
-        <NoticePanel notice={notice} payHref={routes.subscriptionPay()} />
-      ) : null}
-      <section
-        aria-labelledby={headingId}
-        className="flex animate-fade-up flex-col gap-4 rounded-2xl bg-pure-white p-5 shadow-md"
-      >
-        <div className="flex items-center gap-4">
-          <PlanEmblem slug={subscription.plan.slug} size="sm" />
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
-            <p className="text-label-md text-text-secondary">{t('title')}</p>
-            <div className="flex flex-wrap items-center gap-2">
-              <h2
-                id={headingId}
-                className="text-title-md break-words text-text-primary"
-              >
-                {subscription.plan.name}
-              </h2>
-              <StateChip tone={chip.tone}>
-                {tBilling(`billingStatus.${chip.label}`)}
-              </StateChip>
-            </div>
+    <section
+      aria-labelledby={headingId}
+      className="flex animate-fade-up flex-col gap-4 rounded-xl bg-pure-white px-6 py-6 shadow-md sm:px-7"
+    >
+      <div className="flex items-center gap-4">
+        <PlanEmblem slug={subscription.plan.slug} size="sm" />
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <p className="text-label-md text-text-secondary">{t('title')}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2
+              id={headingId}
+              className="text-title-md break-words text-text-primary"
+            >
+              {subscription.plan.name}
+            </h2>
+            <StateChip tone={chip.tone}>
+              {tBilling(`billingStatus.${chip.label}`)}
+            </StateChip>
           </div>
         </div>
-        {/* Under the plan, never over its name in a narrow column. */}
-        <Button
-          asChild
-          variant="white"
-          shape="soft"
-          size="small"
-          className="self-start"
-        >
-          <Link href={routes.subscription()}>{t('see')}</Link>
-        </Button>
-      </section>
-    </div>
+      </div>
+      <Button
+        asChild
+        variant="white"
+        shape="soft"
+        size="small"
+        className="self-start"
+      >
+        <Link href={routes.subscription()}>{t('see')}</Link>
+      </Button>
+    </section>
   );
 }

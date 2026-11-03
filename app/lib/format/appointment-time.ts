@@ -85,6 +85,17 @@ export function formatWeekdayShort(date: string): string {
   return utc ? weekdayShortFormat.format(utc) : date;
 }
 
+const weekdayLongFormat = new Intl.DateTimeFormat(formatLocale, {
+  weekday: 'long',
+  timeZone: 'UTC',
+});
+
+/** «jueves» from a calendar date. */
+export function formatWeekdayLong(date: string): string {
+  const utc = calendarDayToUtc(date);
+  return utc ? weekdayLongFormat.format(utc) : date;
+}
+
 /** «15 oct» from a calendar date. */
 export function formatDayMonthShort(date: string): string {
   const utc = calendarDayToUtc(date);

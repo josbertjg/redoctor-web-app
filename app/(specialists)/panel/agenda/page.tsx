@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server';
 
 import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 
+import { PanelSurface } from '@/app/ui/layout/panel-surface';
 import { MessagesScope } from '@/app/ui/messages-scope';
 import { PageTransition } from '@/app/ui/motion/view-transitions';
 
@@ -23,7 +24,9 @@ export default function AgendaTodayPage() {
   return (
     <PageTransition>
       <MessagesScope namespaces={pageNamespaces.agenda}>
-        <AgendaDay day={null} />
+        <PanelSurface>
+          <AgendaDay day={null} />
+        </PanelSurface>
       </MessagesScope>
     </PageTransition>
   );

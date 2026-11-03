@@ -6,6 +6,7 @@ import { getTranslations } from 'next-intl/server';
 
 import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 
+import { PanelSurface } from '@/app/ui/layout/panel-surface';
 import { MessagesScope } from '@/app/ui/messages-scope';
 import { PageTransition } from '@/app/ui/motion/view-transitions';
 
@@ -29,9 +30,11 @@ export default function SpecialistAppointmentsPage() {
     <PageTransition>
       <MessagesScope namespaces={pageNamespaces.agenda}>
         {/* The filters live in the address: read in the browser, under a boundary. */}
-        <Suspense fallback={<HistorySkeleton />}>
-          <AppointmentsHistory />
-        </Suspense>
+        <PanelSurface>
+          <Suspense fallback={<HistorySkeleton />}>
+            <AppointmentsHistory />
+          </Suspense>
+        </PanelSurface>
       </MessagesScope>
     </PageTransition>
   );

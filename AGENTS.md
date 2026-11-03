@@ -257,7 +257,7 @@ app/                                  # The application: routes, UI and logic
   (search)/                           # module: the search for specialists (M16)
     search/page.tsx · error.tsx       #   /search — the search in the address, the first page read on the server, the rest in the browser
     _components/                      #   search-header (+ -header-bar), search-navigation (the address as the one state, the pending line), search-results, result-card, availability-strip, search-filters, map-panel, results-map, map-markers, results-states
-    _components/                      #   profile pieces; panel-*, agenda-*, appointments-history, booking-action and book-at-office (the profile's «Agendar cita», `useBookingOffer`), edit-in-app-card, plan-offer-card; reports/ (the statistics' views, charts, filters, export and the plan that downloads); my-profile/ (the view, its state, identity, offices, prices, schedules and training blocks); my-specialties/ (the view, the specialty card, support)
+    _components/                      #   profile pieces; panel-* (panel-home: the home's rules; panel-greeting, panel-activation-card with use-profile-activation, panel-plan-card, panel-week-agenda, panel-week-chart), agenda-*, appointments-history, booking-action and book-at-office (the profile's «Agendar cita», `useBookingOffer`), edit-in-app-card, plan-offer-card; reports/ (the statistics' views, charts, filters, export and the plan that downloads); my-profile/ (the view, its state, identity, offices, prices, schedules and training blocks); my-specialties/ (the view, the specialty card, support)
   (account)/                          # module: legal and account (M10)
     layout.tsx                        #   the bar with the account over the legal pages
     terms/page.tsx · privacy/page.tsx · delete-account/page.tsx   # /terms, /privacy, /delete-account — public, indexed; every word in the catalog (`legal.*`)
@@ -282,11 +282,11 @@ app/                                  # The application: routes, UI and logic
   ui/                                 # ALL shared UI
     button.tsx · back-link.tsx · text-field.tsx · identity-document-field.tsx · select-field.tsx · text-area.tsx · checkbox.tsx · choice-cards.tsx · stars-input.tsx · tabs.tsx · filter-chips.tsx · field-error.tsx · sheet.tsx · skeleton.tsx · toast.tsx · empty-state.tsx · status-card.tsx · link-card.tsx · avatar.tsx · count-badge.tsx · fading-edges.ts (the faded sides of a row that scrolls) …
     messages-scope.tsx                #   a page's own client messages (§9)
-    layout/                           #   site-header, page-frame (a page's column and its main, in the guarded layouts), panel-frame and panel-nav (the specialist's panel around each section), bottom-actions
+    layout/                           #   site-header, page-frame (a page's column and its main, in the guarded layouts), panel-frame (the specialist's panel on the blue: the sidebar from laptops up, panel-bar with the controls at the top right, panel-nav vertical or as tabs, panel-surface for the pages with no design of their own), bottom-actions
     auth/                             #   session-provider, session-button (+ account-menu, loaded for a signed-in person only, and account-item), session-controls (the bell and the account, for a bar), require-session, sign-in-buttons, use-sign-in-arrival (an in-place sign-in under the blue wipe), sign-in-legal-note, account-error-state, in-app-browser-help, provider-logos
     notifications/                    #   the notifications (M17): notifications-provider (the inbox, the live channel, the effects, the push), notifications-bell (nothing for a stranger; bell-popover, the count and the menu from it, loads for a signed-in person), notifications-menu (+ -menu-skeleton), notification-banner (a live notice over the page, on the Toaster), notification-tone (icon and colour by family), use-push (the web push in this browser)
     app-bridge/                       #   open-in-app-button, store-badges, app-access (a specialist's way to the app), store-qr
-    appointments/ · specialists/ · billing/ · reviews/   # domain components used by two or more modules (appointments/: headline, details, appointment-card; billing/: notice-panel, plan-emblem)
+    appointments/ · specialists/ · billing/ · reviews/   # domain components used by two or more modules (appointments/: headline, details, appointment-card; billing/: notice-panel, plan-emblem; specialists/: profile-state-chip, the profile's state in the panel's bar)
     support/                          #   support-links: the API's support lines, to write or to call (REDOC-357)
     search/                           #   the search box (M16), on the landing and on /search: search-bar (+ what-field, where-field, suggestion-popup, highlight, use-combobox, use-location-suggestions — Google's places —, use-remembered), its words from the server (search-bar-words)
     analytics/ · og/ · seo/           #   link-origin-tracker; the Open Graph brand card (next/og); the JSON-LD data block a page carries for search engines
@@ -308,7 +308,8 @@ app/                                  # The application: routes, UI and logic
     security/                         #   csp.ts (the nonce policy proxy.ts sends), rate-limit.ts (so many a minute per address, for the endpoints that spend Google's quota)
     billing/                          #   banks.ts: the app's list of Venezuelan banks (the API publishes none); plan-benefits.ts: what a plan includes, from its limits (the landing's plans and the payment's); payment-draft.ts: the payment left halfway (localStorage, seven days, no zod)
     seo/                              #   json-ld.ts (a schema.org document, serialized so a person's text cannot close its tag), specialist.ts (a public profile as a Physician or a Dentist: name, photos, specialties, offices, rating)
-    reports/                          #   period.ts (the presets, the buckets), figures.ts (trends, the main currency, rankings), csv.ts (the spreadsheet)
+    reports/                          #   period.ts (the presets, the buckets, the calendar days and weeks), figures.ts (trends, the main currency, rankings), csv.ts (the spreadsheet)
+    profile/                          #   activation.ts: the profile's way to the search (the app's ProfileActivation, PublicationReadiness and setup tasks)
     analytics/ · i18n/
     observability/                    #   report.ts (the seam), scrub.ts (what never leaves), sentry.ts
     env.ts · public-env.ts · routes.ts · deep-links.ts · site.ts · support.ts (the API's support lines as channels; read by data/support.ts and queries/support.ts) · clipboard.ts · utils.ts · calendar.ts (.ics, Google Calendar)
@@ -2916,6 +2917,46 @@ written out in full, or Next.js does not inline it).
     the card follow the tokens (radius 30, fields 40 px, titles in
     grey-900) where the frames use 36 px fields and pure black; phones are
     ours (no phone frames).
+
+- **Phase 2, the panel and its home, as built (frame `4644:2329`):**
+  - **The frame** (`PanelFrame`, every page under `/panel` and `/pay`):
+    the blue primary to the edges; from laptops up a white sidebar with the
+    wordmark and the sections (Inicio, Citas, Estadísticas, Suscripción;
+    the one on screen bold and blue on a blue-50 mark that slides), and at
+    the column's top right the profile's state (`ProfileStateChip`: the
+    app's badge, «Perfil activo», «En revisión», «Registro incompleto»,
+    «Perfil Inactivo», «Acción requerida», its colours and icons, a link to
+    «Mi perfil»), the bell and the account in white; on phones and tablets
+    the bar with the white wordmark and the controls, the sections as tabs
+    under it. Pages with no design of their own sit on a white
+    `PanelSurface` (statistics, history, the agenda until phase 3, «Mi
+    perfil», «Mis especialidades», the subscription's pages and `/pay`).
+  - **The home** (`PanelHome`, the app's home rules in their order): «Hola,»
+    and the name on the blue; the billing notice first, or, when nothing is
+    owed and the profile is not visible, how far it is from the search (the
+    app's `ProfileActivation`, ported to `app/lib/profile/activation.ts`:
+    «URGENTE» or «EN REVISIÓN», «Tu cuenta está al N%», its bar from 25 %,
+    «Falta un paso: …» or, in review, what can be set meanwhile), a link to
+    «Mi perfil»; the green «¡Llega a más pacientes desde hoy!» with its
+    figure only when a plan can be taken (none in force, the sign-up done and
+    a specialty verified: the app's `canContractPlan`), else the plan in
+    force; with a plan giving visibility, «Mis citas» (the current week,
+    Monday to Sunday, each day's open appointments, the chosen day's first
+    one, «Ver todas» to that day) and «Esta semana» (each day's
+    appointments as bars, the cancelled aside, today in green, with its
+    table for screen readers); at the foot the daily summary's email and the
+    profile's links.
+  - **Where the web differs from the frame, on purpose and to confirm:** no
+    «Mensajes» (nothing to message with exists); «Suscripción» in the
+    sidebar; the chip's colours are the app's (green-500 on green-50 for
+    «Perfil activo» is under AA for its 12 px words, the owner's brand
+    rule); weeks run Monday to Sunday, as the app's home and the web's month
+    grid (the frame's chart starts on a Sunday); «Esta semana» is our metric
+    (the frame left «Ver una métrica en esta card»); the home's statistics
+    card and today's card are gone (the sidebar leads to the statistics, the
+    week replaces today); patients wear their initials; phones keep the
+    sections as tabs (a bottom bar would collide with the payment's fixed
+    actions).
 
 ### Improvements noted (not scheduled)
 
