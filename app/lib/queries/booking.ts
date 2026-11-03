@@ -17,6 +17,7 @@ import {
   toBookingReasons,
   toTerceros,
   type BookingRequest,
+  type BookingReason,
 } from '../schemas/booking';
 
 import type { TokenHolder } from '../api/types';
@@ -45,12 +46,17 @@ export function isInactiveSpecialist(error: unknown): boolean {
   return isApiError(error) && notFound(error);
 }
 
-/** The reasons enabled at an office, each with its price. */
+/**
+ * The reasons enabled at an office, each with its price. `initial` is what
+ * the public profile already brought (REDOC-367): no second trip for it.
+ */
 export function officeServicesQueryOptions(
   user: TokenHolder,
   officeId: string,
+  initial: BookingReason[] | null = null,
 ) {
   return queryOptions({
+    ...(initial ? { initialData: initial } : {}),
     queryKey: bookingKeys.services(officeId),
     queryFn: async ({ signal }) =>
       toBookingReasons(

@@ -110,13 +110,12 @@ export function OwnPreview({
 
 /**
  * Nobody can book with this specialist from here: not active (the API
- * answers 404, the app's words), no office published, or a specialty the
- * catalog does not know (the API asks for one, REDOC-251).
+ * answers 404, the app's words), or no office published.
  */
 export function BookingUnavailable({
   reason,
 }: {
-  reason: 'inactive' | 'noOffices' | 'noSpecialty';
+  reason: 'inactive' | 'noOffices';
 }) {
   const t = useTranslations();
   const words = {
@@ -127,10 +126,6 @@ export function BookingUnavailable({
     noOffices: {
       title: t('appointments.book.unavailable'),
       description: t('appointments.book.noOffices'),
-    },
-    noSpecialty: {
-      title: t('appointments.book.unavailable'),
-      description: t('appointments.book.unavailableDescription'),
     },
   }[reason];
   return (

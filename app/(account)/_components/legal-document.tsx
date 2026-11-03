@@ -5,13 +5,17 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 
 import { routes } from '@/app/lib/routes';
-import { supportChannels } from '@/app/lib/support';
+import { supportChannels, type SupportContact } from '@/app/lib/support';
 
 import { PageFrame } from '@/app/ui/layout/page-frame';
 
 type LegalDocumentProps = {
   /** The document's namespace under `legal` in the catalog. */
   document: 'terms' | 'privacy' | 'deleteAccount';
+  /** Redoctor's support lines, as the server read them: the main WhatsApp is the first. */
+  support: SupportContact;
+  /** What comes right after the introduction: the deletion itself, on its page. */
+  lead?: ReactNode;
   /** The sections, in order (app/(account)/_data/legal-sections.ts). */
   sections: readonly string[];
   /** A table of contents after the introduction (the long documents). */
@@ -31,20 +35,24 @@ const isEmail = (value: string) =>
  * A legal document (M10): its title and date, an introduction, a table of
  * contents and the sections, every word from the catalog. The bodies are
  * rich messages: paragraphs, lists and bold, plus links to the other legal
- * pages, to the company's email and to the support WhatsApp (the number
- * the environment gives, the message saying nothing about the person).
+ * pages, to the company's email and to the support WhatsApp (the main
+ * line the API publishes, the message saying nothing about the person).
  * The company's identification is written once (`legal.entity`) and
  * reaches every document as values.
  */
 export function LegalDocument({
   document,
+  support,
+  lead,
   sections,
   contents = true,
 }: LegalDocumentProps) {
   const t = useTranslations(`legal.${document}`);
   const tLegal = useTranslations('legal');
   const email = tLegal('entity.email');
-  const whatsapp = supportChannels(tLegal('common.whatsappMessage')).whatsapp;
+  const whatsapp =
+    supportChannels(support, tLegal('common.whatsappMessage')).whatsapp[0] ??
+    null;
 
   const values = {
     company: tLegal('entity.name'),
@@ -121,6 +129,7 @@ export function LegalDocument({
           </p>
         </header>
         <div className="mt-6">{rich('intro')}</div>
+        {lead ? <div className="mt-8">{lead}</div> : null}
         {contents ? (
           <nav
             aria-label={tLegal('common.contents')}

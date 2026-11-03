@@ -221,7 +221,11 @@
     "uncertainOutcome": "Se cortó la conexión antes de confirmar la operación. Revisa si se aplicó antes de volver a intentarlo.",
     "unexpected": "Algo salió mal. Inténtalo de nuevo en un momento.",
     "genericCustomErrors": {
-      "registrationIncomplete": "Termina tu registro para continuar."
+      "registrationIncomplete": "Termina tu registro para continuar.",
+      "requestInProgress": "Todavía estamos procesando tu solicitud. Espera unos segundos y vuelve a intentarlo.",
+      "phoneTaken": "Ese teléfono ya está registrado en otra cuenta.",
+      "alreadyRegistered": "Tu registro ya estaba hecho.",
+      "selfDeletionNotAllowed": "No puedes eliminar tu propia cuenta desde el panel."
     },
     "notificationErrors": {
       "invalidUnsubscribeLink": "Este enlace ya no es válido. Usa el del último correo que recibiste."
@@ -238,7 +242,15 @@
       "noExchangeRate": "No podemos calcular el monto en bolívares ahora. Inténtalo más tarde.",
       "discountActive": "Ya tienes un cupón aplicado. Podrás usar otro cuando termine.",
       "discountLossNotAccepted": "Para cambiar de plan tienes que aceptar que pierdes tu cupón.",
-      "subscriptionRequired": "Necesitas un plan activo para agendar citas."
+      "subscriptionRequired": "Necesitas un plan activo para agendar citas.",
+      "officeLimit": "Tu plan no permite más consultorios activos.",
+      "invoiceNotPayable": "Este recibo ya no tiene nada que pagar.",
+      "referenceAlreadyUsed": "Esa referencia ya se usó en otro pago. Revísala en el banco.",
+      "quoteChanged": "El precio cambió. Revísalo y confirma de nuevo.",
+      "quoteUsed": "Ese pago ya se envió. Revisa tu suscripción antes de enviarlo otra vez.",
+      "paymentRequired": "Faltan los datos del pago para confirmar el plan.",
+      "identityNotApproved": "Podrás contratar un plan cuando aprobemos tu identidad.",
+      "methodUnavailable": "Esa forma de pago no está disponible ahora. Elige otra."
     },
     "firebaseAuthErrors": {
       "popupBlocked": "Tu navegador bloqueó la ventana para entrar. Permítela e inténtalo de nuevo.",
@@ -248,6 +260,9 @@
       "userDisabled": "Tu cuenta ha sido deshabilitada. Contacta a soporte para recibir más información.",
       "tooManyRequests": "Hubo demasiados intentos seguidos. Espera un momento e inténtalo de nuevo.",
       "unknownAuth": "No pudimos entrar. Inténtalo de nuevo en un momento."
+    },
+    "statusCodeErrors": {
+      "tooManyRequests": "Hiciste muchas solicitudes seguidas. Espera un momento y vuelve a intentarlo."
     }
   },
   "appBridge": {
@@ -589,6 +604,11 @@
       "closeSelected": "Cerrar la tarjeta",
       "metaTitle": "Buscar especialistas",
       "metaDescription": "Encuentra especialistas verificados cerca de ti y agenda tu cita en Redoctor."
+    },
+    "prices": "Precios",
+    "pricingMode": {
+      "standard": "Estándar",
+      "perReason": "Por motivo"
     }
   },
   "rating": {
@@ -616,7 +636,10 @@
       "submit": "Enviar calificación",
       "thanks": "Gracias por calificar a {name}",
       "thanksNoName": "Gracias por calificar tu consulta",
-      "failed": "No pudimos enviar tu calificación. Inténtalo de nuevo en un momento."
+      "failed": "No pudimos enviar tu calificación. Inténtalo de nuevo en un momento.",
+      "anonymous": "Hacer esta reseña de forma anónima",
+      "anonymousHint": "Te lo recomendamos por tratarse de una especialidad sensible. Si prefieres firmarla, desmarca la casilla.",
+      "isPublicAnonymous": "Tu reseña se publicará en el perfil del especialista, sin tu nombre."
     },
     "list": {
       "overall": "Calificación general",
@@ -730,6 +753,12 @@
       },
       "current": {
         "subtitle": "Tu plan actual está marcado. Ahora mismo no se puede cambiar: revisa «Mi suscripción»."
+      },
+      "priceVes": "{amount} al mes con la tasa de hoy",
+      "draft": {
+        "title": "Tienes un pago a medias",
+        "description": "Sigue con el plan {plan} donde lo dejaste, con el precio de hoy.",
+        "resume": "Seguir donde lo dejé"
       }
     },
     "planChange": {
@@ -759,7 +788,13 @@
       "unavailableTitle": "Ese plan no está disponible",
       "unavailableDescription": "Puede que ya no se ofrezca. Revisa tu suscripción.",
       "refusedTitle": "No puedes cambiar de plan ahora",
-      "officesBlocked": "Tienes {active} consultorios activos y el plan {plan} permite {count}. Desactiva los que sobran desde la app antes de bajar de plan."
+      "officesBlocked": "Tienes {active} consultorios activos y el plan {plan} permite {count}. Desactiva los que sobran desde la app antes de bajar de plan.",
+      "officesOff": {
+        "title": "{count, plural, one {Al bajar de plan se desactivará un consultorio} other {Al bajar de plan se desactivarán # consultorios}}",
+        "description": "El plan {plan} permite {limit, plural, one {# consultorio activo} other {# consultorios activos}}. Seguirán activos los más antiguos; {count, plural, one {este se desactivará} other {estos se desactivarán}} cuando empiece el plan nuevo, y sus citas se conservan:",
+        "accept": "Acepto que se desactiven al empezar el plan {plan}",
+        "acceptError": "Marca la casilla para poder programar el cambio."
+      }
     },
     "actions": {
       "cancel": {
@@ -927,7 +962,10 @@
         "freeTitle": "Tu cupón cubre este mes completo",
         "freeDescription": "No tienes que pagar nada: al activarlo, tu plan queda listo de inmediato.",
         "activateFree": "Activar mi plan",
-        "failed": "No pudimos preparar tu pago. Inténtalo de nuevo."
+        "failed": "No pudimos preparar tu pago. Inténtalo de nuevo.",
+        "noneAvailable": "Ahora mismo no hay formas de pago disponibles.",
+        "quoteError": "No pudimos calcular el precio del plan. Revisa tu conexión e inténtalo de nuevo.",
+        "freeTitleBalance": "Tu saldo a favor cubre este mes completo"
       },
       "totals": {
         "title": "Lo que vas a pagar",
@@ -937,7 +975,9 @@
         "addCoupon": "Añadir cupones",
         "changeCoupon": "Cambiar cupón",
         "settled": "Abonado",
-        "toPay": "Total a pagar"
+        "toPay": "Total a pagar",
+        "balance": "Saldo a favor",
+        "inBolivars": "{amount} con la tasa del día ({rate})"
       },
       "coupon": {
         "title": "Añadir cupones",
@@ -1085,7 +1125,35 @@
         "expired": "Vencido",
         "canceled": "Anulado",
         "unknown": "Sin estado"
-      }
+      },
+      "quoteChanged": {
+        "rate": {
+          "title": "La tasa del día cambió",
+          "description": "Actualizamos el precio de tu plan con la tasa de hoy: ahora son {current}. Antes eran {previous}.",
+          "beforePayment": "La tasa cambió antes del día de tu pago, así que actualizamos el precio de tu plan: ahora son {current}. Antes eran {previous}."
+        },
+        "price": {
+          "title": "El precio del plan cambió",
+          "description": "Actualizamos el precio de tu plan: ahora son {current}. Antes eran {previous}."
+        },
+        "coupon": {
+          "title": "Tu cupón ya no aplica",
+          "description": "Lo quitamos y actualizamos el precio de tu plan: ahora son {current}. Antes eran {previous}."
+        },
+        "balance": {
+          "title": "Tu saldo a favor cambió",
+          "description": "Actualizamos lo que te toca pagar: ahora son {current}. Antes eran {previous}."
+        },
+        "expired": {
+          "title": "El precio venció",
+          "description": "Pasaron más de 72 horas desde que lo calculamos, así que lo actualizamos: ahora son {current}. Antes eran {previous}."
+        },
+        "ifPaid": "Si ya pagaste, reporta el monto que transferiste. Lo revisamos con la fecha de tu pago.",
+        "ifNotPaid": "Si todavía no has pagado, transfiere el monto nuevo.",
+        "reportPaid": "Puedes reportar lo que pagaste: antes de enviarlo te contamos qué pasa con la diferencia.",
+        "payNow": "Ahora sí hay algo que pagar: elige cómo y transfiere el monto nuevo."
+      },
+      "supportMessage": "¡Hola, equipo de Redoctor! 👋 Soy especialista y necesito ayuda con el pago de mi plan."
     },
     "report": {
       "nothingTitle": "No tienes pagos pendientes",
@@ -1393,7 +1461,6 @@
       "forSpecialistsDescription": "Tu cuenta es de especialista. Para agendar una cita como paciente, entra con otra cuenta de Google o Apple.",
       "goToPanel": "Ir a mi panel",
       "unavailable": "Por ahora no es posible agendar con este especialista desde la web",
-      "unavailableDescription": "Pídele tu cita directamente a tu especialista mientras lo resolvemos.",
       "noOffices": "Este especialista aún no tiene consultorios publicados.",
       "reasonsLoadError": "No pudimos cargar los motivos de consulta.",
       "yourPeople": "¿Quién asistirá a la cita?",
@@ -1575,6 +1642,13 @@
           "title": "Mis especialidades",
           "description": "Cada una y cómo va su revisión."
         }
+      },
+      "dailySummary": {
+        "title": "Resumen diario de tu agenda",
+        "description": "Cada día te enviamos por correo tus citas de ese día. La notificación del resumen te llega igual.",
+        "label": "Recibirlo también por correo",
+        "failed": "No pudimos guardar el cambio. Revisa tu conexión e inténtalo de nuevo.",
+        "loadFailed": "No pudimos leer tu preferencia del resumen diario."
       }
     },
     "agenda": {
@@ -1931,7 +2005,7 @@
       "metaTitle": "Política de privacidad · Redoctor",
       "metaDescription": "Qué datos recoge Redoctor, para qué los usa, con quién los comparte, cuánto tiempo los conserva y qué derechos tienes sobre ellos, incluidos tus datos de salud.",
       "title": "Política de privacidad",
-      "updatedAt": "14 de octubre de 2026",
+      "updatedAt": "2 de noviembre de 2026",
       "intro": "<p>En Redoctor tratamos datos personales y, en particular, datos de salud. Esta Política de privacidad explica qué datos recogemos cuando usas el sitio web redoctorapp.com y la aplicación móvil Redoctor (la «Plataforma»), para qué los usamos, con quién los compartimos, cuánto tiempo los conservamos y qué derechos tienes sobre ellos.</p><p>El responsable del tratamiento es {company}, RIF {rif}, con domicilio en {address} («Redoctor»). Puedes escribirnos sobre privacidad a <mail>{email}</mail>.</p><p>Esta Política forma parte de los <terms>Términos y condiciones de uso</terms>. Tratamos tus datos conforme a la Constitución de la República Bolivariana de Venezuela, que protege el honor, la vida privada y la intimidad y reconoce el derecho a conocer, actualizar y rectificar los datos propios; a la Ley sobre Mensajes de Datos y Firmas Electrónicas; a la Ley Especial contra los Delitos Informáticos; a las normas que rigen el secreto médico; y a los criterios de la Sala Constitucional del Tribunal Supremo de Justicia sobre el tratamiento de datos personales.</p>",
       "sections": {
         "scope": {
@@ -1956,7 +2030,7 @@
         },
         "retention": {
           "title": "6. Cuánto tiempo los conservamos",
-          "body": "<ul><li><b>Tu cuenta y tus perfiles:</b> mientras la cuenta exista. Si la eliminas, borramos tus datos personales en un plazo máximo de treinta (30) días, salvo los que debamos conservar por ley.</li><li><b>Tus citas:</b> mientras la cuenta exista, como historial tuyo y del Especialista. Al eliminar tu cuenta, el Especialista conserva únicamente los registros que su historia clínica y la ley le exijan.</li><li><b>Tus reseñas:</b> mientras el perfil del Especialista esté publicado; al eliminar tu cuenta dejan de mostrar tu nombre.</li><li><b>Datos de facturación y pagos de Especialistas:</b> el tiempo que exijan las normas contables y tributarias venezolanas, aun después de cerrar la cuenta.</li><li><b>Datos de verificación:</b> mientras el perfil del Especialista esté activo y el tiempo necesario para acreditar que la verificación se realizó.</li><li><b>Registros técnicos:</b> hasta noventa (90) días, salvo que sean necesarios para investigar un incidente de seguridad.</li></ul>"
+          "body": "<ul><li><b>Tu cuenta y tus perfiles:</b> mientras la cuenta exista. Si la eliminas, borramos en el acto tus datos personales, salvo los que debamos conservar por ley; si nos pides eliminarla, lo hacemos en un plazo máximo de treinta (30) días.</li><li><b>Tus citas:</b> mientras la cuenta exista, como historial tuyo y del Especialista. Al eliminar tu cuenta, el Especialista conserva únicamente los registros que su historia clínica y la ley le exijan.</li><li><b>Tus reseñas:</b> mientras el perfil del Especialista esté publicado; al eliminar tu cuenta se borran.</li><li><b>Datos de facturación y pagos de Especialistas:</b> el tiempo que exijan las normas contables y tributarias venezolanas, aun después de cerrar la cuenta.</li><li><b>Datos de verificación:</b> mientras el perfil del Especialista esté activo y el tiempo necesario para acreditar que la verificación se realizó.</li><li><b>Registros técnicos:</b> hasta noventa (90) días, salvo que sean necesarios para investigar un incidente de seguridad.</li></ul>"
         },
         "rights": {
           "title": "7. Tus derechos",
@@ -1994,20 +2068,68 @@
     },
     "deleteAccount": {
       "metaTitle": "Eliminar mi cuenta · Redoctor",
-      "metaDescription": "Cómo pedir la eliminación de tu cuenta de Redoctor y qué datos se eliminan.",
+      "metaDescription": "Elimina tu cuenta de Redoctor tú mismo, en el acto, y conoce qué se borra, qué se cancela y qué se conserva.",
       "title": "Eliminar mi cuenta",
-      "updatedAt": "14 de octubre de 2026",
-      "intro": "<p>Puedes pedir la eliminación de tu cuenta de Redoctor en cualquier momento. La solicitud la atiende nuestro equipo de soporte, y pronto podrás hacerla tú mismo desde tu cuenta.</p>",
+      "updatedAt": "2 de noviembre de 2026",
+      "intro": "<p>Puedes eliminar tu cuenta de Redoctor tú mismo, desde esta página, cuando quieras. Se elimina en el acto y no se puede deshacer.</p>",
       "sections": {
         "how": {
-          "title": "Cómo pedirla",
-          "body": "<ol><li>Escríbenos por <support>WhatsApp al {whatsapp}</support> o a <mail>{email}</mail> desde el correo con el que inicias sesión en Redoctor (tu cuenta de Google o de Apple), con el asunto «Eliminar mi cuenta».</li><li>Para comprobar que la solicitud es tuya, te pediremos confirmar algún dato de tu cuenta. Nunca te pediremos una contraseña: Redoctor no la tiene.</li><li>Eliminaremos tu cuenta en un plazo máximo de treinta (30) días y te lo confirmaremos por correo.</li></ol>"
+          "title": "Cómo eliminarla",
+          "body": "<ol><li>Entra arriba con la cuenta que usas en Redoctor (Google o Apple) y toca «Eliminar mi cuenta».</li><li>Para confirmar que eres tú, te pediremos entrar de nuevo con la misma cuenta. Nunca te pediremos una contraseña: Redoctor no la tiene. Si entras con Apple, también retiramos el permiso que le diste a Redoctor en Apple.</li><li>Tu cuenta se elimina en el acto y se cierra tu sesión.</li></ol><p>Si no puedes entrar a tu cuenta, escríbenos por <support>WhatsApp al {whatsapp}</support> o a <mail>{email}</mail> desde el correo de tu cuenta, con el asunto «Eliminar mi cuenta», y la eliminaremos en un plazo máximo de treinta (30) días.</p>"
         },
         "what": {
-          "title": "Qué se elimina",
-          "body": "<ul><li>Tu cuenta, tus perfiles de paciente o de especialista y tus datos personales: nombres, documento, teléfono, fecha de nacimiento, sexo y las personas a tu cargo.</li><li>Tus citas futuras quedan canceladas y se notifica a la otra parte. Tus citas pasadas dejan de estar asociadas a ti.</li><li>Tus reseñas dejan de mostrar tu nombre.</li><li>Si eres especialista, tu perfil deja de ser visible y tu plan queda cancelado. Conservamos únicamente los recibos y los datos de facturación que exigen las normas contables y tributarias, por el tiempo que estas establecen.</li></ul><p>Encuentras los detalles en nuestra <privacy>Política de privacidad</privacy>. Si solo quieres dejar de recibir correos, no hace falta eliminar tu cuenta: puedes darte de baja desde cada correo.</p>"
+          "title": "Qué pasa con cada cosa",
+          "body": "<ul><li><b>Se borra:</b> tu cuenta, tus datos personales y tu foto, tus familiares y favoritos, las notas de tus citas, las reseñas que escribiste y tus avisos. Si eres especialista, también tu perfil profesional y público, tus consultorios con sus horarios, motivos y precios, tus especialidades, certificaciones y fotos, las reseñas que recibiste y tu verificación de identidad.</li><li><b>Se cancela:</b> tus citas futuras, y le avisamos a la otra parte. Si eres especialista, también tu suscripción, en el acto y sin reembolso, y el pago que tengas en revisión; tu saldo a favor, si tienes, te lo devuelve un administrador.</li><li><b>Se conserva, sin tus datos personales:</b> en la agenda de cada especialista, el registro de las citas atendidas (el nombre, la fecha, el consultorio, el motivo y el precio), y los pagos y recibos que exigen las normas contables y tributarias.</li></ul><p>Tu correo queda libre: podrás crear una cuenta nueva con él cuando quieras. Encuentras los detalles en nuestra <privacy>Política de privacidad</privacy>. Si solo quieres dejar de recibir correos, no hace falta eliminar tu cuenta: puedes darte de baja desde cada correo.</p>"
         }
+      },
+      "flow": {
+        "title": "Tu cuenta",
+        "signIn": "Para eliminar tu cuenta, entra con la cuenta que usas en Redoctor.",
+        "admin": "Tu cuenta es de administrador: no se elimina desde aquí. Pídeselo a otro super administrador.",
+        "intro": "Tu cuenta se borra en el acto y no se puede deshacer. Esto es lo que pasa con cada cosa:",
+        "deletedTitle": "Qué se borra",
+        "cancelledTitle": "Qué se cancela",
+        "keptTitle": "Qué se conserva, sin tus datos personales",
+        "patient": {
+          "personal": "Tus datos personales y tu foto.",
+          "relatives": "Tus familiares, tus favoritos y las notas de tus citas.",
+          "writtenReviews": "Las reseñas que escribiste.",
+          "devices": "Tus avisos y el acceso desde todos tus teléfonos.",
+          "appointments": "Tus citas futuras. Le avisamos al especialista de cada una.",
+          "appointmentRecord": "En la agenda de cada especialista que te atendió, el registro de la cita: tu nombre, la fecha, el consultorio, el motivo y el precio."
+        },
+        "specialist": {
+          "personal": "Tus datos personales, tu foto y tu verificación de identidad.",
+          "profile": "Tu perfil profesional: dejas de salir en las búsquedas y el enlace a tu perfil deja de funcionar.",
+          "offices": "Tus consultorios, con sus horarios, motivos y precios.",
+          "credentials": "Tus especialidades, certificaciones y fotos.",
+          "receivedReviews": "Las reseñas que recibiste.",
+          "devices": "Tus avisos y el acceso desde todos tus teléfonos.",
+          "appointments": "Tus citas futuras y tus invitaciones pendientes. A cada paciente le avisamos que ya no atiendes en Redoctor.",
+          "subscription": "Tu suscripción, en el acto y sin reembolso, y el pago que tengas en revisión.",
+          "balance": "Tu saldo a favor, si tienes: te lo devuelve un administrador.",
+          "appointmentRecord": "En las citas que atendiste, el registro para tus pacientes: tu nombre, la fecha, el consultorio, el motivo y el precio.",
+          "payments": "Tus pagos y recibos, por contabilidad."
+        },
+        "emailFree": "Tu correo queda libre: podrás crear una cuenta nueva con él cuando quieras.",
+        "reauthNote": "Para confirmar que eres tú, te pediremos que entres de nuevo con {provider}.",
+        "button": "Eliminar mi cuenta",
+        "deleted": "Tu cuenta se eliminó.",
+        "wrongAccount": "Entra con la misma cuenta con la que usas Redoctor.",
+        "appleRevokeFailed": "No pudimos retirar el permiso de Apple. Revisa tu conexión e inténtalo de nuevo.",
+        "failed": "No pudimos eliminar tu cuenta. Inténtalo de nuevo en un momento.",
+        "noProvider": "Tu cuenta no entra con Google ni con Apple: escríbenos y la eliminamos por ti."
       }
     }
+  },
+  "understood": "Entendido",
+  "support": {
+    "subtitle": "Escríbenos o llámanos y te ayudamos.",
+    "needHelp": "¿Necesitas ayuda? Contáctanos",
+    "writeSection": "Escríbenos",
+    "callSection": "Llámanos",
+    "channel": "{label}: {number}",
+    "whatsappTo": "Escribir por WhatsApp a {name}",
+    "callTo": "Llamar a {name}"
   }
 }

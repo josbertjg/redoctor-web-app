@@ -1,7 +1,6 @@
 import { z } from 'zod';
 
 import { priceSchema, type Price } from './price';
-import { flattenSpecialties, type Specialty } from './specialties';
 import { isDocumentType, type DocumentType } from '../format/identity-document';
 
 import type { AppointmentResponse } from './appointments';
@@ -147,34 +146,42 @@ export function terceroNeedsDocument(
   return today >= `${pad(year, 4)}-${pad(month)}-${pad(day)}`;
 }
 
-/* ---------- The specialty the API asks for ------------------------------- */
+/* ---------- The specialty a booking carries -------------------------------- */
 
-const comparable = (name: string) =>
-  name.trim().replace(/\s+/g, ' ').toLocaleLowerCase('es');
+/** A specialty's place in the tree, `"Medicina > Cardiología"` (the app's `hierarchyPath`). */
+function hierarchyPath(specialty: { name: string; path: readonly string[] }) {
+  const segments = specialty.path
+    .map((segment) => segment.trim())
+    .filter((segment) => segment !== '');
+  return segments.length === 0 ? specialty.name.trim() : segments.join(' > ');
+}
 
 /**
- * The specialty sent with a booking (`specialtyId`, which the API requires
- * until REDOC-251), as the app finds it (`booking_specialty.dart`,
- * provisional): the profile's most specific verified specialty — the
- * longest path, the first on a tie — looked up by name in the catalog.
- * Null when the catalog does not have it.
+ * The specialty sent with a booking (the app's «option B»,
+ * `BookingSpecialty.unambiguousId`, REDOC-251): only when there is no
+ * doubt. Of the profile's verified specialties, those that only head
+ * another one it practises drop out — between «Medicina General» and
+ * «Psiquiatría», the branch —; if exactly one remains, its id goes. With
+ * two branches nothing is guessed: the appointment goes without it, and
+ * the API makes its review anonymous when one of them is sensitive. Never
+ * looked up by name in the catalog.
  */
 export function bookingSpecialtyId(
-  specialties: readonly { name: string; path: readonly string[] }[],
-  tree: readonly Specialty[],
+  verified: readonly {
+    id: string | null;
+    name: string;
+    path: readonly string[];
+  }[],
 ): string | null {
-  let chosen: { name: string; path: readonly string[] } | null = null;
-  for (const specialty of specialties) {
-    if (chosen === null || specialty.path.length > chosen.path.length) {
-      chosen = specialty;
-    }
-  }
-  if (chosen === null) return null;
-  const name = comparable(chosen.name);
-  return (
-    flattenSpecialties(tree).find((node) => comparable(node.name) === name)
-      ?.id ?? null
+  const practiced = verified.filter(
+    (specialty) =>
+      !verified.some((other) =>
+        hierarchyPath(other).startsWith(`${hierarchyPath(specialty)} > `),
+      ),
   );
+  const ids = new Set(practiced.map((specialty) => specialty.id));
+  const [only] = [...ids];
+  return ids.size === 1 && only ? only : null;
 }
 
 /* ---------- The booking --------------------------------------------------- */
@@ -201,7 +208,8 @@ export type BookingRequest = {
   /** The office's calendar day and wall-clock start, as its slots say them. */
   date: string;
   startTime: string;
-  specialtyId: string;
+  /** Only when there is no doubt which one (`bookingSpecialtyId`); else none. */
+  specialtyId: string | null;
   consultationReasonId: string | null;
   attendee: BookingAttendee;
 };
@@ -215,7 +223,9 @@ export function toBookingBody(request: BookingRequest) {
     date: request.date,
     startTime: request.startTime,
     forSelf: attendee.kind === 'self',
-    specialtyId: request.specialtyId,
+    ...(request.specialtyId === null
+      ? {}
+      : { specialtyId: request.specialtyId }),
     ...(request.consultationReasonId === null
       ? {}
       : { consultationReasonId: request.consultationReasonId }),

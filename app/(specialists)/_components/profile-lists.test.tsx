@@ -54,6 +54,40 @@ describe('OfficeList', () => {
       `/book/${profile.id}?office=office-2`,
     );
   });
+
+  it('shows each office’s prices, from the profile itself (REDOC-367)', async () => {
+    const [first] = profile.offices;
+    if (first === undefined) throw new Error('The fixture has an office.');
+    const priced = {
+      ...first,
+      pricingMode: 'PER_REASON' as const,
+      reasons: [
+        {
+          id: 'reason-1',
+          name: 'Consulta general',
+          price: {
+            type: 'FIXED' as const,
+            amount: 40,
+            minAmount: null,
+            maxAmount: null,
+            currency: 'USD',
+          },
+        },
+        { id: 'reason-2', name: 'Control', price: null },
+      ],
+    };
+    const { container } = renderWithIntl(
+      <OfficeList offices={[priced]} booking={booking} />,
+    );
+
+    expect(screen.getByText('Precios')).toBeInTheDocument();
+    expect(screen.getByText('Por motivo')).toBeInTheDocument();
+    expect(screen.getByText('Consulta general')).toBeInTheDocument();
+    expect(screen.getByText('$ 40')).toBeInTheDocument();
+    // A reason without a price is asked about, never left blank.
+    expect(screen.getByText('A consultar')).toBeInTheDocument();
+    expect(await axe(container)).toHaveNoViolations();
+  });
 });
 
 describe('SpecialtyList', () => {

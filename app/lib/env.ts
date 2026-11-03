@@ -13,18 +13,6 @@ const url = z.url();
 const nonEmpty = z.string().min(1);
 const optional = z.string().min(1).optional();
 
-// `Label|+58XXXXXXXXXX`; lists are comma-separated. Provisional until REDOC-357.
-const phoneEntry = String.raw`[^|,]+\|\+\d{8,15}`;
-const supportWhatsapp = z
-  .string()
-  .regex(new RegExp(`^${phoneEntry}$`), 'expected "Label|+number"');
-const supportPhones = z
-  .string()
-  .regex(
-    new RegExp(`^${phoneEntry}(,${phoneEntry})*$`),
-    'expected "Label|+number" entries separated by commas',
-  );
-
 const appStoreId = z
   .string()
   .regex(/^\d+$/, 'expected the numeric App Store id')
@@ -76,8 +64,6 @@ export const env = createEnv({
     NEXT_PUBLIC_IOS_BUNDLE_ID: nonEmpty,
     NEXT_PUBLIC_APPLE_TEAM_ID: nonEmpty,
     NEXT_PUBLIC_ANDROID_PACKAGE: nonEmpty,
-    NEXT_PUBLIC_SUPPORT_WHATSAPP: supportWhatsapp,
-    NEXT_PUBLIC_SUPPORT_PHONES: supportPhones,
     // The search's map (M16), a browser key. Empty: the map stays off.
     NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: optional,
     NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID: optional,
@@ -114,8 +100,6 @@ export const env = createEnv({
     NEXT_PUBLIC_IOS_BUNDLE_ID: process.env.NEXT_PUBLIC_IOS_BUNDLE_ID,
     NEXT_PUBLIC_APPLE_TEAM_ID: process.env.NEXT_PUBLIC_APPLE_TEAM_ID,
     NEXT_PUBLIC_ANDROID_PACKAGE: process.env.NEXT_PUBLIC_ANDROID_PACKAGE,
-    NEXT_PUBLIC_SUPPORT_WHATSAPP: process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP,
-    NEXT_PUBLIC_SUPPORT_PHONES: process.env.NEXT_PUBLIC_SUPPORT_PHONES,
     NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:
       process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
     NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID: process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID,

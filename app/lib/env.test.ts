@@ -29,9 +29,9 @@ describe('env', () => {
   });
 
   it('fails when a variable has the wrong shape', async () => {
-    vi.stubEnv('NEXT_PUBLIC_SUPPORT_WHATSAPP', 'Redoctor 0422-7362867');
+    vi.stubEnv('NEXT_PUBLIC_APP_STORE_ID', 'id-de-la-app');
 
-    await expect(loadEnv()).rejects.toThrow(/NEXT_PUBLIC_SUPPORT_WHATSAPP/);
+    await expect(loadEnv()).rejects.toThrow(/NEXT_PUBLIC_APP_STORE_ID/);
   });
 
   it('refuses the development proxy outside development', async () => {

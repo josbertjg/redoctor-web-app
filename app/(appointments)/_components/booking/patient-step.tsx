@@ -26,6 +26,7 @@ import {
 import {
   terceroNeedsDocument,
   type BookingAttendee,
+  type BookingReason,
 } from '@/app/lib/schemas/booking';
 
 import { ChoiceCards } from '@/app/ui/choice-cards';
@@ -55,6 +56,8 @@ function documentExempt(dateOfBirth: string, today: string): boolean {
 type PatientStepProps = {
   user: TokenHolder;
   officeId: string;
+  /** The office's reasons as the profile brought them (REDOC-367), if it did. */
+  knownReasons?: BookingReason[] | null;
   today: string;
   /** What was answered before: coming back to this step keeps it. */
   defaults: PatientValues;
@@ -71,13 +74,16 @@ type PatientStepProps = {
 export function PatientStep({
   user,
   officeId,
+  knownReasons = null,
   today,
   defaults,
   onDone,
 }: PatientStepProps) {
   const t = useTranslations();
   const words = usePriceWords();
-  const services = useQuery(officeServicesQueryOptions(user, officeId));
+  const services = useQuery(
+    officeServicesQueryOptions(user, officeId, knownReasons),
+  );
   const terceros = useQuery(tercerosQueryOptions(user));
   const reasons = services.data ?? [];
   const people = terceros.data ?? [];

@@ -115,10 +115,30 @@ export const appointmentResponseSchema = z.object({
   appointment: appointmentSchema,
 });
 
-/** `GET /scheduling/appointments` and `GET /reviews/pending` answer a list of them. */
+/** `GET /scheduling/appointments` answers a list of them. */
 export const appointmentListResponseSchema = z.object({
   appointments: z.array(appointmentSchema),
 });
+
+/**
+ * `GET /reviews/pending`: the finished consultations still to rate, each
+ * saying whether its review is better anonymous — its specialty, or one of
+ * its parents, is sensitive (REDOC-251). It only sets the box's default.
+ */
+export const pendingReviewListResponseSchema = z.object({
+  appointments: z.array(
+    appointmentShape
+      .extend({ isSensitive: z.boolean().catch(false) })
+      .transform((appointment) => ({
+        ...appointment,
+        status: knownStatus(appointment.status, appointment.persistedStatus),
+      })),
+  ),
+});
+
+export type PendingReview = z.infer<
+  typeof pendingReviewListResponseSchema
+>['appointments'][number];
 
 /**
  * `GET /scheduling/specialist/appointments`: one page of the specialist's

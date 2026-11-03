@@ -1,19 +1,18 @@
 'use client';
 
-import Call from '@material-symbols/svg-400/rounded/call.svg?svgr';
-import Chat from '@material-symbols/svg-400/rounded/chat.svg?svgr';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
 import type { SessionUser } from '@/app/lib/firebase/client';
 import { billingAccountQueryOptions } from '@/app/lib/queries/billing';
 import { billingDocument } from '@/app/lib/schemas/billing';
-import { supportChannels } from '@/app/lib/support';
 
 import { Button } from '@/app/ui/button';
-import { Icon } from '@/app/ui/icons';
 import { Sheet } from '@/app/ui/sheet';
 import { Skeleton } from '@/app/ui/skeleton';
+import { SupportLinks } from '@/app/ui/support/support-links';
+
+import { useSupportChannels } from '@/app/hooks/use-support-channels';
 
 import { DetailList } from './detail-list';
 
@@ -40,7 +39,7 @@ export function BillingAccountSheet({
     ...billingAccountQueryOptions(user),
     enabled: open,
   });
-  const channels = supportChannels(t('account.whatsappMessage'));
+  const channels = useSupportChannels(t('account.whatsappMessage'));
   /** A blank datum shows the app's dashes: no row is left empty. */
   const orMissing = (value: string | null | undefined) =>
     value?.trim() ? value : t('missing');
@@ -49,39 +48,11 @@ export function BillingAccountSheet({
     <Sheet open={open} onOpenChange={onOpenChange} title={t('account.title')}>
       <div className="flex flex-col gap-5 pb-2">
         {content()}
-        {channels.whatsapp === null && channels.phones.length === 0 ? null : (
-          <div className="flex flex-col gap-2">
-            {channels.whatsapp === null ? null : (
-              <Button asChild block shape="soft" variant="white">
-                <a
-                  href={channels.whatsapp.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Icon icon={Chat} size={20} />
-                  {tRoot('appAccess.whatsapp')}
-                </a>
-              </Button>
-            )}
-            {channels.phones.map((phone) => (
-              <Button
-                key={phone.href}
-                asChild
-                block
-                shape="soft"
-                variant="white"
-              >
-                <a href={phone.href}>
-                  <Icon icon={Call} size={20} />
-                  {tRoot('appAccess.call', {
-                    label: phone.label,
-                    number: phone.number,
-                  })}
-                </a>
-              </Button>
-            ))}
-          </div>
-        )}
+        <SupportLinks
+          channels={channels}
+          headingLevel={null}
+          whatsappVariant="white"
+        />
       </div>
     </Sheet>
   );

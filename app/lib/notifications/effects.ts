@@ -2,6 +2,7 @@ import {
   isAdminBillingNotice,
   isBillingNotice,
   isProfileNotice,
+  isSpecialtyNotice,
   type NotificationAudience,
   type NotificationData,
 } from './destination';
@@ -44,7 +45,11 @@ export function staleTargets(
     targets.add('session');
   }
 
-  if (isProfileNotice(data)) targets.add('session');
+  // A profile published or not, a specialty verified or rejected: the
+  // account's state, «Mi perfil» and «Mis especialidades» read again.
+  if (isProfileNotice(data) || isSpecialtyNotice(data)) {
+    targets.add('session');
+  }
 
   // A finished consultation is when a pending review is born — for the
   // patient; the specialist gets the same notice and rates nobody.
@@ -53,6 +58,43 @@ export function staleTargets(
   }
 
   return [...targets];
+}
+
+/**
+ * What a signal (`data:changed`, REDOC-358) leaves old, by its scope: the
+ * same targets a notice names. Since 2026-10-26 much of what reaches a
+ * specialist comes only this way — an appointment changed, confirmed or
+ * closed, an invitation claimed, a review received —, so without it the
+ * agenda would not keep up. A scope the web has nothing of (favourites,
+ * the admins' queues) or one born tomorrow refreshes nothing.
+ */
+export function signalTargets(
+  scope: string,
+  audience: NotificationAudience,
+): StaleTarget[] {
+  switch (scope) {
+    case 'appointments':
+      return audience.specialist
+        ? ['appointments', 'statistics']
+        : ['appointments'];
+    case 'subscription':
+      return ['subscription', 'session'];
+    case 'profile':
+    case 'account':
+      return ['session'];
+    case 'reviews':
+      return audience.specialist ? ['statistics'] : ['pendingReviews'];
+    default:
+      return [];
+  }
+}
+
+/** Every target, for coming back after the channel was down a while. */
+export function allTargets(audience: NotificationAudience): StaleTarget[] {
+  const targets: StaleTarget[] = ['appointments', 'session'];
+  if (audience.specialist) targets.push('statistics', 'subscription');
+  if (audience.patient) targets.push('pendingReviews');
+  return targets;
 }
 
 /**
@@ -86,6 +128,8 @@ export function staleQueryKeys(
       return [
         ['identity', 'me', userId],
         ['specialists', 'profile', userId],
+        // «Mi perfil» shows the offices, which the app edits.
+        ['offices', userId],
       ];
     case 'pendingReviews':
       return [['reviews', 'pending', userId]];

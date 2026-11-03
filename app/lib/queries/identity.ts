@@ -1,4 +1,5 @@
 import { queryOptions } from '@tanstack/react-query';
+import { z } from 'zod';
 
 import { identityKeys } from './identity-keys';
 import { apiFetch } from '../api/client';
@@ -157,4 +158,22 @@ export async function isDocumentAvailable(
     ...(signal ? { signal } : {}),
   });
   return available;
+}
+
+/**
+ * `DELETE /identity/me` (REDOC-352): the account is deleted at once, with
+ * no time to change one's mind — the person confirmed it by signing in
+ * again. The second time it answers 204 too, so a lost answer may be sent
+ * again. An admin cannot delete their own account (403 ERR_2019).
+ */
+export async function deleteAccount(user: TokenHolder): Promise<void> {
+  await apiFetch({
+    method: 'DELETE',
+    path: '/identity/me',
+    token: await user.getToken(),
+    schema: z.unknown(),
+    idempotent: true,
+    // An admin's account, refused as the API says: explained in place.
+    expected: (error) => error.status === 403,
+  });
 }

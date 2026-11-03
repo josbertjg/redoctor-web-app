@@ -3,10 +3,12 @@ import LocationOn from '@material-symbols/svg-400/rounded/location_on.svg?svgr';
 import Signpost from '@material-symbols/svg-400/rounded/signpost.svg?svgr';
 import { useTranslations } from 'next-intl';
 
+import { formatPrice, type PriceWords } from '@/app/lib/format/money';
 import { directionsUrl } from '@/app/lib/maps';
 import type { SpecialistProfile } from '@/app/lib/schemas/specialists';
 
 import { Icon } from '@/app/ui/icons';
+import { StateChip } from '@/app/ui/state-chip';
 
 import { BookAtOffice } from './book-at-office';
 
@@ -15,8 +17,11 @@ import { BookAtOffice } from './book-at-office';
  * shows (the description), and «Cómo llegar» to the exact coordinates in
  * Google Maps, the promise of the app's share message. No static map: that
  * needs a browser key restricted to the web (AGENTS.md §11), not the app's.
- * With two offices or more, each offers the app's «Agendar en este
- * consultorio» (with one, it is the profile's «Agendar cita»).
+ * Each office's prices as the app's profile shows them (REDOC-367: they come
+ * with the public profile, no session): «Por motivo» or «Estándar», each
+ * reason with its price, «A consultar» when it has none. With two offices or
+ * more, each offers the app's «Agendar en este consultorio» (with one, it
+ * is the profile's «Agendar cita»).
  */
 export function OfficeList({
   offices,
@@ -28,6 +33,12 @@ export function OfficeList({
 }) {
   const t = useTranslations('specialists');
   const search = useTranslations('search');
+  const priceFormat = useTranslations('priceFormat');
+  const words: PriceWords = {
+    from: (amount) => priceFormat('from', { amount }),
+    rangeShort: (min, max) => priceFormat('rangeShort', { min, max }),
+    range: (min, max) => priceFormat('range', { min, max }),
+  };
   const perOffice = offices.length > 1;
 
   return (
@@ -60,6 +71,36 @@ export function OfficeList({
             <Icon icon={Directions} size={18} />
             {t('directions')}
           </a>
+          {office.reasons && office.reasons.length > 0 ? (
+            <div className="flex flex-col gap-1.5 border-t border-divider pt-2">
+              <p className="flex flex-wrap items-center gap-2 text-label-md text-text-primary">
+                {search('prices')}
+                {office.pricingMode ? (
+                  <StateChip tone="neutral">
+                    {search(
+                      office.pricingMode === 'PER_REASON'
+                        ? 'pricingMode.perReason'
+                        : 'pricingMode.standard',
+                    )}
+                  </StateChip>
+                ) : null}
+              </p>
+              <ul className="flex flex-col gap-1">
+                {office.reasons.map((reason) => (
+                  <li
+                    key={reason.id}
+                    className="flex items-baseline justify-between gap-3 text-body-xxs text-text-secondary"
+                  >
+                    <span className="min-w-0">{reason.name}</span>
+                    <span className="shrink-0 font-semibold text-text-primary">
+                      {formatPrice(reason.price, words) ??
+                        search('priceOnRequestShort')}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           {perOffice ? (
             <BookAtOffice
               specialistId={booking.specialistId}

@@ -38,7 +38,7 @@ import type { BookingSpecialist } from './booking-types';
 
 type BookingFlowProps = {
   specialist: BookingSpecialist;
-  /** The specialty the API asks for, found in the catalog; null when it is not there. */
+  /** The specialty the booking carries, when there is no doubt which (REDOC-251); else none. */
   specialtyId: string | null;
   /** The app's preview notice, for the specialist on their own page (its words, from the server). */
   ownerNotice: { title: string; description: string };
@@ -46,7 +46,7 @@ type BookingFlowProps = {
 
 /*
  * `/book/{specialistId}` (M15), the app's booking: what the API needs is
- * checked first — an office, the specialty —, then the session, asked for
+ * checked first — an office —, then the session, asked for
  * right here (one tap, AGENTS.md §1), as on `/a`. A specialist's account
  * books nothing; a patient whose sign-up is not finished finishes it first
  * (the app's «¡Un último paso…!») and comes back. Then the four steps.
@@ -82,9 +82,6 @@ export function BookingFlow({
 
   if (specialist.offices.length === 0) {
     return frame(<BookingUnavailable reason="noOffices" />);
-  }
-  if (specialtyId === null) {
-    return frame(<BookingUnavailable reason="noSpecialty" />);
   }
   if (session.status === 'resolving') return frame(<BookingSkeleton />);
   if (session.status === 'signed-out') {

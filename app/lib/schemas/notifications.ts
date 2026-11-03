@@ -121,6 +121,20 @@ export const notificationCreatedPayloadSchema = z.object({
   notification: notificationResponseSchema,
   /** The server's unread total; absent, the local count moves by itself. */
   unreadCount: z.number().int().nullable().optional(),
+  /** The device whose action caused it (REDOC-358): that one shows no banner. */
+  originDeviceId: z.string().nullish(),
+});
+
+/**
+ * `data:changed` (REDOC-358): something changed and is read again in
+ * silence — no banner, no inbox row. `scope` names what (`appointments`,
+ * `subscription`, `profile`, `reviews`, `account`…), `id` the thing when it
+ * says it, `originDeviceId` the device that changed it.
+ */
+export const dataChangedPayloadSchema = z.object({
+  scope: z.string(),
+  id: z.string().nullish(),
+  originDeviceId: z.string().nullish(),
 });
 
 /** `notification:unread`: the count moved, maybe from another device. */
@@ -156,3 +170,16 @@ export type DeviceTokenBody = z.infer<typeof deviceTokenBodySchema>;
 
 /** `registered: false` means this device is no longer the person's: a sign-out from afar. */
 export const heartbeatResponseSchema = z.object({ registered: z.boolean() });
+
+/**
+ * `GET` and `PATCH /notifications/preferences` (REDOC-359, specialists):
+ * whether the daily summary also comes by email. Its push cannot be turned
+ * off, nor the other emails.
+ */
+export const notificationPreferencesSchema = z.object({
+  dailySummaryEmail: z.boolean(),
+});
+
+export type NotificationPreferences = z.infer<
+  typeof notificationPreferencesSchema
+>;

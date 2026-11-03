@@ -11,3 +11,5 @@ Claude-specific notes (everything else is in `AGENTS.md`):
   Spanish summary of what changed and what was verified.
 - Do not re-read files already read in the session; do not reach for a new
   dependency when `app/lib` or `app/ui` already covers the need.
+- Any doubt about the API contract: the OpenAPI and the API's code together,
+  read only — `../redoctor-api`, branch `dev` (AGENTS.md §5).

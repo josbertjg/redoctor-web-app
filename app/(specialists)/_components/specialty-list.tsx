@@ -7,7 +7,8 @@ import { Icon } from '@/app/ui/icons';
 
 import { ProfilePlaceholder } from './profile-section';
 
-type Specialty = SpecialistProfile['specialties'][number];
+/** What the list shows of a specialty: its catalog id plays no part here. */
+type Specialty = Omit<SpecialistProfile['specialties'][number], 'id'>;
 
 /** Parents before their children: «Medicina» before «Medicina › Cardiología». */
 function byPath(a: Specialty, b: Specialty): number {
@@ -29,7 +30,7 @@ function byPath(a: Specialty, b: Specialty): number {
 export function SpecialtyList({
   specialties,
 }: {
-  specialties: SpecialistProfile['specialties'];
+  specialties: readonly Specialty[];
 }) {
   const t = useTranslations('specialists');
 

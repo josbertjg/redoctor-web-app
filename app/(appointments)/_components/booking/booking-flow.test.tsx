@@ -87,12 +87,14 @@ const specialist: BookingSpecialist = {
       name: 'Clínica El Ávila',
       address: 'Av. San Juan Bosco, Altamira, Caracas',
       description: 'Piso 6, consultorio 604',
+      reasons: null,
     },
     {
       id: secondOffice,
       name: 'Centro Médico La Floresta',
       address: 'Av. Principal de La Floresta, Caracas',
       description: null,
+      reasons: null,
     },
   ],
 };
@@ -280,13 +282,24 @@ describe('booking from a profile', () => {
     ).toHaveAttribute('href', `/s/${knownSpecialistId}`);
   });
 
-  it('says so when the catalog does not know the specialty the API asks for', async () => {
+  it('books without a specialty when it is not clear which one (REDOC-251)', async () => {
+    const sent = captureBooking();
     renderBooking({ specialtyId: null });
+
+    await toPatientStep();
+    await userEvent.click(
+      screen.getByRole('radio', { name: /Consulta general/ }),
+    );
+    await userEvent.click(screen.getByRole('radio', { name: 'Para mí' }));
+    await next();
+    await heading('Resumen de tu cita');
+    await userEvent.click(screen.getByRole('button', { name: 'Agendar' }));
+
     expect(
-      await screen.findByRole('heading', {
-        name: 'Por ahora no es posible agendar con este especialista desde la web',
-      }),
+      await screen.findByRole('heading', { name: '¡Todo listo!' }),
     ).toBeInTheDocument();
+    // The API decides the review's anonymity from the specialist's specialties.
+    expect(sent.body).not.toHaveProperty('specialtyId');
   });
 
   it('says so when the specialist is not active (404), in the app’s words', async () => {
@@ -299,6 +312,7 @@ describe('booking from a profile', () => {
             name: 'Centro Médico La Floresta',
             address: 'Av. Principal de La Floresta, Caracas',
             description: null,
+            reasons: null,
           },
         ],
       },

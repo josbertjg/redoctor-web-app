@@ -15,8 +15,11 @@ import {
   intentIds,
   invoiceIds,
   planIds,
+  quoteIdFor,
   savedCouponId,
+  toVes,
   usd,
+  ves,
 } from '@/tests/factories/billing';
 
 import {
@@ -25,6 +28,8 @@ import {
   billingAccountQueryOptions,
   changePlan,
   changeSubscription,
+  checkoutQuoteQueryOptions,
+  confirmCheckout,
   couponRejectionKey,
   invoiceQueryOptions,
   invoicesQueryOptions,
@@ -36,7 +41,7 @@ import {
   resolvePayable,
   saveCoupon,
   savedCouponsQueryOptions,
-  subscribe,
+  upgradeQuoteQueryOptions,
   validateCoupon,
 } from './billing';
 import { apiUrl, errorEnvelope } from '../../../tests/msw/api-url';
@@ -52,32 +57,9 @@ import {
 import { validToken } from '../../../tests/msw/handlers/identity';
 import { server } from '../../../tests/msw/server';
 import { ApiError } from '../api/errors';
-import {
-  offeredPlans,
-  plansResponseSchema,
-  subscriptionSchema,
-} from '../schemas/billing';
+import { subscriptionSchema } from '../schemas/billing';
 
 const user = { id: 'uid-1', getToken: () => Promise.resolve(validToken) };
-
-const plan = () => {
-  const { plans } = plansResponseSchema.parse({
-    plans: [
-      {
-        id: planIds.professional,
-        slug: 'profesional',
-        name: 'Profesional',
-        maxActiveClinics: 3,
-        canExportReports: true,
-        status: 'ACTIVE',
-        price: { id: 'p', amount: usd(3000), status: 'ACTIVE' },
-      },
-    ],
-  });
-  const [offered] = offeredPlans(plans);
-  if (!offered) throw new Error('no plan');
-  return offered;
-};
 
 const subscription = (
   overrides: Parameters<typeof buildSubscription>[0] = {},
@@ -155,55 +137,137 @@ describe('resolvePayable', () => {
   });
 });
 
-describe('subscribe', () => {
-  it('creates the subscription with its first receipt, the coupon inside', async () => {
-    const result = await subscribe(user, {
-      plan: plan(),
-      coupon: { code: 'REDOCTOR20' },
-      free: false,
-    });
+describe('quoting and confirming a checkout (REDOC-363)', () => {
+  const payment = {
+    reference: '00123456',
+    bankCode: '0134',
+    origin: '+584141234567',
+    paidOn: '2026-11-02',
+    amountVes: toVes(2400),
+  };
 
-    expect(result.subscription.status).toBe('INCOMPLETE');
-    expect(result.subscription.discount?.code).toBe('REDOCTOR20');
-    expect(result.invoice?.pending).toEqual(usd(2400));
-    expect(result.invoice?.intents).toEqual([]);
+  /** The `Idempotency-Key` of every confirmation the API received. */
+  function recordKeys() {
+    const keys: (string | null)[] = [];
+    server.events.on('request:start', ({ request }) => {
+      if (new URL(request.url).pathname.endsWith('/billing/me/checkout')) {
+        keys.push(request.headers.get('idempotency-key'));
+      }
+    });
+    return keys;
+  }
+
+  it('quotes a plan with its coupon, creating nothing, in dollars and bolívares', async () => {
+    const quote = await new QueryClient().query(
+      checkoutQuoteQueryOptions(user, planIds.professional, {
+        code: 'REDOCTOR20',
+      }),
+    );
+
+    expect(quote.id).toBe(quoteIdFor(planIds.professional, 'REDOCTOR20'));
+    expect(quote.payable).toEqual(usd(2400));
+    expect(quote.payableVes).toEqual(ves(toVes(2400)));
+    expect(quote.lines.map((line) => line.type)).toEqual(['PLAN', 'DISCOUNT']);
+    expect(quote.requiresPayment).toBe(true);
+    expect(quote.destination.mobilePayment?.bankName).toBe(
+      'Banco de Venezuela',
+    );
   });
 
-  it('answers no receipt when a coupon covers the month: the plan is active', async () => {
-    const result = await subscribe(user, {
-      plan: plan(),
-      coupon: { code: 'GRATIS100' },
-      free: true,
+  it('confirms the quote with its key and the payment: the plan unpaid, the payment in review', async () => {
+    const keys = recordKeys();
+
+    const confirmed = await confirmCheckout(user, {
+      planId: planIds.professional,
+      quoteId: quoteIdFor(planIds.professional, 'REDOCTOR20'),
+      method: 'MOBILE_PAYMENT',
+      payment,
+      idempotencyKey: 'key-1',
     });
 
-    expect(result.subscription.status).toBe('ACTIVE');
-    expect(result.invoice).toBeNull();
+    expect(confirmed.subscription.status).toBe('INCOMPLETE');
+    expect(confirmed.intent?.status).toBe('IN_REVIEW');
+    expect(keys).toEqual(['key-1']);
   });
 
-  it('goes on with the unpaid subscription of this plan when the API says there is one', async () => {
+  it('confirms without a payment when nothing is to pay: the plan active', async () => {
+    const confirmed = await confirmCheckout(user, {
+      planId: planIds.professional,
+      quoteId: quoteIdFor(planIds.professional, 'GRATIS100'),
+      method: null,
+      payment: null,
+      idempotencyKey: 'key-2',
+    });
+
+    expect(confirmed.subscription.status).toBe('ACTIVE');
+    expect(confirmed.intent).toBeNull();
+  });
+
+  it('counts the same key still being answered as done once the payment is in review', async () => {
     server.use(
-      http.post(apiUrl('/billing/me/subscription'), () =>
-        HttpResponse.json(errorEnvelope('ERR_5071', 'Already subscribed'), {
+      http.post(apiUrl('/billing/me/checkout'), () =>
+        HttpResponse.json(errorEnvelope('ERR_1011', 'In progress'), {
+          status: 409,
+        }),
+      ),
+      subscriptionHandler(
+        buildSubscription({
+          openInvoice: {
+            id: invoiceIds.unpaid,
+            number: 'R-2026-000123',
+            kind: 'SUBSCRIPTION_CYCLE',
+            total: usd(2400),
+            pending: usd(2400),
+            dueAt: '2026-11-02T12:00:00.000Z',
+          },
+          lastPayment: {
+            intentId: intentIds.fresh,
+            status: 'IN_REVIEW',
+            reason: null,
+          },
+        }),
+      ),
+    );
+
+    const confirmed = await confirmCheckout(user, {
+      planId: planIds.professional,
+      quoteId: quoteIdFor(planIds.professional, null),
+      method: 'MOBILE_PAYMENT',
+      payment,
+      idempotencyKey: 'key-3',
+    });
+
+    expect(confirmed.subscription.plan.id).toBe(planIds.professional);
+  });
+
+  it('counts a quote already used as done when this plan waits with its payment', async () => {
+    server.use(
+      http.post(apiUrl('/billing/me/checkout'), () =>
+        HttpResponse.json(errorEnvelope('ERR_5126', 'Quote used'), {
           status: 409,
         }),
       ),
       subscriptionHandler(buildSubscription()),
       invoicesHandler([buildInvoice()]),
+      invoiceDetailHandler(buildInvoice(), [
+        buildIntent({ status: 'IN_REVIEW', reported: buildReported() }),
+      ]),
     );
 
-    const result = await subscribe(user, {
-      plan: plan(),
-      coupon: null,
-      free: false,
-    });
-
-    expect(result.subscription.id).toBe(buildSubscription().id);
-    expect(result.invoice?.id).toBe(invoiceIds.unpaid);
+    await expect(
+      confirmCheckout(user, {
+        planId: planIds.professional,
+        quoteId: quoteIdFor(planIds.professional, null),
+        method: 'MOBILE_PAYMENT',
+        payment,
+        idempotencyKey: 'key-4',
+      }),
+    ).resolves.toMatchObject({ subscription: { status: 'INCOMPLETE' } });
   });
 
-  it('refuses when the subscription on the way is another plan’s', async () => {
+  it('passes on a subscription on its way that is another plan’s', async () => {
     server.use(
-      http.post(apiUrl('/billing/me/subscription'), () =>
+      http.post(apiUrl('/billing/me/checkout'), () =>
         HttpResponse.json(errorEnvelope('ERR_5071', 'Already subscribed'), {
           status: 409,
         }),
@@ -216,17 +280,45 @@ describe('subscribe', () => {
     );
 
     await expect(
-      subscribe(user, { plan: plan(), coupon: null, free: false }),
+      confirmCheckout(user, {
+        planId: planIds.professional,
+        quoteId: quoteIdFor(planIds.professional, null),
+        method: 'MOBILE_PAYMENT',
+        payment,
+        idempotencyKey: 'key-5',
+      }),
     ).rejects.toMatchObject({ code: 'ERR_5071' });
+  });
+
+  it('passes on a changed quote with the new one in its details', async () => {
+    server.use(
+      http.post(apiUrl('/billing/me/checkout'), () =>
+        HttpResponse.json(
+          {
+            ...errorEnvelope('ERR_5125', 'Quote changed'),
+            details: { reason: 'RATE' },
+          },
+          { status: 409 },
+        ),
+      ),
+    );
+
+    await expect(
+      confirmCheckout(user, {
+        planId: planIds.professional,
+        quoteId: quoteIdFor(planIds.professional, null),
+        method: 'MOBILE_PAYMENT',
+        payment,
+        idempotencyKey: 'key-6',
+      }),
+    ).rejects.toMatchObject({ code: 'ERR_5125', details: { reason: 'RATE' } });
   });
 
   it('passes on a plan that is no longer offered', async () => {
     await expect(
-      subscribe(user, {
-        plan: { ...plan(), id: planIds.archived },
-        coupon: null,
-        free: false,
-      }),
+      new QueryClient().query(
+        checkoutQuoteQueryOptions(user, planIds.archived, null),
+      ),
     ).rejects.toMatchObject({ code: 'ERR_5074' });
   });
 });
@@ -340,6 +432,76 @@ describe('changing plan', () => {
         acceptDiscountLoss: false,
       }),
     ).rejects.toMatchObject({ code: 'ERR_5075' });
+  });
+});
+
+describe('changing plan on its quote (REDOC-363)', () => {
+  it('reads an upgrade’s quote from its preview, in the payment’s shape', async () => {
+    const quote = await new QueryClient().query(
+      upgradeQuoteQueryOptions(user, planIds.professional),
+    );
+
+    expect(quote.payable).toEqual(usd(1355));
+    expect(quote.payableVes).toEqual(ves(toVes(1355)));
+    expect(quote.lines.map((line) => line.type)).toEqual([
+      'PRORATION_CHARGE',
+      'PRORATION_CREDIT',
+    ]);
+  });
+
+  it('says there is no rate when the preview brings no quote', async () => {
+    server.use(...planChangeHandlers({ noRate: true }));
+
+    await expect(
+      new QueryClient().query(
+        upgradeQuoteQueryOptions(user, planIds.professional),
+      ),
+    ).rejects.toMatchObject({ code: 'ERR_5085' });
+  });
+
+  it('reports a quoted upgrade’s payment in the same call', async () => {
+    const changed = await changePlan(user, {
+      planId: planIds.professional,
+      acceptDiscountLoss: false,
+      quoted: {
+        quoteId: `upgrade-quote:${planIds.professional}`,
+        method: 'BANK_TRANSFER',
+        payment: {
+          reference: '987654321',
+          bankCode: '0105',
+          origin: '01050000111122223333',
+          paidOn: '2026-11-02',
+          amountVes: toVes(1355),
+        },
+      },
+    });
+
+    expect(changed.kind).toBe('UPGRADE');
+    expect(changed.intent?.status).toBe('IN_REVIEW');
+    expect(changed.invoice).toBeNull();
+  });
+
+  it('schedules a downgrade that turns offices off only once accepted', async () => {
+    server.use(
+      ...planChangeHandlers({
+        from: planIds.corporate,
+        officesToDeactivate: [{ id: 'office-3', name: 'Consultorio Norte' }],
+      }),
+    );
+
+    await expect(
+      changePlan(user, {
+        planId: planIds.professional,
+        acceptDiscountLoss: false,
+      }),
+    ).rejects.toMatchObject({ code: 'ERR_5076' });
+    await expect(
+      changePlan(user, {
+        planId: planIds.professional,
+        acceptDiscountLoss: false,
+        acceptOfficeDeactivation: true,
+      }),
+    ).resolves.toMatchObject({ kind: 'DOWNGRADE' });
   });
 });
 
@@ -609,7 +771,7 @@ describe('coupons', () => {
         new ApiError({
           kind: 'http',
           method: 'POST',
-          path: '/billing/me/subscription',
+          path: '/billing/me/checkout/quote',
           status: 409,
           code: 'ERR_5104',
           details: { reason: 'FIRST_SUBSCRIPTION_ONLY' },

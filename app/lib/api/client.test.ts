@@ -307,6 +307,45 @@ describe('apiFetch', () => {
     expect(calls).toBe(1);
   });
 
+  it('sends a write’s Idempotency-Key, and repeats it after a gateway failure', async () => {
+    const keys: (string | null)[] = [];
+    let calls = 0;
+    server.use(
+      http.post(apiUrl('/checkout'), ({ request }) => {
+        keys.push(request.headers.get('idempotency-key'));
+        calls += 1;
+        return calls === 1
+          ? new HttpResponse(null, { status: 502 })
+          : HttpResponse.json({ ok: true }, { status: 201 });
+      }),
+    );
+
+    // The same key answers what the first send created: safe to repeat.
+    await expect(
+      apiFetch({
+        method: 'POST',
+        path: '/checkout',
+        body: {},
+        idempotencyKey: 'key-1',
+        schema: pingSchema,
+      }),
+    ).resolves.toEqual({ ok: true });
+    expect(keys).toEqual(['key-1', 'key-1']);
+  });
+
+  it('names no device from the server: it is nobody’s', async () => {
+    let device: string | null = 'unread';
+    server.use(
+      http.get(apiUrl('/ping'), ({ request }) => {
+        device = request.headers.get('x-device-id');
+        return HttpResponse.json({ ok: true });
+      }),
+    );
+
+    await apiFetch({ path: '/ping', schema: pingSchema });
+    expect(device).toBeNull();
+  });
+
   it('stops when the caller cancels', async () => {
     server.use(
       http.get(apiUrl('/cancel'), async () => {

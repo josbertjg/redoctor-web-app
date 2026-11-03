@@ -5,6 +5,11 @@ import { axe } from 'jest-axe';
 import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  markLocalWrite,
+  resetLocalWrites,
+} from '@/app/lib/notifications/local-writes';
+import { deviceId } from '@/app/lib/notifications/push';
 import type {
   NotificationsChannelOptions,
   RealtimeEvent,
@@ -137,15 +142,34 @@ const arrive = (event: RealtimeEvent) => {
 const created = (
   overrides: Parameters<typeof buildNotificationResponse>[0],
   unreadCount: number | null = null,
+  originDeviceId: string | null = null,
 ): RealtimeEvent => ({
   kind: 'created',
   notification: toNotification(
     notificationResponseSchema.parse(buildNotificationResponse(overrides)),
   ),
   unreadCount,
+  originDeviceId,
 });
 
 const bell = () => screen.findByRole('button', { name: /^Notificaciones/ });
+
+/** The ids of every notice the API was asked to mark read. */
+function recordReads() {
+  const reads: string[] = [];
+  server.use(
+    http.patch(apiUrl('/notifications/:notificationId/read'), ({ params }) => {
+      reads.push(String(params.notificationId));
+      return HttpResponse.json(
+        buildNotificationResponse({
+          id: String(params.notificationId),
+          readAt: '2026-10-14T21:00:00.000Z',
+        }),
+      );
+    }),
+  );
+  return reads;
+}
 
 /** Opens the menu and waits for its code, which comes with the first opening. */
 async function openMenu() {
@@ -157,6 +181,8 @@ async function openMenu() {
 
 afterEach(() => {
   channels.made.length = 0;
+  // One test's writes are no other test's echo.
+  resetLocalWrites();
 });
 
 describe('NotificationsProvider', () => {
@@ -483,6 +509,93 @@ describe('NotificationsProvider', () => {
       },
       { timeout: 2000 },
     );
+  });
+
+  it('reads again in silence what a signal names (REDOC-358): the agenda keeps up', async () => {
+    const { invalidate } = renderWithSession(signedIn(specialist));
+    await bell();
+    await waitFor(() => {
+      expect(channels.made).toHaveLength(1);
+    });
+
+    arrive({
+      kind: 'changed',
+      scope: 'appointments',
+      id: 'appt-9',
+      originDeviceId: 'another-device',
+    });
+
+    await waitFor(
+      () => {
+        expect(invalidate).toHaveBeenCalledWith({
+          queryKey: ['specialist-appointments', 'uid-1'],
+        });
+        expect(invalidate).toHaveBeenCalledWith({
+          queryKey: ['report', 'specialist', 'uid-1'],
+        });
+      },
+      { timeout: 2000 },
+    );
+    // A signal is no notice: no banner, no row.
+    expect(
+      screen.getByRole('button', { name: 'Notificaciones, 2 sin leer' }),
+    ).toBeInTheDocument();
+  });
+
+  it('takes this tab’s own echo as told: no banner and nothing read again', async () => {
+    const { invalidate } = renderWithSession(signedIn());
+    await bell();
+    await waitFor(() => {
+      expect(channels.made).toHaveLength(1);
+    });
+    const here = deviceId();
+    markLocalWrite();
+
+    arrive({
+      kind: 'changed',
+      scope: 'appointments',
+      id: 'appt-9',
+      originDeviceId: here,
+    });
+    arrive(
+      created(
+        {
+          id: 'own-1',
+          title: 'Cancelaste tu cita',
+          data: {
+            kind: 'APPOINTMENT_CANCELLED_PATIENT',
+            appointmentId: 'appt-9',
+          },
+        },
+        3,
+        here,
+      ),
+    );
+
+    // In the inbox, counted; over the page, nothing.
+    expect(
+      await screen.findByRole('button', { name: 'Notificaciones, 3 sin leer' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /Cancelaste tu cita/ }),
+    ).not.toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    expect(invalidate).not.toHaveBeenCalledWith({
+      queryKey: ['appointments', 'uid-1'],
+    });
+  });
+
+  it('reads a notice opened from a push, and leaves the address clean', async () => {
+    const reads = recordReads();
+    window.history.replaceState(null, '', '/a/appt-9?notification=n-1');
+    renderWithSession(signedIn());
+    await bell();
+
+    await waitFor(() => {
+      expect(reads).toEqual(['n-1']);
+    });
+    expect(window.location.search).toBe('');
+    window.history.replaceState(null, '', '/');
   });
 
   it('shows no banner while the menu is open: the notice is a row already', async () => {

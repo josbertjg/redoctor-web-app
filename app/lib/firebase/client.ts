@@ -6,6 +6,8 @@ import {
   GoogleAuthProvider,
   OAuthProvider,
   onIdTokenChanged,
+  reauthenticateWithPopup,
+  revokeAccessToken,
   signInWithPopup,
   signOut,
   type Auth,
@@ -177,4 +179,55 @@ export async function signInWith(
 
 export async function signOutUser(): Promise<void> {
   await signOut(firebaseAuth());
+}
+
+/** How confirming one's identity again ended, before deleting the account. */
+export type ReauthOutcome =
+  /** The same account: with Apple, the access token to revoke its permission. */
+  | { status: 'confirmed'; appleAccessToken: string | null }
+  /** The person closed the window: nothing to say. */
+  | { status: 'cancelled' }
+  /** Another account came back from the provider: nothing happens to either. */
+  | { status: 'wrong-account' }
+  | { status: 'failed'; reason: AuthErrorKey };
+
+/**
+ * Signs in again, with the same provider, the person who is signed in: the
+ * proof that deleting the account is their own wish (the app's rule,
+ * REDOC-352). Another account coming back is refused by Firebase itself
+ * (`auth/user-mismatch`).
+ */
+export async function reauthenticate(
+  provider: AuthProvider,
+): Promise<ReauthOutcome> {
+  const user = firebaseAuth().currentUser;
+  if (user === null) return { status: 'failed', reason: 'unknownAuth' };
+  try {
+    const result = await reauthenticateWithPopup(user, providerFor(provider));
+    const credential =
+      provider === 'apple' ? OAuthProvider.credentialFromResult(result) : null;
+    return {
+      status: 'confirmed',
+      appleAccessToken: credential?.accessToken ?? null,
+    };
+  } catch (error) {
+    if (codeOf(error) === 'auth/user-mismatch') {
+      return { status: 'wrong-account' };
+    }
+    const outcome = outcomeOfError(error);
+    return outcome.status === 'cancelled'
+      ? outcome
+      : {
+          status: 'failed',
+          reason: outcome.status === 'failed' ? outcome.reason : 'unknownAuth',
+        };
+  }
+}
+
+/**
+ * Withdraws the permission the person gave Redoctor in Apple (App Store
+ * guideline 5.1.1(v), as the app does before deleting an account).
+ */
+export async function revokeAppleAccess(accessToken: string): Promise<void> {
+  await revokeAccessToken(firebaseAuth(), accessToken);
 }

@@ -1,19 +1,16 @@
 'use client';
 
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import ChevronRight from '@material-symbols/svg-400/rounded/chevron_right.svg?svgr';
 import Schedule from '@material-symbols/svg-400/rounded/schedule.svg?svgr';
-import { useMutation } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 
-import { track } from '@/app/lib/analytics/track';
-import { failureMessageKey, isApiError } from '@/app/lib/api/errors';
 import { bankByCode, bankLabel } from '@/app/lib/billing/banks';
-import type { SessionUser } from '@/app/lib/firebase/client';
+import type { DraftReport } from '@/app/lib/billing/payment-draft';
 import { hourAgreement } from '@/app/lib/format/appointment-time';
 import { todayInCaracas, yearsBefore } from '@/app/lib/format/date-of-birth';
 import { formatTime } from '@/app/lib/format/dates';
@@ -28,18 +25,16 @@ import {
   toInternationalPhone,
   venezuelaCode,
 } from '@/app/lib/format/phone';
-import { reportPayment, startPayment } from '@/app/lib/queries/billing';
 import {
   originMaxLength,
   originMinLength,
   paymentReportBodySchema,
   referenceMaxLength,
   referenceMinLength,
-  type InvoiceDetail,
-  type PaymentIntent,
+  type Money,
+  type PaymentDestination,
   type PaymentMethod,
   type PaymentReportBody,
-  type StartedPayment,
 } from '@/app/lib/schemas/billing';
 import { cn } from '@/app/lib/utils';
 
@@ -47,26 +42,38 @@ import { Button } from '@/app/ui/button';
 import { FieldError } from '@/app/ui/field-error';
 import { Icon } from '@/app/ui/icons';
 import { TextField } from '@/app/ui/text-field';
-import { toast } from '@/app/ui/toast';
 
 import { BankPicker } from './bank-picker';
 import { CopyButton } from './copy-button';
 import { DetailList } from './detail-list';
 import { DifferentAmountSheet } from './different-amount-sheet';
 
-import type { PaymentOutcome } from './payment-types';
-
 type PaymentStepProps = {
-  user: SessionUser;
-  invoice: InvoiceDetail;
   method: PaymentMethod;
-  payment: StartedPayment;
-  /** The amount in bolívares expired and a new one was fixed: the page shows it. */
-  onPaymentRefreshed: (payment: StartedPayment) => void;
-  /** The report was taken: the page moves on, and the button stays busy until it has. */
-  onReported: (outcome: PaymentOutcome) => void;
-  /** Another report is already in review — another phone, a lost answer: the page shows the subscription. */
-  onInReview: () => void;
+  /** The figure to transfer, in bolívares, with its dollars and the rate it was fixed at. */
+  amountVes: Money;
+  amountUsd: Money;
+  rate: string;
+  /**
+   * Until when the figure holds: an attempt's, once its rate is no longer
+   * the day's. A quote's has none — confirming it late re-quotes it.
+   */
+  validUntil: string | null;
+  destination: PaymentDestination;
+  /** What the form starts with: a draft's report, or the amount kept after a change. */
+  initial?: DraftReport | null;
+  /**
+   * The amounts that need no warning (céntimos): the one asked and, after a
+   * change of rate, the one a quote from before asked.
+   */
+  expectedAmounts: readonly number[];
+  /** Pressed and on its way: busy until the page moves on. */
+  busy: boolean;
+  /** Why it failed, in words; null when there is nothing to add here. */
+  failure: string | null;
+  onSubmit: (body: PaymentReportBody) => void;
+  /** The form as it stands, for the draft. */
+  onReportChange?: (report: DraftReport) => void;
 };
 
 type ReportValues = {
@@ -79,9 +86,6 @@ type ReportValues = {
   amount: string;
 };
 
-/** Codes the step answers by itself, not with the line under the button. */
-const handledCodes = new Set(['ERR_5083', 'ERR_5084']);
-
 /** The digits alone: a reference or an account is often pasted with dashes or spaces, as the app takes it. */
 const digitsOf = (value: string) => value.replace(/\D/g, '');
 
@@ -93,22 +97,27 @@ const accountTypeKeys = {
 
 /*
  * Step 2, pay and report it (the app's instructions, origin, reference,
- * bank, date and confirm pages, on one page): the amount in bolívares the
- * API fixed with the day's rate — the figure to transfer, big, with its
- * dollars and the rate —, Redoctor's account for the method chosen, each
- * datum with «Copiar», and the report: the reference, the bank, where the
- * payment came from, the day and the amount, prefilled with what was asked.
- * «Confirmar» sends it; an amount other than the one asked is explained
- * first. The report goes through the write-once guard.
+ * bank, date and confirm pages, on one page): the figure in bolívares —
+ * big, with its dollars and the rate —, Redoctor's account for the method
+ * chosen, each datum with «Copiar», and the report: the reference, the
+ * bank, where the payment came from, the day and the amount, prefilled
+ * with what was asked. «Confirmar» hands the report to whoever sends it
+ * (the checkout, the upgrade, or a receipt's attempt); an amount other than
+ * the one asked is explained first.
  */
 export function PaymentStep({
-  user,
-  invoice,
   method,
-  payment,
-  onPaymentRefreshed,
-  onReported,
-  onInReview,
+  amountVes,
+  amountUsd,
+  rate,
+  validUntil,
+  destination,
+  initial = null,
+  expectedAmounts,
+  busy,
+  failure,
+  onSubmit,
+  onReportChange,
 }: PaymentStepProps) {
   const t = useTranslations('billing');
   const tRoot = useTranslations();
@@ -128,7 +137,6 @@ export function PaymentStep({
   // A payment is reported almost always just made: the day opens answered.
   const [today] = useState(() => todayInCaracas());
   const earliest = yearsBefore(today, 1);
-  const { intent, destination } = payment;
 
   const schema = useMemo(
     () =>
@@ -182,171 +190,115 @@ export function PaymentStep({
     handleSubmit,
     setValue,
     control,
-    formState: { errors },
+    formState: { errors, dirtyFields },
   } = useForm<ReportValues>({
     resolver: zodResolver(schema),
     mode: 'onBlur',
     reValidateMode: 'onChange',
     defaultValues: {
-      reference: '',
-      bankCode: '',
-      origin: '',
-      paidOn: today,
-      amount: formatBolivaresForBank(intent.amountVes.amount),
+      reference: initial?.reference ?? '',
+      bankCode: initial?.bankCode ?? '',
+      origin: initial?.origin ?? '',
+      paidOn: initial?.paidOn ?? today,
+      amount: formatBolivaresForBank(initial?.amountVes ?? amountVes.amount),
     },
   });
 
-  const bankCode = useWatch({ control, name: 'bankCode' });
+  const values = useWatch({ control });
+  const bankCode = values.bankCode ?? '';
   const bank = bankCode ? bankByCode(bankCode) : undefined;
+  const paidOnChosen = initial?.paidOn != null || dirtyFields.paidOn === true;
+  const typed = parseBolivares(values.amount ?? '');
+  // The report as the draft keeps it, as text: it changes only when the form does.
+  const reportText = JSON.stringify({
+    reference: values.reference ?? '',
+    bankCode,
+    origin: values.origin ?? '',
+    paidOn: paidOnChosen ? (values.paidOn ?? null) : null,
+    // Only an amount the person typed: the one asked comes with the quote.
+    amountVes: typed !== null && typed !== amountVes.amount ? typed : null,
+  } satisfies DraftReport);
 
-  // The amount in bolívares expired (ERR_5083): a new one is asked for and
-  // what was typed is kept.
-  const refresh = useMutation({
-    mutationFn: () => startPayment(user, invoice.id, method),
-  });
+  // The draft follows what is typed: the person may leave to pay and come back.
+  useEffect(() => {
+    onReportChange?.(JSON.parse(reportText) as DraftReport);
+  }, [reportText, onReportChange]);
 
-  const report = useMutation({
-    // The attempt travels with the report: after a renewal it is a new one.
-    mutationFn: ({
-      body,
-      attempt,
-    }: {
-      body: PaymentReportBody;
-      attempt: PaymentIntent;
-    }) => reportPayment(user, attempt, body),
-    onSuccess: (_reported: PaymentIntent, { body }) => {
-      track('web_payment_reported', {
-        method:
-          method === 'MOBILE_PAYMENT' ? 'mobile_payment' : 'bank_transfer',
-      });
-      onReported({
-        kind: 'reported',
-        method,
-        amountVes: body.amountVes,
-        bank: bankByCode(body.bankCode) ?? {
-          code: body.bankCode,
-          name: body.bankCode,
-        },
-        paidOn: body.paidOn,
-      });
-    },
-    onError: (error, { body, attempt }) => {
-      if (!isApiError(error) || error.status !== 409) return;
-      if (error.code === 'ERR_5083') {
-        refresh.mutate(undefined, {
-          onSuccess: (started) => {
-            onPaymentRefreshed(started);
-            if (started.intent.amountVes.amount === attempt.amountVes.amount) {
-              // The same figure: the report goes again with the fresh
-              // attempt, there is nothing for the person to review.
-              report.mutate({ body, attempt: started.intent });
-            } else {
-              toast.warning(t('pay.intentExpired'));
-            }
-          },
-        });
-      } else if (error.code === 'ERR_5084') {
-        // Someone else's — another phone: nothing more is sent.
-        toast(t('pay.alreadyInReview'));
-        onInReview();
-      }
-    },
-  });
-
-  // A renewal that failed says why — no rate of the day yet, mostly —;
-  // else the report's own failure, unless the step answered it already.
-  const refreshFailureKey =
-    refresh.error === null
-      ? null
-      : isApiError(refresh.error) && refresh.error.code === 'ERR_5085'
-        ? 'billing.pay.noRate'
-        : failureMessageKey(refresh.error, 'billing.acquire.method.failed');
-  const failureKey =
-    refreshFailureKey ??
-    (report.error &&
-    !(isApiError(report.error) && handledCodes.has(report.error.code ?? ''))
-      ? failureMessageKey(report.error, 'billing.acquire.confirm.failed')
-      : null);
-
-  const toBody = (values: ReportValues): PaymentReportBody =>
+  const toBody = (form: ReportValues): PaymentReportBody =>
     paymentReportBodySchema.parse({
-      reference: digitsOf(values.reference),
-      bankCode: values.bankCode,
+      reference: digitsOf(form.reference),
+      bankCode: form.bankCode,
       origin:
         method === 'MOBILE_PAYMENT'
-          ? toInternationalPhone(values.origin)
-          : digitsOf(values.origin),
-      paidOn: values.paidOn,
-      amountVes: parseBolivares(values.amount) ?? 0,
+          ? toInternationalPhone(form.origin)
+          : digitsOf(form.origin),
+      paidOn: form.paidOn,
+      amountVes: parseBolivares(form.amount) ?? 0,
     });
 
   const send = (body: PaymentReportBody) => {
-    if (report.isPending || refresh.isPending) return;
-    refresh.reset();
-    report.mutate({ body, attempt: intent });
+    if (busy) return;
+    onSubmit(body);
   };
 
   const bankName = (code: string, name: string) =>
     code === '' ? name : bankLabel({ code, name });
-  const details =
-    method === 'MOBILE_PAYMENT'
+  const mobile = method === 'MOBILE_PAYMENT' ? destination.mobilePayment : null;
+  const transfer = method === 'BANK_TRANSFER' ? destination.bankTransfer : null;
+  const details = mobile
+    ? [
+        {
+          key: 'bank',
+          label: t('acquire.fields.bankName'),
+          value: bankName(mobile.bankCode, mobile.bankName),
+        },
+        {
+          key: 'phone',
+          label: t('acquire.fields.phone'),
+          value: mobile.phone,
+        },
+        {
+          key: 'document',
+          label: t('acquire.fields.document'),
+          value: mobile.document,
+        },
+      ]
+    : transfer
       ? [
           {
             key: 'bank',
             label: t('acquire.fields.bankName'),
-            value: bankName(
-              destination.mobilePayment.bankCode,
-              destination.mobilePayment.bankName,
-            ),
-          },
-          {
-            key: 'phone',
-            label: t('acquire.fields.phone'),
-            value: destination.mobilePayment.phone,
-          },
-          {
-            key: 'document',
-            label: t('acquire.fields.document'),
-            value: destination.mobilePayment.document,
-          },
-        ]
-      : [
-          {
-            key: 'bank',
-            label: t('acquire.fields.bankName'),
-            value: bankName(
-              destination.bankTransfer.bankCode,
-              destination.bankTransfer.bankName,
-            ),
+            value: bankName(transfer.bankCode, transfer.bankName),
           },
           {
             key: 'account',
             label: t('acquire.fields.account'),
-            value: destination.bankTransfer.account,
+            value: transfer.account,
           },
           {
             key: 'holder',
             label: t('acquire.fields.holder'),
-            value: destination.bankTransfer.holder,
+            value: transfer.holder,
           },
           {
             key: 'document',
             label: t('acquire.fields.document'),
-            value: destination.bankTransfer.document,
+            value: transfer.document,
           },
           {
             key: 'type',
             label: t('acquire.fields.accountType'),
-            value: t(accountTypeKeys[destination.bankTransfer.accountType]),
+            value: t(accountTypeKeys[transfer.accountType]),
           },
-        ];
-  const bankFigure = formatBolivaresForBank(intent.amountVes.amount);
+        ]
+      : [];
+  const bankFigure = formatBolivaresForBank(amountVes.amount);
   // The whole block only helps with the amount inside: it is what gets pasted in the bank.
   const everything = [
     ...details.map((detail) => `${detail.label}: ${detail.value}`),
     `${t('acquire.fields.amount')}: ${bankFigure}`,
   ].join('\n');
-  const validUntil = intent.expiresAt ? formatTime(intent.expiresAt) : null;
+  const validTime = validUntil ? formatTime(validUntil) : null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -356,53 +308,63 @@ export function PaymentStep({
         </h2>
         <div className="flex items-center justify-between gap-3">
           <p className="text-title-xl font-bold text-text-primary">
-            {formatBillingAmount(intent.amountVes)}
+            {formatBillingAmount(amountVes)}
           </p>
           <CopyButton value={bankFigure} label={t('acquire.fields.amount')} />
         </div>
         <p className="text-body-sm text-text-secondary">
           {t('pay.reference', {
-            usd: formatBillingAmount(intent.amountUsd),
-            rate: formatRate(intent.rate),
+            usd: formatBillingAmount(amountUsd),
+            rate: formatRate(rate),
           })}
         </p>
-        {validUntil ? (
+        {validTime ? (
           <p className="flex items-center gap-1.5 text-body-sm font-medium text-warning-800">
             <Icon icon={Schedule} size={16} />
             {t('pay.validUntil', {
-              time: validUntil,
-              hour: hourAgreement(validUntil),
+              time: validTime,
+              hour: hourAgreement(validTime),
             })}
           </p>
         ) : null}
       </section>
 
-      <section className="flex animate-fade-up flex-col gap-4 rounded-2xl bg-pure-white p-5 shadow-md">
-        <h2 className="sr-only">{t('acquire.instructions.title')}</h2>
-        <DetailList
-          items={details.map((detail) => ({
-            ...detail,
-            value: <span className="break-all">{detail.value}</span>,
-            action: <CopyButton value={detail.value} label={detail.label} />,
-          }))}
-        />
-        <CopyButton
-          value={everything}
-          label={t('acquire.instructions.title')}
-          variant="outline"
+      {details.length > 0 ? (
+        <section className="flex animate-fade-up flex-col gap-4 rounded-2xl bg-pure-white p-5 shadow-md">
+          <h2 className="sr-only">{t('acquire.instructions.title')}</h2>
+          <DetailList
+            items={details.map((detail) => ({
+              ...detail,
+              value: <span className="break-all">{detail.value}</span>,
+              action: <CopyButton value={detail.value} label={detail.label} />,
+            }))}
+          />
+          <CopyButton
+            value={everything}
+            label={t('acquire.instructions.title')}
+            variant="outline"
+          >
+            {t('pay.copyAll')}
+          </CopyButton>
+        </section>
+      ) : (
+        // The account of this method is gone from the configuration.
+        <p
+          role="status"
+          className="animate-fade-in rounded-lg bg-warning-50 p-3 text-body-md text-warning-800"
         >
-          {t('pay.copyAll')}
-        </CopyButton>
-      </section>
+          {tRoot('apiErrors.billingErrors.methodUnavailable')}
+        </p>
+      )}
 
       <form
         noValidate
         className="flex animate-fade-up flex-col gap-4 rounded-2xl bg-pure-white p-5 shadow-md"
         onSubmit={(event) => {
           event.preventDefault();
-          void handleSubmit((values) => {
-            const body = toBody(values);
-            if (body.amountVes !== intent.amountVes.amount) {
+          void handleSubmit((form) => {
+            const body = toBody(form);
+            if (!expectedAmounts.includes(body.amountVes)) {
               setPendingBody(body);
               return;
             }
@@ -505,7 +467,7 @@ export function PaymentStep({
           inputMode="decimal"
           autoComplete="off"
           hint={t('pay.amount.description', {
-            expected: formatBillingAmount(intent.amountVes),
+            expected: formatBillingAmount(amountVes),
           })}
           error={errors.amount?.message}
           {...register('amount')}
@@ -514,15 +476,10 @@ export function PaymentStep({
         <div className="flex flex-col gap-2">
           <FieldError
             id={failureId}
-            message={failureKey ? tRoot(failureKey) : undefined}
+            message={failure ?? undefined}
             className="text-center"
           />
-          <Button
-            type="submit"
-            block
-            shape="soft"
-            loading={report.isPending || report.isSuccess || refresh.isPending}
-          >
+          <Button type="submit" block shape="soft" loading={busy}>
             {t('acquire.confirm.action')}
           </Button>
         </div>
@@ -544,7 +501,7 @@ export function PaymentStep({
         onOpenChange={(open) => {
           if (!open) setPendingBody(null);
         }}
-        expected={intent.amountVes}
+        expected={amountVes}
         reported={shownBody?.amountVes ?? 0}
         onSend={() => {
           if (pendingBody) send(pendingBody);

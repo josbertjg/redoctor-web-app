@@ -6,4 +6,7 @@
  */
 export const notificationKeys = {
   inbox: (userId: string) => ['notifications', 'inbox', userId] as const,
+  /** The specialist's email preferences (REDOC-359). */
+  preferences: (userId: string) =>
+    ['notifications', 'preferences', userId] as const,
 };

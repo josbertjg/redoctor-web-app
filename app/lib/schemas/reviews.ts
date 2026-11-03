@@ -100,12 +100,15 @@ export const reviewRatingMax = 5;
 export const reviewCommentMaxLength = 1000;
 
 /**
- * `POST /reviews/appointments/{appointmentId}`: strict, as the API refuses
- * what it does not expect; a blank comment is not sent, as the app does.
+ * `POST /reviews/appointments/{appointmentId}`: strict, so a misspelt field
+ * fails here and not, silently, at the API (which drops what it does not
+ * know); a blank comment is not sent, as the app does. `isAnonymous` always
+ * goes: it is the patient's choice, whatever the specialty (REDOC-251).
  */
 export const reviewBodySchema = z.strictObject({
   rating: z.number().int().min(reviewRatingMin).max(reviewRatingMax),
   comment: z.string().trim().min(1).max(reviewCommentMaxLength).optional(),
+  isAnonymous: z.boolean(),
 });
 
 export type ReviewBody = z.infer<typeof reviewBodySchema>;
@@ -114,11 +117,13 @@ export type ReviewBody = z.infer<typeof reviewBodySchema>;
 export function toReviewBody(input: {
   rating: number;
   comment?: string | null | undefined;
+  isAnonymous: boolean;
 }): ReviewBody {
   const comment = input.comment?.trim();
   return reviewBodySchema.parse({
     rating: input.rating,
     ...(comment ? { comment } : {}),
+    isAnonymous: input.isAnonymous,
   });
 }
 

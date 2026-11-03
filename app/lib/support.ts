@@ -1,29 +1,36 @@
-import { formatNationalPhone } from './format/phone';
-import { publicEnv } from './public-env';
-
 /*
- * Redoctor's support channels (AGENTS.md §12): provisional, read from the
- * environment until the configuration endpoint exists (REDOC-357). Each
- * entry is `Label|+number`, validated by env.ts; lists are comma-separated.
+ * Redoctor's support channels (REDOC-357): the call and WhatsApp lines an
+ * admin keeps in the business configuration, which the API publishes
+ * without a session (`GET /config/support`, read on the server by
+ * app/lib/data/support.ts and in the browser by app/lib/queries/support.ts).
+ * Each line is shown as it comes, its label and its number; the first
+ * WhatsApp is the main one. No line at all is a valid state: every way to
+ * support then stays out of sight. No zod here: the contract is parsed
+ * where it is read.
  */
+
+/** One line as the API publishes it: a free label and an international number. */
+export type SupportLine = { label: string; phone: string };
+
+/** The lines, in the admin's order. */
+export type SupportContact = {
+  whatsapp: SupportLine[];
+  calls: SupportLine[];
+};
+
+export const noSupport: SupportContact = { whatsapp: [], calls: [] };
 
 export type SupportChannel = {
   label: string;
-  /** As people read it: `0422 736 2867`. */
+  /** As the admin wrote it: `+58 414-0000000`. */
   number: string;
   href: string;
 };
 
 export type SupportChannels = {
-  whatsapp: SupportChannel | null;
+  whatsapp: SupportChannel[];
   phones: SupportChannel[];
 };
-
-function parseEntry(entry: string): { label: string; number: string } | null {
-  const [label, number] = entry.split('|').map((part) => part.trim());
-  if (!label || !number) return null;
-  return { label, number };
-}
 
 /**
  * A WhatsApp chat with the message already written. The text says nothing
@@ -34,29 +41,28 @@ export function whatsappLink(number: string, message: string): string {
   return `https://wa.me/${number.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
 }
 
-export function supportChannels(
-  whatsappMessage: string,
-  source: { whatsapp: string; phones: string } = {
-    whatsapp: publicEnv.supportWhatsapp,
-    phones: publicEnv.supportPhones,
-  },
-): SupportChannels {
-  const whatsapp = parseEntry(source.whatsapp);
-  const phones = source.phones
-    .split(',')
-    .map(parseEntry)
-    .filter((entry) => entry !== null);
+/** The digits a dialler needs, with the international `+`. */
+const dialable = (phone: string) => `+${phone.replace(/\D/g, '')}`;
 
+export function supportChannels(
+  contact: SupportContact,
+  whatsappMessage: string,
+): SupportChannels {
   return {
-    whatsapp: whatsapp && {
-      label: whatsapp.label,
-      number: formatNationalPhone(whatsapp.number),
-      href: whatsappLink(whatsapp.number, whatsappMessage),
-    },
-    phones: phones.map((phone) => ({
-      label: phone.label,
-      number: formatNationalPhone(phone.number),
-      href: `tel:${phone.number}`,
+    whatsapp: contact.whatsapp.map((line) => ({
+      label: line.label,
+      number: line.phone,
+      href: whatsappLink(line.phone, whatsappMessage),
+    })),
+    phones: contact.calls.map((line) => ({
+      label: line.label,
+      number: line.phone,
+      href: `tel:${dialable(line.phone)}`,
     })),
   };
+}
+
+/** Some way to reach support: otherwise it is not offered at all. */
+export function hasSupport(channels: SupportChannels): boolean {
+  return channels.whatsapp.length > 0 || channels.phones.length > 0;
 }

@@ -1,5 +1,11 @@
 import { z } from 'zod';
 
+import {
+  officeServicesSchema,
+  toBookingReasons,
+  type BookingReason,
+} from './booking';
+
 /*
  * `GET /specialists/{specialistId}/public-profile` (public, no session).
  * The schema is the contract with the API (AGENTS.md §3 rule 6): the server
@@ -37,6 +43,8 @@ const galleryImageSchema = z.object({
 });
 
 const specialtySchema = z.object({
+  /** The catalog's id: the one a booking sends as `specialtyId`. */
+  specialtyId: z.string().nullish(),
   specialtyName: z.string(),
   specialtyPath: z.array(z.string()),
   collegeName: z.string(),
@@ -52,6 +60,11 @@ const officeSchema = z.object({
   latitude: z.number(),
   longitude: z.number(),
   timezone: z.string(),
+  /**
+   * The reasons enabled at the office with their prices, as the booking's
+   * own read gives them, with no session (REDOC-367).
+   */
+  services: officeServicesSchema.nullish(),
 });
 
 export const publicProfileResponseSchema = z.object({
@@ -91,6 +104,8 @@ export type SpecialistProfile = {
   rating: { average: number | null; count: number };
   /** Only the specialties the team verified (AGENTS.md M8). */
   specialties: {
+    /** The catalog's id, when the API sends it. */
+    id: string | null;
     name: string;
     path: string[];
     college: string;
@@ -102,6 +117,10 @@ export type SpecialistProfile = {
     address: string;
     description: string | null;
     coordinates: { latitude: number; longitude: number };
+    /** One price for all, or one per reason; null when the API sent no services. */
+    pricingMode: 'STANDARD' | 'PER_REASON' | null;
+    /** Each reason with its price; null when the API sent no services. */
+    reasons: BookingReason[] | null;
   }[];
   certifications: {
     name: string;
@@ -127,6 +146,7 @@ export function toSpecialistProfile(
     specialties: response.specialties
       .filter((specialty) => specialty.isVerified)
       .map((specialty) => ({
+        id: specialty.specialtyId ?? null,
         name: specialty.specialtyName,
         path: specialty.specialtyPath,
         college: specialty.collegeName,
@@ -138,6 +158,8 @@ export function toSpecialistProfile(
       address: office.address,
       description: office.description,
       coordinates: { latitude: office.latitude, longitude: office.longitude },
+      pricingMode: office.services?.pricingMode ?? null,
+      reasons: office.services ? toBookingReasons(office.services) : null,
     })),
     certifications: toCertifications(profile.certificationList),
     gallery: toGallery(profile.gallery),

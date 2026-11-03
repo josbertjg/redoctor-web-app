@@ -17,7 +17,7 @@ import { track } from '@/app/lib/analytics/track';
 import { failureMessageKey, isApiError } from '@/app/lib/api/errors';
 import type { SessionUser } from '@/app/lib/firebase/client';
 import { formatDate } from '@/app/lib/format/dates';
-import { formatBillingAmount } from '@/app/lib/format/money';
+import { formatBillingAmount, formatRate } from '@/app/lib/format/money';
 import {
   billingKeys,
   changePlan,
@@ -25,11 +25,12 @@ import {
   plansQueryOptions,
   type PlanChanged,
 } from '@/app/lib/queries/billing';
-import { myOfficesQueryOptions } from '@/app/lib/queries/offices';
 import { routes } from '@/app/lib/routes';
 import {
   activeDiscount,
+  previewQuote,
   type OfferedPlan,
+  type PaymentQuote,
   type PlanChangePreview,
   type Subscription,
 } from '@/app/lib/schemas/billing';
@@ -56,8 +57,15 @@ type ChangePlanViewProps = {
   planSlug: string;
   /** Reached from the plans: the way back returns there. */
   backToPlans: boolean;
-  /** An upgrade left the receipt of the difference: the payment's steps take over. */
-  onPay: (subscription: Subscription) => void;
+  /**
+   * An upgrade with something to pay: the payment's steps take over with
+   * the preview's quote (REDOC-363). Nothing is written until «Confirmar».
+   */
+  onPay: (upgrade: {
+    plan: OfferedPlan;
+    quote: PaymentQuote;
+    acceptDiscountLoss: boolean;
+  }) => void;
   /** To the plans, or to «Mi suscripción»: where the person came from. */
   onBack: () => void;
   /** «Mantener mi plan»: to «Mi suscripción». */
@@ -78,10 +86,14 @@ const isRefusal = (error: unknown) =>
  * PlanChangeSheet; the owner's rule of 2026-10-13: a feature the plan lacks
  * invites here, `?plan=`). The API's preview says what the change does: an
  * upgrade pays now the part of the month left with the new plan — the
- * receipt's lines — and applies once that payment is approved, through the
- * payment's two steps; a downgrade costs nothing and applies at the
- * period's end. A coupon the change ends is said, and its loss accepted,
- * before anything is written.
+ * receipt's lines, less the balance — and applies once that payment is
+ * approved; its quote goes on to the payment's two steps, and the change
+ * and its payment are sent together at «Confirmar» (REDOC-363). A downgrade
+ * costs nothing and applies at the period's end; when the active offices do
+ * not fit the new plan, the preview names the ones that turn off then (the
+ * newest; the owner's call of 2026-10-02) and the person accepts it. A
+ * coupon the change ends is said, and its loss accepted, before anything
+ * is written.
  */
 export function ChangePlanView({
   user,
@@ -101,29 +113,16 @@ export function ChangePlanView({
     ...planChangePreviewQueryOptions(user, plan?.id ?? ''),
     enabled: plan !== null,
   });
-  // A downgrade the active offices do not fit is refused before it is
-  // asked (the app's check): only the app turns offices off.
-  const limit = plan?.maxActiveClinics ?? null;
-  const offices = useQuery({
-    ...myOfficesQueryOptions(user),
-    enabled: preview.data?.kind === 'DOWNGRADE' && limit !== null,
-  });
-  const activeOffices =
-    offices.data?.filter((office) => office.isActive).length ?? 0;
-  const officesOver =
-    preview.data?.kind === 'DOWNGRADE' &&
-    limit !== null &&
-    activeOffices > limit
-      ? { active: activeOffices, count: limit }
-      : null;
   const [accepted, setAccepted] = useState(false);
+  const [acceptedOffices, setAcceptedOffices] = useState(false);
   // The skeleton crossfades into what arrives (AGENTS.md §8, rule 13).
   const holdingPlans = useSkeletonHold(plans.isPending);
   const holdingPreview = useSkeletonHold(preview.isPending);
   const [askedToAccept, setAskedToAccept] = useState(false);
+  const [askedOffices, setAskedOffices] = useState(false);
   const [done, setDone] = useState<PlanChanged | null>(null);
   const change = useMutation({
-    mutationFn: (body: { planId: string; acceptDiscountLoss: boolean }) =>
+    mutationFn: (body: Parameters<typeof changePlan>[1]) =>
       changePlan(user, body),
   });
 
@@ -140,15 +139,6 @@ export function ChangePlanView({
     void queryClient.invalidateQueries({
       queryKey: billingKeys.subscription(user.id),
     });
-    if (changed.invoice) {
-      // The receipt the payment reads: no second trip for it.
-      queryClient.setQueryData(
-        billingKeys.payable(user.id, changed.subscription.id),
-        changed.invoice,
-      );
-      onPay(changed.subscription);
-      return;
-    }
     void queryClient.invalidateQueries({
       queryKey: billingKeys.payables(user.id),
     });
@@ -220,39 +210,67 @@ export function ChangePlanView({
       );
     }
 
-    // A downgrade waits for the offices it is checked against (a failure
-    // to read them leaves the check to the API: ERR_5076).
-    if (
-      preview.data.kind === 'DOWNGRADE' &&
-      limit !== null &&
-      offices.isPending
-    ) {
-      return <PaySkeleton />;
-    }
-
+    const data = preview.data;
     return (
       <ChangeSummary
         subscription={subscription}
         plan={plan}
-        preview={preview.data}
+        preview={data}
         accepted={accepted}
         askedToAccept={askedToAccept}
         onAccepted={setAccepted}
+        acceptedOffices={acceptedOffices}
+        askedOffices={askedOffices}
+        onAcceptedOffices={setAcceptedOffices}
         changing={change.isPending}
         failure={failureKey ? tRoot(failureKey) : null}
-        officesOver={officesOver}
+        retrying={preview.isFetching}
+        onRetry={() => {
+          void preview.refetch();
+        }}
         backToPlans={backToPlans}
         onBack={onBack}
         onKeep={onKeep}
         onConfirm={() => {
           if (change.isPending) return;
-          const losesCoupon = preview.data.discountEffect === 'ENDS';
+          const losesCoupon = data.discountEffect === 'ENDS';
           if (losesCoupon && !accepted) {
             setAskedToAccept(true);
             return;
           }
+          if (data.kind === 'DOWNGRADE') {
+            const turnsOff = data.officesToDeactivate.length > 0;
+            if (turnsOff && !acceptedOffices) {
+              setAskedOffices(true);
+              return;
+            }
+            change.mutate(
+              {
+                planId: plan.id,
+                acceptDiscountLoss: losesCoupon,
+                acceptOfficeDeactivation: turnsOff,
+              },
+              { onSuccess: onChanged, onError: onChangeFailed },
+            );
+            return;
+          }
+          const quote = previewQuote(data);
+          // Something to pay: the payment's steps, with the change sent at «Confirmar».
+          if (quote?.requiresPayment) {
+            onPay({ plan, quote, acceptDiscountLoss: losesCoupon });
+            return;
+          }
+          // Without a rate of the day there is no figure to pay yet.
+          if (quote === null && upgradeToPay(data).amount > 0) return;
+          // Nothing to pay (the balance covers it): changed at once.
           change.mutate(
-            { planId: plan.id, acceptDiscountLoss: losesCoupon },
+            {
+              planId: plan.id,
+              acceptDiscountLoss: losesCoupon,
+              quoted: quote
+                ? { quoteId: quote.id, method: null, payment: null }
+                : null,
+            },
             { onSuccess: onChanged, onError: onChangeFailed },
           );
         }}
@@ -268,16 +286,26 @@ type ChangeSummaryProps = {
   accepted: boolean;
   askedToAccept: boolean;
   onAccepted: (accepted: boolean) => void;
+  /** A downgrade that turns offices off: the person accepted it. */
+  acceptedOffices: boolean;
+  askedOffices: boolean;
+  onAcceptedOffices: (accepted: boolean) => void;
   changing: boolean;
   /** Why the change failed, in words; null when there is nothing to add (no connection: the global notice says it). */
   failure: string | null;
-  /** A downgrade the active offices do not fit: it cannot be asked. */
-  officesOver: { active: number; count: number } | null;
+  /** The preview read again, for a rate of the day that was missing. */
+  retrying: boolean;
+  onRetry: () => void;
   backToPlans: boolean;
   onBack: () => void;
   onKeep: () => void;
   onConfirm: () => void;
 };
+
+/** What an upgrade leaves to pay now: the difference less the balance. */
+function upgradeToPay(preview: PlanChangePreview) {
+  return preview.payableUsd ?? preview.total;
+}
 
 /** The change before it is made: the plan, what it costs now and from the renewal, the coupon's fate. */
 function ChangeSummary({
@@ -287,9 +315,13 @@ function ChangeSummary({
   accepted,
   askedToAccept,
   onAccepted,
+  acceptedOffices,
+  askedOffices,
+  onAcceptedOffices,
   changing,
   failure,
-  officesOver,
+  retrying,
+  onRetry,
   backToPlans,
   onBack,
   onKeep,
@@ -302,7 +334,12 @@ function ChangeSummary({
   const failureId = useId();
 
   const downgrade = preview.kind === 'DOWNGRADE';
-  const payNow = !downgrade && preview.total.amount > 0;
+  const toPay = upgradeToPay(preview);
+  const payNow = !downgrade && toPay.amount > 0;
+  const quote = downgrade ? null : previewQuote(preview);
+  // An upgrade to pay, and no rate of the day to put it in bolívares.
+  const noRate = payNow && quote === null;
+  const officesOff = downgrade ? preview.officesToDeactivate : [];
   const effective = preview.effectiveAt
     ? formatDate(preview.effectiveAt)
     : null;
@@ -316,16 +353,29 @@ function ChangeSummary({
       ? t('planChange.upgradeCourtesy')
       : t('planChange.upgradeIntro');
 
+  const balance = preview.balanceApplied;
   const today: DetailItem[] = [
     ...preview.lines.map((line, index) => ({
       key: `line-${String(index)}`,
       label: line.description,
       value: formatBillingAmount(line.amount),
     })),
+    ...(balance && balance.amount > 0
+      ? [
+          {
+            key: 'balance',
+            label: t('acquire.totals.balance'),
+            value: formatBillingAmount({
+              amount: -balance.amount,
+              currency: balance.currency,
+            }),
+          },
+        ]
+      : []),
     {
       key: 'total',
       label: t('planChange.toPayNow'),
-      value: formatBillingAmount(preview.total),
+      value: formatBillingAmount(toPay),
       strong: true,
     },
   ];
@@ -406,8 +456,34 @@ function ChangeSummary({
             {t('acquire.totals.title')}
           </h2>
           <DetailList items={today} />
+          {quote?.requiresPayment ? (
+            <p className="mt-2 text-right text-body-sm text-text-secondary">
+              {t('acquire.totals.inBolivars', {
+                amount: formatBillingAmount(quote.payableVes),
+                rate: formatRate(quote.rate),
+              })}
+            </p>
+          ) : null}
         </section>
       )}
+
+      {noRate ? (
+        <div
+          role="status"
+          className="flex animate-fade-in flex-col items-start gap-3 rounded-2xl bg-warning-50 p-4"
+        >
+          <p className="text-body-md text-warning-800">{t('pay.noRate')}</p>
+          <Button
+            variant="white"
+            size="small"
+            shape="soft"
+            loading={retrying}
+            onClick={onRetry}
+          >
+            {tRoot('retry')}
+          </Button>
+        </div>
+      ) : null}
 
       {preview.discountEffect === 'ENDS' ? (
         <div className="flex animate-fade-up flex-col gap-1 rounded-2xl bg-warning-light p-4">
@@ -431,18 +507,40 @@ function ChangeSummary({
         </div>
       ) : null}
 
-      {officesOver ? (
-        <p className="animate-fade-up rounded-2xl bg-warning-light p-4 text-body-md text-text-primary">
-          {t('planChange.officesBlocked', {
-            active: officesOver.active,
-            plan: plan.name,
-            count: officesOver.count,
-          })}
-        </p>
+      {officesOff.length > 0 ? (
+        <div className="flex animate-fade-up flex-col gap-2 rounded-2xl bg-warning-light p-4">
+          <p className="text-title-sm text-text-primary">
+            {t('planChange.officesOff.title', { count: officesOff.length })}
+          </p>
+          <p className="text-body-md text-text-primary">
+            {t('planChange.officesOff.description', {
+              plan: plan.name,
+              limit: plan.maxActiveClinics ?? 0,
+              count: officesOff.length,
+            })}
+          </p>
+          <ul className="flex list-disc flex-col gap-1 pl-6 text-body-md text-text-primary">
+            {officesOff.map((office) => (
+              <li key={office.id}>{office.name}</li>
+            ))}
+          </ul>
+          <Checkbox
+            label={t('planChange.officesOff.accept', { plan: plan.name })}
+            checked={acceptedOffices}
+            onChange={(event) => {
+              onAcceptedOffices(event.target.checked);
+            }}
+            error={
+              askedOffices && !acceptedOffices
+                ? t('planChange.officesOff.acceptError')
+                : undefined
+            }
+          />
+        </div>
       ) : null}
 
       <div className="flex flex-col gap-3">
-        {officesOver ? null : (
+        {noRate ? null : (
           <Button
             block
             shape="soft"

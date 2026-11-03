@@ -140,3 +140,50 @@ describe('copy', () => {
     }
   });
 });
+
+describe('the codes of sprint 14 (the app’s ErrorHandler)', () => {
+  const http = (
+    status: number,
+    code?: string,
+    details?: Record<string, unknown>,
+  ) => new ApiError({ ...base, kind: 'http', status, code, details });
+
+  it('asks to wait after too many requests, whatever the code', () => {
+    expect(http(429).messageKey).toBe(
+      'apiErrors.statusCodeErrors.tooManyRequests',
+    );
+    expect(http(429).isReportable).toBe(false);
+  });
+
+  it('reads a plain conflict by what clashed', () => {
+    expect(http(409, 'ERR_1005', { phone: '+584140000000' }).messageKey).toBe(
+      'apiErrors.genericCustomErrors.phoneTaken',
+    );
+    expect(http(409, 'ERR_1005', { userId: 'u-1' }).messageKey).toBe(
+      'apiErrors.genericCustomErrors.alreadyRegistered',
+    );
+    // Anything else of that conflict is unknown, and reported.
+    expect(http(409, 'ERR_1005').isReportable).toBe(true);
+  });
+
+  it('gives the 403s of contracting and of deleting one’s own account their words', () => {
+    expect(http(403, 'ERR_5128').messageKey).toBe(
+      'apiErrors.billingErrors.identityNotApproved',
+    );
+    expect(http(403, 'ERR_2019').messageKey).toBe(
+      'apiErrors.genericCustomErrors.selfDeletionNotAllowed',
+    );
+  });
+
+  it('names the checkout’s refusals', () => {
+    expect(http(409, 'ERR_5125').messageKey).toBe(
+      'apiErrors.billingErrors.quoteChanged',
+    );
+    expect(http(409, 'ERR_1011').messageKey).toBe(
+      'apiErrors.genericCustomErrors.requestInProgress',
+    );
+    expect(http(409, 'ERR_5129').messageKey).toBe(
+      'apiErrors.billingErrors.methodUnavailable',
+    );
+  });
+});

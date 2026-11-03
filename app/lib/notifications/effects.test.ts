@@ -2,7 +2,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  allTargets,
   createStaleScheduler,
+  signalTargets,
   staleQueryKeys,
   staleTargets,
   STALE_DEBOUNCE_MS,
@@ -10,6 +12,7 @@ import {
 import { appointmentKeys } from '../queries/appointments';
 import { billingKeys } from '../queries/billing';
 import { identityKeys } from '../queries/identity-keys';
+import { officeKeys } from '../queries/offices';
 import { reportKeys } from '../queries/reports';
 import { reviewKeys } from '../queries/reviews';
 import { specialistKeys } from '../queries/specialists';
@@ -48,7 +51,7 @@ describe('staleTargets', () => {
     ).toEqual(['subscription', 'session']);
     expect(
       staleTargets(
-        { kind: 'PAYMENT', billingEventType: 'BILLING_INVOICE_DUE' },
+        { kind: 'PAYMENT', billingEventType: 'invoice.issued' },
         specialist,
       ),
     ).toEqual(['subscription', 'session']);
@@ -62,6 +65,49 @@ describe('staleTargets', () => {
       'session',
     ]);
     expect(staleTargets({ kind: 'WELCOME' }, patient)).toEqual([]);
+  });
+});
+
+describe('signalTargets (REDOC-358)', () => {
+  it('reads again what each scope names', () => {
+    expect(signalTargets('appointments', specialist)).toEqual([
+      'appointments',
+      'statistics',
+    ]);
+    expect(signalTargets('appointments', patient)).toEqual(['appointments']);
+    expect(signalTargets('subscription', specialist)).toEqual([
+      'subscription',
+      'session',
+    ]);
+    expect(signalTargets('profile', specialist)).toEqual(['session']);
+    expect(signalTargets('account', patient)).toEqual(['session']);
+    expect(signalTargets('reviews', specialist)).toEqual(['statistics']);
+  });
+
+  it('reads nothing for what the web does not hold, or a scope it does not know', () => {
+    expect(signalTargets('favorites', patient)).toEqual([]);
+    expect(signalTargets('adminPayments', specialist)).toEqual([]);
+    expect(signalTargets('tomorrow', specialist)).toEqual([]);
+  });
+
+  it('reads everything again after the channel was down a while', () => {
+    expect(allTargets(specialist)).toEqual([
+      'appointments',
+      'session',
+      'statistics',
+      'subscription',
+    ]);
+    expect(allTargets(patient)).toEqual([
+      'appointments',
+      'session',
+      'pendingReviews',
+    ]);
+  });
+
+  it('refreshes the session for a specialty reviewed', () => {
+    expect(
+      staleTargets({ kind: 'SPECIALTY_REJECTED_MANY' }, specialist),
+    ).toEqual(['session']);
   });
 });
 
@@ -96,6 +142,7 @@ describe('staleQueryKeys', () => {
     const session = prefixesOf('session');
     expect(session).toContainEqual(identityKeys.me(userId));
     expect(session).toContainEqual(specialistKeys.myProfile(userId));
+    expect(session).toContainEqual(officeKeys.mine(userId));
     expect(prefixesOf('pendingReviews')).toContainEqual(
       reviewKeys.pending(userId),
     );

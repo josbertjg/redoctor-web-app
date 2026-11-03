@@ -16,8 +16,6 @@ import {
   type BookingRequest,
 } from './booking';
 
-import type { Specialty } from './specialties';
-
 describe('an office’s reasons', () => {
   it('prices each one as the app does: its own per reason, else the standard', () => {
     const reasons = toBookingReasons(
@@ -97,48 +95,49 @@ describe('the people in one’s care', () => {
   });
 });
 
-describe('the specialty a booking sends', () => {
-  const tree: Specialty[] = [
-    {
-      id: 'medicine',
-      name: 'Medicina',
-      children: [
-        { id: 'internal', name: 'Medicina Interna', children: [] },
-        { id: 'pediatrics', name: 'Pediatría', children: [] },
-      ],
-    },
-  ];
-  const specialty = (name: string, path: string[]) => ({ name, path });
-
-  it('is the profile’s most specific one, found by name in the catalog', () => {
-    expect(
-      bookingSpecialtyId(
-        [
-          specialty('Medicina', ['Medicina']),
-          specialty('Medicina Interna', ['Medicina', 'Medicina Interna']),
-        ],
-        tree,
-      ),
-    ).toBe('internal');
+describe('bookingSpecialtyId (REDOC-251, the app’s «option B»)', () => {
+  const specialty = (id: string, name: string, path: string[]) => ({
+    id,
+    name,
+    path,
   });
 
-  it('takes the first on a tie, and ignores case and spacing', () => {
+  it('sends the one branch practised: a parent heading its child drops out', () => {
     expect(
-      bookingSpecialtyId(
-        [
-          specialty('  pediatría ', ['Medicina', 'Pediatría']),
-          specialty('Medicina Interna', ['Medicina', 'Medicina Interna']),
-        ],
-        tree,
-      ),
-    ).toBe('pediatrics');
+      bookingSpecialtyId([
+        specialty('general', 'Medicina General', ['Medicina General']),
+        specialty('psychiatry', 'Psiquiatría', [
+          'Medicina General',
+          'Psiquiatría',
+        ]),
+      ]),
+    ).toBe('psychiatry');
+    expect(
+      bookingSpecialtyId([
+        specialty('dentistry', 'Odontología', ['Odontología']),
+      ]),
+    ).toBe('dentistry');
   });
 
-  it('is none when the catalog does not have it, or the profile has none', () => {
+  it('sends none with two branches, or none at all: nothing is guessed', () => {
     expect(
-      bookingSpecialtyId([specialty('Odontología', ['Odontología'])], tree),
+      bookingSpecialtyId([
+        specialty('pediatrics', 'Pediatría', ['Medicina', 'Pediatría']),
+        specialty('internal', 'Medicina Interna', [
+          'Medicina',
+          'Medicina Interna',
+        ]),
+      ]),
     ).toBeNull();
-    expect(bookingSpecialtyId([], tree)).toBeNull();
+    expect(bookingSpecialtyId([])).toBeNull();
+  });
+
+  it('sends none when the API did not say the specialty’s id', () => {
+    expect(
+      bookingSpecialtyId([
+        { id: null, name: 'Odontología', path: ['Odontología'] },
+      ]),
+    ).toBeNull();
   });
 });
 

@@ -12,6 +12,8 @@ import { ReviewForm } from './review-form';
 type ReviewWallProps = {
   /** The consultations still to rate, the oldest first. */
   appointments: readonly AppointmentSummary[];
+  /** Those whose specialty is sensitive: their review comes anonymous by default. */
+  sensitiveIds: ReadonlySet<string>;
   user: SessionUser;
   onReviewed: (appointmentId: string) => void;
 };
@@ -24,6 +26,7 @@ type ReviewWallProps = {
  */
 export function ReviewWall({
   appointments,
+  sensitiveIds,
   user,
   onReviewed,
 }: ReviewWallProps) {
@@ -58,6 +61,7 @@ export function ReviewWall({
       <ReviewForm
         key={current.id}
         appointment={current}
+        sensitive={sensitiveIds.has(current.id)}
         user={user}
         onSubmitted={() => {
           setDone((count) => count + 1);

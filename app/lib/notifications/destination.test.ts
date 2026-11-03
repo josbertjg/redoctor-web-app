@@ -2,7 +2,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  billingType,
   isAdminBillingNotice,
   isBillingNotice,
   notificationDestination,
@@ -48,10 +47,10 @@ describe('notificationDestination', () => {
     expect(where('BILLING_PAYMENT_APPROVED')).toBe('/panel/subscription');
   });
 
-  it('reads the billing engine kind from billingEventType too', () => {
+  it('reads the billing engine’s event, dotted, when the kind says nothing', () => {
     expect(
       notificationDestination(
-        { kind: 'PAYMENT', billingEventType: 'BILLING_BALANCE_APPLIED' },
+        { kind: 'PAYMENT', billingEventType: 'balance.applied' },
         specialist,
       ),
     ).toBe('/panel/subscription/balance');
@@ -84,16 +83,39 @@ describe('notificationDestination', () => {
   });
 });
 
-describe('billingType', () => {
-  it('prefers a billing kind, then billingEventType, then the kind', () => {
-    expect(billingType({ kind: 'BILLING_INVOICE_DUE' })).toBe(
-      'BILLING_INVOICE_DUE',
-    );
-    expect(
-      billingType({ kind: 'PAYMENT', billingEventType: 'BILLING_PAID' }),
-    ).toBe('BILLING_PAID');
-    expect(billingType({ kind: 'WELCOME' })).toBe('WELCOME');
-    expect(billingType({})).toBe('');
+describe('billing notices (REDOC-363)', () => {
+  it('leads each billing family where it is resolved, variants included', () => {
+    const cases: [Record<string, string>, string][] = [
+      [
+        { kind: 'BILLING_BALANCE_CREDITED_GIFT' },
+        '/panel/subscription/balance',
+      ],
+      [
+        { kind: 'BILLING_REFUND_RECORDED_MOBILE' },
+        '/panel/subscription/balance',
+      ],
+      [
+        { kind: 'BILLING_ADJUSTMENT_ISSUED_COVERED' },
+        '/panel/subscription/invoices',
+      ],
+      [
+        { kind: 'BILLING_DISCOUNT_ENDED_BY_ADMIN' },
+        '/panel/subscription/coupons',
+      ],
+      [{ kind: 'BILLING_COUPON_GIFTED' }, '/panel/subscription/coupons'],
+      [
+        { kind: 'BILLING_SUBSCRIPTION_NOT_ACTIVATED_REJECTED' },
+        '/pay?view=plans',
+      ],
+      [{ kind: 'BILLING_CANCELED_UNPAID' }, '/pay?view=plans'],
+      [{ kind: 'BILLING_PAST_DUE_NOT_VISIBLE' }, '/panel/subscription'],
+      // Without a kind, the history's event says the same.
+      [{ billingEventType: 'balance.credited' }, '/panel/subscription/balance'],
+      [{ billingEventType: 'subscription.past_due' }, '/panel/subscription'],
+    ];
+    for (const [data, destination] of cases) {
+      expect(notificationDestination(data, specialist)).toBe(destination);
+    }
   });
 
   it('tells the billing notices and the admins ones apart', () => {
@@ -103,5 +125,28 @@ describe('billingType', () => {
       true,
     );
     expect(isAdminBillingNotice({ kind: 'BILLING_INVOICE_DUE' })).toBe(false);
+  });
+});
+
+describe('the specialist’s other notices', () => {
+  it('opens the day of the daily summary, or today’s agenda', () => {
+    expect(
+      notificationDestination(
+        { kind: 'AGENDA_DAILY_SUMMARY', date: '2026-11-03' },
+        specialist,
+      ),
+    ).toBe('/panel/agenda/2026-11-03');
+    expect(
+      notificationDestination({ kind: 'AGENDA_DAILY_SUMMARY' }, specialist),
+    ).toBe('/panel/agenda');
+  });
+
+  it('opens «Mis especialidades» for a specialty reviewed', () => {
+    expect(
+      notificationDestination({ kind: 'SPECIALTY_VERIFIED_MANY' }, specialist),
+    ).toBe('/panel/specialties');
+    expect(
+      notificationDestination({ kind: 'SPECIALTY_REJECTED' }, patient),
+    ).toBeNull();
   });
 });

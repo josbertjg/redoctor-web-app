@@ -8,6 +8,8 @@ import {
   neverReachedServer,
   retryAfterDelay,
 } from './retry';
+import { markLocalWrite } from '../notifications/local-writes';
+import { deviceId } from '../notifications/push';
 import { reportApiError } from '../observability/report';
 import { publicEnv } from '../public-env';
 import { apiErrorEnvelopeSchema } from '../schemas/api-error';
@@ -46,6 +48,13 @@ export type ApiRequest<T> = {
   schema: z.ZodType<T>;
   /** A POST or DELETE that is safe to send twice (e.g. a read over POST). */
   idempotent?: boolean;
+  /**
+   * The `Idempotency-Key` of a write the API keeps by key (REDOC-363): the
+   * same key with the same body answers what the first one created, so the
+   * request is safe to send again. Only where the API requires it — its
+   * CORS does not let the header through elsewhere yet (REDOC-371).
+   */
+  idempotencyKey?: string;
   /**
    * Answers the flow handles as part of its normal course — a link that
    * leads nowhere, another account's appointment, a refusal it explains in
@@ -182,13 +191,27 @@ export async function apiFetch<T>(request: ApiRequest<T>): Promise<T> {
   const { path, expected } = request;
   const url = buildApiUrl(path, request.params, request.query);
   const maxRetries = request.maxRetries ?? DEFAULT_MAX_RETRIES;
-  const replayable = isReplayable(method, request.idempotent);
+  const replayable = isReplayable(
+    method,
+    request.idempotent === true || request.idempotencyKey !== undefined,
+  );
 
   const headers = new Headers({ Accept: 'application/json' });
   if (request.body !== undefined) {
     headers.set('Content-Type', 'application/json');
   }
   if (request.token) headers.set('Authorization', `Bearer ${request.token}`);
+  if (request.idempotencyKey !== undefined) {
+    headers.set('Idempotency-Key', request.idempotencyKey);
+  }
+  // This browser, as the API knows it among the person's devices (REDOC-358):
+  // what it changes reaches the person's other devices, never this one as
+  // an echo. Only from the browser; the server is nobody's device.
+  const inBrowser = typeof window !== 'undefined';
+  const device = inBrowser ? deviceId() : null;
+  if (device !== null) headers.set('X-Device-Id', device);
+  // This tab's own writes: their echo through the channel is not news here.
+  if (inBrowser && method !== 'GET') markLocalWrite();
 
   for (let attempt = 0; ; attempt += 1) {
     const retriesLeft = attempt < maxRetries;

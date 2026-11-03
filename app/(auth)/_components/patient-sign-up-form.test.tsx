@@ -267,6 +267,39 @@ describe('PatientSignUpForm', () => {
     expect(onDone).not.toHaveBeenCalled();
   });
 
+  it('says under the field when the API finds the phone or the document in another account', async () => {
+    let answer = { code: 'ERR_1005', details: { phone: '+584141234567' } };
+    server.use(
+      http.post(apiUrl('/identity/complete-registration'), () =>
+        HttpResponse.json({ ...answer, message: 'Conflict' }, { status: 409 }),
+      ),
+    );
+    const { onDone } = renderForm({ register: false, personalData: true });
+
+    await fillPersonalData();
+    await userEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    expect(
+      await screen.findByText(
+        'Ese teléfono ya está registrado en otra cuenta.',
+      ),
+    ).toBeInTheDocument();
+
+    // A document another account confirmed slips past the check (REDOC-365).
+    answer = { code: 'ERR_2011', details: { phone: '' } };
+    await userEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    expect(
+      await screen.findByText(
+        'Ya existe una cuenta con esta cédula. Cámbiala para poder registrarte.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        'No pudimos guardar tus datos. Inténtalo de nuevo en un momento.',
+      ),
+    ).not.toBeInTheDocument();
+    expect(onDone).not.toHaveBeenCalled();
+  });
+
   it('says it could not save when the API fails, and keeps the form', async () => {
     server.use(
       http.post(apiUrl('/identity/register'), () =>

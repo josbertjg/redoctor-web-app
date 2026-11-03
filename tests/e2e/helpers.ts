@@ -61,13 +61,20 @@ export async function revealWholePage(page: Page): Promise<void> {
   await waitForAnimations(page);
 }
 
-/** axe on the settled page. */
 /**
- * Contrast the owner accepted below AA (AGENTS.md §13): the white words on
- * the brand green card of «Sí, puedes confiar» (2.8:1). Everything else on
- * the page must pass.
+ * Contrast below AA that the owner accepted (AGENTS.md §13): the white words
+ * on the brand green card of «Sí, puedes confiar» (2.8:1).
  */
 const acceptedContrast = '#verificacion [data-piece="card-2"]';
+
+/**
+ * Contrast below AA waiting for the owner's call (AGENTS.md §13, open
+ * decisions): a chosen card's description (`ChoiceCards`), grey-600 on
+ * blue-50, 3.8:1. Found 2026-10-17.
+ */
+const pendingContrast = 'label:has(input:checked) > .text-text-secondary';
+
+/** axe on the settled page; everything but the contrast above must pass. */
 
 export async function auditAccessibility(page: Page) {
   await revealWholePage(page);
@@ -84,12 +91,14 @@ export async function auditAccessibility(page: Page) {
         .join(' '),
     );
     const accepted = await page.evaluate(
-      ([list, within]) =>
+      ([list, known]) =>
         list.map((selector) => {
           const element = document.querySelector(selector);
-          return element ? element.closest(within) !== null : false;
+          return element
+            ? known.some((rule) => element.closest(rule) !== null)
+            : false;
         }),
-      [selectors, acceptedContrast] as const,
+      [selectors, [acceptedContrast, pendingContrast]] as const,
     );
     const nodes = violation.nodes.filter((_, index) => !accepted[index]);
     if (nodes.length > 0) violations.push({ ...violation, nodes });

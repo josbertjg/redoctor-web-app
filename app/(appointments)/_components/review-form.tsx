@@ -8,9 +8,10 @@ import Lock from '@material-symbols/svg-400/rounded/lock.svg?svgr';
 import Person from '@material-symbols/svg-400/rounded/person.svg?svgr';
 import Public from '@material-symbols/svg-400/rounded/public.svg?svgr';
 import Stethoscope from '@material-symbols/svg-400/rounded/stethoscope.svg?svgr';
+import VisibilityOff from '@material-symbols/svg-400/rounded/visibility_off.svg?svgr';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 
 import { track } from '@/app/lib/analytics/track';
@@ -25,6 +26,7 @@ import {
 
 import { AppointmentHeadline } from '@/app/ui/appointments/appointment-headline';
 import { Button } from '@/app/ui/button';
+import { Checkbox } from '@/app/ui/checkbox';
 import { FieldError } from '@/app/ui/field-error';
 import { Icon, type IconComponent } from '@/app/ui/icons';
 import { StarsInput } from '@/app/ui/stars-input';
@@ -35,6 +37,8 @@ type ReviewValues = {
   /** The radio's value, «1» to «5»; nothing chosen until the person chooses. */
   rating: string;
   comment: string;
+  /** Published without the name: the patient's choice (REDOC-251). */
+  anonymous: boolean;
 };
 
 type ReviewFormProps = {
@@ -43,20 +47,30 @@ type ReviewFormProps = {
   onSubmitted: () => void;
   /** The consultation above the stars; off where the page already shows it (`/a/{id}`). */
   withConsultation?: boolean;
+  /**
+   * Its specialty is sensitive (`isSensitive` of the pending list,
+   * REDOC-251): the review comes anonymous by default, and the person may
+   * still sign it.
+   */
+  sensitive?: boolean;
 };
 
 /*
  * The app's review form (M7): the consultation — who, when, why, where and
  * for whom —, «¿Cómo calificarías la cita?» with five stars, an optional
- * comment with its count, what the person should know (final, public) and
- * «Enviar calificación», never disabled: without a star it says what is
- * missing and sends nothing. The write goes through the write-once guard.
+ * comment with its count, «Hacer esta reseña de forma anónima» — ticked by
+ * default under a sensitive specialty, with the reason why (REDOC-251) —,
+ * what the person should know (final; public with or without the name, as
+ * the box says) and «Enviar calificación», never disabled: without a star
+ * it says what is missing and sends nothing. The choice always travels.
+ * The write goes through the write-once guard.
  */
 export function ReviewForm({
   appointment,
   user,
   onSubmitted,
   withConsultation = true,
+  sensitive = false,
 }: ReviewFormProps) {
   const t = useTranslations();
   const queryClient = useQueryClient();
@@ -74,6 +88,7 @@ export function ReviewForm({
             reviewCommentMaxLength,
             t('reviews.rate.commentTooLong', { max: reviewCommentMaxLength }),
           ),
+        anonymous: z.boolean(),
       }),
     [t],
   );
@@ -81,13 +96,15 @@ export function ReviewForm({
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<ReviewValues>({
     resolver: zodResolver(schema),
     mode: 'onSubmit',
     reValidateMode: 'onChange',
-    defaultValues: { comment: '' },
+    defaultValues: { comment: '', anonymous: sensitive },
   });
+  const anonymous = useWatch({ control, name: 'anonymous' });
 
   const submit = useMutation({
     mutationFn: (values: ReviewValues) =>
@@ -97,6 +114,7 @@ export function ReviewForm({
         toReviewBody({
           rating: Number(values.rating),
           comment: values.comment,
+          isAnonymous: values.anonymous,
         }),
       ),
     onSuccess: (_submission, values) => {
@@ -179,14 +197,33 @@ export function ReviewForm({
           error={errors.comment?.message}
           {...register('comment')}
         />
+        <div className="flex flex-col">
+          <Checkbox
+            label={t('reviews.rate.anonymous')}
+            {...register('anonymous')}
+          />
+          {sensitive ? (
+            <p className="text-body-sm text-text-secondary">
+              {t('reviews.rate.anonymousHint')}
+            </p>
+          ) : null}
+        </div>
         <ul className="flex flex-col gap-2 text-body-sm text-text-secondary">
           <li className="flex items-start gap-2">
             <Icon icon={Lock} size={18} className="mt-0.5 shrink-0" />
             {t('reviews.rate.isFinal')}
           </li>
           <li className="flex items-start gap-2">
-            <Icon icon={Public} size={18} className="mt-0.5 shrink-0" />
-            {t('reviews.rate.isPublic')}
+            <Icon
+              icon={anonymous ? VisibilityOff : Public}
+              size={18}
+              className="mt-0.5 shrink-0"
+            />
+            {t(
+              anonymous
+                ? 'reviews.rate.isPublicAnonymous'
+                : 'reviews.rate.isPublic',
+            )}
           </li>
         </ul>
         <div className="flex flex-col gap-2">

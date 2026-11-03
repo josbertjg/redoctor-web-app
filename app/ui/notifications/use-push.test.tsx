@@ -320,6 +320,7 @@ describe('the web push', () => {
         ),
       ),
       unreadCount: 3,
+      originDeviceId: null,
     };
     act(() => {
       channels.made[0]?.options.onEvent(event);

@@ -8,7 +8,10 @@ import TermsPage from './page';
 
 describe('TermsPage', () => {
   it('renders the terms, their contents and the links to the other legal pages', async () => {
-    const { container } = renderWithIntl(<TermsPage />);
+    const { container } = renderWithIntl(
+      // A server page: it reads the support lines before it renders.
+      await TermsPage(),
+    );
 
     expect(
       screen.getByRole('heading', {

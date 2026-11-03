@@ -236,8 +236,18 @@ export function buildAppointmentList(now = new Date()): AppointmentPayload[] {
 }
 
 /** What `GET /reviews/pending` lists: the finished consultations not rated yet. */
-export function buildPendingReviews(now = new Date()): AppointmentPayload[] {
+/**
+ * `GET /reviews/pending`: the two finished consultations; the one with
+ * Dra. María González is of a sensitive specialty (REDOC-251).
+ */
+export function buildPendingReviews(
+  now = new Date(),
+): (AppointmentPayload & { isSensitive: boolean })[] {
   return [appointmentIds.completed, appointmentIds.completedDependent]
     .map((id) => appointmentFor(id, now))
-    .filter(defined);
+    .filter(defined)
+    .map((appointment) => ({
+      ...appointment,
+      isSensitive: appointment.id === appointmentIds.completed,
+    }));
 }

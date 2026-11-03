@@ -22,6 +22,7 @@ import {
   rememberSessionHint,
 } from '@/app/lib/auth/session-hint';
 import { setTokenSource } from '@/app/lib/auth/token';
+import { forgetPaymentDraft } from '@/app/lib/billing/payment-draft';
 import type { SessionUser } from '@/app/lib/firebase/client';
 import { reportPerson } from '@/app/lib/observability/report';
 import { identityKeys } from '@/app/lib/queries/identity-keys';
@@ -169,6 +170,8 @@ export function SessionProvider({
           if (previous !== null && previous !== lastPerson.current) {
             forgetPerson();
             reportPerson(null);
+            // A payment left halfway is the person's alone (REDOC-363).
+            forgetPaymentDraft();
             queryClient.clear();
           }
           setState({ status: user ? 'signed-in' : 'signed-out', user });
@@ -234,6 +237,7 @@ export function SessionProvider({
       forgetPanelHint();
       forgetPerson();
       reportPerson(null);
+      forgetPaymentDraft();
       queryClient.clear();
     }
   };

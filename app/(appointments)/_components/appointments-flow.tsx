@@ -73,6 +73,13 @@ function PatientAppointments({ user }: { user: SessionUser }) {
       return (
         <ReviewWall
           appointments={sortPendingReviews(toRate).map(toAppointmentSummary)}
+          sensitiveIds={
+            new Set(
+              toRate
+                .filter((pending) => pending.isSensitive)
+                .map((pending) => pending.id),
+            )
+          }
           user={user}
           onReviewed={(appointmentId) => {
             queryClient.setQueryData<AppointmentResponse[]>(

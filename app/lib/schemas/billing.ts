@@ -32,6 +32,16 @@ const planPriceSchema = z.object({
   status: z.string(),
 });
 
+/**
+ * The monthly price in bolívares at the accepted rate, for reference: no
+ * coupon, no balance. Null without a rate.
+ */
+const planVesPriceSchema = z.object({
+  amount: moneySchema,
+  rate: z.string(),
+  rateValueDate: z.string().nullish(),
+});
+
 export const planSchema = z.object({
   id: z.string(),
   slug: z.string(),
@@ -43,6 +53,7 @@ export const planSchema = z.object({
   status: z.string(),
   /** Missing on a plan the admin has not finished configuring. */
   price: planPriceSchema.nullish(),
+  priceVes: planVesPriceSchema.nullish(),
 });
 
 export type Plan = z.infer<typeof planSchema>;
@@ -104,6 +115,13 @@ const planRefSchema = z.object({
   name: z.string(),
 });
 
+/** A subscription's plan with its limits, even when archived (REDOC-363). */
+const subscriptionPlanSchema = planRefSchema.extend({
+  /** `null` means unlimited. */
+  maxActiveClinics: z.number().int().nullish(),
+  canExportReports: z.boolean().nullish(),
+});
+
 export const discountTypes = ['PERCENT', 'AMOUNT'] as const;
 export const discountDurations = ['ONCE', 'REPEATING', 'FOREVER'] as const;
 
@@ -124,17 +142,21 @@ export type SubscriptionDiscount = z.infer<typeof subscriptionDiscountSchema>;
 export const subscriptionSchema = z.object({
   id: z.string(),
   status: z.enum(subscriptionStatuses).or(unknownValue),
-  plan: planRefSchema,
+  plan: subscriptionPlanSchema,
   /** What the plan costs a month, frozen when it was taken. */
   price: moneySchema,
   currentPeriod: z.object({ start: instant, end: instant }).nullish(),
   cancelAtPeriodEnd: z.boolean().nullish(),
   endsAt: instant,
   scheduledChange: z
-    .object({ plan: planRefSchema, price: moneySchema, effectiveAt: instant })
+    .object({
+      plan: subscriptionPlanSchema,
+      price: moneySchema,
+      effectiveAt: instant,
+    })
     .nullish(),
   pendingUpgrade: z
-    .object({ plan: planRefSchema, invoiceId: z.string() })
+    .object({ plan: subscriptionPlanSchema, invoiceId: z.string() })
     .nullish(),
   /** Until when an INCOMPLETE subscription can be paid (72 h). */
   incompleteExpiresAt: instant,
@@ -143,6 +165,28 @@ export const subscriptionSchema = z.object({
   discount: subscriptionDiscountSchema.nullish(),
   courtesy: z
     .object({ monthsLeft: z.number().int(), endsAt: instant })
+    .nullish(),
+  /** The oldest open receipt, or null when nothing is owed (REDOC-363). */
+  openInvoice: z
+    .object({
+      id: z.string(),
+      number: z.string(),
+      kind: z.string(),
+      total: moneySchema,
+      pending: moneySchema,
+      dueAt: instant,
+    })
+    .nullish(),
+  /**
+   * The last payment reported on that receipt: still in review, or
+   * rejected with the admin's reason. Null when none was reported.
+   */
+  lastPayment: z
+    .object({
+      intentId: z.string(),
+      status: z.enum(['IN_REVIEW', 'REJECTED']).or(unknownValue),
+      reason: z.string().nullish(),
+    })
     .nullish(),
 });
 
@@ -437,25 +481,50 @@ export function canPayInvoice(detail: InvoiceDetail): boolean {
   return isPayable(detail) && intentInReview(detail) === null;
 }
 
-export const startedPaymentSchema = z.object({
-  intent: paymentIntentSchema,
-  /** Redoctor's accounts; both come whatever the method chosen. */
-  destination: z.object({
-    mobilePayment: z.object({
+/**
+ * Redoctor's accounts, from the business configuration an admin keeps
+ * (REDOC-357). A method with none is not offered: starting a payment with
+ * it answers ERR_5129.
+ */
+export const paymentDestinationSchema = z.object({
+  mobilePayment: z
+    .object({
       phone: z.string(),
       bankCode: z.string(),
       bankName: z.string(),
       document: z.string(),
-    }),
-    bankTransfer: z.object({
+    })
+    .nullish()
+    .transform((value) => value ?? null),
+  bankTransfer: z
+    .object({
       account: z.string(),
       bankCode: z.string(),
       bankName: z.string(),
       holder: z.string(),
       document: z.string(),
       accountType: z.enum(['CORRIENTE', 'AHORRO']).or(unknownValue),
-    }),
-  }),
+    })
+    .nullish()
+    .transform((value) => value ?? null),
+});
+
+export type PaymentDestination = z.infer<typeof paymentDestinationSchema>;
+
+/** The methods there is an account for, in the app's order. */
+export function offeredMethods(
+  destination: PaymentDestination,
+): PaymentMethod[] {
+  return paymentMethods.filter((method) =>
+    method === 'MOBILE_PAYMENT'
+      ? destination.mobilePayment !== null
+      : destination.bankTransfer !== null,
+  );
+}
+
+export const startedPaymentSchema = z.object({
+  intent: paymentIntentSchema,
+  destination: paymentDestinationSchema,
 });
 
 export type StartedPayment = z.infer<typeof startedPaymentSchema>;
@@ -611,6 +680,142 @@ export const paymentReportBodySchema = z.strictObject({
 
 export type PaymentReportBody = z.infer<typeof paymentReportBodySchema>;
 
+/* ---------- Contracting at «Confirmar» (REDOC-363) ------------------------ */
+
+/** A quote's own identity: valid 72 h, at the rate of `rateDate`. */
+const quoteRefSchema = z.object({
+  id: z.string(),
+  /** Bolívares per dollar, a text with 8 decimals. */
+  rate: z.string(),
+  /** The rate's day, `YYYY-MM-DD`. */
+  rateDate: z.string().nullish(),
+  expiresAt: instant,
+});
+
+/**
+ * `POST /billing/me/checkout/quote`: what taking a plan would cost, in
+ * dollars and in bolívares at the day's rate, with the coupon and the
+ * balance, and where to pay. It creates nothing — no subscription, no
+ * receipt, no use of the coupon — and may be asked again.
+ */
+export const checkoutQuoteViewSchema = z.object({
+  quote: quoteRefSchema,
+  plan: planRefSchema,
+  /** The receipt's lines it would have: the plan and its discount. */
+  lines: z.array(invoiceLineSchema),
+  balanceApplied: moneySchema,
+  /** The receipt's total, before the balance. */
+  totalUsd: moneySchema,
+  /** What is left to pay: the total less the balance. */
+  payableUsd: moneySchema,
+  /** `payableUsd` in bolívares at the quoted rate. */
+  totalVes: moneySchema,
+  /** False when a coupon or the balance covers it whole. */
+  requiresPayment: z.boolean(),
+  destination: paymentDestinationSchema,
+});
+
+export type CheckoutQuoteView = z.infer<typeof checkoutQuoteViewSchema>;
+
+/**
+ * What a payment is about to charge, whether it takes a plan (the
+ * checkout's quote) or upgrades one (the preview's): the app's
+ * `PaymentQuote`, one shape for the payment's two steps.
+ */
+export type PaymentQuote = {
+  id: string;
+  rate: string;
+  rateDate: string | null;
+  expiresAt: string | null;
+  lines: z.infer<typeof invoiceLineSchema>[];
+  total: Money;
+  balanceApplied: Money;
+  payable: Money;
+  payableVes: Money;
+  requiresPayment: boolean;
+  destination: PaymentDestination;
+};
+
+export function toPaymentQuote(view: CheckoutQuoteView): PaymentQuote {
+  return {
+    id: view.quote.id,
+    rate: view.quote.rate,
+    rateDate: view.quote.rateDate ?? null,
+    expiresAt: view.quote.expiresAt ?? null,
+    lines: view.lines,
+    total: view.totalUsd,
+    balanceApplied: view.balanceApplied,
+    payable: view.payableUsd,
+    payableVes: view.totalVes,
+    requiresPayment: view.requiresPayment,
+    destination: view.destination,
+  };
+}
+
+/** It can no longer be confirmed: its 72 h are over. */
+export function quoteExpired(
+  quote: Pick<PaymentQuote, 'expiresAt'>,
+  now: Date = new Date(),
+): boolean {
+  const expires = quote.expiresAt ? Date.parse(quote.expiresAt) : NaN;
+  return !Number.isNaN(expires) && expires <= now.getTime();
+}
+
+/** The same figures to pay: confirming with the other one charges the same. */
+export function chargesTheSame(a: PaymentQuote, b: PaymentQuote): boolean {
+  return (
+    a.rate === b.rate &&
+    a.payable.amount === b.payable.amount &&
+    a.payableVes.amount === b.payableVes.amount
+  );
+}
+
+export const checkoutQuoteBodySchema = z.strictObject({
+  planId: z.string(),
+  coupon: couponChoiceSchema.optional(),
+});
+
+/**
+ * `POST /billing/me/checkout`: takes the plan and reports its payment in
+ * one transaction. `method` and `payment` only when something is to pay;
+ * without them the plan is active at once.
+ */
+export const checkoutBodySchema = z.strictObject({
+  quoteId: z.string(),
+  method: paymentMethodSchema.optional(),
+  payment: paymentReportBodySchema.optional(),
+});
+
+export type CheckoutBody = z.infer<typeof checkoutBodySchema>;
+
+export const checkoutResponseSchema = z.object({
+  subscription: subscriptionSchema,
+  invoice: invoiceSchema,
+  /** The payment reported, in review; null when nothing was to pay. */
+  intent: paymentIntentSchema.nullish().transform((value) => value ?? null),
+});
+
+/** Why a quote no longer holds (ERR_5125's `details.reason`). */
+export const quoteChangeReasons = [
+  'RATE',
+  'PRICE',
+  'COUPON',
+  'BALANCE',
+  'EXPIRED',
+] as const;
+
+export type QuoteChangeReason = (typeof quoteChangeReasons)[number];
+
+const quoteChangeReasonSchema = z
+  .enum(quoteChangeReasons)
+  .or(z.string().transform(() => 'PRICE' as const));
+
+/** ERR_5125 on confirming a checkout: nothing was created; the new quote comes along. */
+export const checkoutQuoteChangedSchema = z.object({
+  reason: quoteChangeReasonSchema,
+  quote: checkoutQuoteViewSchema,
+});
+
 /* ---------- Changing plan ------------------------------------------------- */
 
 export const planChangeKinds = ['UPGRADE', 'DOWNGRADE'] as const;
@@ -631,14 +836,73 @@ export const planChangePreviewSchema = z.object({
   discountEffect: z.enum(['KEEPS', 'ENDS', 'NONE']).or(unknownValue),
   /** A courtesy pays the current period. */
   courtesyCovered: z.boolean(),
+  /**
+   * A downgrade: the active offices it would turn off when it applies (the
+   * newest; the oldest stay, and every appointment is kept). Empty when
+   * they all fit.
+   */
+  officesToDeactivate: z
+    .array(z.object({ id: z.string(), name: z.string() }))
+    .default([]),
+  /** An upgrade with a rate of the day: the quote to confirm it with, valid 72 h. */
+  quote: quoteRefSchema.nullish(),
+  /** What the balance would pay of the difference. */
+  balanceApplied: moneySchema.nullish(),
+  /** What is left to pay after the balance. */
+  payableUsd: moneySchema.nullish(),
+  /** `payableUsd` in bolívares at the quoted rate; null without a quote. */
+  totalVes: moneySchema.nullish(),
+  requiresPayment: z.boolean().nullish(),
+  /** Redoctor's accounts; null without a quote. */
+  destination: paymentDestinationSchema.nullish(),
 });
 
 export type PlanChangePreview = z.infer<typeof planChangePreviewSchema>;
 
+/**
+ * An upgrade's quote, in the payment's shape; null when the preview brought
+ * none (no rate of the day): there is nothing to confirm it with yet.
+ */
+export function previewQuote(preview: PlanChangePreview): PaymentQuote | null {
+  const quote = preview.quote;
+  if (!quote || !preview.totalVes || !preview.destination) return null;
+  const payable = preview.payableUsd ?? preview.total;
+  return {
+    id: quote.id,
+    rate: quote.rate,
+    rateDate: quote.rateDate ?? null,
+    expiresAt: quote.expiresAt ?? null,
+    lines: preview.lines,
+    total: preview.total,
+    balanceApplied: preview.balanceApplied ?? {
+      amount: 0,
+      currency: preview.total.currency,
+    },
+    payable,
+    payableVes: preview.totalVes,
+    requiresPayment: preview.requiresPayment ?? payable.amount > 0,
+    destination: preview.destination,
+  };
+}
+
+/** ERR_5125 on a quoted upgrade: nothing was created; the new preview comes along. */
+export const upgradeQuoteChangedSchema = z.object({
+  reason: quoteChangeReasonSchema,
+  quote: planChangePreviewSchema,
+});
+
 export const planChangeBodySchema = z.strictObject({
   planId: z.string(),
   acceptDiscountLoss: z.literal(true).optional(),
+  /** A downgrade the active offices do not fit: the person accepted the newest turn off. */
+  acceptOfficeDeactivation: z.literal(true).optional(),
+  /** A quoted upgrade, paid in the same call (no coupon with it). */
+  quoteId: z.string().optional(),
+  method: paymentMethodSchema.optional(),
+  payment: paymentReportBodySchema.optional(),
 });
+
+export type PlanChangeBody = z.infer<typeof planChangeBodySchema>;
 
 /** `DELETE /billing/me/subscription/scheduled-change`: the subscription, renewing as it is. */
 export const subscriptionResponseSchema = z.object({
@@ -651,6 +915,8 @@ export const planChangeResponseSchema = z.object({
   subscription: subscriptionSchema,
   prorationInvoice: invoiceSchema.nullish().transform((value) => value ?? null),
   effectiveAt: instant,
+  /** A quoted upgrade's payment, reported in the same call and in review. */
+  intent: paymentIntentSchema.nullish().transform((value) => value ?? null),
 });
 
 /**
@@ -903,8 +1169,9 @@ export function noticeNeedsAction(notice: SubscriptionNotice): boolean {
 
 /**
  * `payable` is the receipt left to pay, with its attempts; without it (it
- * could not be read) the notice comes from the subscription alone and only
- * the nuance of the last attempt is lost.
+ * could not be read, or was not needed) the notice comes from the
+ * subscription alone, whose `lastPayment` tells a payment in review or
+ * rejected (REDOC-363).
  */
 export function subscriptionNotice({
   subscription,
@@ -926,11 +1193,17 @@ export function subscriptionNotice({
   const days = deadline === null ? 0 : calendarDaysUntil(deadline, now);
   const base = { days, deadline, rejectionReason: null, planName: null };
 
-  if (payable && intentInReview(payable)) return { ...base, kind: 'inReview' };
+  const last = subscription.lastPayment ?? null;
+  const inReview = payable
+    ? intentInReview(payable) !== null
+    : last?.status === 'IN_REVIEW';
+  if (inReview) return { ...base, kind: 'inReview' };
 
   const reason = payable
     ? (lastRejected(payable)?.failureReason?.trim() ?? '')
-    : '';
+    : last?.status === 'REJECTED'
+      ? (last.reason?.trim() ?? '')
+      : '';
   const rejectionReason = reason === '' ? null : reason;
 
   if (subscription.status === 'PAST_DUE') {
@@ -938,7 +1211,8 @@ export function subscriptionNotice({
   }
 
   const upgrade = subscription.pendingUpgrade;
-  const owesUpgrade = upgrade != null && payable?.id === upgrade.invoiceId;
+  const owedId = payable?.id ?? subscription.openInvoice?.id ?? null;
+  const owesUpgrade = owedId !== null && owedId === upgrade?.invoiceId;
   const isIncomplete = subscription.status === 'INCOMPLETE';
 
   if (rejectionReason !== null && (isIncomplete || owesUpgrade)) {

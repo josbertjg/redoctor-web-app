@@ -64,7 +64,7 @@ type BookingStepsProps = {
   /** The page's top: the way back, the title, the specialist. */
   header: ReactNode;
   specialist: BookingSpecialist;
-  specialtyId: string;
+  specialtyId: string | null;
   user: SessionUser;
   /** The account the appointment will be saved under (AGENTS.md §1). */
   savedUnder: string | null;
@@ -130,9 +130,12 @@ export function BookingSteps({
   const suggestedDay = useFirstFreeDay(user, officeId, today);
   const day = chosenDay ?? suggestedDay;
   const month = shownMonth ?? (day ?? today).slice(0, 7);
-  const services = useQuery(officeServicesQueryOptions(user, officeId));
   const office =
     offices.find((candidate) => candidate.id === officeId) ?? offices[0];
+  // The profile brought each office's reasons: no second trip for them.
+  const services = useQuery(
+    officeServicesQueryOptions(user, officeId, office?.reasons ?? null),
+  );
 
   const asked = searchParams.get('step');
   const requested = isStep(asked) ? asked : startStep;
@@ -421,6 +424,7 @@ export function BookingSteps({
               <PatientStep
                 user={user}
                 officeId={officeId}
+                knownReasons={office.reasons}
                 today={today}
                 defaults={patientValues}
                 onDone={(choice) => {

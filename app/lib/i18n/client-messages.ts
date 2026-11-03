@@ -206,9 +206,9 @@ export const pageNamespaces = {
   ],
   // The specialist's subscription (M13): where the plan stands, its notice,
   // what can be done with it, its receipts, its balance and its coupons;
-  // «Datos de cobro» leads to support (`appAccess`).
-  subscription: ['apiErrors', 'billing', 'appAccess'],
+  // «Datos de cobro» leads to support (`support`).
+  subscription: ['apiErrors', 'billing', 'support'],
   // The payment (M13): the plans, the coupon sheet and the two steps of the
   // payment, all read in the browser.
-  pay: ['apiErrors', 'billing', 'back', 'input'],
+  pay: ['apiErrors', 'billing', 'back', 'input', 'support', 'understood'],
 } as const satisfies Record<string, readonly Namespace[]>;

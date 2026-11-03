@@ -1,5 +1,9 @@
 import type { DocumentType } from '@/app/lib/format/identity-document';
-import type { BookingAttendee, BookingSex } from '@/app/lib/schemas/booking';
+import type {
+  BookingAttendee,
+  BookingReason,
+  BookingSex,
+} from '@/app/lib/schemas/booking';
 
 /** What the booking shows of the specialist: their public profile's, read on the server. */
 export type BookingSpecialist = {
@@ -14,6 +18,8 @@ export type BookingSpecialist = {
     name: string;
     address: string;
     description: string | null;
+    /** Its reasons and prices, as the profile brought them (REDOC-367); null when it did not. */
+    reasons: BookingReason[] | null;
   }[];
 };
 

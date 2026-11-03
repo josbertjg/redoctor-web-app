@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 
 import { getTranslations } from 'next-intl/server';
 
+import { getSupportContact } from '@/app/lib/data/support';
 import { routes } from '@/app/lib/routes';
 import { brandOpenGraph } from '@/app/lib/site';
 
@@ -29,10 +30,15 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /** The terms and conditions of use (M10): the catalog's `legal.terms`. */
-export default function TermsPage() {
+export default async function TermsPage() {
+  const support = await getSupportContact();
   return (
     <PageTransition>
-      <LegalDocument document="terms" sections={termsSections} />
+      <LegalDocument
+        document="terms"
+        support={support}
+        sections={termsSections}
+      />
     </PageTransition>
   );
 }

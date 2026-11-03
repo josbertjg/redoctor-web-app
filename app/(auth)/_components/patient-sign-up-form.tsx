@@ -11,7 +11,7 @@ import { useForm, type Resolver } from 'react-hook-form';
 import { z } from 'zod';
 
 import { track } from '@/app/lib/analytics/track';
-import { failureMessageKey } from '@/app/lib/api/errors';
+import { failureMessageKey, isApiError } from '@/app/lib/api/errors';
 import type { SessionUser } from '@/app/lib/firebase/client';
 import {
   earliestBirthDate,
@@ -48,6 +48,16 @@ const legalLinkClass =
 
 /** What the form asks: the names and consents, the personal data, or both. */
 export type SignUpParts = { register: boolean; personalData: boolean };
+
+/** Which datum another account already has, by the API's refusal; null when it is no such refusal. */
+function takenField(error: unknown): 'document' | 'phone' | null {
+  if (!isApiError(error) || error.status !== 409) return null;
+  if (error.code === 'ERR_2011') return 'document';
+  if (error.code === 'ERR_1005' && error.details && 'phone' in error.details) {
+    return 'phone';
+  }
+  return null;
+}
 
 /** The sexes the app's form offers (the API also takes OTHER). */
 const offeredSexes = ['MALE', 'FEMALE'] as const;
@@ -226,10 +236,22 @@ export function PatientSignUpForm({
     },
     onSuccess: onDone,
     onError: (error) => {
-      if (error instanceof DocumentTaken) {
+      // A document another account confirmed (ERR_2011, REDOC-365), or a
+      // phone another account has (ERR_1005 with `details.phone`): said
+      // under the field to change.
+      if (error instanceof DocumentTaken || takenField(error) === 'document') {
         setError(
           'documentNumber',
           { type: 'taken', message: t('auth.identityDocumentTaken') },
+          { shouldFocus: true },
+        );
+      } else if (takenField(error) === 'phone') {
+        setError(
+          'phone',
+          {
+            type: 'taken',
+            message: t('apiErrors.genericCustomErrors.phoneTaken'),
+          },
           { shouldFocus: true },
         );
       }
@@ -237,7 +259,9 @@ export function PatientSignUpForm({
   });
 
   const failureKey =
-    save.error === null || save.error instanceof DocumentTaken
+    save.error === null ||
+    save.error instanceof DocumentTaken ||
+    takenField(save.error) !== null
       ? null
       : failureMessageKey(save.error, 'signUp.saveFailed');
   const failure = failureKey === null ? undefined : t(failureKey);

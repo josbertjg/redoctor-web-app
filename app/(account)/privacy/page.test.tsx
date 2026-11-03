@@ -8,7 +8,10 @@ import PrivacyPage from './page';
 
 describe('PrivacyPage', () => {
   it('renders the policy, its contents and the links to the other legal pages', async () => {
-    const { container } = renderWithIntl(<PrivacyPage />);
+    const { container } = renderWithIntl(
+      // A server page: it reads the support lines before it renders.
+      await PrivacyPage(),
+    );
 
     expect(
       screen.getByRole('heading', { level: 1, name: 'Política de privacidad' }),

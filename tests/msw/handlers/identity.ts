@@ -38,6 +38,13 @@ export const meHandler = (me: ReturnType<typeof buildMeResponse>) =>
   });
 
 export const identityHandlers = [
+  // REDOC-352: deleted at once; the second time a 204 too.
+  http.delete(apiUrl('/identity/me'), ({ request }) =>
+    isStranger(request)
+      ? unauthorized()
+      : new HttpResponse(null, { status: 204 }),
+  ),
+
   http.get(apiUrl('/identity/me'), ({ request }) => {
     if (isStranger(request)) return unauthorized();
     return HttpResponse.json(buildMeResponse());

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 
 import { getTranslations } from 'next-intl/server';
 
+import { getSupportContact } from '@/app/lib/data/support';
 import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 
 import { AppAccess } from '@/app/ui/app-bridge/app-access';
@@ -22,13 +23,20 @@ export async function generateMetadata(): Promise<Metadata> {
  * (18) leads here. On a phone with the app the same link opens the app's
  * «Perfil»; a sign-up still open is finished in the app.
  */
-export default function MyProfilePage() {
+export default async function MyProfilePage() {
+  const support = await getSupportContact();
   return (
     <PageTransition>
       <MessagesScope namespaces={pageNamespaces.myProfile}>
         <SpecialistHomeSwitch
           ready={<MyProfileView />}
-          pending={<AppAccess variant="finish" className="mx-auto mt-6" />}
+          pending={
+            <AppAccess
+              variant="finish"
+              support={support}
+              className="mx-auto mt-6"
+            />
+          }
         />
       </MessagesScope>
     </PageTransition>

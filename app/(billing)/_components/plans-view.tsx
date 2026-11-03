@@ -3,6 +3,7 @@
 import { useId, useState } from 'react';
 
 import ArrowBack from '@material-symbols/svg-400/rounded/arrow_back.svg?svgr';
+import Bookmark from '@material-symbols/svg-400/rounded/bookmark.svg?svgr';
 import CheckCircleFill from '@material-symbols/svg-400/rounded/check_circle-fill.svg?svgr';
 import CloudOff from '@material-symbols/svg-400/rounded/cloud_off.svg?svgr';
 import KeyboardArrowDown from '@material-symbols/svg-400/rounded/keyboard_arrow_down.svg?svgr';
@@ -10,6 +11,7 @@ import WorkspacePremium from '@material-symbols/svg-400/rounded/workspace_premiu
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
+import { readPaymentDraft } from '@/app/lib/billing/payment-draft';
 import type { SessionUser } from '@/app/lib/firebase/client';
 import { formatBillingAmount } from '@/app/lib/format/money';
 import { plansQueryOptions } from '@/app/lib/queries/billing';
@@ -61,6 +63,9 @@ export function PlansView({
   const [chosenId, setChosenId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const groupName = useId();
+  const draftHeadingId = useId();
+  // A payment left halfway (REDOC-363): read once, as the list opens.
+  const [draft] = useState(() => readPaymentDraft(user.id));
 
   const list = plans.data ?? [];
   const chosen =
@@ -76,6 +81,15 @@ export function PlansView({
     chosen !== null &&
     chosen.id !== current.plan.id &&
     chosen.id !== scheduledId;
+  // Offered to take up where it was left: a plan to take when taking one,
+  // an upgrade when changing one, while that plan is still on offer.
+  const draftPlan =
+    draft !== null &&
+    (current === null
+      ? draft.kind === 'contract'
+      : changeable && draft.kind === 'upgrade')
+      ? (list.find((plan) => plan.id === draft.planId) ?? null)
+      : null;
   const badgeOf = (plan: OfferedPlan) =>
     plan.id === current?.plan.id
       ? t('plans.change.currentBadge')
@@ -109,6 +123,33 @@ export function PlansView({
             : t('plans.subtitle')}
         </p>
       </header>
+
+      {draftPlan ? (
+        <section
+          aria-labelledby={draftHeadingId}
+          className="flex animate-fade-up flex-col gap-3 rounded-2xl bg-info-light p-5"
+        >
+          <h2
+            id={draftHeadingId}
+            className="flex items-start gap-2 text-title-md text-text-primary"
+          >
+            <Icon icon={Bookmark} size={24} className="shrink-0 text-primary" />
+            {t('plans.draft.title')}
+          </h2>
+          <p className="text-body-md text-text-secondary">
+            {t('plans.draft.description', { plan: draftPlan.name })}
+          </p>
+          <Button
+            shape="soft"
+            className="self-start"
+            onClick={() => {
+              onSelect(draftPlan);
+            }}
+          >
+            {t('plans.draft.resume')}
+          </Button>
+        </section>
+      ) : null}
 
       {plans.isPending ? (
         <ul aria-busy="true" className="flex flex-col gap-3">
@@ -269,6 +310,13 @@ function PlanCard({
           </span>{' '}
           <span className={cn('text-body-md', muted)}>{t('perMonth')}</span>
         </span>
+        {plan.priceVes ? (
+          <span className={cn('text-body-sm', muted)}>
+            {t('priceVes', {
+              amount: formatBillingAmount(plan.priceVes.amount),
+            })}
+          </span>
+        ) : null}
         {plan.description ? (
           <span className={cn('text-body-sm', muted)}>{plan.description}</span>
         ) : null}

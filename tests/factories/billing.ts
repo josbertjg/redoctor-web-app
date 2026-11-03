@@ -1,6 +1,7 @@
 import type {
   balanceMovementSchema,
   billingAccountResponseSchema,
+  checkoutQuoteViewSchema,
   couponSchema,
   invoiceDetailResponseSchema,
   invoiceSchema,
@@ -27,6 +28,7 @@ export type InvoiceDetailPayload = z.input<
 >['invoice'] &
   Record<string, unknown>;
 export type StartedPaymentPayload = z.input<typeof startedPaymentSchema>;
+export type CheckoutQuotePayload = z.input<typeof checkoutQuoteViewSchema>;
 export type CouponPayload = z.input<typeof couponSchema> &
   Record<string, unknown>;
 export type SavedCouponPayload = z.input<typeof savedCouponSchema>;
@@ -281,6 +283,12 @@ export function buildInvoiceDetail(
   return { ...invoice, intents, allocations: [], adjustments: [] };
 }
 
+/** The day's rate the handlers quote at: $ 30 are Bs 1.198,39. */
+export const rate = '39.94633333';
+
+/** Bolívares for an amount in cents at the day's rate, as the API rounds them. */
+export const toVes = (cents: number) => Math.round(cents * Number(rate));
+
 export const destination: StartedPaymentPayload['destination'] = {
   mobilePayment: {
     phone: '04141234567',
@@ -410,6 +418,94 @@ export function buildBillingAccount(
     documentNumber: '12345678',
     email: 'facturas@example.com',
     status: 'ACTIVE',
+    ...overrides,
+  };
+}
+
+/**
+ * A quote's id the handlers can read back: the plan and the coupon it was
+ * made with (the API keeps them on its side; here they ride in the id).
+ */
+export function quoteIdFor(planId: string, coupon: string | null, version = 1) {
+  return `quote:${planId}:${coupon ?? 'none'}:${String(version)}`;
+}
+
+export function parseQuoteId(
+  id: string,
+): { planId: string; coupon: string | null; version: number } | null {
+  const match = /^quote:([^:]+):([^:]+):(\d+)$/.exec(id);
+  if (!match?.[1] || !match[2] || !match[3]) return null;
+  return {
+    planId: match[1],
+    coupon: match[2] === 'none' ? null : match[2],
+    version: Number(match[3]),
+  };
+}
+
+/** `POST /billing/me/checkout/quote` for a plan, its discount and the balance it uses. */
+export function buildCheckoutQuote({
+  plan,
+  coupon = null,
+  discount = 0,
+  balance = 0,
+  version = 1,
+  quoteRate = rate,
+  destinationOverride = destination,
+}: {
+  plan: { id: string; slug: string; name: string; price: number };
+  coupon?: string | null;
+  discount?: number;
+  balance?: number;
+  version?: number;
+  quoteRate?: string;
+  destinationOverride?: CheckoutQuotePayload['destination'];
+}): CheckoutQuotePayload {
+  const total = plan.price - discount;
+  const applied = Math.min(balance, total);
+  const payable = total - applied;
+  return {
+    quote: {
+      id: quoteIdFor(plan.id, coupon, version),
+      rate: quoteRate,
+      rateDate: '2026-11-02',
+      expiresAt: hoursFromNow(72),
+    },
+    plan: { id: plan.id, slug: plan.slug, name: plan.name },
+    lines: [
+      {
+        type: 'PLAN',
+        description: `Plan ${plan.name} · 2 nov – 1 dic 2026`,
+        amount: usd(plan.price),
+      },
+      ...(discount > 0
+        ? [
+            {
+              type: 'DISCOUNT',
+              description: `Cupón ${coupon ?? ''}`,
+              amount: usd(-discount),
+            },
+          ]
+        : []),
+    ],
+    balanceApplied: usd(applied),
+    totalUsd: usd(total),
+    payableUsd: usd(payable),
+    totalVes: ves(Math.round(payable * Number(quoteRate))),
+    requiresPayment: payable > 0,
+    destination: destinationOverride,
+  };
+}
+
+/** Redoctor's support lines, as an admin filled them (fake numbers). */
+export function buildSupportContact(
+  overrides: {
+    supportCallPhones?: { label: string; phone: string }[];
+    supportWhatsappPhones?: { label: string; phone: string }[];
+  } = {},
+) {
+  return {
+    supportCallPhones: [{ label: 'General', phone: '+58 414 0000001' }],
+    supportWhatsappPhones: [{ label: 'Redoctor', phone: '+58 424 0000002' }],
     ...overrides,
   };
 }

@@ -34,7 +34,13 @@ export type ApiErrorMessageKey =
   | 'apiErrors.timeout'
   | 'apiErrors.uncertainOutcome'
   | 'apiErrors.unexpected'
-  | 'apiErrors.genericCustomErrors.registrationIncomplete'
+  | 'apiErrors.statusCodeErrors.tooManyRequests'
+  | `apiErrors.genericCustomErrors.${
+      | 'registrationIncomplete'
+      | 'requestInProgress'
+      | 'phoneTaken'
+      | 'alreadyRegistered'
+      | 'selfDeletionNotAllowed'}`
   | 'apiErrors.notificationErrors.invalidUnsubscribeLink'
   | `apiErrors.billingErrors.${
       | 'alreadySubscribed'
@@ -43,12 +49,21 @@ export type ApiErrorMessageKey =
       | 'changeWithDebt'
       | 'changeOverOfficeLimit'
       | 'changeNotAllowed'
+      | 'officeLimit'
+      | 'invoiceNotPayable'
       | 'paymentExpired'
       | 'paymentInReview'
       | 'noExchangeRate'
+      | 'referenceAlreadyUsed'
       | 'discountActive'
       | 'discountLossNotAccepted'
+      | 'quoteChanged'
+      | 'quoteUsed'
+      | 'paymentRequired'
+      | 'identityNotApproved'
+      | 'methodUnavailable'
       | 'subscriptionRequired'}`
+  | 'auth.identityDocumentTaken'
   | CouponRejectionKey;
 
 /** The coupon refusals by code; the coupon's own reading goes by `details.reason` first (app/lib/queries/billing.ts). */
@@ -62,20 +77,34 @@ export const couponRejectionByCode: Readonly<
   ERR_5109: 'billing.couponRejection.unavailable',
 };
 
-/** Codes whose message the person can meet on the web, with our copy. */
+/**
+ * Codes whose message the person can meet on the web, with our copy: the
+ * app's map (`ErrorHandler._messagesByCode`), the codes the web can meet.
+ */
 export const messageKeysByCode: Readonly<Record<string, ApiErrorMessageKey>> = {
-  // Specialist payment (M13).
+  // The same Idempotency-Key is still being answered (REDOC-363).
+  ERR_1011: 'apiErrors.genericCustomErrors.requestInProgress',
+  // The sign-up: a document another account already confirmed.
+  ERR_2011: 'auth.identityDocumentTaken',
+  // Specialist payment (M13), and contracting at «Confirmar» (REDOC-363).
+  ERR_5050: 'apiErrors.billingErrors.officeLimit',
   ERR_5071: 'apiErrors.billingErrors.alreadySubscribed',
   ERR_5073: 'apiErrors.billingErrors.invalidTransition',
   ERR_5074: 'apiErrors.billingErrors.planUnavailable',
   ERR_5075: 'apiErrors.billingErrors.changeWithDebt',
   ERR_5076: 'apiErrors.billingErrors.changeOverOfficeLimit',
   ERR_5077: 'apiErrors.billingErrors.changeNotAllowed',
+  ERR_5081: 'apiErrors.billingErrors.invoiceNotPayable',
   ERR_5083: 'apiErrors.billingErrors.paymentExpired',
   ERR_5084: 'apiErrors.billingErrors.paymentInReview',
   ERR_5085: 'apiErrors.billingErrors.noExchangeRate',
+  ERR_5092: 'apiErrors.billingErrors.referenceAlreadyUsed',
   ERR_5106: 'apiErrors.billingErrors.discountActive',
   ERR_5108: 'apiErrors.billingErrors.discountLossNotAccepted',
+  ERR_5125: 'apiErrors.billingErrors.quoteChanged',
+  ERR_5126: 'apiErrors.billingErrors.quoteUsed',
+  ERR_5127: 'apiErrors.billingErrors.paymentRequired',
+  ERR_5129: 'apiErrors.billingErrors.methodUnavailable',
   ...couponRejectionByCode,
   // Daily-summary opt-out link (M11).
   ERR_8004: 'apiErrors.notificationErrors.invalidUnsubscribeLink',
@@ -87,9 +116,31 @@ export const forbiddenMessageKeysByCode: Readonly<
 > = {
   // A patient route with the sign-up half done (claim, book).
   ERR_2010: 'apiErrors.genericCustomErrors.registrationIncomplete',
+  // An admin deleting their own account: another super admin does it.
+  ERR_2019: 'apiErrors.genericCustomErrors.selfDeletionNotAllowed',
   // A specialist booking without an active plan.
   ERR_5052: 'apiErrors.billingErrors.subscriptionRequired',
+  // Contracting while the identity is not approved yet.
+  ERR_5128: 'apiErrors.billingErrors.identityNotApproved',
 };
+
+/**
+ * `ERR_1005` is a plain conflict: what clashed is in `details` (the app's
+ * `_conflictMessage`) — a phone of another account, or an account that was
+ * already registered (a sign-up whose answer was lost).
+ */
+function conflictMessageKey(
+  details: Record<string, unknown> | undefined,
+): ApiErrorMessageKey | undefined {
+  if (details === undefined) return undefined;
+  if (Object.hasOwn(details, 'phone')) {
+    return 'apiErrors.genericCustomErrors.phoneTaken';
+  }
+  if (Object.hasOwn(details, 'userId')) {
+    return 'apiErrors.genericCustomErrors.alreadyRegistered';
+  }
+  return undefined;
+}
 
 /** Codes that are part of a normal flow and need no report. */
 const expectedCodes = new Set([
@@ -154,11 +205,16 @@ export class ApiError extends Error {
 
   /** Our copy for the API code, when the code is one the person can meet. */
   get knownMessageKey(): ApiErrorMessageKey | undefined {
+    // Too many requests in a row, whatever the code: wait a moment.
+    if (this.kind === 'http' && this.status === 429) {
+      return 'apiErrors.statusCodeErrors.tooManyRequests';
+    }
     if (this.code === undefined) return undefined;
     if (this.status === 403) {
       const forbidden = forbiddenMessageKeysByCode[this.code];
       if (forbidden) return forbidden;
     }
+    if (this.code === 'ERR_1005') return conflictMessageKey(this.details);
     return messageKeysByCode[this.code];
   }
 

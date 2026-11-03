@@ -37,11 +37,20 @@ import { PayView, type PayMode } from './pay-view';
 import { PlansView } from './plans-view';
 import { SubscriptionLoadError } from './subscription-load-error';
 
+/** Where the way back of a view leads. */
+type Back =
+  /** The plans, to take one. */
+  | { kind: 'plans' }
+  /** The change it came from (an upgrade's payment). */
+  | { kind: 'change'; planSlug: string; fromPlans: boolean }
+  /** Where the person came from: «Mi suscripción», or a receipt's page. */
+  | { kind: 'origin' };
+
 type View =
   /** `changing`: from the plan in force, marked; else to take one. */
   | { kind: 'plans'; changing: boolean }
   | { kind: 'change'; planSlug: string; fromPlans: boolean }
-  | { kind: 'pay'; mode: PayMode; fromPlans: boolean }
+  | { kind: 'pay'; mode: PayMode; back: Back }
   | { kind: 'upToDate' };
 
 /**
@@ -76,7 +85,7 @@ function startingView(
     return {
       kind: 'pay',
       mode: { kind: 'invoice', subscription, invoiceId: request.invoice },
-      fromPlans: false,
+      back: { kind: 'origin' },
     };
   }
   // What is owed comes first: the API changes no plan with debt.
@@ -86,7 +95,7 @@ function startingView(
       return {
         kind: 'pay',
         mode: { kind: 'invoice', subscription },
-        fromPlans: false,
+        back: { kind: 'origin' },
       };
     }
   }
@@ -227,7 +236,7 @@ function SpecialistPayment({
                     : {
                         kind: 'pay',
                         mode: { kind: 'contract', plan },
-                        fromPlans: true,
+                        back: { kind: 'plans' },
                       },
                 );
               });
@@ -244,12 +253,16 @@ function SpecialistPayment({
             subscription={subscription}
             planSlug={view.planSlug}
             backToPlans={view.fromPlans}
-            onPay={(changed) => {
+            onPay={(upgrade) => {
               moveStep('forward', () => {
                 setView({
                   kind: 'pay',
-                  mode: { kind: 'invoice', subscription: changed },
-                  fromPlans: false,
+                  mode: { kind: 'upgrade', ...upgrade },
+                  back: {
+                    kind: 'change',
+                    planSlug: view.planSlug,
+                    fromPlans: view.fromPlans,
+                  },
                 });
               });
             }}
@@ -265,23 +278,33 @@ function SpecialistPayment({
             onKeep={toSubscription}
           />
         );
-      case 'pay':
+      case 'pay': {
+        const back = view.back;
         return (
           <PayView
             user={user}
             mode={view.mode}
             onBack={
-              view.fromPlans
-                ? () => {
+              back.kind === 'origin'
+                ? toOrigin
+                : () => {
                     moveStep('back', () => {
-                      setView({ kind: 'plans', changing: false });
+                      setView(
+                        back.kind === 'plans'
+                          ? { kind: 'plans', changing: false }
+                          : {
+                              kind: 'change',
+                              planSlug: back.planSlug,
+                              fromPlans: back.fromPlans,
+                            },
+                      );
                     });
                   }
-                : toOrigin
             }
             onExit={toOrigin}
           />
         );
+      }
       case 'upToDate':
         return (
           <EmptyState

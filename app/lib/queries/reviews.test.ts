@@ -63,6 +63,7 @@ describe('submitReview', () => {
     const { review } = await submitReview(user, appointmentIds.completed, {
       rating: 5,
       comment: 'Muy puntual.',
+      isAnonymous: false,
     });
 
     expect(review).toMatchObject({
@@ -74,7 +75,10 @@ describe('submitReview', () => {
 
   it('counts a refusal as done once the consultation is no longer pending', async () => {
     await expect(
-      submitReview(user, appointmentIds.reviewed, { rating: 4 }),
+      submitReview(user, appointmentIds.reviewed, {
+        rating: 4,
+        isAnonymous: false,
+      }),
     ).resolves.toEqual({
       appointmentId: appointmentIds.reviewed,
       review: null,
@@ -85,7 +89,10 @@ describe('submitReview', () => {
     server.use(pendingReviewsHandler([finished(appointmentIds.reviewed, 480)]));
 
     await expect(
-      submitReview(user, appointmentIds.reviewed, { rating: 4 }),
+      submitReview(user, appointmentIds.reviewed, {
+        rating: 4,
+        isAnonymous: false,
+      }),
     ).rejects.toMatchObject({ status: 409 });
   });
 
@@ -108,13 +115,19 @@ describe('submitReview', () => {
 
     // The answer is lost while the consultation still waits: the doubt stays.
     await expect(
-      submitReview(user, appointmentIds.completed, { rating: 5 }),
+      submitReview(user, appointmentIds.completed, {
+        rating: 5,
+        isAnonymous: false,
+      }),
     ).rejects.toMatchObject({ kind: 'uncertain' });
     expect(posts).toBe(1);
 
     // Next try: it is no longer pending, so it landed; nothing is re-sent.
     await expect(
-      submitReview(user, appointmentIds.completed, { rating: 5 }),
+      submitReview(user, appointmentIds.completed, {
+        rating: 5,
+        isAnonymous: false,
+      }),
     ).resolves.toEqual({
       appointmentId: appointmentIds.completed,
       review: null,

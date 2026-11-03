@@ -8,6 +8,7 @@ import {
   deletedResponseSchema,
   heartbeatResponseSchema,
   inboxResponseSchema,
+  notificationPreferencesSchema,
   notificationResponseSchema,
   readAllResponseSchema,
   toInbox,
@@ -15,6 +16,7 @@ import {
   type DeviceTokenBody,
   type Inbox,
   type InboxNotification,
+  type NotificationPreferences,
 } from '../schemas/notifications';
 
 import type { TokenHolder } from '../api/types';
@@ -178,4 +180,36 @@ export async function deviceHeartbeat(
     idempotent: true,
   });
   return registered;
+}
+
+/** The specialist's email preferences: whether the daily summary comes by email. */
+export function notificationPreferencesQueryOptions(user: TokenHolder) {
+  return queryOptions({
+    queryKey: notificationKeys.preferences(user.id),
+    queryFn: async ({ signal }): Promise<NotificationPreferences> =>
+      apiFetch({
+        path: '/notifications/preferences',
+        token: await user.getToken(),
+        schema: notificationPreferencesSchema,
+        signal,
+      }),
+    staleTime: 5 * 60_000,
+  });
+}
+
+/**
+ * `PATCH /notifications/preferences`: the daily summary's email on or off.
+ * It only sets a value: sending it twice leaves the same.
+ */
+export async function updateNotificationPreferences(
+  user: TokenHolder,
+  preferences: NotificationPreferences,
+): Promise<NotificationPreferences> {
+  return apiFetch({
+    method: 'PATCH',
+    path: '/notifications/preferences',
+    body: notificationPreferencesSchema.parse(preferences),
+    token: await user.getToken(),
+    schema: notificationPreferencesSchema,
+  });
 }

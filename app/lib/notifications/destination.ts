@@ -19,32 +19,39 @@ export type NotificationAudience = {
 const billingPrefix = 'BILLING_';
 const adminBillingPrefix = 'BILLING_ADMIN_';
 const profilePrefix = 'PROFILE_';
+const specialtyPrefix = 'SPECIALTY_';
 
 /**
- * The kind of a billing notice: the app's own carry it in `kind`, the
- * billing engine's also in `billingEventType`.
+ * A billing notice: its `kind` is the catalog's key (`BILLING_*`, often
+ * with a variant after it: `BILLING_BALANCE_CREDITED_GIFT`), and its
+ * `billingEventType` the history's event, dotted (`subscription.past_due`).
  */
-export function billingType(data: NotificationData): string {
-  const kind = data.kind ?? '';
-  if (kind.startsWith(billingPrefix)) return kind;
-  return data.billingEventType ?? kind;
-}
-
 export function isBillingNotice(data: NotificationData): boolean {
-  return billingType(data).startsWith(billingPrefix);
+  return (
+    (data.kind ?? '').startsWith(billingPrefix) ||
+    (data.billingEventType ?? '').includes('.')
+  );
 }
 
 /** The admins' billing notices: their tools are in the app, not here. */
 export function isAdminBillingNotice(data: NotificationData): boolean {
-  return billingType(data).startsWith(adminBillingPrefix);
+  return (data.kind ?? '').startsWith(adminBillingPrefix);
 }
 
 export function isProfileNotice(data: NotificationData): boolean {
   return (data.kind ?? '').startsWith(profilePrefix);
 }
 
+/** A specialty verified, rejected or sent again (`SPECIALTY_VERIFIED_MANY`…). */
+export function isSpecialtyNotice(data: NotificationData): boolean {
+  return (data.kind ?? '').startsWith(specialtyPrefix);
+}
+
 export type NotificationDestination =
   | ReturnType<typeof routes.appointment>
+  | '/panel/agenda'
+  | `/panel/agenda/${string}`
+  | ReturnType<typeof routes.specialties>
   | ReturnType<typeof routes.subscription>
   | ReturnType<typeof routes.subscriptionPlans>
   | ReturnType<typeof routes.subscriptionCoupons>
@@ -52,38 +59,56 @@ export type NotificationDestination =
   | ReturnType<typeof routes.subscriptionBalance>
   | ReturnType<typeof routes.specialistProfile>;
 
-const couponKinds = new Set([
-  'BILLING_COUPON_GIFTED',
-  'BILLING_DISCOUNT_APPLIED',
-  'BILLING_DISCOUNT_ENDED',
-]);
-
-const balanceKinds = new Set([
-  'BILLING_BALANCE_CREDITED',
-  'BILLING_BALANCE_APPLIED',
-  'BILLING_REFUND_RECORDED',
-]);
+/** A kind of the family `family`: the family itself, or a variant after it. */
+const ofFamily = (kind: string, family: string) =>
+  kind === family || kind.startsWith(`${family}_`);
 
 /**
  * The billing notices lead to the page where what they tell is resolved,
- * as the app's table has it: a plan not activated or cancelled to the
- * plans, coupons and discounts to «Mis cupones», an adjustment to the
- * receipts, the balance's movements to the balance, and the rest —
- * receipts, payments, debt, the change of plan — to «Mi suscripción».
+ * as the app's table has it — by family, since the variants grow with the
+ * catalog (`BILLING_REFUND_RECORDED_MOBILE`, `BILLING_DISCOUNT_ENDED_BY_ADMIN`):
+ * a plan not activated or cancelled to the plans, coupons and discounts to
+ * «Mis cupones», an adjustment to the receipts, the balance's movements to
+ * the balance, and the rest — receipts, payments, debt, the change of plan —
+ * to «Mi suscripción». Without a kind, its event says the same.
  */
-function billingDestination(type: string): NotificationDestination {
+function billingDestination(data: NotificationData): NotificationDestination {
+  const kind = data.kind ?? '';
+  const event = data.billingEventType ?? '';
   if (
-    type === 'BILLING_SUBSCRIPTION_NOT_ACTIVATED' ||
-    type.startsWith('BILLING_CANCELED')
+    ofFamily(kind, 'BILLING_SUBSCRIPTION_NOT_ACTIVATED') ||
+    kind.startsWith('BILLING_CANCELED') ||
+    event === 'subscription.incomplete_expired' ||
+    event === 'subscription.canceled'
   ) {
     return routes.subscriptionPlans();
   }
-  if (couponKinds.has(type)) return routes.subscriptionCoupons();
-  if (type === 'BILLING_ADJUSTMENT_ISSUED')
+  if (
+    ofFamily(kind, 'BILLING_COUPON_GIFTED') ||
+    kind.startsWith('BILLING_DISCOUNT_') ||
+    event.startsWith('discount.') ||
+    event.startsWith('promotion_code.')
+  ) {
+    return routes.subscriptionCoupons();
+  }
+  if (
+    ofFamily(kind, 'BILLING_ADJUSTMENT_ISSUED') ||
+    event.startsWith('credit_note.')
+  ) {
     return routes.subscriptionInvoices();
-  if (balanceKinds.has(type)) return routes.subscriptionBalance();
+  }
+  if (
+    kind.startsWith('BILLING_BALANCE_') ||
+    ofFamily(kind, 'BILLING_REFUND_RECORDED') ||
+    event.startsWith('balance.') ||
+    event.startsWith('refund.')
+  ) {
+    return routes.subscriptionBalance();
+  }
   return routes.subscription();
 }
+
+const calendarDay = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * The page a notice leads to, or `null` when it points at none this
@@ -100,12 +125,18 @@ export function notificationDestination(
 
   if (isBillingNotice(data)) {
     if (!audience.specialist || isAdminBillingNotice(data)) return null;
-    return billingDestination(billingType(data));
+    return billingDestination(data);
   }
 
-  if (isProfileNotice(data) && audience.specialist) {
-    return routes.specialistProfile();
+  if (!audience.specialist) return null;
+
+  // The daily summary opens that day's agenda (REDOC-359).
+  if (data.kind === 'AGENDA_DAILY_SUMMARY') {
+    const date = data.date ?? '';
+    return calendarDay.test(date) ? routes.agenda(date) : routes.agenda();
   }
+  if (isSpecialtyNotice(data)) return routes.specialties();
+  if (isProfileNotice(data)) return routes.specialistProfile();
 
   return null;
 }

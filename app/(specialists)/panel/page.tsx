@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 
 import { getTranslations } from 'next-intl/server';
 
+import { getSupportContact } from '@/app/lib/data/support';
 import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 
 import { AppAccess } from '@/app/ui/app-bridge/app-access';
@@ -15,6 +16,7 @@ import {
   PanelStatisticsCard,
 } from '../_components/panel-links';
 import { PanelPlanCard } from '../_components/panel-plan-card';
+import { PanelSummaryEmail } from '../_components/panel-summary-email';
 import { PanelTodayCard } from '../_components/panel-today-card';
 import { SpecialistHomeSwitch } from '../_components/specialist-home-switch';
 import { SpecialistOnly } from '../_components/specialist-only';
@@ -34,7 +36,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function SpecialistHomePage() {
-  const t = await getTranslations();
+  const [t, support] = await Promise.all([
+    getTranslations(),
+    getSupportContact(),
+  ]);
 
   return (
     <PageTransition>
@@ -59,13 +64,22 @@ export default async function SpecialistHomePage() {
                     <PanelPlanCard />
                     <PanelTodayCard />
                   </div>
-                  <PanelStatisticsCard />
+                  <div className="grid items-start gap-4 lg:grid-cols-2">
+                    <PanelStatisticsCard />
+                    <PanelSummaryEmail />
+                  </div>
                 </div>
                 <PanelProfileLinks />
               </SpecialistOnly>
             </div>
           }
-          pending={<AppAccess variant="finish" className="mx-auto mt-6" />}
+          pending={
+            <AppAccess
+              variant="finish"
+              support={support}
+              className="mx-auto mt-6"
+            />
+          }
         />
       </MessagesScope>
     </PageTransition>

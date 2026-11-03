@@ -7,14 +7,8 @@ import { renderWithIntl } from '@/tests/render';
 import { AppAccess } from './app-access';
 
 const support = {
-  whatsapp: {
-    label: 'Redoctor',
-    number: '0422 736 2867',
-    href: 'https://wa.me/584227362867?text=Hola',
-  },
-  phones: [
-    { label: 'Soporte 1', number: '0414 559 8216', href: 'tel:+584145598216' },
-  ],
+  whatsapp: [{ label: 'Redoctor', phone: '+58 424 0000002' }],
+  calls: [{ label: 'General', phone: '+58 414 0000001' }],
 };
 
 describe('AppAccess', () => {
@@ -30,20 +24,26 @@ describe('AppAccess', () => {
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('link', { name: 'Escribir por WhatsApp' }),
-    ).toHaveAttribute('href', 'https://wa.me/584227362867?text=Hola');
+      screen.getByRole('link', {
+        name: 'Escribir por WhatsApp a Redoctor, +58 424 0000002',
+      }),
+    ).toHaveAttribute(
+      'href',
+      expect.stringMatching(/^https:\/\/wa\.me\/584240000002\?text=/),
+    );
+    expect(screen.getByText('Redoctor: +58 424 0000002')).toBeInTheDocument();
     expect(
-      screen.getByRole('link', { name: 'Llamar a Soporte 1, 0414 559 8216' }),
-    ).toHaveAttribute('href', 'tel:+584145598216');
+      screen.getByRole('link', { name: 'Llamar a General, +58 414 0000001' }),
+    ).toHaveAttribute('href', 'tel:+584140000001');
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
     expect(await axe(container)).toHaveNoViolations();
   });
 
-  it('writes the default WhatsApp message without anything personal', () => {
-    renderWithIntl(<AppAccess variant="join" stores={{}} />);
+  it('writes the WhatsApp message without anything personal', () => {
+    renderWithIntl(<AppAccess variant="join" stores={{}} support={support} />);
 
     const href = screen
-      .getByRole('link', { name: 'Escribir por WhatsApp' })
+      .getByRole('link', { name: /Escribir por WhatsApp/ })
       .getAttribute('href');
     expect(href).toMatch(/^https:\/\/wa\.me\/\d+\?text=/);
     expect(decodeURIComponent(href ?? '')).toContain(

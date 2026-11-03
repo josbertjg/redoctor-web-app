@@ -1,6 +1,8 @@
 import { http, HttpResponse } from 'msw';
 
 import {
+  checkoutBodySchema,
+  checkoutQuoteBodySchema,
   couponChoiceSchema,
   couponDiscount,
   couponSchema,
@@ -9,11 +11,13 @@ import {
   planChangeBodySchema,
   saveCouponBodySchema,
   startPaymentBodySchema,
-  subscribeBodySchema,
+  type CouponChoice,
+  type PaymentReportBody,
 } from '@/app/lib/schemas/billing';
 
 import {
   buildBillingAccount,
+  buildCheckoutQuote,
   buildInvoice,
   buildInvoiceDetail,
   buildIntent,
@@ -22,14 +26,22 @@ import {
   buildSavedCoupons,
   buildStartedPayment,
   buildSubscription,
+  buildSupportContact,
   couponCodes,
+  destination,
+  hoursFromNow,
   intentIds,
   invoiceIds,
   knownCoupons,
+  parseQuoteId,
   periodEnd,
   planIds,
+  rate,
   savedCouponId,
+  toVes,
   usd,
+  ves,
+  type CheckoutQuotePayload,
   type BalanceMovementPayload,
   type BillingAccountPayload,
   type IntentPayload,
@@ -261,10 +273,16 @@ export function planChangeHandlers({
   from = planIds.essential,
   discountEffect = 'NONE',
   refusal = null,
+  officesToDeactivate = [],
+  noRate = false,
 }: {
   from?: string;
   discountEffect?: 'KEEPS' | 'ENDS' | 'NONE';
   refusal?: { code: string; message: string } | null;
+  /** A downgrade's offices that would turn off: it refuses without accepting it (ERR_5076). */
+  officesToDeactivate?: { id: string; name: string }[];
+  /** No rate of the day: an upgrade's preview brings no quote. */
+  noRate?: boolean;
 } = {}) {
   const offered = (planId: string | null) =>
     buildPlans().find(
@@ -295,6 +313,7 @@ export function planChangeHandlers({
         if (!plan?.price) return conflict('ERR_5074', 'Plan unavailable');
         const upgrade = plan.price.amount.amount > currentPrice;
         const receipt = buildProrationInvoice();
+        const quoted = upgrade && !noRate;
         return HttpResponse.json({
           kind: upgrade ? 'UPGRADE' : 'DOWNGRADE',
           lines: upgrade ? receipt.lines : [],
@@ -302,6 +321,20 @@ export function planChangeHandlers({
           effectiveAt: upgrade ? null : periodEnd,
           discountEffect,
           courtesyCovered: false,
+          officesToDeactivate: upgrade ? [] : officesToDeactivate,
+          quote: quoted
+            ? {
+                id: `upgrade-quote:${plan.id}`,
+                rate,
+                rateDate: '2026-11-02',
+                expiresAt: hoursFromNow(72),
+              }
+            : null,
+          balanceApplied: usd(0),
+          payableUsd: upgrade ? receipt.total : usd(0),
+          totalVes: quoted ? ves(toVes(receipt.total.amount)) : null,
+          requiresPayment: upgrade,
+          destination: quoted ? destination : null,
         });
       },
     ),
@@ -323,14 +356,67 @@ export function planChangeHandlers({
         if (!plan?.price) return conflict('ERR_5074', 'Plan unavailable');
         const target = { id: plan.id, slug: plan.slug, name: plan.name };
         if (plan.price.amount.amount > currentPrice) {
+          const { quoteId, method, payment } = body.data;
+          if (quoteId !== undefined && (!method || !payment)) {
+            return HttpResponse.json(
+              errorEnvelope('ERR_5127', 'Payment required'),
+              { status: 400 },
+            );
+          }
+          const paid = quoteId !== undefined && payment !== undefined;
           return HttpResponse.json({
             kind: 'UPGRADE',
             subscription: subscriptionOn({
               pendingUpgrade: { plan: target, invoiceId: invoiceIds.upgrade },
+              ...(paid
+                ? {
+                    openInvoice: {
+                      id: invoiceIds.upgrade,
+                      number: 'R-2026-000124',
+                      kind: 'PRORATION',
+                      total: usd(1355),
+                      pending: usd(1355),
+                      dueAt: hoursFromNow(0),
+                    },
+                    lastPayment: {
+                      intentId: intentIds.fresh,
+                      status: 'IN_REVIEW',
+                      reason: null,
+                    },
+                  }
+                : {}),
             }),
             prorationInvoice: buildProrationInvoice(),
             effectiveAt: null,
+            intent:
+              paid && method
+                ? buildIntent({
+                    invoiceId: invoiceIds.upgrade,
+                    method,
+                    status: 'IN_REVIEW',
+                    reported: {
+                      reference: payment.reference,
+                      bankCode: payment.bankCode,
+                      origin: payment.origin,
+                      paidOn: payment.paidOn,
+                      amount: ves(payment.amountVes),
+                      reportedAt: new Date().toISOString(),
+                    },
+                  })
+                : null,
           });
+        }
+        if (
+          officesToDeactivate.length > 0 &&
+          body.data.acceptOfficeDeactivation !== true
+        ) {
+          return HttpResponse.json(
+            {
+              ...errorEnvelope('ERR_5076', 'Plan limit exceeded'),
+              details: { limit: 'maxActiveClinics' },
+            },
+            { status: 409 },
+          );
         }
         return HttpResponse.json({
           kind: 'DOWNGRADE',
@@ -347,6 +433,162 @@ export function planChangeHandlers({
       },
     ),
   ];
+}
+
+/** A coupon's code, from what travels with a quote: typed, or one of «Mis cupones». */
+function couponCodeOf(choice: CouponChoice | undefined): string | null {
+  if (!choice) return null;
+  if ('code' in choice) return choice.code;
+  return choice.savedCouponId === savedCouponId
+    ? couponCodes.professionalOnly
+    : 'UNKNOWN';
+}
+
+/** The quote the API would make for a plan and a coupon code, or its refusal. */
+function quoteFor(planId: string, code: string | null, balance: number) {
+  const plan = buildPlans().find(
+    (candidate) => candidate.id === planId && candidate.status === 'ACTIVE',
+  );
+  if (!plan?.price)
+    return { refusal: conflict('ERR_5074', 'Plan unavailable') };
+  const price = plan.price.amount;
+  let discount = 0;
+  if (code !== null) {
+    const refusal = couponResponse(code, plan.id);
+    if (refusal) return { refusal };
+    discount = couponDiscount(
+      couponSchema.parse(knownCoupons[code]),
+      price,
+    ).amount;
+  }
+  return {
+    quote: buildCheckoutQuote({
+      plan: {
+        id: plan.id,
+        slug: plan.slug,
+        name: plan.name,
+        price: price.amount,
+      },
+      coupon: code,
+      discount,
+      balance,
+    }),
+  };
+}
+
+/**
+ * `POST /billing/me/checkout/quote` and `POST /billing/me/checkout`
+ * (REDOC-363), as the API answers them for a specialist with no plan:
+ * quoting creates nothing; confirming wants its `Idempotency-Key` (400
+ * ERR_1009 without), the payment when something is to pay (400 ERR_5127),
+ * and leaves the subscription unpaid with the payment in review — or active,
+ * when nothing was to pay. `balance` is the balance the quote applies.
+ */
+export function checkoutHandlers({ balance = 0 }: { balance?: number } = {}) {
+  return [
+    http.post(apiUrl('/billing/me/checkout/quote'), async ({ request }) => {
+      if (isStranger(request)) return unauthorized();
+      const body = checkoutQuoteBodySchema.safeParse(await request.json());
+      if (!body.success) return badRequest();
+      const result = quoteFor(
+        body.data.planId,
+        couponCodeOf(body.data.coupon),
+        balance,
+      );
+      return result.refusal ?? HttpResponse.json(result.quote);
+    }),
+
+    http.post(apiUrl('/billing/me/checkout'), async ({ request }) => {
+      if (isStranger(request)) return unauthorized();
+      if (!request.headers.get('idempotency-key')) {
+        return HttpResponse.json(
+          errorEnvelope('ERR_1009', 'Idempotency-Key required'),
+          { status: 400 },
+        );
+      }
+      const body = checkoutBodySchema.safeParse(await request.json());
+      if (!body.success) return badRequest();
+      const quoted = parseQuoteId(body.data.quoteId);
+      if (!quoted) {
+        return HttpResponse.json(errorEnvelope('ERR_5124', 'Quote not found'), {
+          status: 404,
+        });
+      }
+      const result = quoteFor(quoted.planId, quoted.coupon, balance);
+      if (result.refusal) return result.refusal;
+      return HttpResponse.json(
+        checkoutAnswer(result.quote, body.data.method, body.data.payment),
+        {
+          status:
+            body.data.payment || !result.quote.requiresPayment ? 201 : 400,
+        },
+      );
+    }),
+  ];
+}
+
+/** What confirming a quote leaves: the subscription, its receipt and the payment in review. */
+export function checkoutAnswer(
+  quote: CheckoutQuotePayload,
+  method: 'MOBILE_PAYMENT' | 'BANK_TRANSFER' | undefined,
+  payment: PaymentReportBody | undefined,
+) {
+  if (quote.requiresPayment && (!method || !payment)) {
+    return errorEnvelope('ERR_5127', 'Payment required');
+  }
+  const paying = quote.requiresPayment && method && payment;
+  const invoice = buildInvoice({
+    status: paying ? 'OPEN' : 'PAID',
+    total: quote.totalUsd,
+    balanceApplied: quote.balanceApplied,
+    pending: paying ? quote.payableUsd : usd(0),
+    lines: quote.lines.map((line) => ({ ...line })),
+  });
+  return {
+    subscription: buildSubscription({
+      plan: quote.plan,
+      price: quote.lines[0]?.amount ?? usd(0),
+      status: paying ? 'INCOMPLETE' : 'ACTIVE',
+      incompleteExpiresAt: paying ? hoursFromNow(72) : null,
+      openInvoice: paying
+        ? {
+            id: invoice.id,
+            number: invoice.number,
+            kind: 'SUBSCRIPTION_CYCLE',
+            total: invoice.total,
+            pending: invoice.pending,
+            dueAt: invoice.dueAt,
+          }
+        : null,
+      lastPayment: paying
+        ? { intentId: intentIds.fresh, status: 'IN_REVIEW', reason: null }
+        : null,
+    }),
+    invoice,
+    intent: paying
+      ? buildIntent({
+          method,
+          amountUsd: quote.payableUsd,
+          amountVes: quote.totalVes,
+          rate: quote.quote.rate,
+          expiresAt: null,
+          status: 'IN_REVIEW',
+          reported: {
+            reference: payment.reference,
+            bankCode: payment.bankCode,
+            origin: payment.origin,
+            paidOn: payment.paidOn,
+            amount: ves(payment.amountVes),
+            reportedAt: new Date().toISOString(),
+          },
+        })
+      : null,
+  };
+}
+
+/** `GET /config/support` (public): the support lines an admin filled. */
+export function supportHandler(contact = buildSupportContact()) {
+  return http.get(apiUrl('/config/support'), () => HttpResponse.json(contact));
 }
 
 /*
@@ -410,76 +652,9 @@ export const billingHandlers = [
           }),
   ),
 
-  http.post(apiUrl('/billing/me/subscription'), async ({ request }) => {
-    if (isStranger(request)) return unauthorized();
-    const body = subscribeBodySchema.safeParse(await request.json());
-    if (!body.success) return badRequest();
-    const plan = buildPlans().find(
-      (candidate) => candidate.id === body.data.planId,
-    );
-    if (!plan?.price || plan.status !== 'ACTIVE') {
-      return conflict('ERR_5074', 'Plan unavailable');
-    }
-    const price = plan.price.amount;
-    let discount = 0;
-    let code: string | null = null;
-    if (body.data.coupon) {
-      code =
-        'code' in body.data.coupon
-          ? body.data.coupon.code
-          : body.data.coupon.savedCouponId === savedCouponId
-            ? couponCodes.professionalOnly
-            : 'UNKNOWN';
-      const refusal = couponResponse(code, plan.id);
-      if (refusal) return refusal;
-      const terms = couponSchema.parse(knownCoupons[code]);
-      discount = couponDiscount(terms, price).amount;
-    }
-    const pending = price.amount - discount;
-    const subscription = buildSubscription({
-      plan: { id: plan.id, slug: plan.slug, name: plan.name },
-      price,
-      status: pending === 0 ? 'ACTIVE' : 'INCOMPLETE',
-      incompleteExpiresAt:
-        pending === 0 ? null : buildSubscription().incompleteExpiresAt,
-      discount:
-        code === null
-          ? null
-          : {
-              couponName: knownCoupons[code]?.name ?? code,
-              code,
-              discountType: knownCoupons[code]?.discountType ?? 'PERCENT',
-              percentOff: knownCoupons[code]?.percentOff ?? null,
-              amountOff: knownCoupons[code]?.amountOff ?? null,
-              duration: knownCoupons[code]?.duration ?? 'ONCE',
-              remainingCycles: 0,
-              status: 'ACTIVE',
-            },
-    });
-    const invoice = buildInvoice({
-      status: pending === 0 ? 'PAID' : 'OPEN',
-      total: usd(pending),
-      paid: usd(0),
-      pending: usd(pending),
-      lines: [
-        {
-          type: 'PLAN',
-          description: `Plan ${plan.name} · 12 oct – 11 nov 2026`,
-          amount: price,
-        },
-        ...(discount > 0
-          ? [
-              {
-                type: 'DISCOUNT',
-                description: `Cupón ${code ?? ''}`,
-                amount: usd(-discount),
-              },
-            ]
-          : []),
-      ],
-    });
-    return HttpResponse.json({ subscription, invoice }, { status: 201 });
-  }),
+  ...checkoutHandlers(),
+
+  supportHandler(),
 
   http.post(
     apiUrl('/billing/me/invoices/:invoiceId/payment-intents'),

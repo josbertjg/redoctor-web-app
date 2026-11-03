@@ -247,6 +247,17 @@ describe('AppointmentsFlow', () => {
       ).toBeVisible();
       expect(sent).toHaveLength(0);
 
+      // Not a sensitive specialty: signed by default, and said so.
+      expect(
+        screen.getByRole('checkbox', {
+          name: 'Hacer esta reseña de forma anónima',
+        }),
+      ).not.toBeChecked();
+      expect(
+        screen.getByText(
+          'Tu reseña se publicará en el perfil del especialista, junto a tu nombre.',
+        ),
+      ).toBeVisible();
       await userEvent.click(screen.getByRole('radio', { name: '4 estrellas' }));
       await userEvent.type(
         screen.getByRole('textbox', { name: 'Comentario (opcional)' }),
@@ -260,7 +271,9 @@ describe('AppointmentsFlow', () => {
       expect(
         await screen.findByText('Gracias por calificar a Dr. Luis Gómez'),
       ).toBeVisible();
-      expect(sent).toEqual([{ rating: 4, comment: 'Muy amable.' }]);
+      expect(sent).toEqual([
+        { rating: 4, comment: 'Muy amable.', isAnonymous: false },
+      ]);
 
       // The next one, on a clean form.
       expect(await screen.findByText('2 de 2')).toBeVisible();
@@ -270,6 +283,22 @@ describe('AppointmentsFlow', () => {
       expect(
         screen.getByRole('textbox', { name: 'Comentario (opcional)' }),
       ).toHaveValue('');
+      // A sensitive specialty: anonymous by default, with the reason why.
+      expect(
+        screen.getByRole('checkbox', {
+          name: 'Hacer esta reseña de forma anónima',
+        }),
+      ).toBeChecked();
+      expect(
+        screen.getByText(
+          'Te lo recomendamos por tratarse de una especialidad sensible. Si prefieres firmarla, desmarca la casilla.',
+        ),
+      ).toBeVisible();
+      expect(
+        screen.getByText(
+          'Tu reseña se publicará en el perfil del especialista, sin tu nombre.',
+        ),
+      ).toBeVisible();
       await userEvent.click(screen.getByRole('radio', { name: '5 estrellas' }));
       await userEvent.click(
         screen.getByRole('button', { name: 'Enviar calificación' }),
@@ -278,7 +307,7 @@ describe('AppointmentsFlow', () => {
       expect(
         await screen.findByRole('heading', { level: 1, name: 'Mis citas' }),
       ).toBeInTheDocument();
-      expect(sent[1]).toEqual({ rating: 5 });
+      expect(sent[1]).toEqual({ rating: 5, isAnonymous: true });
     });
 
     it('moves on when the consultation was rated meanwhile', async () => {

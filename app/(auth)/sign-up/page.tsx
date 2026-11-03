@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 
 import { getTranslations } from 'next-intl/server';
 
+import { getSupportContact } from '@/app/lib/data/support';
 import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 import { isSafeRedirect } from '@/app/lib/routes';
 
@@ -31,7 +32,10 @@ export default async function SignUpPage({
   const { redirect } = await searchParams;
   const target =
     typeof redirect === 'string' && isSafeRedirect(redirect) ? redirect : null;
-  const t = await getTranslations('common');
+  const [t, support] = await Promise.all([
+    getTranslations('common'),
+    getSupportContact(),
+  ]);
 
   return (
     <>
@@ -43,8 +47,8 @@ export default async function SignUpPage({
           <MessagesScope namespaces={pageNamespaces.signUp}>
             <SignUpFlow
               redirect={target}
-              joinApp={<AppAccess variant="join" />}
-              finishApp={<AppAccess variant="finish" />}
+              joinApp={<AppAccess variant="join" support={support} />}
+              finishApp={<AppAccess variant="finish" support={support} />}
             />
           </MessagesScope>
         </main>

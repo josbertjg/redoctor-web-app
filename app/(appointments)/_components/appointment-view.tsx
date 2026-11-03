@@ -174,9 +174,9 @@ function PendingReview({
     ...pendingReviewsQueryOptions(user),
     enabled: finished,
   });
-  const toRate =
-    finished &&
-    (pending.data ?? []).some((candidate) => candidate.id === appointment.id);
+  const toRate = finished
+    ? (pending.data ?? []).find((candidate) => candidate.id === appointment.id)
+    : undefined;
   if (!toRate) return null;
 
   return (
@@ -189,6 +189,7 @@ function PendingReview({
         appointment={appointment}
         user={user}
         withConsultation={false}
+        sensitive={toRate.isSensitive}
         onSubmitted={() => {
           queryClient.setQueryData<AppointmentResponse[]>(
             reviewKeys.pending(user.id),

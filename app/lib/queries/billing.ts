@@ -2,21 +2,27 @@ import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query';
 
 import { apiFetch } from '../api/client';
 import {
+  ApiError,
   couponRejectionByCode,
   type CouponRejectionKey,
   isApiError,
 } from '../api/errors';
-import { createWriteOnceGuard } from '../api/write-once';
+import { createWriteOnceGuard, mayHaveLandedKeyed } from '../api/write-once';
 import {
   actionLanded,
   activeDiscount,
   appliedDiscountResponseSchema,
   balancePageSchema,
   billingAccountResponseSchema,
+  checkoutBodySchema,
+  checkoutQuoteBodySchema,
+  checkoutQuoteViewSchema,
+  checkoutResponseSchema,
   couponChoiceSchema,
   couponResponseSchema,
   couponValidationBodySchema,
   currentSubscriptionSchema,
+  intentInReview,
   invoiceDetailResponseSchema,
   invoiceFilters,
   invoicesPageSchema,
@@ -30,31 +36,32 @@ import {
   planChangePreviewSchema,
   planChangeResponseSchema,
   plansResponseSchema,
+  previewQuote,
   reportedPaymentResponseSchema,
   saveCouponBodySchema,
   savedCouponResponseSchema,
   savedCouponsResponseSchema,
   sortSavedCoupons,
   startedPaymentSchema,
-  subscribeResponseSchema,
   subscriptionResponseSchema,
   toInvoiceDetail,
+  toPaymentQuote,
   type BalancePage,
   type BillingAccount,
+  type CheckoutBody,
   type Coupon,
   type CouponChoice,
   type CurrentSubscription,
   type InvoiceDetail,
   type InvoiceFilter,
   type InvoicesPage,
-  type OfferedPlan,
   type PaymentIntent,
   type PaymentMethod,
+  type PaymentQuote,
   type PaymentReportBody,
   type PlanChangePreview,
   type SavedCoupon,
   type StartedPayment,
-  type SubscribeBody,
   type Subscription,
   type SubscriptionAction,
   type SubscriptionDiscount,
@@ -82,6 +89,9 @@ export const billingKeys = {
   savedCoupons: (userId: string) => ['billing', 'coupons', userId] as const,
   planChange: (userId: string, planId: string) =>
     ['billing', 'plan-change', userId, planId] as const,
+  /** The quote a payment holds (REDOC-363): never read again by itself. */
+  quote: (userId: string, kind: QuoteKind, planId: string, coupon: string) =>
+    ['billing', 'quote', userId, kind, planId, coupon] as const,
   /** Every list of receipts and every receipt read, to read them all again. */
   invoices: (userId: string) => ['billing', 'invoices', userId] as const,
   invoiceList: (userId: string, filter: InvoiceFilter | null) =>
@@ -248,10 +258,11 @@ export async function resolvePayable(
   const owesCycle =
     subscription.status === 'INCOMPLETE' || subscription.status === 'PAST_DUE';
   let invoiceId = owesCycle
-    ? null
+    ? // The subscription names its oldest open receipt (REDOC-363).
+      (subscription.openInvoice?.id ?? null)
     : (subscription.pendingUpgrade?.invoiceId ?? null);
 
-  if (owesCycle) {
+  if (owesCycle && invoiceId === null) {
     const { items } = await apiFetch({
       path: '/billing/me/invoices',
       query: { status: 'OPEN', page: 1, limit: openInvoicesPageSize },
@@ -406,7 +417,7 @@ const rejectionByReason: Readonly<Record<string, CouponRejectionKey>> = {
 const couponPaths: ReadonlySet<string> = new Set([
   '/billing/me/coupons/validate',
   '/billing/me/coupons',
-  '/billing/me/subscription',
+  '/billing/me/checkout/quote',
   '/billing/me/subscription/discount',
 ]);
 
@@ -430,75 +441,215 @@ export function couponRejectionKey(error: unknown): CouponRejectionKey | null {
     : (couponRejectionByCode[error.code] ?? null);
 }
 
-/** What taking a plan left: the subscription and, when it must be paid, its receipt. */
-export type Subscribed = {
-  subscription: Subscription;
-  /** Null when a coupon covered the first month: the plan is active already. */
-  invoice: InvoiceDetail | null;
-};
+/* ---------- Contracting at «Confirmar» (REDOC-363) ---------------------- */
 
-const subscriptions = createWriteOnceGuard<Subscribed>();
+/** Which quote a payment holds: taking a plan, or upgrading to it. */
+export type QuoteKind = 'contract' | 'upgrade';
+
+/** A coupon's identity in a cache key: its code, or the saved coupon's id. */
+function couponKey(coupon: CouponChoice | null): string {
+  if (coupon === null) return 'none';
+  return 'code' in coupon
+    ? `code:${coupon.code}`
+    : `saved:${coupon.savedCouponId}`;
+}
+
+/** The quote a payment works with: read once and held, never again by itself. */
+const heldQuote = {
+  staleTime: Infinity,
+  // Forgotten once the payment is left: opening the plan again quotes anew.
+  gcTime: 0,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
+  // apiFetch already retries a read twice.
+  retry: false,
+} as const;
 
 /**
- * `POST /billing/me/subscription`: the subscription is created INCOMPLETE
- * with its first receipt, due at once, and 72 h to report its payment.
- * `free` says a coupon covers the whole month, so an ACTIVE one counts as
- * this write's.
+ * `POST /billing/me/checkout/quote`: what taking the plan costs today, in
+ * dollars and in bolívares, with the coupon and the balance, and where to
+ * pay. It creates nothing — no subscription, no receipt, no use of the
+ * coupon —, so whoever is only looking is tied to nothing.
  */
-export function subscribe(
+async function quoteCheckout(
+  user: TokenHolder,
+  planId: string,
+  coupon: CouponChoice | null,
+  signal?: AbortSignal,
+): Promise<PaymentQuote> {
+  const view = await apiFetch({
+    method: 'POST',
+    path: '/billing/me/checkout/quote',
+    body: checkoutQuoteBodySchema.parse({
+      planId,
+      ...(coupon ? { coupon } : {}),
+    }),
+    token: await user.getToken(),
+    schema: checkoutQuoteViewSchema,
+    // A read over POST: safe to send twice.
+    idempotent: true,
+    ...(signal ? { signal } : {}),
+  });
+  return toPaymentQuote(view);
+}
+
+/** The quote of taking `planId` with `coupon`, held while the person pays. */
+export function checkoutQuoteQueryOptions(
+  user: TokenHolder,
+  planId: string,
+  coupon: CouponChoice | null,
+) {
+  return queryOptions({
+    queryKey: billingKeys.quote(user.id, 'contract', planId, couponKey(coupon)),
+    queryFn: ({ signal }) => quoteCheckout(user, planId, coupon, signal),
+    ...heldQuote,
+  });
+}
+
+/** What the preview of a change answers, nothing written but a quote for an upgrade. */
+async function readPlanChangePreview(
+  user: TokenHolder,
+  planId: string,
+  signal?: AbortSignal,
+): Promise<PlanChangePreview> {
+  return apiFetch({
+    path: '/billing/me/subscription/change-plan/preview',
+    query: { planId },
+    token: await user.getToken(),
+    schema: planChangePreviewSchema,
+    ...(signal ? { signal } : {}),
+  });
+}
+
+/**
+ * The quote of an upgrade, from the change's preview, held while the person
+ * pays. Without a rate of the day the preview brings none: that is said as
+ * the API says it everywhere else (ERR_5085).
+ */
+export function upgradeQuoteQueryOptions(user: TokenHolder, planId: string) {
+  return queryOptions({
+    queryKey: billingKeys.quote(user.id, 'upgrade', planId, 'none'),
+    queryFn: async ({ signal }): Promise<PaymentQuote> => {
+      const quote = previewQuote(
+        await readPlanChangePreview(user, planId, signal),
+      );
+      if (quote === null) {
+        throw new ApiError({
+          kind: 'http',
+          method: 'GET',
+          path: '/billing/me/subscription/change-plan/preview',
+          status: 503,
+          code: 'ERR_5085',
+        });
+      }
+      return quote;
+    },
+    ...heldQuote,
+  });
+}
+
+/** What confirming left: the subscription, and the payment in review (none when nothing was to pay). */
+export type Confirmed = {
+  subscription: Subscription;
+  intent: PaymentIntent | null;
+};
+
+/**
+ * The payment waiting for an admin on the receipt a subscription owes:
+ * what the subscription says of it (REDOC-363), or its receipt read.
+ */
+async function hasPaymentInReview(
+  user: TokenHolder,
+  subscription: Subscription,
+  invoiceId: string | null = null,
+): Promise<boolean> {
+  const owed = invoiceId ?? subscription.openInvoice?.id ?? null;
+  if (owed !== null && owed === subscription.openInvoice?.id) {
+    if (subscription.lastPayment) {
+      return subscription.lastPayment.status === 'IN_REVIEW';
+    }
+  }
+  const detail =
+    owed === null
+      ? await resolvePayable(user, subscription)
+      : await readInvoice(user, owed);
+  return detail !== null && intentInReview(detail) !== null;
+}
+
+const checkouts = createWriteOnceGuard<Confirmed>(mayHaveLandedKeyed);
+
+/**
+ * `POST /billing/me/checkout`: takes the plan and reports its payment in one
+ * transaction — the subscription, its receipt with the quoted lines, the
+ * attempt at the quoted rate, the report in review — or, with nothing to
+ * pay, the plan active at once. The key (`Idempotency-Key`, which the API
+ * requires) is the same while the body is: a second send answers what the
+ * first one created. A lost answer, or the same key still being answered,
+ * is looked for in the subscription before anything goes again.
+ */
+export function confirmCheckout(
   user: TokenHolder,
   {
-    plan,
-    coupon,
-    free,
-  }: { plan: OfferedPlan; coupon: CouponChoice | null; free: boolean },
-): Promise<Subscribed> {
-  // The subscription this write was creating, if the API got to create it:
-  // of this plan and unpaid, or active when the coupon covered it whole.
-  const lookAgain = async (): Promise<Subscribed | null> => {
+    planId,
+    quoteId,
+    method,
+    payment,
+    idempotencyKey,
+  }: {
+    planId: string;
+    quoteId: string;
+    method: PaymentMethod | null;
+    payment: PaymentReportBody | null;
+    idempotencyKey: string;
+  },
+): Promise<Confirmed> {
+  const paying = method !== null && payment !== null;
+  // The subscription this confirmation was creating, if it landed: of this
+  // plan with its payment in review, or active when nothing was to pay.
+  const lookAgain = async (): Promise<Confirmed | null> => {
     const { subscription } = await readSubscription(user);
-    if (subscription?.plan.id !== plan.id) return null;
-    if (subscription.status === 'INCOMPLETE') {
-      const payable = await resolvePayable(user, subscription);
-      return payable ? { subscription, invoice: payable } : null;
+    if (subscription?.plan.id !== planId) return null;
+    if (!paying) {
+      return subscription.status === 'ACTIVE'
+        ? { subscription, intent: null }
+        : null;
     }
-    if (free && subscription.status === 'ACTIVE') {
-      return { subscription, invoice: null };
-    }
-    return null;
+    if (subscription.status !== 'INCOMPLETE') return null;
+    return (await hasPaymentInReview(user, subscription))
+      ? { subscription, intent: null }
+      : null;
   };
 
-  const body: SubscribeBody = {
-    planId: plan.id,
-    ...(coupon ? { coupon } : {}),
-  };
+  const body: CheckoutBody = checkoutBodySchema.parse({
+    quoteId,
+    ...(paying ? { method, payment } : {}),
+  });
 
-  return subscriptions({
-    intent: `subscribe:${plan.id}`,
+  return checkouts({
+    intent: `checkout:${planId}`,
     send: async () => {
       try {
-        const { subscription, invoice } = await apiFetch({
+        const { subscription, intent } = await apiFetch({
           method: 'POST',
-          path: '/billing/me/subscription',
+          path: '/billing/me/checkout',
           body,
           token: await user.getToken(),
-          schema: subscribeResponseSchema,
+          schema: checkoutResponseSchema,
+          idempotencyKey,
+          // The quote is gone (ERR_5124): the payment quotes again.
+          expected: (error) => error.code === 'ERR_5124',
         });
-        return {
-          subscription,
-          invoice: isPayable(invoice) ? toInvoiceDetail(invoice) : null,
-        };
+        return { subscription, intent };
       } catch (error) {
-        // One already on the way (ERR_5071): this flow's own if it is this
-        // plan, unpaid — a second tab, a lost answer. Any other is the
-        // page's to show.
+        // The quote used already (ERR_5126), or a subscription on its way
+        // (ERR_5071): this very payment, when an earlier send landed.
         if (
           isApiError(error) &&
           error.status === 409 &&
-          error.code === 'ERR_5071'
+          (error.code === 'ERR_5126' || error.code === 'ERR_5071')
         ) {
-          const existing = await lookAgain();
-          if (existing) return existing;
+          const landed = await lookAgain();
+          if (landed) return landed;
         }
         throw error;
       }
@@ -594,16 +745,12 @@ export function planChangePreviewQueryOptions(
 ) {
   return queryOptions({
     queryKey: billingKeys.planChange(user.id, planId),
-    queryFn: async ({ signal }): Promise<PlanChangePreview> =>
-      apiFetch({
-        path: '/billing/me/subscription/change-plan/preview',
-        query: { planId },
-        token: await user.getToken(),
-        schema: planChangePreviewSchema,
-        signal,
-      }),
+    queryFn: ({ signal }): Promise<PlanChangePreview> =>
+      readPlanChangePreview(user, planId, signal),
     // The difference is counted by the day: never an old figure to pay.
     staleTime: 0,
+    // Each read writes an upgrade's quote on the API's side: not on a focus.
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -615,15 +762,27 @@ export type PlanChanged = {
   invoice: InvoiceDetail | null;
   /** When the new plan applies, when the API says it (a downgrade: the period's end). */
   effectiveAt: string | null;
+  /** A quoted upgrade's payment, reported with the change and in review. */
+  intent: PaymentIntent | null;
+};
+
+/** A quoted upgrade (REDOC-363): its quote and, when something is to pay, the payment. */
+export type QuotedUpgrade = {
+  quoteId: string;
+  method: PaymentMethod | null;
+  payment: PaymentReportBody | null;
 };
 
 const planChanges = createWriteOnceGuard<PlanChanged>();
 
 /**
- * `POST /billing/me/subscription/change-plan`: an upgrade issues the
- * receipt of the difference and the plan changes once it is paid; a
- * downgrade is scheduled for the period's end. Sent twice, an upgrade
- * would issue two receipts: a lost answer is looked for before re-sending.
+ * `POST /billing/me/subscription/change-plan`. A downgrade is scheduled for
+ * the period's end — with `acceptOfficeDeactivation` once the person
+ * accepted that the offices it does not fit turn off then. An upgrade
+ * issues the receipt of the difference and the plan changes once it is
+ * paid: with its quote (`quoted`) the payment is reported in the same call,
+ * which is how the web pays one. Sent twice, an upgrade would issue two
+ * receipts: a lost answer is looked for before re-sending.
  * `acceptDiscountLoss` once the person was told the coupon ends with the
  * change (ERR_5108 without it).
  */
@@ -632,17 +791,43 @@ export function changePlan(
   {
     planId,
     acceptDiscountLoss,
-  }: { planId: string; acceptDiscountLoss: boolean },
+    acceptOfficeDeactivation = false,
+    quoted = null,
+  }: {
+    planId: string;
+    acceptDiscountLoss: boolean;
+    acceptOfficeDeactivation?: boolean;
+    quoted?: QuotedUpgrade | null;
+  },
 ): Promise<PlanChanged> {
+  const paying = quoted?.method != null && quoted.payment != null;
   // The change this write was making, if the API got to make it: an
-  // upgrade waiting for its receipt, or already paid with the balance; a
-  // downgrade scheduled.
+  // upgrade waiting for its receipt — with this payment in review when it
+  // carried one —, or already paid with the balance; a downgrade scheduled.
   const lookAgain = async (): Promise<PlanChanged | null> => {
     const { subscription } = await readSubscription(user);
     if (subscription === null) return null;
-    if (subscription.pendingUpgrade?.plan.id === planId) {
+    const upgrade = subscription.pendingUpgrade;
+    if (upgrade?.plan.id === planId) {
+      if (paying) {
+        return (await hasPaymentInReview(user, subscription, upgrade.invoiceId))
+          ? {
+              kind: 'UPGRADE',
+              subscription,
+              invoice: null,
+              effectiveAt: null,
+              intent: null,
+            }
+          : null;
+      }
       const invoice = await resolvePayable(user, subscription);
-      return { kind: 'UPGRADE', subscription, invoice, effectiveAt: null };
+      return {
+        kind: 'UPGRADE',
+        subscription,
+        invoice,
+        effectiveAt: null,
+        intent: null,
+      };
     }
     if (subscription.scheduledChange?.plan.id === planId) {
       return {
@@ -650,6 +835,7 @@ export function changePlan(
         subscription,
         invoice: null,
         effectiveAt: subscription.scheduledChange.effectiveAt ?? null,
+        intent: null,
       };
     }
     if (subscription.plan.id === planId) {
@@ -658,40 +844,54 @@ export function changePlan(
         subscription,
         invoice: null,
         effectiveAt: null,
+        intent: null,
       };
     }
     return null;
   };
 
+  const body = planChangeBodySchema.parse({
+    planId,
+    ...(acceptDiscountLoss ? { acceptDiscountLoss: true } : {}),
+    ...(acceptOfficeDeactivation ? { acceptOfficeDeactivation: true } : {}),
+    ...(quoted ? { quoteId: quoted.quoteId } : {}),
+    ...(paying ? { method: quoted.method, payment: quoted.payment } : {}),
+  });
+
   return planChanges({
     intent: `change-plan:${planId}`,
     send: async () => {
       try {
-        const { kind, subscription, prorationInvoice, effectiveAt } =
+        const { kind, subscription, prorationInvoice, effectiveAt, intent } =
           await apiFetch({
             method: 'POST',
             path: '/billing/me/subscription/change-plan',
-            body: planChangeBodySchema.parse({
-              planId,
-              ...(acceptDiscountLoss ? { acceptDiscountLoss: true } : {}),
-            }),
+            body,
             token: await user.getToken(),
             schema: planChangeResponseSchema,
+            // The quote is gone (ERR_5124): the payment quotes again.
+            expected: (error) => error.code === 'ERR_5124',
           });
         return {
           kind,
           subscription,
           invoice:
-            prorationInvoice && isPayable(prorationInvoice)
+            prorationInvoice && isPayable(prorationInvoice) && intent === null
               ? toInvoiceDetail(prorationInvoice)
               : null,
           effectiveAt: effectiveAt ?? null,
+          intent,
         };
       } catch (error) {
         // A conflict may be this same change, made by a lost answer or a
-        // second tab — its receipt is the debt the API now sees (ERR_5075).
-        // Any other is the page's to explain.
-        if (isApiError(error) && error.status === 409) {
+        // second tab — its receipt is the debt the API now sees (ERR_5075),
+        // its quote is used (ERR_5126). A changed quote (ERR_5125) created
+        // nothing, and any other is the page's to explain.
+        if (
+          isApiError(error) &&
+          error.status === 409 &&
+          error.code !== 'ERR_5125'
+        ) {
           const landed = await lookAgain();
           if (landed) return landed;
         }

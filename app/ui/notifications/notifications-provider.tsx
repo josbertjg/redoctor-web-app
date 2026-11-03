@@ -19,7 +19,9 @@ import {
   type NotificationAudience,
 } from '@/app/lib/notifications/destination';
 import {
+  allTargets,
   createStaleScheduler,
+  signalTargets,
   staleQueryKeys,
   staleTargets,
   type StaleScheduler,
@@ -34,6 +36,8 @@ import {
   withRestoredNotification,
   withUnreadCount,
 } from '@/app/lib/notifications/inbox';
+import { wroteRecently } from '@/app/lib/notifications/local-writes';
+import { deviceId } from '@/app/lib/notifications/push';
 import type {
   NotificationsChannel,
   RealtimeEvent,
@@ -253,7 +257,9 @@ export function NotificationsProvider({
     toast.error(notices.actionFailed);
   };
 
-  const markRead = async (notification: InboxNotification) => {
+  const markRead = async (
+    notification: Pick<InboxNotification, 'id' | 'read'>,
+  ) => {
     const listed = queryClient
       .getQueryData<Inbox>(inboxKey)
       ?.notifications.find((other) => other.id === notification.id);
@@ -281,6 +287,24 @@ export function NotificationsProvider({
       readsInFlight.current.delete(notification.id);
     }
   };
+
+  // A push tapped opened this page: it is read, by its id (REDOC-358). The
+  // worker says so with a message to a tab already on it, or with
+  // `?notification=` in the address of the one it opens — which the address
+  // then loses.
+  const markOpenedFromPush = useEffectEvent((id: string) => {
+    void markRead({ id, read: false });
+  });
+
+  useEffect(() => {
+    if (!enabled) return;
+    const url = new URL(window.location.href);
+    const id = url.searchParams.get('notification');
+    if (id === null) return;
+    url.searchParams.delete('notification');
+    window.history.replaceState(window.history.state, '', url);
+    markOpenedFromPush(id);
+  }, [enabled]);
 
   const openNotification = (notification: InboxNotification) => {
     void markRead(notification);
@@ -351,12 +375,31 @@ export function NotificationsProvider({
 
   /* The live channel. */
 
+  /**
+   * This browser caused it (REDOC-358) and this tab wrote just now: the tab
+   * already read its result. Another tab of the same browser has not.
+   */
+  const ownEcho = (origin: string | null) =>
+    origin !== null && origin === deviceId() && wroteRecently();
+
   const onRealtimeEvent = useEffectEvent((event: RealtimeEvent) => {
     if (event.kind === 'unread') {
       setInbox((current) => withUnreadCount(current, event.unreadCount));
       return;
     }
+    if (event.kind === 'changed') {
+      // Read again in silence: no banner, no row.
+      if (ownEcho(event.originDeviceId)) return;
+      for (const target of signalTargets(event.scope, audience)) {
+        scheduler.current?.schedule(target);
+      }
+      return;
+    }
     const { notification } = event;
+    // The device that acted is told nothing over the page: it is an
+    // acknowledgement, which enters the inbox and stops there.
+    const fromHere =
+      event.originDeviceId !== null && event.originDeviceId === deviceId();
     if (queryClient.getQueryData<Inbox>(inboxKey) === undefined) {
       // Nowhere to put it yet: the inbox is read, and counts it.
       void queryClient.invalidateQueries({ queryKey: inboxKey });
@@ -364,6 +407,14 @@ export function NotificationsProvider({
       setInbox((current) =>
         withArrivedNotification(current, notification, event.unreadCount),
       );
+    }
+    if (fromHere) {
+      if (ownEcho(event.originDeviceId)) {
+        handled.current.add(notification.id);
+      } else {
+        applyEffects(notification);
+      }
+      return;
     }
     // The open menu shows it as a row already: no banner over it.
     if (!menuOpen) showNotificationBanner(notification, openNotification);
@@ -379,10 +430,27 @@ export function NotificationsProvider({
     void query.refetch();
   });
 
+  /** Since when the channel is down; null while it is up, or before it ever was. */
+  const downSince = useRef<number | null>(null);
+
   const onChannelStatus = useEffectEvent((connected: boolean) => {
     setLive(connected);
+    if (!connected) {
+      downSince.current ??= Date.now();
+      return;
+    }
+    const since = downSince.current;
+    downSince.current = null;
     // Whatever arrived while the channel was down is not in it.
-    if (connected) reloadIfStale();
+    reloadIfStale();
+    // Nor what the signals would have said (they only travel while it is
+    // up): after a while without it, the page's data is read again in
+    // silence, as the app does.
+    if (since !== null && Date.now() - since > RELOAD_AFTER_MS) {
+      for (const target of allTargets(audience)) {
+        scheduler.current?.schedule(target);
+      }
+    }
   });
 
   // Back in view: the inbox if it is old, and the push's heartbeat if due.
@@ -395,13 +463,17 @@ export function NotificationsProvider({
   // channel down, the inbox is the only way to show it.
   const onWorkerMessage = useEffectEvent((event: MessageEvent) => {
     const message: unknown = event.data;
-    if (
-      typeof message !== 'object' ||
-      message === null ||
-      (message as { type?: unknown }).type !== 'redoctor:push'
-    ) {
+    if (typeof message !== 'object' || message === null) return;
+    const { type, notificationId } = message as {
+      type?: unknown;
+      notificationId?: unknown;
+    };
+    if (type === 'redoctor:push-opened') {
+      if (typeof notificationId === 'string')
+        markOpenedFromPush(notificationId);
       return;
     }
+    if (type !== 'redoctor:push') return;
     if (!live) reloadIfStale();
   });
 

@@ -1,6 +1,7 @@
 import 'client-only';
 
 import {
+  dataChangedPayloadSchema,
   notificationCreatedPayloadSchema,
   toNotification,
   unreadCountPayloadSchema,
@@ -12,9 +13,10 @@ import type { ManagerOptions, Socket, SocketOptions } from 'socket.io-client';
 /*
  * The live channel of the notifications: the API's Socket.IO namespace
  * `/ws/notifications`, which hangs from the API's host and not from
- * `/api/v1` (the app's `NotificationsSocketService`). It pushes two things
- * while someone is signed in — a notice just created, and the unread count
- * when it moves, maybe from another device —; the inbox itself keeps coming
+ * `/api/v1` (the app's `NotificationsSocketService`). It pushes three
+ * things while someone is signed in — a notice just created, the unread
+ * count when it moves (maybe from another device) and the signal that some
+ * data changed (`data:changed`, REDOC-358) —; the inbox itself keeps coming
  * from the GET, since the channel holds nothing of what happened while it
  * was down.
  *
@@ -36,8 +38,16 @@ export type RealtimeEvent =
       notification: InboxNotification;
       /** The server's unread total, when it travelled in the payload. */
       unreadCount: number | null;
+      /** The device whose action caused it, when one did. */
+      originDeviceId: string | null;
     }
-  | { kind: 'unread'; unreadCount: number };
+  | { kind: 'unread'; unreadCount: number }
+  | {
+      kind: 'changed';
+      scope: string;
+      id: string | null;
+      originDeviceId: string | null;
+    };
 
 /** How a socket is made: `io` of socket.io-client, or a fake in the tests. */
 export type SocketFactory = (
@@ -157,6 +167,18 @@ export function createNotificationsChannel(
       kind: 'created',
       notification: toNotification(parsed.data.notification),
       unreadCount: parsed.data.unreadCount ?? null,
+      originDeviceId: parsed.data.originDeviceId ?? null,
+    });
+  };
+
+  const emitChanged = (payload: unknown) => {
+    const parsed = dataChangedPayloadSchema.safeParse(payload);
+    if (!parsed.success) return;
+    options.onEvent({
+      kind: 'changed',
+      scope: parsed.data.scope,
+      id: parsed.data.id ?? null,
+      originDeviceId: parsed.data.originDeviceId ?? null,
     });
   };
 
@@ -207,6 +229,7 @@ export function createNotificationsChannel(
     next.on('error', handleDrop);
     next.on('notification:created', emitCreated);
     next.on('notification:unread', emitUnread);
+    next.on('data:changed', emitChanged);
 
     socket = next;
     connecting = false;

@@ -1,18 +1,16 @@
 import { useId } from 'react';
 
-import Call from '@material-symbols/svg-400/rounded/call.svg?svgr';
-import Chat from '@material-symbols/svg-400/rounded/chat.svg?svgr';
 import Mobile from '@material-symbols/svg-400/rounded/mobile.svg?svgr';
 import { useTranslations } from 'next-intl';
 
 import { appStoreUrl, playStoreUrl } from '@/app/lib/deep-links';
 import { publicEnv } from '@/app/lib/public-env';
-import { supportChannels, type SupportChannels } from '@/app/lib/support';
+import { supportChannels, type SupportContact } from '@/app/lib/support';
 import { cn } from '@/app/lib/utils';
 
 import { StoreBadges } from '@/app/ui/app-bridge/store-badges';
-import { Button } from '@/app/ui/button';
 import { Icon } from '@/app/ui/icons';
+import { SupportLinks } from '@/app/ui/support/support-links';
 
 import { StoreQr } from './store-qr';
 
@@ -27,8 +25,8 @@ type AppAccessProps = {
   headingLevel?: 1 | 2;
   /** The published listings; from the environment by default (empty in the pilot). */
   stores?: StoreListings;
-  /** Redoctor's support lines; from the environment by default. */
-  support?: SupportChannels;
+  /** Redoctor's support lines, as the server read them (app/lib/data/support.ts). */
+  support: SupportContact;
   className?: string;
 };
 
@@ -55,9 +53,8 @@ export function AppAccess({
   };
   const published =
     listings.appStore !== undefined || listings.playStore !== undefined;
-  const channels = support ?? supportChannels(t('whatsappMessage'));
+  const channels = supportChannels(support, t('whatsappMessage'));
   const Heading = headingLevel === 1 ? 'h1' : 'h2';
-  const SubHeading = headingLevel === 1 ? 'h2' : 'h3';
 
   return (
     <section
@@ -120,46 +117,11 @@ export function AppAccess({
           />
         </div>
       ) : (
-        <div className="mt-6 flex flex-col gap-5 text-left">
-          {channels.whatsapp === null ? null : (
-            <div className="flex flex-col gap-2">
-              <SubHeading className="text-title-sm text-text-primary">
-                {t('writeSection')}
-              </SubHeading>
-              <Button asChild block shape="soft">
-                <a
-                  href={channels.whatsapp.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Icon icon={Chat} size={20} />
-                  {t('whatsapp')}
-                </a>
-              </Button>
-            </div>
-          )}
-          {channels.phones.length === 0 ? null : (
-            <div className="flex flex-col gap-2">
-              <SubHeading className="text-title-sm text-text-primary">
-                {t('callSection')}
-              </SubHeading>
-              {channels.phones.map((phone) => (
-                <Button
-                  key={phone.href}
-                  asChild
-                  block
-                  shape="soft"
-                  variant="white"
-                >
-                  <a href={phone.href}>
-                    <Icon icon={Call} size={20} />
-                    {t('call', { label: phone.label, number: phone.number })}
-                  </a>
-                </Button>
-              ))}
-            </div>
-          )}
-        </div>
+        <SupportLinks
+          channels={channels}
+          headingLevel={headingLevel === 1 ? 2 : 3}
+          className="mt-6 text-left"
+        />
       )}
     </section>
   );

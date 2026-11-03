@@ -28,13 +28,22 @@ type WriteOnceRequest<T> = {
  * or a gateway failed (5xx) between the server and us. The app's payment
  * report counts every failure but a business refusal this way.
  */
-const mayHaveLanded = (error: unknown) =>
+export const mayHaveLanded = (error: unknown) =>
   isApiError(error) &&
   (error.kind === 'uncertain' ||
     error.kind === 'invalid-response' ||
     (error.kind === 'http' &&
       error.status !== undefined &&
       error.status >= 500));
+
+/**
+ * The same, for a write that carries an `Idempotency-Key`: a second send with
+ * that key while the first is still being answered is refused (409
+ * ERR_1011), and that first one may land any moment.
+ */
+export const mayHaveLandedKeyed = (error: unknown) =>
+  mayHaveLanded(error) ||
+  (isApiError(error) && error.status === 409 && error.code === 'ERR_1011');
 
 export function createWriteOnceGuard<T>(
   isUncertain: (error: unknown) => boolean = mayHaveLanded,

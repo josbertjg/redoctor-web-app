@@ -5,7 +5,6 @@ import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 
 import { getSpecialistProfile } from '@/app/lib/data/specialists';
-import { getSpecialtiesTree } from '@/app/lib/data/specialties';
 import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 import { bookingSpecialtyId } from '@/app/lib/schemas/booking';
 import { brandOpenGraph } from '@/app/lib/site';
@@ -49,10 +48,7 @@ export default async function BookPage({
   const profile = await getSpecialistProfile(specialistId);
   if (!profile) notFound();
 
-  const [tree, notice] = await Promise.all([
-    getSpecialtiesTree(),
-    getTranslations('profile.preview.notice'),
-  ]);
+  const notice = await getTranslations('profile.preview.notice');
 
   return (
     <PageTransition>
@@ -72,9 +68,10 @@ export default async function BookPage({
                 name: office.name,
                 address: office.address,
                 description: office.description,
+                reasons: office.reasons,
               })),
             }}
-            specialtyId={bookingSpecialtyId(profile.specialties, tree)}
+            specialtyId={bookingSpecialtyId(profile.specialties)}
             ownerNotice={{
               title: notice('title'),
               description: notice('book'),

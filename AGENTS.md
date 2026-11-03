@@ -77,15 +77,15 @@ transactional emails the API sends.
 | M5 Appointment `/a/{id}` | Confirm (from 24 h before), cancel, reschedule, directions, add to calendar |
 | M6 My appointments `/appointments` | Upcoming, past, pending reviews |
 | M7 Review | Stars, comment, "your review is public / anonymous by default" notice |
-| M8 Public profile `/s/{id}` | Read-only: photo, verified specialties, offices with directions, service prices, rating and reviews, and «Agendar cita» toward the booking (M15). Found by search engines (2026-10-14): the sitemap lists every profile, each page carries its schema.org data and a title and description built from the profile, and an unknown id is a real 404 |
+| M8 Public profile `/s/{id}` | Read-only: photo, verified specialties, offices with directions and each one's prices (they come with the profile since REDOC-367), rating and reviews, and «Agendar cita» toward the booking (M15). Found by search engines (2026-10-14): the sitemap lists every profile, each page carries its schema.org data and a title and description built from the profile, and an unknown id is a real 404 |
 | M9 Landing | Designed by the designer; copy in the doc «Landing de Redoctor» |
-| M10 Legal and account | `/terms`, `/privacy` and `/delete-account` (2026-10-14): the terms of use, the privacy policy and how to have an account deleted, drafted from what the web and the app do, as the base the lawyer reviews (the owner's word); the company's identification is a placeholder until he fills it (§13) |
+| M10 Legal and account | `/terms`, `/privacy` and `/delete-account` (2026-10-14): the terms of use, the privacy policy and how to have an account deleted, drafted from what the web and the app do, as the base the lawyer reviews (the owner's word); the company's identification is a placeholder until he fills it (§13). Since 2026-11-02 `/delete-account` deletes the account right there, signed in (REDOC-352, self-service on the owner's word) |
 | M11 Bridges | `/home/*` (pages that only open the app) and `/daily-summary/unsubscribe` (daily-summary email opt-out); `/panel/subscription`, `/panel/agenda`, `/panel/specialties` and `/panel/profile` were bridges until M14 made them pages |
-| M13 Specialist payment | `/panel/subscription` («Mi suscripción»: the plan, its state and its notice) and `/pay` (the payment, out of the paths the app opens, since no app may charge; the owner's split of 2026-10-13): choose a plan with a coupon, Pago Móvil and transfer data in Bs from the API, report the payment, see it in review; changing plan — from «Mi suscripción» (`?view=plans`) or from a missing feature's invitation (`?plan=`) — and undoing a scheduled change (2026-10-13); and the rest of the app's «Mi suscripción» the same day (§13, Decided): cancelling and resuming, dropping an unpaid subscription, a coupon on the plan in force, the billing data, the receipts (`/panel/subscription/invoices[/{id}]`, each one payable from its page), the balance (`/panel/subscription/balance`) and «Mis cupones» (`/panel/subscription/coupons`) |
+| M13 Specialist payment | `/panel/subscription` («Mi suscripción»: the plan, its state and its notice) and `/pay` (the payment, out of the paths the app opens, since no app may charge; the owner's split of 2026-10-13): choose a plan with a coupon — quoted as it opens and taken, with its payment reported, at «Confirmar» (REDOC-363, 2026-11-02; a payment left halfway is taken up again) —, Pago Móvil and transfer data in Bs from the API, report the payment, see it in review; changing plan — from «Mi suscripción» (`?view=plans`) or from a missing feature's invitation (`?plan=`) — and undoing a scheduled change (2026-10-13); and the rest of the app's «Mi suscripción» the same day (§13, Decided): cancelling and resuming, dropping an unpaid subscription, a coupon on the plan in force, the billing data, the receipts (`/panel/subscription/invoices[/{id}]`, each one payable from its page), the balance (`/panel/subscription/balance`) and «Mis cupones» (`/panel/subscription/coupons`) |
 | M14 Specialist panel | `/panel` and its sections (2026-10-13): the home (the plan and its notice, today's patients, the statistics, what stays in the app), the day's agenda `/panel/agenda[/{date}]` and the history `/panel/appointments` (read only, each appointment opening `/a/{id}`), the statistics `/panel/reports` (the app's summary and four reports, PDF and CSV when the plan allows), «Mi perfil» `/panel/profile` (whether patients find the profile and, if not, why; the profile as the app shows it to its owner) and «Mis especialidades» `/panel/specialties` (each specialty and its review), both read only, the subscription (M13); a specialist stays in it until signing out |
 | M15 Booking | `/book/{specialistId}` (the owner's «vamos con el agendar desde /s», 2026-10-13; built 2026-10-14): a patient books with the specialist of a public profile in the app's four steps — the office, the day and hour, the reason and for whom (oneself, someone in one's care, someone new), the summary — and «¡Todo listo!»; the appointment is born pending and is confirmed on `/a/{id}` from 24 h before. The web's own page, out of `/s/*` (§6) |
 | M16 Search | `/search` (the owner's word, 2026-10-14: «darle vida a esa barra de búsqueda», with ZocDoc, Doctoralia and Webel as the references): the landing's search box live — a specialty of the catalog or a specialist's name offered as one types, the place («Usar mi ubicación», a Google place or one of the built-in cities, or the whole country) — and the results as patients know them: the cards (photo, name with the verified mark, specialties, rating, nearest office and how far, lowest price, the next days, each one a way into the booking), the app's filters (availability, distance), a Google map of the offices with «Buscar en esta zona», ten at a time. The web's own page, listed by no app (§6); public, the session asked for where the booking starts |
-| M17 Notifications | The bell on every page with a session (the owner's word, 2026-10-14, «sumamente importante»): the unread count, the inbox as a menu that unfolds from it (the app's: read, read all, delete, empty), the API's live channel (Socket.IO) that brings each notice as it is born — a banner, the count, and what the notice leaves stale read again, as the app's `NotificationEffects` —, and the web push through a service worker of ours for when no tab is in view, offered from the menu and only with the VAPID key. No sound on the web |
+| M17 Notifications | The bell on every page with a session (the owner's word, 2026-10-14, «sumamente importante»): the unread count, the inbox as a menu that unfolds from it (the app's: read, read all, delete, empty), the API's live channel (Socket.IO) that brings each notice as it is born — a banner, the count, and what the notice leaves stale read again, as the app's `NotificationEffects` — and the signals of data changed elsewhere (`data:changed`, REDOC-358), and the web push through a service worker of ours for when no tab is in view, offered from the menu and only with the VAPID key. No sound on the web |
 | M12 Release | PostHog funnel by origin, tests on real phones from WhatsApp and Gmail, domain cutover |
 
 **Explicitly out of the pilot:** favorites, and acting on appointments from
@@ -157,6 +157,16 @@ notifications (M17, the inbox included) came on the owner's word
   taps, a clear message instead of an error, straight back to the
   appointment, and — in Instagram/Facebook, where Google blocks OAuth inside
   web views — step-by-step instructions to open the link in Chrome or Safari.
+- **Every link that needs a session lets the person in, then shows what
+  it holds (owner, 2026-10-17).** A patient's link (`/i`, `/a`,
+  `/appointments`, `/book`, `/sign-up`) asks for the session right there,
+  or through `/sign-in?redirect=`, and once in shows what the link holds,
+  at the same address: an account with no sign-up finishes it first and
+  comes back; another account is told so, with «Entrar con otra cuenta»;
+  a session the API no longer takes says it expired and asks again;
+  inside Instagram or Facebook, the steps to open it in the browser. The
+  specialist's links from the emails come back to their page the same
+  way. The e2e `session-links` spec keeps it (§10).
 
 ---
 
@@ -251,15 +261,16 @@ app/                                  # The application: routes, UI and logic
     layout.tsx                        #   the bar with the account over the legal pages
     terms/page.tsx · privacy/page.tsx · delete-account/page.tsx   # /terms, /privacy, /delete-account — public, indexed; every word in the catalog (`legal.*`)
     _components/legal-document.tsx    #   a document: title and date, intro, contents, sections (rich messages: paragraphs, lists, links to the other pages, the email, the support WhatsApp)
+    _components/delete-account-flow.tsx   # deleting one's account right there (REDOC-352): by role, signing in again, Apple's permission, DELETE /identity/me
     _data/legal-sections.ts           #   each document's sections, in order
-    (account/page.tsx, /account, is not built: the account's own page waits for the API's deletion endpoint, REDOC-352)
+    (account/page.tsx, /account, is not built: the deletion lives on /delete-account, the page the stores ask for)
   (billing)/                          # module: specialist payment (M13)
     layout.tsx · error.tsx            #   <PanelFrame width="narrow"> around every page below, kept as the person moves between them; the error inside it
     panel/subscription/page.tsx       #   /panel/subscription — «Mi suscripción»
     panel/subscription/invoices/page.tsx · [invoiceId]/page.tsx   # the receipts (`?status=`) and a receipt
     panel/subscription/balance/page.tsx · coupons/page.tsx        # the balance; «Mis cupones»
     pay/page.tsx                      #   /pay[?plan=|?view=plans|?invoice=] — the payment, the plans and the change of plan; out of `/panel/`, listed by no app (§6)
-    _components/                      #   subscription-flow, subscription-view (+ entitlements-card, subscription-sections, subscription-action-sheet, apply-coupon-sheet, billing-account-sheet, collapse), subscription-load-error, invoices-flow, invoice-flow, invoice-card, balance-flow, balance-pieces, coupons-flow, coupon-pieces, paged-list-foot, list-notice, section-header, pay-flow, plans-view, plan-benefits, change-plan-view, pay-view, method-step, payment-step, payment-totals, coupon-sheet, bank-picker, different-amount-sheet, payment-done, copy-button, detail-list, pay-skeleton
+    _components/                      #   use-quoted-payment (the quote, the draft, «Confirmar», ERR_5125), quote-changed-sheet, invoice-payment-step; subscription-flow, subscription-view (+ entitlements-card, subscription-sections, subscription-action-sheet, apply-coupon-sheet, billing-account-sheet, collapse), subscription-load-error, invoices-flow, invoice-flow, invoice-card, balance-flow, balance-pieces, coupons-flow, coupon-pieces, paged-list-foot, list-notice, section-header, pay-flow, plans-view, plan-benefits, change-plan-view, pay-view, method-step, payment-step, payment-totals, coupon-sheet, bank-picker, different-amount-sheet, payment-done, copy-button, detail-list, pay-skeleton
   (bridges)/                          # module: pages that only open the app, noindex (M11)
     layout.tsx
     home/[[...rest]]/                 #   the app's internal paths; every page under /panel/ is the panel's own (M13, M14)
@@ -275,6 +286,7 @@ app/                                  # The application: routes, UI and logic
     notifications/                    #   the notifications (M17): notifications-provider (the inbox, the live channel, the effects, the push), notifications-bell (nothing for a stranger; bell-popover, the count and the menu from it, loads for a signed-in person), notifications-menu (+ -menu-skeleton), notification-banner (a live notice over the page, on the Toaster), notification-tone (icon and colour by family), use-push (the web push in this browser)
     app-bridge/                       #   open-in-app-button, store-badges, app-access (a specialist's way to the app), store-qr
     appointments/ · specialists/ · billing/ · reviews/   # domain components used by two or more modules (appointments/: headline, details, appointment-card; billing/: notice-panel, plan-emblem)
+    support/                          #   support-links: the API's support lines, to write or to call (REDOC-357)
     search/                           #   the search box (M16), on the landing and on /search: search-bar (+ what-field, where-field, suggestion-popup, highlight, use-combobox, use-location-suggestions — Google's places —, use-remembered), its words from the server (search-bar-words)
     analytics/ · og/ · seo/           #   link-origin-tracker; the Open Graph brand card (next/og); the JSON-LD data block a page carries for search engines
     motion/                           #   the one door to Motion: provider, m, tokens, staggered-text (§8.11); the page transitions (§8.13): view-transitions (server-safe), page-transitions.css, directions, skeleton-hold, screen-wipe, navigation-progress (+ navigation-events)
@@ -287,20 +299,20 @@ app/                                  # The application: routes, UI and logic
     queries/                          #   TanStack queryOptions + mutation functions per domain (client)
     actions/                          #   Server Actions — only where no user token is needed
     firebase/                         #   client.ts: Firebase Auth; messaging.ts: Cloud Messaging for the push (the device token through our own worker); both loaded on demand (client-only)
-    notifications/                    #   the inbox's logic (M17): socket.ts (the live channel: Socket.IO, our own reconnection with a fresh token), effects.ts (what a notice leaves stale, the keys to read again, one refresh per target), destination.ts (where a notice leads, by its ids before its kind), inbox.ts (the inbox after each action), time.ts («Hace 5 min»), push.ts (what this browser remembers of the push: device id, registration, heartbeat, «Ahora no»)
+    notifications/                    #   the inbox's logic (M17): socket.ts (the live channel: Socket.IO, our own reconnection with a fresh token; notices and `data:changed`), effects.ts (what a notice or a signal leaves stale, the keys to read again, one refresh per target), destination.ts (where a notice leads, by its ids before its kind, the billing by family), local-writes.ts (whether this tab wrote just now: its own echoes), inbox.ts (the inbox after each action), time.ts («Hace 5 min»), push.ts (what this browser remembers of the push: device id, registration, heartbeat, «Ahora no»)
     auth/                             #   account (the account's model and rules, no zod), session-hint (the session and panel cookies), last-provider, token (the bearer's source), destination, sign-up (the plan)
     format/                           #   names, phone (+58), identity-document, date-of-birth — the forms' rules; money, appointment-time, dates — prices and billing amounts, days and hours; figures — the statistics' numbers, periods, weekdays and hours; distance — «3,2 km»
     search/                           #   the search's logic (M16): query.ts (the address ↔ the search ↔ the API's request), location.ts (the point, the app's radii), text.ts (matching case and accents aside), suggestions.ts, recent.ts and last-location.ts (what the browser remembers)
     maps/                             #   google-maps.ts: the Maps JavaScript API for the results' map, loaded on demand with the page's nonce (client-only)
     security/                         #   csp.ts (the nonce policy proxy.ts sends), rate-limit.ts (so many a minute per address, for the endpoints that spend Google's quota)
-    billing/                          #   banks.ts: the app's list of Venezuelan banks (the API publishes none); plan-benefits.ts: what a plan includes, from its limits (the landing's plans and the payment's)
+    billing/                          #   banks.ts: the app's list of Venezuelan banks (the API publishes none); plan-benefits.ts: what a plan includes, from its limits (the landing's plans and the payment's); payment-draft.ts: the payment left halfway (localStorage, seven days, no zod)
     seo/                              #   json-ld.ts (a schema.org document, serialized so a person's text cannot close its tag), specialist.ts (a public profile as a Physician or a Dentist: name, photos, specialties, offices, rating)
     reports/                          #   period.ts (the presets, the buckets), figures.ts (trends, the main currency, rankings), csv.ts (the spreadsheet)
     analytics/ · i18n/
     observability/                    #   report.ts (the seam), scrub.ts (what never leaves), sentry.ts
-    env.ts · public-env.ts · routes.ts · deep-links.ts · site.ts · support.ts · clipboard.ts · utils.ts · calendar.ts (.ics, Google Calendar)
+    env.ts · public-env.ts · routes.ts · deep-links.ts · site.ts · support.ts (the API's support lines as channels; read by data/support.ts and queries/support.ts) · clipboard.ts · utils.ts · calendar.ts (.ics, Google Calendar)
   hooks/                              # shared client hooks: use-session, use-notifications (the inbox, its count and the push, as the provider keeps them), use-sign-in-tracking, use-focus-heading, use-infinite-scroll, use-link-origin, use-device, use-in-app-browser, use-person-checks (a person's data as the API checks it), use-price-words, use-debounced-value, use-device-location (the position, asked for on a tap), use-fading-edges (which sides of a scrolling row have more beyond them)
-tests/                                # env.ts · dom.ts (what jsdom lacks, before React loads) · setup.ts · msw/ (server + handlers per domain) · factories/ · e2e/ (Playwright)
+tests/                                # env.ts · dom.ts (what jsdom lacks, before React loads) · setup.ts · msw/ (server + handlers per domain) · factories/ · e2e/ (Playwright; signed-in.ts signs in as a person does, §10)
 public/                               # .well-known/ (§6) · brand/ (logo.svg, logo-white.svg, icons) · illustrations/ · animations/ (the app's splash_logo.riv) · notifications-sw.js (the push's service worker, plain JavaScript)
 proxy.ts                              # Next 16's name for middleware: the CSP nonce per request, /.well-known excluded — nothing else
 instrumentation.ts · instrumentation-client.ts   # Sentry and PostHog, each only when its variable is set
@@ -375,16 +387,17 @@ Every route path is built from one place, `app/lib/routes.ts` (the app has
 
 - **Public pages** (`/`, `/s/[id]`, `/search`, legal, bridges): **Server
   Components**, `fetch` on the server with `next: { revalidate, tags }`.
-  Server-side calls are not subject to CORS, so the public profile and the
-  search's first page work today even though the API has not opened CORS
-  yet (§5).
+  Server-side calls are not subject to CORS: they never depended on the
+  API's allow-list (§5).
 - **Authenticated flows** (`/i`, `/a`, `/appointments`, `/account`, the
   booking, payment):
   **Client Components** + TanStack Query, calling the API from the browser
   with the Firebase ID token. These need the API's CORS allow-list
-  (REDOC-362). Until it ships, develop against MSW or the dev-only proxy in
-  `next.config.ts` (`/api-proxy/* → NEXT_PUBLIC_API_URL`), which **must not
-  exist in production builds**.
+  (REDOC-362): a closed list that answers `redoctorapp.com` and `www.`
+  (checked 2026-11-02), not `localhost` nor the Vercel previews. In
+  development they go through MSW or the dev-only proxy in `next.config.ts`
+  (`/api-proxy/* → NEXT_PUBLIC_API_URL`), which **must not exist in
+  production builds**.
 - **The notifications** (M17) live in the browser with the session: the
   inbox through TanStack Query (`GET /notifications/`, the one read that
   feeds the bell and the menu), the live channel over WebSocket (Socket.IO
@@ -397,11 +410,12 @@ Every route path is built from one place, `app/lib/routes.ts` (the app has
 - **Route handlers** only for things the browser must not do itself. Two
   cases, both the search's (M16): `/api/search` and `/api/search/suggestions`
   hand the browser the API's public search — the pages after the first, the
-  names the box suggests — because the browser cannot call the API (its
-  CORS, REDOC-362) and because the web's server caches each search for
-  every visitor (the endpoint takes 30 requests a minute from one address,
-  and from Vercel every visitor is one): no session, no token, the same
-  query the page's address carries, and the API's own answer back, parsed
+  names the box suggests — born when the browser could not call the API
+  (its CORS, REDOC-362), and kept because the web's server caches each
+  search for every visitor (the endpoint takes 30 requests a minute from
+  one address, and from Vercel every visitor is one): no session, no
+  token, the same query the page's address carries, and the API's own
+  answer back, parsed
   with the same contract on both sides; so many a minute per address, each
   endpoint counted apart (one address must not spend the API's minute for
   everyone). And `/api/places/suggestions` and
@@ -452,6 +466,16 @@ Every route path is built from one place, `app/lib/routes.ts` (the app has
   `https://api-dev.redoctorapp.com/api/v1/docs.json` — read it before
   writing a datasource; it is the contract. There is **no production API
   yet**: dev, preview and production of the web all point to `api-dev`.
+- **Any doubt about the contract: the OpenAPI and the API's code together,
+  read only** — the sibling clone `../redoctor-api`, branch `dev` (what
+  api-dev runs): `git -C ../redoctor-api show dev:<file>`, `grep`, `cat`;
+  never a checkout, pull, commit or new file. The OpenAPI says what an
+  endpoint takes and returns; the code says what it does (each error's
+  `details`, validations, side effects, rate limits). Routes and headers in
+  `src/shared/contracts/`, schemas in `src/shared/schemas/`, codes in
+  `src/shared/errors/error-codes.ts`, billing's errors per route in
+  `src/shared/contracts/billing.docs.ts`. Its `z.object`s are not strict:
+  a field it does not know is dropped in silence, never refused.
 - Auth: `Authorization: Bearer <Firebase ID token>`. Roles the API knows:
   `SUPER_ADMIN | ADMIN | SPECIALIST | PATIENT`. `GET /identity/me` returns
   `profiles.patient` and `profiles.specialist` (`exists`, `id`, `status`,
@@ -530,14 +554,50 @@ Every route path is built from one place, `app/lib/routes.ts` (the app has
   $ 25», «$ 25 – $ 50» (compact) and «Desde $ 25 hasta $ 50 (USD)»
   (detailed). Bolívar amounts and bank accounts come from the API's payment
   attempt, never from our configuration.
+- **Sprint 14 and REDOC-363 (checked in the API's code, `dev` `56bb6fd`,
+  2026-11-02):**
+  - Taking a plan is quoted, then confirmed: `POST /billing/me/checkout/quote`
+    creates nothing (no subscription, receipt, attempt or use of a coupon)
+    and is good for 72 h; `POST /billing/me/checkout` takes the plan and
+    reports its payment in one transaction, with an `Idempotency-Key` it
+    requires (400 ERR_1009; the same key with another body 422 ERR_1010, a
+    key still being answered 409 ERR_1011; a failed run frees the key). A
+    quote that no longer holds answers 409 ERR_5125 with `details.reason`
+    (`RATE`, `PRICE`, `COUPON`, `BALANCE`, `EXPIRED`) and the new quote in
+    `details.quote`, creating nothing; the quoted rate holds while `paidOn`
+    falls on a day it was the day's. An upgrade's preview carries its quote
+    (`quote`, `payableUsd`, `totalVes`, `destination`) and
+    `change-plan` takes `quoteId`, `method` and `payment`; a downgrade with
+    offices over the plan answers ERR_5076 unless `acceptOfficeDeactivation`
+    (the preview names them, `officesToDeactivate`). Plans carry `priceVes`
+    (`{amount, rate, rateValueDate}`); the subscription its plan's limits,
+    `openInvoice` and `lastPayment`. A method with no account is `null` in
+    `destination` (starting a payment with it: ERR_5129). Do not use
+    `POST /billing/me/subscription/checkout` (REDOC-368).
+  - `GET /config/support` is public (30 a minute per address), never 404s
+    and may come empty. `DELETE /identity/me` answers 204, twice too (an
+    admin: 403 ERR_2019). `POST /reviews/appointments/{id}` takes
+    `isAnonymous`; `GET /reviews/pending` says `isSensitive`. A booking's
+    `specialtyId` is optional. The public profile carries each office's
+    `services` and each specialty's `specialtyId`. `GET`/`PATCH
+    /notifications/preferences` (`dailySummaryEmail`, specialists).
+  - Every request from a browser names it (`X-Device-Id`, ≤128 of
+    `[\w.:-]`; the push's device id): the device that acted gets no push of
+    its own and its socket events carry `originDeviceId`; the channel also
+    emits `data:changed` `{scope, id, originDeviceId}`, much of what reaches
+    a specialist since 2026-10-26 comes only that way. Notices of billing
+    carry `{kind, billingEventType (dotted), aggregateId}`, kinds with
+    variants after them; the push's data adds `notificationId`.
+  - The API's CORS (`src/core/http/cors.options.ts`, REDOC-362) is open
+    to the origins in `CORS_ORIGINS`, a closed list: `redoctorapp.com` and
+    `www.` answer, `localhost` and the Vercel previews do not (checked
+    2026-11-02). It allows `Authorization`, `Content-Type` and
+    `X-Device-Id` only: `Idempotency-Key` is blocked from redoctorapp.com
+    until REDOC-371 ships. The web sends it only where it is required.
 - Pending on the API side (do not work around silently; keep the hook
-  isolated): CORS allow-list and pilot environment (REDOC-362), business
-  configuration endpoint with `webPaymentUrl` and support phones (REDOC-357),
-  services inside the public profile (REDOC-367), invitation hardening
-  (REDOC-314/315/316), anonymous reviews (REDOC-251), account deletion
-  `DELETE /identity/me` (REDOC-352), one checkout with a quote for paying
-  and changing plan (REDOC-363/368: the payment's two steps and the
-  change of plan get rebuilt on it), and a public listing of the visible
+  isolated): `Idempotency-Key` in the CORS (REDOC-371, Sprint 15), the
+  Vercel previews in `CORS_ORIGINS` (REDOC-362), invitation
+  hardening (REDOC-314/315/316), and a public listing of the visible
   specialists for the sitemap (ids and `updatedAt`; until then the web
   derives it from the public search, `app/lib/data/public-profiles.ts`,
   §13 Decided 2026-10-14), devices addressed by Firebase Installation ID
@@ -1135,7 +1195,14 @@ search's strip of days).
   notice, the session for a profile notice, a patient's pending reviews
   when a consultation ends — invalidated by key prefix, once per target,
   600 ms after the last notice; also for what arrived while the tab was
-  hidden, found by reading the inbox again on the way back. The first inbox
+  hidden, found by reading the inbox again on the way back. The signals
+  (`data:changed`, REDOC-358) name what to read again by their scope
+  (`signalTargets`); after 15 s without the channel everything is read
+  again. A notice or a signal this browser caused (`originDeviceId`, the
+  `X-Device-Id` every request carries) shows no banner, and the tab that
+  wrote reads nothing again — another tab of the same browser does
+  (`app/lib/notifications/local-writes.ts`). A push tapped is read by its
+  `notificationId`. The first inbox
   is the past and refreshes nothing. Opening a notice reads it and goes
   where its ids lead (`destination.ts`); the inbox is a menu, never a page,
   and shows no banner while open.
@@ -1206,8 +1273,17 @@ pnpm check          # typecheck + lint + format:check + test + build
   a server started by hand on :3300 must be stopped.
 - **Tests**: domain logic, mappers and zod schemas (unit); `app/ui`
   primitives (component + axe); every API call behind MSW; e2e for the
-  critical patient path (open `/i/{token}` → sign in (mocked) → claim →
-  confirm) and for the `.well-known` files.
+  `.well-known` files, the public pages and, signed in, the critical
+  patient path (open `/i/{token}` → sign in → claim → confirm,
+  `critical-path.spec.ts`) and every link that needs a session
+  (`session-links.spec.ts`, §1). A signed-in spec imports `test` from
+  `tests/e2e/signed-in.ts`: Firebase's SDK runs whole through its popup
+  flow while Google's and Apple's window and Firebase's endpoints answer
+  in the browser (`fake-provider.ts`); the API answers from a store over
+  the unit tests' MSW handlers, so what one page does is there on the
+  next (`fake-api.ts`); the live channel connects and stays quiet; a CSP
+  violation or an uncaught error fails the test. Pages read on the server
+  (`/s`, `/book`) still read api-dev's test profile.
 - **Definition of done**: `pnpm check` green · a11y checked · i18n keys
   added · tokens only · budgets respected · no `console.*` left · README /
   `.env.example` / this file updated if something changed · the change was
@@ -1273,6 +1349,13 @@ pnpm check          # typecheck + lint + format:check + test + build
   like the ID token: the token travels to the API alone, and the browser
   drops it when the person signs out. The device id is this browser's,
   made once and never sent anywhere but the API.
+- **This browser's device id** (the push's, a UUID made once) travels in
+  every request to our API (`X-Device-Id`, REDOC-358) and nowhere else.
+- **A payment left halfway** (`app/lib/billing/payment-draft.ts`, the
+  owner's call of 2026-11-02) holds the reference and where the payment
+  came from: in this browser's localStorage for seven days at most, one
+  account's at a time, forgotten when the payment ends, on sign-out and
+  when another account signs in; never sent anywhere.
 - **The device's position** is asked for only on a tap («Usar mi
   ubicación»; `Permissions-Policy: geolocation=(self)`), rounded to two
   decimals — about a kilometre — before anything keeps it, and travels
@@ -1318,13 +1401,11 @@ Environments: `development` (local), `preview` (Vercel PR), `production`
 | `NEXT_PUBLIC_IOS_BUNDLE_ID` | all | `com.redoctor.mobileapp` |
 | `NEXT_PUBLIC_APPLE_TEAM_ID` | all | `SLAQ84BD94` |
 | `NEXT_PUBLIC_ANDROID_PACKAGE` | all | `com.redoctor.mobileapp` |
-| `NEXT_PUBLIC_SUPPORT_WHATSAPP` | all | `Redoctor\|+584227362867` (`Label\|number`); provisional until REDOC-357 |
-| `NEXT_PUBLIC_SUPPORT_PHONES` | all | `Soporte 1\|+584145598216,Soporte 2\|+584245582129`; provisional until REDOC-357 |
 | `GOOGLE_PLACES_API_KEY` | all (server only) | Google Places for the search's places (M16), asked by the web's server; never `NEXT_PUBLIC_`. The app's key for now (§11). **Empty** = the box offers no places |
 | `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | all | The search's map (M16): a browser key of the web's own, restricted by referrer, with the Maps JavaScript API. **Empty** = no map |
 | `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID` | all | Optional: a Cloud map style for the search's map; without one, Google's `DEMO_MAP_ID` (Advanced Markers need one) |
 | `NEXT_PUBLIC_FIREBASE_VAPID_KEY` | all | The web push of the notifications (M17): the project's public VAPID key (Firebase Console → Project settings → Cloud Messaging → Web Push certificates). Public by design. **Empty** = no push; the bell, the inbox and the live channel work all the same |
-| `API_PROXY_TARGET` | development only | Dev-only proxy for authenticated calls until CORS (REDOC-362); must be absent in preview/production. Without it, `next dev` proxies to `NEXT_PUBLIC_API_URL` |
+| `API_PROXY_TARGET` | development only | Dev-only proxy for authenticated calls (the API's CORS answers the production origins only, REDOC-362); must be absent in preview/production. Without it, `next dev` proxies to `NEXT_PUBLIC_API_URL` |
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | GitHub Actions secret | Only if previews have Deployment Protection: Playwright and Lighthouse use it for one request and browse with Vercel's cookie |
 | `PLAYWRIGHT_BASE_URL` · `E2E_SPECIALIST_ID` | testing | Run the e2e suite against a deployed URL; the public profile the e2e and Lighthouse runs use (api-dev's test profile by default) |
 
@@ -1341,9 +1422,11 @@ written out in full, or Next.js does not inline it).
 2. PostHog event list and funnel definition (M12).
 3. Patient screens design (Figma) — the designer is working on them; the
    landing design and copy are hers too («Landing de Redoctor» doc).
-4. When REDOC-362 (CORS, pilot environment) and REDOC-357 (configuration
-   endpoint) ship; until then the dev-only proxy and the provisional
-   constants stay isolated.
+4. The API's CORS for the Vercel previews (REDOC-362; `redoctorapp.com`
+   and `www.` are allowed, checked 2026-11-02) and for `Idempotency-Key`
+   (REDOC-371); until then the dev-only proxy stays for development.
+   REDOC-357 (the configuration endpoint) shipped: the web reads its
+   support lines (§13, Decided 2026-11-02).
 5. Legal texts (privacy, terms, account deletion) — the lawyer's review of
    the drafts of 2026-10-14 (Decided, «The legal pages (M10) as drafted»):
    the company's identification (`legal.entity`), the citations, the
@@ -1365,6 +1448,12 @@ written out in full, or Next.js does not inline it).
 10. Figma vs this file: the Snackbar is filled with color (blue, green, red,
     yellow, dark grey with white text) while our Toast is a light card; the
     «secondary» button is blue outline in Figma and green in §8.
+11. A chosen card's description (`ChoiceCards`: «Soy Ana Pérez.» under
+    «Para mí»): grey-600 on the chosen blue-50 measures 3.8:1, below AA's
+    4.5:1 (found by the signed-in e2e, 2026-10-17; unchosen, on white, it
+    passes). grey-700 would measure 5.5:1, the card's own blue 8.4:1. The
+    e2e lists it apart (`pendingContrast`, tests/e2e/helpers.ts) until
+    decided.
 
 ### Decided (2026-10-08)
 
@@ -2653,17 +2742,125 @@ written out in full, or Next.js does not inline it).
     and later) and a real Firefox; the e2e and the unit tests run in
     Chromium, WebKit and jsdom.
 
+### Decided (2026-10-17)
+
+- **The signed-in e2e (the owner's «adelante con todas las pruebas que
+  puedas hacer de la prueba automática del camino crítico», and his rule
+  of the same message, now in §1).** Built without the Firebase Auth
+  emulator (§10 says how). On both phones (WebKit and Chromium):
+  - **The critical path** (`critical-path.spec.ts`): a new patient opens
+    the invitation, signs in with Google, finishes the sign-up from the
+    invitation's data, claims it confirming in the same step and finds it
+    confirmed, after a reload too; a patient with an account claims with
+    Apple and confirms on the appointment's page once its window opens; a
+    parent claims for a child with no document.
+  - **Every link with a session** (`session-links.spec.ts`): the
+    reminder's `/a` (sign in, confirm; reschedule and cancel), another
+    account's appointment, the bar's «Entrar», an invitation already
+    claimed, «Mis citas» behind its review wall, «Mis citas» and the
+    booking for an account with no sign-up, the booking from the profile
+    with an hour just taken, the sign-up link in another browser, email
+    15's stars, a session the API refuses, a specialist on their
+    patient's invitation, the specialist's emailed links, signing out,
+    and Instagram's browser.
+  - **Found and left for the owner:** a chosen card's contrast (open
+    decision 11), and the booking summary's rows, which put their
+    «Editar» button with the term in a `<div>` inside the `<dl>` (HTML
+    does not allow it: axe's `definition-list` and `dlitem`), listed
+    apart in the spec until fixed.
+
+### Decided (2026-11-02)
+
+- **The API's sprint 14 and REDOC-363 in the web (the owner's «integrar
+  todas las cosas nuevas del api… adelante», from the mobile agent's prompt
+  of the same day; every fact checked in the API's code, §5).** His four
+  calls the same day: the payment's draft in localStorage, seven days;
+  `/delete-account` as self-service; the daily summary's email switch on the
+  panel's home; the checkout built on the API's contract and not published
+  until REDOC-371 is on api-dev.
+  - **Taking a plan at «Confirmar» (REDOC-363, pedido 11):** quoted as the
+    plan opens (nothing is created; whoever only looks is tied to nothing),
+    the first step's totals are the quote's — the plan, the coupon, the
+    balance it uses, what is left to pay and its bolívares at the day's
+    rate —; the method only picks the account, and only those with one are
+    offered (none: support); «Confirmar» takes the plan and reports its
+    payment in one call, its `Idempotency-Key` kept while the body is the
+    same; nothing to pay leaves «Activar mi plan» (a coupon, or the
+    balance). A lost answer, or the key still being answered (ERR_1011),
+    is looked for in the subscription before anything goes again. ERR_5125
+    adopts the quote of today — at once and in silence when it charges the
+    same, else with the app's sheet («La tasa del día cambió»…, its bullets,
+    support), what the person typed kept; ERR_5124, 5126 and 5127 quote
+    again. The plans show their price in bolívares. An upgrade is paid the
+    same way on its preview's quote: nothing written until «Confirmar».
+    Built in `use-quoted-payment.ts`, `pay-view.tsx` (`QuotedPayView`,
+    `InvoicePayView`), `quote-changed-sheet.tsx`.
+  - **The draft** (`app/lib/billing/payment-draft.ts`): saved from the
+    method's choice, taken up from «Tienes un pago a medias» or by opening
+    the same plan: quoted anew, the same rate keeps its quote and its key;
+    another rate shows today's price and keeps the quote from then, which
+    still confirms what was paid with it (the API honours it by `paidOn`).
+  - **A downgrade with more active offices than the new plan** names the
+    ones that turn off (the newest; their appointments stay) and asks to
+    accept it (`acceptOfficeDeactivation`), the owner's call of
+    2026-10-02.
+  - **A receipt that exists** is paid as before (attempt, then report); one
+    the balance settled meanwhile (ERR_5081) is read again.
+  - **Support from the API (REDOC-357):** on the server from the Data Cache
+    (five minutes; the endpoint takes 30 a minute per address) for the
+    legal pages and `AppAccess`, in the browser for the flows
+    (`useSupportChannels`, an hour, `SupportLinks`); every line as the admin
+    wrote it, the first WhatsApp the main one; none, and no way to support
+    is offered. `NEXT_PUBLIC_SUPPORT_*` are gone.
+  - **Notifications (REDOC-358, 164):** `X-Device-Id` on every browser
+    request; `data:changed` read by scope; a notice this browser caused
+    shows no banner; after 15 s without the channel everything is read
+    again; a push tapped is read by its `notificationId` (the worker tells
+    the tab, or opens it with `?notification=`, which the page drops);
+    notices lead by family (the billing variants, the daily summary to its
+    day, a specialty to «Mis especialidades») — the worker keeps the same
+    rule, a test keeps them equal. The daily summary's email on `/panel`.
+  - **Errors:** the app's map for the codes the web can meet (ERR_1005 by
+    `details`, 1011, 2011, 2019, 5050, 5081, 5092, 5125–5129) and 429 by
+    its status. A sign-up's phone or document another account has is said
+    under its field.
+  - **Reviews (REDOC-251):** «Hacer esta reseña de forma anónima», ticked
+    by default under a sensitive specialty, the notice following it;
+    `isAnonymous` always sent.
+  - **A booking's specialty (the app's «option B»):** sent only when the
+    profile practises one branch; else none, and the booking goes on (it
+    was blocked without one).
+  - **Deleting one's account (REDOC-352):** on `/delete-account`, signed
+    in: what happens to each thing by role, in the app's words; signing in
+    again with the same provider; Apple's permission withdrawn first (if it
+    fails, nothing is deleted); `DELETE /identity/me`; the session closed.
+    An admin is not offered it. The page's text and the privacy policy's
+    retention say the account goes at once; support stays for whoever
+    cannot sign in.
+  - **Prices on the profile (REDOC-367):** each office's reasons and prices
+    come with the public profile: «Por motivo» or «Estándar», «A consultar»;
+    the booking reuses them.
+  - **Where the web differs from the app, on purpose and to confirm:** the
+    draft is in the browser's storage, not encrypted (no keychain in a
+    browser); a downgrade with offices to turn off is accepted here while
+    the app (v0.177.0) still refuses it; the daily summary's switch exists
+    only here; a reason on the profile does not open the booking with it
+    chosen (the app's card does); the deletion keeps support for whoever
+    cannot sign in.
+  - **Open:** REDOC-371 (Sprint 15, Heyscar's): the API's CORS must allow
+    `Idempotency-Key`; until then contracting a plan fails on
+    redoctorapp.com (development works through the proxy). The key goes
+    only where the API requires it (the checkout): an optional one
+    elsewhere would break those writes in production today. To ask too:
+    the Vercel previews in `CORS_ORIGINS` (`redoctorapp.com` and `www.`
+    answer, checked 2026-11-02).
+
 ### Improvements noted (not scheduled)
 
 - The FAQ's closed answers are not in the HTML (Radix renders them on
   opening): search engines and Ctrl+F miss five of six. `forceMount` would
   break the closing animation as Radix measures it; worth a proper look
   when the landing's SEO is worked on.
-
-- The e2e of the critical path with a mocked sign-in (§10: open `/i` →
-  sign in → claim → confirm) needs a way to sign in under Playwright —
-  the Firebase Auth emulator is the clean one. Until then the signed-in
-  flows of `/i` and `/a` are covered by the component tests (MSW).
 
 ---
 

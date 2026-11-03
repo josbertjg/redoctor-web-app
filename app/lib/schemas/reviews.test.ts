@@ -60,24 +60,37 @@ describe('toSpecialistReviews', () => {
 });
 
 describe('toReviewBody', () => {
-  it('sends the stars and a trimmed comment, or no comment at all', () => {
-    expect(toReviewBody({ rating: 5, comment: '  Muy puntual.  ' })).toEqual({
-      rating: 5,
-      comment: 'Muy puntual.',
+  it('sends the stars, a trimmed comment or none, and the patient’s choice always', () => {
+    expect(
+      toReviewBody({
+        rating: 5,
+        comment: '  Muy puntual.  ',
+        isAnonymous: false,
+      }),
+    ).toEqual({ rating: 5, comment: 'Muy puntual.', isAnonymous: false });
+    expect(
+      toReviewBody({ rating: 4, comment: '   ', isAnonymous: true }),
+    ).toEqual({ rating: 4, isAnonymous: true });
+    expect(toReviewBody({ rating: 3, isAnonymous: false })).toEqual({
+      rating: 3,
+      isAnonymous: false,
     });
-    expect(toReviewBody({ rating: 4, comment: '   ' })).toEqual({ rating: 4 });
-    expect(toReviewBody({ rating: 3 })).toEqual({ rating: 3 });
   });
 
-  it('refuses what the API would refuse', () => {
-    expect(() => toReviewBody({ rating: 0 })).toThrow();
-    expect(() => toReviewBody({ rating: 6 })).toThrow();
-    expect(() => toReviewBody({ rating: 4.5 })).toThrow();
+  it('refuses what the API would refuse, and a misspelt field it would drop', () => {
+    expect(() => toReviewBody({ rating: 0, isAnonymous: false })).toThrow();
+    expect(() => toReviewBody({ rating: 6, isAnonymous: false })).toThrow();
+    expect(() => toReviewBody({ rating: 4.5, isAnonymous: false })).toThrow();
     expect(() =>
-      toReviewBody({ rating: 5, comment: 'a'.repeat(1001) }),
+      toReviewBody({
+        rating: 5,
+        comment: 'a'.repeat(1001),
+        isAnonymous: false,
+      }),
     ).toThrow();
+    // The API would silently drop `isAnonimo` and decide for the patient.
     expect(
-      reviewBodySchema.safeParse({ rating: 5, anonymous: true }).success,
+      reviewBodySchema.safeParse({ rating: 5, isAnonimo: true }).success,
     ).toBe(false);
   });
 });

@@ -4,8 +4,9 @@ import { apiFetch } from '../api/client';
 import { isApiError } from '../api/errors';
 import { createWriteOnceGuard } from '../api/write-once';
 import {
-  appointmentListResponseSchema,
+  pendingReviewListResponseSchema,
   type AppointmentResponse,
+  type PendingReview,
 } from '../schemas/appointments';
 import {
   createdReviewResponseSchema,
@@ -29,11 +30,11 @@ export const reviewKeys = {
 async function readPending(
   user: TokenHolder,
   signal?: AbortSignal,
-): Promise<AppointmentResponse[]> {
+): Promise<PendingReview[]> {
   const { appointments } = await apiFetch({
     path: '/reviews/pending',
     token: await user.getToken(),
-    schema: appointmentListResponseSchema,
+    schema: pendingReviewListResponseSchema,
     ...(signal ? { signal } : {}),
   });
   return appointments;
@@ -55,9 +56,9 @@ const instant = (iso: string | null | undefined) => {
 };
 
 /** The oldest consultation first, by when it ended, as the app orders the wall. */
-export function sortPendingReviews(
-  appointments: readonly AppointmentResponse[],
-): AppointmentResponse[] {
+export function sortPendingReviews<T extends AppointmentResponse>(
+  appointments: readonly T[],
+): T[] {
   return [...appointments].sort(
     (a, b) =>
       instant(a.slot.endsAtUtc ?? a.slot.startsAtUtc) -

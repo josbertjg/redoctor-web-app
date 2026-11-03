@@ -36,6 +36,23 @@ const noContent = () => new HttpResponse(null, { status: 204 });
  * would otherwise take `device-tokens` for an id.
  */
 export const notificationsHandlers = [
+  // The daily summary by email (REDOC-359): on by default.
+  http.get(apiUrl('/notifications/preferences'), ({ request }) =>
+    isStranger(request)
+      ? unauthorized()
+      : HttpResponse.json({ dailySummaryEmail: true }),
+  ),
+
+  http.patch(apiUrl('/notifications/preferences'), async ({ request }) => {
+    if (isStranger(request)) return unauthorized();
+    const body = (await request.json()) as { dailySummaryEmail?: unknown };
+    return typeof body.dailySummaryEmail === 'boolean'
+      ? HttpResponse.json({ dailySummaryEmail: body.dailySummaryEmail })
+      : HttpResponse.json(errorEnvelope('ERR_1001', 'Validation'), {
+          status: 400,
+        });
+  }),
+
   respond(false),
   respond(true),
 
