@@ -59,16 +59,42 @@ test('the landing leads to the sign-in page', async ({ page }) => {
   await expect(page).toHaveURL(/\/sign-in$/);
 });
 
-test('the sign-up asks a stranger to sign in first, keeping the invitation', async ({
+test('the sign-up lets a stranger create the account right there, keeping the invitation', async ({
   page,
 }) => {
   await page.goto('/sign-up?redirect=/i/tok');
 
-  await expect(page).toHaveURL(
-    /\/sign-in\?redirect=%2Fsign-up%3Fredirect%3D%252Fi%252Ftok$/,
-  );
+  // An invitation is for a patient: no «¿Quién eres?», and no detour.
+  await expect(
+    page.getByRole('heading', {
+      level: 1,
+      name: 'Crea tu cuenta como paciente',
+    }),
+  ).toBeVisible();
   await expect(
     page.getByRole('button', { name: 'Continuar con Google' }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/sign-up\?redirect=/);
+  expect(await auditAccessibility(page)).toEqual([]);
+});
+
+test('a specialist starts the sign-up from «¿Quién eres?», on the address', async ({
+  page,
+}) => {
+  await page.goto('/sign-up');
+
+  await page.getByRole('button', { name: /^Especialista/ }).click();
+
+  await expect(page).toHaveURL(/\/sign-up\?as=specialist$/);
+  await expect(
+    page.getByRole('heading', {
+      level: 1,
+      name: 'Crea tu cuenta como especialista',
+    }),
+  ).toBeVisible();
+  await page.goBack();
+  await expect(
+    page.getByRole('heading', { level: 1, name: '¿Quién eres?' }),
   ).toBeVisible();
 });
 

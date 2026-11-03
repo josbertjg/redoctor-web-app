@@ -7,22 +7,36 @@ import {
 } from './account';
 
 /*
- * What `/sign-up` asks of the person (M3, owner's scope of 2026-10-12):
- * the web signs up patients only. A specialist's sign-up happens in the
- * app, so the web points them there — to support while the app is in
- * testing, to the store once it is published.
+ * What `/sign-up` asks of the person (M3; specialists too since the owner's
+ * word of 2026-11-03). It starts as the app's does: who they are, then the
+ * account — Google or Apple, in place —, then the form of the role chosen.
+ * A specialist's sign-up is finished in the app (their specialties and
+ * licence), so the web creates the account and hands them over.
  *
  * Like the app, the patient's sign-up comes in two parts: the names and the
  * consents, and later, only when a flow needs it, the personal data. Two
  * flows need it on the web, as in the app: claiming an invitation (M4) and
  * booking from a profile (M15); then both parts share one screen
- * (AGENTS.md §1: «one screen»).
+ * (AGENTS.md §1: «one screen»), and the flow says the person is a patient.
  */
 
+/** Who the person says they are, in the address of the sign-up (`?as=`). */
+export type SignUpRole = 'patient' | 'specialist';
+
+export function signUpRoleOf(
+  value: string | null | undefined,
+): SignUpRole | null {
+  return value === 'patient' || value === 'specialist' ? value : null;
+}
+
 export type SignUpPlan =
-  /** A brand-new account outside an invitation: patient or specialist? */
+  /** Patient or specialist? */
   | { step: 'choose-role' }
+  /** A stranger: the account first, with Google or Apple, for the role chosen. */
+  | { step: 'create'; role: SignUpRole; canGoBack: boolean }
   | { step: 'patient'; register: boolean; personalData: boolean }
+  /** A brand-new account that chose to be a specialist: the app's form. */
+  | { step: 'specialist' }
   /** A specialist's open sign-up: it is finished in the app. */
   | { step: 'specialist-in-app' }
   /** Nothing to ask: on to where the person was going. */
@@ -72,16 +86,27 @@ export function invitationOf(
   return { token: decoded, forSelf: url.searchParams.get('for') === 'self' };
 }
 
+/**
+ * `account` is `null` for a stranger. A flow that needs a patient (an
+ * invitation, a booking) says the role itself: the person is never asked.
+ */
 export function planSignUp(
-  account: Account,
+  account: Account | null,
   redirect: string | null | undefined,
+  role: SignUpRole | null,
 ): SignUpPlan {
   const personalData = flowNeedsPersonalData(redirect);
+  const chosen = personalData ? 'patient' : role;
 
+  if (account === null) {
+    return chosen === null
+      ? { step: 'choose-role' }
+      : { step: 'create', role: chosen, canGoBack: !personalData };
+  }
   if (needsSignUp(account)) {
-    // An invitation is for a patient: nobody needs to say who they are.
-    return personalData
-      ? { step: 'patient', register: true, personalData: true }
+    if (chosen === 'specialist') return { step: 'specialist' };
+    return chosen === 'patient'
+      ? { step: 'patient', register: true, personalData }
       : { step: 'choose-role' };
   }
   if (!account.patient.exists && specialistMustFinishInApp(account)) {

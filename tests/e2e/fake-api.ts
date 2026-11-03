@@ -6,6 +6,7 @@ import { z } from 'zod';
 import {
   patientCompletionBodySchema,
   patientRegistrationBodySchema,
+  specialistRegistrationBodySchema,
 } from '@/app/lib/schemas/identity';
 import { claimBodySchema } from '@/app/lib/schemas/invitations';
 import { reviewBodySchema } from '@/app/lib/schemas/reviews';
@@ -22,6 +23,7 @@ import {
   buildNewAccountMeResponse,
   buildSpecialistMeResponse,
   patientFacet,
+  specialistFacet,
 } from '../factories/identity';
 import { buildCreatedReview } from '../factories/reviews';
 import { apiUrl, errorEnvelope } from '../msw/api-url';
@@ -248,9 +250,26 @@ export class FakeApi {
       http.post(apiUrl('/identity/register'), async ({ request }) => {
         const me = callerOf(request);
         if (me === null) return unauthorized();
-        const body = patientRegistrationBodySchema.safeParse(
-          await request.json(),
-        );
+        const json: unknown = await request.json();
+        // A specialist's sign-up (the web's since 2026-11-03): the app
+        // registers the specialties next.
+        const specialist = specialistRegistrationBodySchema.safeParse(json);
+        if (specialist.success) {
+          const created: Me = {
+            ...me,
+            displayName: `${specialist.data.firstName} ${specialist.data.lastName}`,
+            role: 'SPECIALIST',
+            registrationStatus: 'PENDING_COMPLETE_SPECIALIST',
+            profiles: {
+              patient: { exists: false },
+              specialist: specialistFacet({ status: 'PENDING_SPECIALTIES' }),
+            },
+            visibilityStatus: 'PROFILE_INCOMPLETE',
+          };
+          setMe(request, created);
+          return HttpResponse.json(created);
+        }
+        const body = patientRegistrationBodySchema.safeParse(json);
         if (!body.success) return badRequest();
         const registered: Me = {
           ...me,

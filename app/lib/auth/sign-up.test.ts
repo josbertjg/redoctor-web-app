@@ -6,6 +6,7 @@ import {
   invitationOf,
   planSignUp,
   signUpPurposeOf,
+  signUpRoleOf,
 } from './sign-up';
 import { meResponseSchema, toAccount } from '../schemas/identity';
 
@@ -56,8 +57,8 @@ describe('flowNeedsPersonalData', () => {
 
 describe('planSignUp', () => {
   it('asks a brand-new account who they are, unless an invitation says it', () => {
-    expect(planSignUp(brandNew, null)).toEqual({ step: 'choose-role' });
-    expect(planSignUp(brandNew, '/i/tok')).toEqual({
+    expect(planSignUp(brandNew, null, null)).toEqual({ step: 'choose-role' });
+    expect(planSignUp(brandNew, '/i/tok', null)).toEqual({
       step: 'patient',
       register: true,
       personalData: true,
@@ -65,21 +66,21 @@ describe('planSignUp', () => {
   });
 
   it('asks a registered patient for the personal data only when claiming or booking', () => {
-    expect(planSignUp(registeredPatient, '/i/tok')).toEqual({
+    expect(planSignUp(registeredPatient, '/i/tok', null)).toEqual({
       step: 'patient',
       register: false,
       personalData: true,
     });
-    expect(planSignUp(registeredPatient, '/book/abc')).toEqual({
+    expect(planSignUp(registeredPatient, '/book/abc', null)).toEqual({
       step: 'patient',
       register: false,
       personalData: true,
     });
-    expect(planSignUp(registeredPatient, null)).toEqual({ step: 'done' });
+    expect(planSignUp(registeredPatient, null, null)).toEqual({ step: 'done' });
   });
 
   it('asks a brand-new account booking for both parts, as a patient', () => {
-    expect(planSignUp(brandNew, '/book/abc')).toEqual({
+    expect(planSignUp(brandNew, '/book/abc', null)).toEqual({
       step: 'patient',
       register: true,
       personalData: true,
@@ -95,12 +96,120 @@ describe('planSignUp', () => {
         specialist: { exists: true, status: 'PENDING_KYC' },
       },
     });
-    expect(planSignUp(specialist, null)).toEqual({ step: 'specialist-in-app' });
+    expect(planSignUp(specialist, null, null)).toEqual({
+      step: 'specialist-in-app',
+    });
   });
 
   it('asks nothing of a complete account', () => {
-    expect(planSignUp(account({}), '/i/tok')).toEqual({ step: 'done' });
-    expect(planSignUp(account({}), null)).toEqual({ step: 'done' });
+    expect(planSignUp(account({}), '/i/tok', null)).toEqual({ step: 'done' });
+    expect(planSignUp(account({}), null, null)).toEqual({ step: 'done' });
+  });
+});
+
+describe('planSignUp, for a stranger', () => {
+  it('asks who they are', () => {
+    expect(planSignUp(null, null, null)).toEqual({ step: 'choose-role' });
+  });
+
+  it('offers the providers for the role chosen, with the way back', () => {
+    expect(planSignUp(null, null, 'specialist')).toEqual({
+      step: 'create',
+      role: 'specialist',
+      canGoBack: true,
+    });
+    expect(planSignUp(null, null, 'patient')).toEqual({
+      step: 'create',
+      role: 'patient',
+      canGoBack: true,
+    });
+  });
+
+  it('creates a patient account for an invitation or a booking, whatever the role', () => {
+    expect(planSignUp(null, '/i/tok', null)).toEqual({
+      step: 'create',
+      role: 'patient',
+      canGoBack: false,
+    });
+    expect(planSignUp(null, '/book/abc', 'specialist')).toEqual({
+      step: 'create',
+      role: 'patient',
+      canGoBack: false,
+    });
+  });
+});
+
+describe('planSignUp, with a role chosen', () => {
+  it('asks a brand-new account the form of the role it chose', () => {
+    expect(planSignUp(brandNew, null, 'patient')).toEqual({
+      step: 'patient',
+      register: true,
+      personalData: false,
+    });
+    expect(planSignUp(brandNew, null, 'specialist')).toEqual({
+      step: 'specialist',
+    });
+  });
+
+  it('lets an invitation decide, whatever the role', () => {
+    expect(planSignUp(brandNew, '/i/tok', 'specialist')).toEqual({
+      step: 'patient',
+      register: true,
+      personalData: true,
+    });
+  });
+
+  it('is done for a registered account whatever the role', () => {
+    expect(planSignUp(account({}), null, 'specialist')).toEqual({
+      step: 'done',
+    });
+  });
+
+  it('sends every open specialist sign-up to the app, and not a review', () => {
+    const specialistAt = (status: string, registrationStatus: string) =>
+      account({
+        role: 'SPECIALIST',
+        registrationStatus,
+        profiles: {
+          patient: { exists: false },
+          specialist: { exists: true, status },
+        },
+      });
+    expect(
+      planSignUp(
+        specialistAt(
+          'PENDING_PHONE_VERIFICATION',
+          'PENDING_PHONE_VERIFICATION',
+        ),
+        null,
+        'specialist',
+      ),
+    ).toEqual({ step: 'specialist-in-app' });
+    expect(
+      planSignUp(
+        specialistAt('PENDING_SPECIALTIES', 'PENDING_COMPLETE_SPECIALIST'),
+        null,
+        null,
+      ),
+    ).toEqual({ step: 'specialist-in-app' });
+    expect(
+      planSignUp(
+        specialistAt('WAITING_ADMIN_REVIEW', 'WAITING_ADMIN_REVIEW'),
+        null,
+        null,
+      ),
+    ).toEqual({ step: 'done' });
+  });
+});
+
+describe('signUpRoleOf', () => {
+  it('reads the role the address names, and nothing else', () => {
+    expect(signUpRoleOf('patient')).toBe('patient');
+    expect(signUpRoleOf('specialist')).toBe('specialist');
+    expect(signUpRoleOf('admin')).toBeNull();
+    expect(signUpRoleOf('')).toBeNull();
+    expect(signUpRoleOf(null)).toBeNull();
+    expect(signUpRoleOf(undefined)).toBeNull();
   });
 });
 

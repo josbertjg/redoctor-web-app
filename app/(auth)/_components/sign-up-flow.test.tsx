@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react';
+
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { meResponseSchema, toAccount } from '@/app/lib/schemas/identity';
 
@@ -20,7 +22,11 @@ import {
 } from '../../../tests/factories/identity';
 import { validToken } from '../../../tests/msw/handlers/identity';
 
-const router = vi.hoisted(() => ({ replace: vi.fn(), push: vi.fn() }));
+const router = vi.hoisted(() => ({
+  replace: vi.fn(),
+  push: vi.fn(),
+  listeners: new Set<() => void>(),
+}));
 const wipe = vi.hoisted(() => ({
   covered: null as (() => unknown) | null,
 }));
@@ -31,11 +37,39 @@ vi.mock('@/app/ui/motion/screen-wipe', () => ({
     return new Promise<void>(() => undefined);
   },
 }));
-vi.mock('next/navigation', () => ({
-  useRouter: () => router,
-  usePathname: () => '/sign-up',
-  useSearchParams: () => new URLSearchParams(),
-}));
+vi.mock('next/navigation', async () => {
+  const { useSyncExternalStore } = await import('react');
+  const subscribe = (listener: () => void) => {
+    router.listeners.add(listener);
+    return () => {
+      router.listeners.delete(listener);
+    };
+  };
+  return {
+    useRouter: () => ({ replace: router.replace, push: router.push }),
+    usePathname: () => window.location.pathname,
+    // Next.js keeps useSearchParams in step with pushState: so does the mock.
+    useSearchParams: () =>
+      new URLSearchParams(
+        useSyncExternalStore(subscribe, () => window.location.search),
+      ),
+  };
+});
+vi.mock('@/app/lib/firebase/client', () => ({ signInWith: vi.fn() }));
+
+// The browser's own, kept before any spy replaces it.
+const pushState = History.prototype.pushState.bind(window.history);
+
+beforeEach(() => {
+  wipe.covered = null;
+  window.history.replaceState(null, '', '/sign-up');
+  vi.spyOn(window.history, 'pushState').mockImplementation((...args) => {
+    pushState(...args);
+    router.listeners.forEach((listener) => {
+      listener();
+    });
+  });
+});
 
 const user = {
   id: 'uid-1',
@@ -66,45 +100,201 @@ function session(me: Parameters<typeof meResponseSchema.parse>[0]): Session {
   };
 }
 
+const stranger: Session = {
+  status: 'signed-out',
+  expected: false,
+  user: null,
+  account: null,
+  accountStatus: 'idle',
+  accountError: null,
+  accountRetrying: false,
+  retryAccount: vi.fn(),
+  signOut: vi.fn(() => Promise.resolve()),
+  addSignOutTask: () => () => undefined,
+  firebaseReady: true,
+  prepareSignIn: () => undefined,
+};
+
 function renderFlow(value: Session, redirect: string | null = null) {
   return renderWithIntl(
     <QueryClientProvider client={new QueryClient()}>
       <SessionContext.Provider value={value}>
         <SignUpFlow
           redirect={redirect}
-          joinApp={<p>Ir a la app (nuevo)</p>}
           finishApp={<p>Termina en la app</p>}
+          createdApp={<p>Cuenta creada: sigue en la app</p>}
         />
       </SessionContext.Provider>
     </QueryClientProvider>,
   );
 }
 
+/** Lets a test change the session from outside, as Firebase and `/me` do. */
+const arrival = { now: (): void => undefined };
+
+function SessionThatArrives({
+  first,
+  then,
+}: {
+  first: Session;
+  then: Session;
+}) {
+  const [value, setValue] = useState(first);
+  useEffect(() => {
+    arrival.now = () => {
+      setValue(then);
+    };
+  }, [then]);
+  return (
+    <SessionContext.Provider value={value}>
+      <SignUpFlow redirect={null} finishApp={null} createdApp={null} />
+    </SessionContext.Provider>
+  );
+}
+
 describe('SignUpFlow', () => {
+  it('keeps the browser’s focus when the account arrives: only a step moves it', () => {
+    const ready = session(buildNewAccountMeResponse());
+    renderWithIntl(
+      <QueryClientProvider client={new QueryClient()}>
+        <SessionThatArrives
+          first={{ ...ready, account: null, accountStatus: 'loading' }}
+          then={ready}
+        />
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByRole('heading')).toBeNull();
+
+    act(() => {
+      arrival.now();
+    });
+
+    expect(
+      screen.getByRole('heading', { name: '¿Quién eres?' }),
+    ).not.toHaveFocus();
+    expect(document.body).toHaveFocus();
+  });
+
+  it('a stranger chooses who they are, then creates the account in place', async () => {
+    renderFlow(stranger);
+
+    expect(
+      screen.getByRole('heading', { level: 1, name: '¿Quién eres?' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Inicia sesión' })).toHaveAttribute(
+      'href',
+      '/sign-in',
+    );
+    await userEvent.click(screen.getByRole('button', { name: /Especialista/ }));
+
+    expect(window.location.search).toBe('?as=specialist');
+    expect(
+      screen.getByRole('heading', {
+        level: 1,
+        name: 'Crea tu cuenta como especialista',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Continuar con Google' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Continuar con Apple' }),
+    ).toBeInTheDocument();
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+
+  it('keeps the role in the address, and goes back to the roles', async () => {
+    window.history.replaceState(null, '', '/sign-up?as=patient');
+    renderFlow(stranger);
+
+    expect(
+      screen.getByRole('heading', { name: 'Crea tu cuenta como paciente' }),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Volver' }));
+
+    expect(window.location.search).toBe('');
+    expect(
+      screen.getByRole('heading', { name: '¿Quién eres?' }),
+    ).toBeInTheDocument();
+  });
+
+  it('a stranger from an invitation creates a patient account in place', () => {
+    renderFlow(stranger, '/i/tok');
+
+    expect(
+      screen.getByRole('heading', { name: 'Crea tu cuenta como paciente' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Volver' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Inicia sesión' })).toHaveAttribute(
+      'href',
+      '/sign-in?redirect=%2Fi%2Ftok',
+    );
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+
   it('asks a brand-new account who it is, and signs a patient up', async () => {
     renderFlow(session(buildNewAccountMeResponse()));
 
     expect(
       screen.getByRole('heading', { name: '¿Quién eres?' }),
     ).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Inicia sesión' })).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: /Paciente/ }));
 
+    expect(window.location.search).toBe('?as=patient');
     expect(
-      screen.getByRole('heading', { name: 'Crea tu cuenta de paciente' }),
+      screen.getByRole('heading', { name: 'Crea tu cuenta como paciente' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Nombre' })).toBeInTheDocument();
   });
 
-  it('sends a specialist to the app, with a way back', async () => {
+  it('a brand-new specialist fills the form and is handed to the app', async () => {
+    window.history.replaceState(null, '', '/sign-up?as=specialist');
     renderFlow(session(buildNewAccountMeResponse()));
 
-    await userEvent.click(screen.getByRole('button', { name: /Especialista/ }));
-    expect(screen.getByText('Ir a la app (nuevo)')).toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole('button', { name: 'Volver' }));
     expect(
-      screen.getByRole('heading', { name: '¿Quién eres?' }),
+      screen.getByRole('heading', { name: 'Crea tu cuenta como especialista' }),
     ).toBeInTheDocument();
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Nombre' }),
+      'Luis',
+    );
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Apellido' }),
+      'Gómez',
+    );
+    await userEvent.type(
+      screen.getByLabelText('Fecha de nacimiento'),
+      '1985-03-02',
+    );
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Cédula de identidad' }),
+      '12345678',
+    );
+    await userEvent.click(screen.getByRole('radio', { name: 'Hombre' }));
+    await userEvent.type(
+      screen.getByRole('textbox', { name: 'Teléfono' }),
+      '04141234567',
+    );
+    await userEvent.click(screen.getByRole('checkbox', { name: /He leído/ }));
+    await userEvent.click(screen.getByRole('checkbox', { name: /Autorizo/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+
+    await waitFor(() => {
+      expect(wipe.covered).not.toBeNull();
+    });
+    await act(async () => {
+      await wipe.covered?.();
+    });
+
+    expect(
+      screen.getByText('Cuenta creada: sigue en la app'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ir a mi panel' })).toHaveAttribute(
+      'href',
+      '/panel',
+    );
+    expect(router.replace).not.toHaveBeenCalled();
   });
 
   it('asks everything on one screen to claim an invitation', () => {
@@ -288,7 +478,7 @@ describe('SignUpFlow', () => {
             user: { ...user, email: 'x1@privaterelay.appleid.com' },
           }}
         >
-          <SignUpFlow redirect={null} joinApp={null} finishApp={null} />
+          <SignUpFlow redirect={null} finishApp={null} createdApp={null} />
         </SessionContext.Provider>
       </QueryClientProvider>,
     );

@@ -7,17 +7,20 @@ import {
   completePatientRegistration,
   isDocumentAvailable,
   meQueryOptions,
-  registerPatient,
+  refreshIdToken,
+  registerAccount,
+  takenIdentityField,
 } from './identity';
 import {
   buildMeResponse,
+  buildPendingSpecialistMeResponse,
   knownUserId,
   takenDocumentNumber,
 } from '../../../tests/factories/identity';
 import { apiUrl, errorEnvelope } from '../../../tests/msw/api-url';
 import { validToken } from '../../../tests/msw/handlers/identity';
 import { server } from '../../../tests/msw/server';
-import { isApiError } from '../api/errors';
+import { ApiError, isApiError } from '../api/errors';
 
 const client = () =>
   new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -34,6 +37,20 @@ const registrationBody = {
   acceptedSensitiveData: true,
   acceptedNewsletter: false,
   role: 'PATIENT',
+} as const;
+
+const specialistBody = {
+  role: 'SPECIALIST',
+  firstName: 'Luis',
+  lastName: 'Gómez',
+  phone: '+584141234567',
+  dateOfBirth: '1985-03-02',
+  sex: 'MALE',
+  documentType: 'V',
+  documentNumber: '12345678',
+  acceptedTerms: true,
+  acceptedSensitiveData: true,
+  acceptedNewsletter: true,
 } as const;
 
 const completionBody = {
@@ -65,7 +82,7 @@ describe('meQueryOptions', () => {
 
 describe('the patient sign-up', () => {
   it('registers the patient and answers the account', async () => {
-    const account = await registerPatient(user('uid-3'), registrationBody);
+    const account = await registerAccount(user('uid-3'), registrationBody);
 
     expect(account.registration).toBe('pendingCompletePatient');
     expect(account.patient).toMatchObject({
@@ -84,7 +101,7 @@ describe('the patient sign-up', () => {
       ),
     );
 
-    const account = await registerPatient(user('uid-4'), registrationBody);
+    const account = await registerAccount(user('uid-4'), registrationBody);
 
     expect(account.registration).toBe('completed');
   });
@@ -138,5 +155,88 @@ describe('the patient sign-up', () => {
         documentNumber: takenDocumentNumber,
       }),
     ).resolves.toBe(false);
+  });
+});
+
+describe('the specialist sign-up', () => {
+  it('registers a specialist with the API’s body', async () => {
+    let received: unknown = null;
+    server.use(
+      http.post(apiUrl('/identity/register'), async ({ request }) => {
+        received = await request.clone().json();
+        // Nothing answered here: the default handler answers.
+      }),
+    );
+
+    const account = await registerAccount(user('uid-20'), specialistBody);
+
+    expect(received).toEqual(specialistBody);
+    expect(account.registration).toBe('pendingCompleteSpecialist');
+    expect(account.role).toBe('specialist');
+    expect(account.specialist).toMatchObject({
+      exists: true,
+      status: 'pendingSpecialties',
+      isIncomplete: true,
+    });
+  });
+
+  it('counts a registration already done as done', async () => {
+    server.use(
+      http.post(apiUrl('/identity/register'), () =>
+        HttpResponse.json(errorEnvelope('ERR_2002', 'Already registered'), {
+          status: 409,
+        }),
+      ),
+      http.get(apiUrl('/identity/me'), () =>
+        HttpResponse.json(buildPendingSpecialistMeResponse()),
+      ),
+    );
+
+    const account = await registerAccount(user('uid-21'), specialistBody);
+
+    expect(account.registration).toBe('pendingCompleteSpecialist');
+  });
+});
+
+describe('takenIdentityField', () => {
+  const refusal = (
+    status: number,
+    code: string,
+    details?: Record<string, unknown>,
+  ) =>
+    new ApiError({
+      kind: 'http',
+      method: 'POST',
+      path: '/identity/register',
+      status,
+      code,
+      details,
+    });
+
+  it('names the field another account has', () => {
+    expect(takenIdentityField(refusal(409, 'ERR_2011'))).toBe('document');
+    expect(
+      takenIdentityField(refusal(409, 'ERR_1005', { phone: 'taken' })),
+    ).toBe('phone');
+  });
+
+  it('names nothing for any other failure', () => {
+    expect(takenIdentityField(refusal(409, 'ERR_1005'))).toBeNull();
+    expect(takenIdentityField(refusal(500, 'ERR_9999'))).toBeNull();
+    expect(takenIdentityField(new Error('offline'))).toBeNull();
+  });
+});
+
+describe('refreshIdToken', () => {
+  it('asks for a fresh token, and shrugs off a failure', async () => {
+    const asked: (boolean | undefined)[] = [];
+    await refreshIdToken({
+      getToken: (force) => {
+        asked.push(force);
+        return Promise.reject(new Error('offline'));
+      },
+    });
+
+    expect(asked).toEqual([true]);
   });
 });

@@ -201,6 +201,34 @@ export const patientCompletionBodySchema = z.strictObject({
 
 export type PatientCompletionBody = z.infer<typeof patientCompletionBodySchema>;
 
+/**
+ * A specialist's sign-up, in one write (the API's `RegisterSpecialistSchema`):
+ * the names, the personal data and the consents together, as the app's form
+ * sends them while the API verifies no phone and runs no KYC. The account
+ * then waits for its specialties, registered in the app.
+ */
+export const specialistRegistrationBodySchema = z.strictObject({
+  role: z.literal('SPECIALIST'),
+  firstName: z.string().min(1).max(100),
+  lastName: z.string().min(1).max(100),
+  phone: z.string().min(1),
+  dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  sex: z.enum(sexes),
+  documentType: z.enum(documentTypes),
+  documentNumber: z.string().regex(/^\d{6,8}$/),
+  acceptedTerms: z.literal(true),
+  acceptedSensitiveData: z.literal(true),
+  acceptedNewsletter: z.boolean(),
+});
+
+export type SpecialistRegistrationBody = z.infer<
+  typeof specialistRegistrationBodySchema
+>;
+
+/** What `POST /identity/register` takes: a patient's or a specialist's. */
+export type RegistrationBody =
+  PatientRegistrationBody | SpecialistRegistrationBody;
+
 /** `POST /identity/public/check-document`: whether nobody uses the document yet. */
 export const documentAvailabilitySchema = z.object({ available: z.boolean() });
 

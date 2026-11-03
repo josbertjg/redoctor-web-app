@@ -35,10 +35,14 @@ export const routes = {
     redirect
       ? (`/sign-in?redirect=${encodeURIComponent(redirect)}` as const)
       : ('/sign-in' as const),
-  signUp: (redirect?: string) =>
-    redirect
-      ? (`/sign-up?redirect=${encodeURIComponent(redirect)}` as const)
-      : ('/sign-up' as const),
+  /** `as` is the role the person chose on the sign-up (`SignUpRole`). */
+  signUp: (redirect?: string, as?: 'patient' | 'specialist') => {
+    const query = [
+      ...(as ? [`as=${as}`] : []),
+      ...(redirect ? [`redirect=${encodeURIComponent(redirect)}`] : []),
+    ].join('&');
+    return query ? (`/sign-up?${query}` as const) : ('/sign-up' as const);
+  },
 
   /* Paths shared with the app (AGENTS.md §6). */
   specialist: (specialistId: string) => `/s/${segment(specialistId)}` as const,

@@ -29,9 +29,10 @@ import {
  * into view (role-card-motion.tsx, through the `data-piece` marks) and
  * answers the pointer: over the card the avatar nods and the steps lean
  * right one after another; over a step, it lifts and its badge grows.
- * «Comenzar» leads where each role starts: a specialist to the sign-in (a
- * new account goes on to the sign-up, which points specialists to the
- * app), a patient to the search, which needs no account (AGENTS.md §1).
+ * «Comenzar» leads where each role starts: a specialist to the sign-up as
+ * a specialist (the account on the web, the specialties in the app; the
+ * owner's word of 2026-11-03), a patient to the search, which needs no
+ * account (AGENTS.md §1).
  */
 export function HowItWorks() {
   const t = useTranslations('landing.howItWorks');
@@ -68,7 +69,7 @@ export function HowItWorks() {
               label: t(`specialist.steps.${step.key}`),
             }))}
             cta={t('cta')}
-            href={routes.signIn()}
+            href={routes.signUp(undefined, 'specialist')}
           />
         </RoleCardMotion>
         {/* A step beat behind its neighbour when the two share a row. */}

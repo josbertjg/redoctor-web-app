@@ -9,11 +9,12 @@ import {
   documentNumberProblem,
 } from '@/app/lib/format/identity-document';
 import { personNameMaxLength, personNameProblem } from '@/app/lib/format/names';
+import { phoneProblem } from '@/app/lib/format/phone';
 
 /**
  * A person's data checked as the API checks it, as zod rules carrying the
- * app's messages: the patient's sign-up (M3) and the person in one's care
- * a booking adds (M15) ask the same things the same way.
+ * app's messages: the patient's and the specialist's sign-up (M3) and the
+ * person in one's care a booking adds (M15) ask the same things the same way.
  */
 export function usePersonChecks() {
   const t = useTranslations();
@@ -71,7 +72,23 @@ export function usePersonChecks() {
             return undefined;
         }
       }),
-      sex: z.string().refine((value) => value !== '', t('input.empty')),
+      /** One of the app's two, chosen: nothing is preselected (M3, M15). */
+      sex: z
+        .enum(['', 'MALE', 'FEMALE'])
+        .refine((value) => value !== '', t('input.empty')),
+      /** A Venezuelan mobile, as the API takes it once `+58` goes in front. */
+      phone: check((value) => {
+        switch (phoneProblem(value)) {
+          case 'empty':
+            return t('input.empty');
+          case 'invalidFormat':
+            return t('input.phoneNumber.invalidFormat');
+          default:
+            return undefined;
+        }
+      }),
+      /** A consent the sign-up cannot go on without. */
+      consent: z.boolean().refine(Boolean, t('input.mustAccept')),
     };
   }, [t]);
 }

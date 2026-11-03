@@ -275,10 +275,10 @@
     "playStore": "Descargar en Google Play"
   },
   "appAccess": {
-    "join": {
-      "title": "El registro de especialistas se hace en la app",
-      "testing": "La app de Redoctor está en fase de pruebas. Escríbenos o llámanos y te damos acceso para que completes tu registro desde ahí.",
-      "store": "Descarga la app de Redoctor y completa tu registro desde ahí."
+    "created": {
+      "title": "¡Tu cuenta está creada!",
+      "testing": "Ahora registra tu especialidad y tu número de colegiatura desde la app de Redoctor: así verificamos tu perfil. Si aún no tienes la app, escríbenos o llámanos y te damos acceso.",
+      "store": "Ahora registra tu especialidad y tu número de colegiatura desde la app de Redoctor: así verificamos tu perfil. Descárgala y entra con esta misma cuenta."
     },
     "finish": {
       "title": "Termina tu registro en la app",
@@ -299,6 +299,9 @@
     "metaTitle": "Entrar",
     "title": "Inicia sesión de manera rápida y segura",
     "description": "Entra con la misma cuenta de Google o Apple que usas en la app de Redoctor.",
+    "noAccountYet": "¿Aún no tienes una cuenta?",
+    "alreadyHaveAccount": "¿Ya tienes una cuenta?",
+    "signInLink": "Inicia sesión",
     "signIn": "Entrar",
     "signOut": "Cerrar sesión",
     "continueWithGoogle": "Continuar con Google",
@@ -342,7 +345,8 @@
     "whichModeDoYouWantToUse": "Cuéntanos qué modo deseas usar para personalizar tu experiencia",
     "iWantToFindSpecialists": "Quiero encontrar especialistas calificados y agendar citas",
     "iWantToConnectWithPatients": "Quiero conectar con pacientes y automatizar mis citas",
-    "signupPatientDescription": "Regístrate y conecta con profesionales verificados cuando lo necesites",
+    "signupQuickAndSecure1": "Regístrate de manera",
+    "signupQuickAndSecure2": "rápida y segura",
     "iHaveRead": "He leído y acepto los",
     "iAgreeToRecopileData": "Autorizo el uso de mis datos de salud y geolocalización con fines de atención y gestión de citas",
     "subscribeToOurNewsletter": "Quiero recibir consejos de salud y novedades por mi correo electrónico",
@@ -351,14 +355,22 @@
   },
   "signUp": {
     "metaTitle": "Crea tu cuenta",
-    "title": "Crea tu cuenta de paciente",
+    "createTitle": {
+      "patient": "Crea tu cuenta como paciente",
+      "specialist": "Crea tu cuenta como especialista"
+    },
+    "createDescription": {
+      "patient": "Completa tu perfil y comienza a agendar citas.",
+      "specialist": "Completa tu perfil profesional y empieza a recibir y organizar tus citas."
+    },
     "claimTitle": "Crea tu cuenta para reclamar tu cita",
     "bookTitle": "Crea tu cuenta para agendar tu cita",
     "documentType": "Tipo de documento",
     "phonePlaceholder": "414 123 4567",
     "documentPlaceholder": "12345678",
     "saveFailed": "No pudimos guardar tus datos. Inténtalo de nuevo en un momento.",
-    "back": "Volver"
+    "back": "Volver",
+    "goToPanel": "Ir a mi panel"
   },
   "finishPatientSignup": {
     "title": "Finalizar registro",
@@ -1584,6 +1596,7 @@
   "cancel": "Cancelar",
   "back": "Volver",
   "next": "Siguiente",
+  "signup": "Regístrate",
   "edit": "Editar",
   "book": "Agendar",
   "dateAndTime": "Fecha y hora",

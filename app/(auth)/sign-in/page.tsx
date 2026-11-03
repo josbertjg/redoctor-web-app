@@ -5,7 +5,6 @@ import { getTranslations } from 'next-intl/server';
 import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 import { isSafeRedirect } from '@/app/lib/routes';
 
-import { SiteHeader } from '@/app/ui/layout/site-header';
 import { MessagesScope } from '@/app/ui/messages-scope';
 import { PageTransition } from '@/app/ui/motion/view-transitions';
 
@@ -29,18 +28,14 @@ export default async function SignInPage({
   const { redirect } = await searchParams;
   const target =
     typeof redirect === 'string' && isSafeRedirect(redirect) ? redirect : null;
-  const t = await getTranslations('common');
 
   return (
-    <>
-      <SiteHeader homeLabel={t('homeLabel')} />
-      <PageTransition>
-        <main className="flex flex-1 flex-col items-center justify-center px-gutter pb-16">
-          <MessagesScope namespaces={pageNamespaces.signIn}>
-            <SignInCard redirect={target} />
-          </MessagesScope>
-        </main>
-      </PageTransition>
-    </>
+    <PageTransition>
+      <main className="flex flex-1 flex-col items-center justify-center px-gutter pt-4 pb-16">
+        <MessagesScope namespaces={pageNamespaces.signIn}>
+          <SignInCard redirect={target} />
+        </MessagesScope>
+      </main>
+    </PageTransition>
   );
 }

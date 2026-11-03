@@ -4,10 +4,12 @@ import {
   documentQuerySchema,
   patientCompletionBodySchema,
   patientRegistrationBodySchema,
+  specialistRegistrationBodySchema,
 } from '@/app/lib/schemas/identity';
 
 import {
   buildMeResponse,
+  buildPendingSpecialistMeResponse,
   patientFacet,
   takenDocumentNumber,
 } from '../../factories/identity';
@@ -52,7 +54,16 @@ export const identityHandlers = [
 
   http.post(apiUrl('/identity/register'), async ({ request }) => {
     if (isStranger(request)) return unauthorized();
-    const body = patientRegistrationBodySchema.safeParse(await request.json());
+    const json: unknown = await request.json();
+    const specialist = specialistRegistrationBodySchema.safeParse(json);
+    if (specialist.success) {
+      return HttpResponse.json(
+        buildPendingSpecialistMeResponse({
+          displayName: `${specialist.data.firstName} ${specialist.data.lastName}`,
+        }),
+      );
+    }
+    const body = patientRegistrationBodySchema.safeParse(json);
     if (!body.success) return badRequest();
     return HttpResponse.json(
       buildMeResponse({

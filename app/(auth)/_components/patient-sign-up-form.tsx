@@ -2,8 +2,6 @@
 
 import { useId, useMemo, useState } from 'react';
 
-import Link from 'next/link';
-
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
@@ -11,7 +9,7 @@ import { useForm, type Resolver } from 'react-hook-form';
 import { z } from 'zod';
 
 import { track } from '@/app/lib/analytics/track';
-import { failureMessageKey, isApiError } from '@/app/lib/api/errors';
+import { failureMessageKey } from '@/app/lib/api/errors';
 import type { SessionUser } from '@/app/lib/firebase/client';
 import {
   earliestBirthDate,
@@ -22,20 +20,17 @@ import {
   type DocumentType,
 } from '@/app/lib/format/identity-document';
 import { cleanPersonName } from '@/app/lib/format/names';
-import {
-  phoneProblem,
-  toInternationalPhone,
-  venezuelaCode,
-} from '@/app/lib/format/phone';
+import { toInternationalPhone, venezuelaCode } from '@/app/lib/format/phone';
 import {
   completePatientRegistration,
+  DocumentTakenError,
   isDocumentAvailable,
-  registerPatient,
+  refreshIdToken,
+  registerAccount,
+  takenIdentityField,
 } from '@/app/lib/queries/identity';
-import { routes } from '@/app/lib/routes';
 
 import { Button } from '@/app/ui/button';
-import { Checkbox } from '@/app/ui/checkbox';
 import { ChoiceCards } from '@/app/ui/choice-cards';
 import { FieldError } from '@/app/ui/field-error';
 import { IdentityDocumentField } from '@/app/ui/identity-document-field';
@@ -43,21 +38,10 @@ import { TextField } from '@/app/ui/text-field';
 
 import { usePersonChecks } from '@/app/hooks/use-person-checks';
 
-const legalLinkClass =
-  'rounded-sm font-semibold text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50';
+import { SignUpConsents } from './sign-up-consents';
 
 /** What the form asks: the names and consents, the personal data, or both. */
 export type SignUpParts = { register: boolean; personalData: boolean };
-
-/** Which datum another account already has, by the API's refusal; null when it is no such refusal. */
-function takenField(error: unknown): 'document' | 'phone' | null {
-  if (!isApiError(error) || error.status !== 409) return null;
-  if (error.code === 'ERR_2011') return 'document';
-  if (error.code === 'ERR_1005' && error.details && 'phone' in error.details) {
-    return 'phone';
-  }
-  return null;
-}
 
 /** The sexes the app's form offers (the API also takes OTHER). */
 const offeredSexes = ['MALE', 'FEMALE'] as const;
@@ -88,23 +72,6 @@ const emptyValues: SignUpValues = {
   sex: '',
 };
 
-/** Someone else's account already uses the document. */
-class DocumentTaken extends Error {}
-
-/**
- * A fresh ID token, whose claims carry the registration the API reads. When
- * it cannot be had right now (the connection dropped just after saving), the
- * data is saved all the same and Firebase refreshes the token by itself: the
- * person is not told that saving failed, as in the app.
- */
-async function refreshToken(user: SessionUser) {
-  try {
-    await user.getToken(true);
-  } catch {
-    // Saved anyway: see above.
-  }
-}
-
 type PatientSignUpFormProps = {
   user: SessionUser;
   parts: SignUpParts;
@@ -121,43 +88,25 @@ type PatientSignUpFormProps = {
 
 /** The form's rules, with the app's messages: the same checks the API makes. */
 function useSignUpResolver(parts: SignUpParts): Resolver<SignUpValues> {
-  const t = useTranslations();
   const person = usePersonChecks();
 
   return useMemo(() => {
-    const consent = z.boolean().refine(Boolean, t('input.mustAccept'));
-    const phone = z.string().superRefine((value, context) => {
-      switch (phoneProblem(value)) {
-        case 'empty':
-          context.addIssue({ code: 'custom', message: t('input.empty') });
-          return;
-        case 'invalidFormat':
-          context.addIssue({
-            code: 'custom',
-            message: t('input.phoneNumber.invalidFormat'),
-          });
-          return;
-        default:
-          return;
-      }
-    });
-
     // A part the form does not ask is not checked.
     const skip = z.any();
     const schema = z.object({
       firstName: parts.register ? person.name : skip,
       lastName: parts.register ? person.name : skip,
-      acceptedTerms: parts.register ? consent : skip,
-      acceptedSensitiveData: parts.register ? consent : skip,
+      acceptedTerms: parts.register ? person.consent : skip,
+      acceptedSensitiveData: parts.register ? person.consent : skip,
       acceptedNewsletter: skip,
       dateOfBirth: parts.personalData ? person.dateOfBirth(true) : skip,
-      phone: parts.personalData ? phone : skip,
+      phone: parts.personalData ? person.phone : skip,
       documentType: skip,
       documentNumber: parts.personalData ? person.documentNumber : skip,
       sex: parts.personalData ? person.sex : skip,
     });
     return zodResolver(schema);
-  }, [parts.register, parts.personalData, person, t]);
+  }, [parts.register, parts.personalData, person]);
 }
 
 /*
@@ -205,10 +154,10 @@ export function PatientSignUpForm({
           documentType: values.documentType,
           documentNumber,
         });
-        if (!available) throw new DocumentTaken();
+        if (!available) throw new DocumentTakenError();
       }
       if (parts.register) {
-        await registerPatient(user, {
+        await registerAccount(user, {
           firstName: cleanPersonName(values.firstName),
           lastName: cleanPersonName(values.lastName),
           acceptedTerms: true,
@@ -216,10 +165,10 @@ export function PatientSignUpForm({
           acceptedNewsletter: values.acceptedNewsletter,
           role: 'PATIENT',
         });
-        track('web_signup_completed', { step: 'register' });
+        track('web_signup_completed', { step: 'register', role: 'patient' });
         // The completion reads the registration from the token's claims, as
         // the app refreshes it between the two steps.
-        await refreshToken(user);
+        await refreshIdToken(user);
       }
       if (parts.personalData && values.sex !== '') {
         await completePatientRegistration(user, {
@@ -229,23 +178,26 @@ export function PatientSignUpForm({
           documentNumber,
           sex: values.sex,
         });
-        track('web_signup_completed', { step: 'personal_data' });
+        track('web_signup_completed', {
+          step: 'personal_data',
+          role: 'patient',
+        });
       }
       // The token's claims carry the registration status the API reads.
-      await refreshToken(user);
+      await refreshIdToken(user);
     },
     onSuccess: onDone,
     onError: (error) => {
       // A document another account confirmed (ERR_2011, REDOC-365), or a
       // phone another account has (ERR_1005 with `details.phone`): said
       // under the field to change.
-      if (error instanceof DocumentTaken || takenField(error) === 'document') {
+      if (takenIdentityField(error) === 'document') {
         setError(
           'documentNumber',
           { type: 'taken', message: t('auth.identityDocumentTaken') },
           { shouldFocus: true },
         );
-      } else if (takenField(error) === 'phone') {
+      } else if (takenIdentityField(error) === 'phone') {
         setError(
           'phone',
           {
@@ -259,9 +211,7 @@ export function PatientSignUpForm({
   });
 
   const failureKey =
-    save.error === null ||
-    save.error instanceof DocumentTaken ||
-    takenField(save.error) !== null
+    save.error === null || takenIdentityField(save.error) !== null
       ? null
       : failureMessageKey(save.error, 'signUp.saveFailed');
   const failure = failureKey === null ? undefined : t(failureKey);
@@ -340,50 +290,15 @@ export function PatientSignUpForm({
       ) : null}
 
       {parts.register ? (
-        <div className="flex flex-col">
-          {/* The legal pages open apart, so nothing typed here is lost. */}
-          <Checkbox
-            label={
-              <>
-                {t('auth.iHaveRead')}{' '}
-                {t.rich('auth.termsOfUseAndPrivacy', {
-                  terms: (chunks) => (
-                    <Link
-                      href={routes.terms()}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={legalLinkClass}
-                    >
-                      {chunks}
-                    </Link>
-                  ),
-                  privacy: (chunks) => (
-                    <Link
-                      href={routes.privacy()}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={legalLinkClass}
-                    >
-                      {chunks}
-                    </Link>
-                  ),
-                })}{' '}
-                {t('ofRedoctor')}.
-              </>
-            }
-            error={errors.acceptedTerms?.message}
-            {...register('acceptedTerms')}
-          />
-          <Checkbox
-            label={`${t('auth.iAgreeToRecopileData')}.`}
-            error={errors.acceptedSensitiveData?.message}
-            {...register('acceptedSensitiveData')}
-          />
-          <Checkbox
-            label={`${t('auth.subscribeToOurNewsletter')}.`}
-            {...register('acceptedNewsletter')}
-          />
-        </div>
+        <SignUpConsents
+          terms={register('acceptedTerms')}
+          sensitiveData={register('acceptedSensitiveData')}
+          newsletter={register('acceptedNewsletter')}
+          errors={{
+            terms: errors.acceptedTerms?.message,
+            sensitiveData: errors.acceptedSensitiveData?.message,
+          }}
+        />
       ) : null}
 
       <FieldError id={formErrorId} message={failure} className="text-center" />

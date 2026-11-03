@@ -12,7 +12,7 @@ import {
   toAccount,
   type DocumentQuery,
   type PatientCompletionBody,
-  type PatientRegistrationBody,
+  type RegistrationBody,
 } from '../schemas/identity';
 
 import type { TokenHolder } from '../api/types';
@@ -54,7 +54,8 @@ export function meQueryOptions(user: TokenHolder) {
 }
 
 /*
- * The patient's sign-up (M3). Neither write may land twice (AGENTS.md §5):
+ * The sign-up (M3): a patient's or a specialist's registration, and the
+ * patient's personal data. Neither write may land twice (AGENTS.md §5):
  * when an answer is lost, the write-once guard looks at the account before
  * sending again. A 409 on the registration and a 403 on the completion say
  * the account already moved past that step (a second tab, a lost answer):
@@ -83,9 +84,10 @@ async function alreadyDone(
   throw error;
 }
 
-export function registerPatient(
+/** `POST /identity/register`: one registration per account, whatever its role. */
+export function registerAccount(
   user: TokenHolder,
-  body: PatientRegistrationBody,
+  body: RegistrationBody,
 ): Promise<Account> {
   return registration({
     intent: `register:${user.id}`,
@@ -139,6 +141,47 @@ export function completePatientRegistration(
       return isComplete(account) ? account : null;
     },
   });
+}
+
+/** Another account already uses the document: the sign-up stops before writing. */
+export class DocumentTakenError extends Error {
+  constructor() {
+    super('The document belongs to another account');
+    this.name = 'DocumentTakenError';
+  }
+}
+
+/**
+ * Which datum another account already has, by the API's refusal of a
+ * sign-up: a document confirmed elsewhere (409 ERR_2011, REDOC-365) or a
+ * phone in use (409 ERR_1005 with `details.phone`). `null` for anything else.
+ */
+export function takenIdentityField(
+  error: unknown,
+): 'document' | 'phone' | null {
+  if (error instanceof DocumentTakenError) return 'document';
+  if (!isApiError(error) || error.status !== 409) return null;
+  if (error.code === 'ERR_2011') return 'document';
+  if (error.code === 'ERR_1005' && error.details && 'phone' in error.details) {
+    return 'phone';
+  }
+  return null;
+}
+
+/**
+ * A fresh ID token, whose claims carry the registration the API reads. When
+ * it cannot be had right now (the connection dropped just after saving), the
+ * data is saved all the same and Firebase refreshes the token by itself: the
+ * person is not told that saving failed, as in the app.
+ */
+export async function refreshIdToken(user: {
+  getToken: (forceRefresh?: boolean) => Promise<string>;
+}): Promise<void> {
+  try {
+    await user.getToken(true);
+  } catch {
+    // Saved anyway: see above.
+  }
 }
 
 /**

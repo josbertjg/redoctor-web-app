@@ -404,7 +404,7 @@ test('booking for an account with no sign-up: the sign-up first, then the steps'
   await expect(page.getByText('Paso 1 de 3')).toBeVisible();
 });
 
-test('the sign-up link opened in another browser: sign in first, then the sign-up, then the invitation', async ({
+test('the sign-up link opened in another browser: the account right there, then the sign-up, then the invitation', async ({
   page,
   providers,
   api,
@@ -414,11 +414,12 @@ test('the sign-up link opened in another browser: sign in first, then the sign-u
   providers.next = people.carmen;
 
   await page.goto(`/sign-up?redirect=/i/${token}`);
-  await expect(page).toHaveURL(
-    `/sign-in?redirect=${encodeURIComponent(
-      `/sign-up?redirect=${encodeURIComponent(`/i/${token}`)}`,
-    )}`,
-  );
+  await expect(
+    page.getByRole('heading', {
+      level: 1,
+      name: 'Crea tu cuenta como paciente',
+    }),
+  ).toBeVisible();
   await signInWith(page);
 
   await expect(

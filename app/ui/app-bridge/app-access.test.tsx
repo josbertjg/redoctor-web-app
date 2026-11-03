@@ -12,16 +12,19 @@ const support = {
 };
 
 describe('AppAccess', () => {
-  it('sends a new specialist to support while the app is in testing', async () => {
+  it('sends a specialist who just created the account to support while the app is in testing', async () => {
     const { container } = renderWithIntl(
-      <AppAccess variant="join" stores={{}} support={support} />,
+      <AppAccess variant="created" stores={{}} support={support} />,
     );
 
     expect(
       screen.getByRole('heading', {
         level: 1,
-        name: 'El registro de especialistas se hace en la app',
+        name: '¡Tu cuenta está creada!',
       }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/registra tu especialidad y tu número de colegiatura/),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('link', {
@@ -40,7 +43,9 @@ describe('AppAccess', () => {
   });
 
   it('writes the WhatsApp message without anything personal', () => {
-    renderWithIntl(<AppAccess variant="join" stores={{}} support={support} />);
+    renderWithIntl(
+      <AppAccess variant="created" stores={{}} support={support} />,
+    );
 
     const href = screen
       .getByRole('link', { name: /Escribir por WhatsApp/ })

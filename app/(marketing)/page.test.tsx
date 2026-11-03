@@ -209,13 +209,13 @@ describe('HomePage', () => {
     ).toBeInTheDocument();
   });
 
-  it('leads a specialist to the sign-in and a patient to the search from «Comenzar»', async () => {
+  it('leads a specialist to the sign-up and a patient to the search from «Comenzar»', async () => {
     await renderHome();
 
     const [specialist, patient] = screen.getAllByRole('link', {
       name: 'Comenzar',
     });
-    expect(specialist).toHaveAttribute('href', '/sign-in');
+    expect(specialist).toHaveAttribute('href', '/sign-up?as=specialist');
     expect(patient).toHaveAttribute('href', '/search');
   });
 

@@ -20,8 +20,8 @@ type StoreListings = {
 };
 
 type AppAccessProps = {
-  /** `join`: a specialist with no account yet; `finish`: one whose sign-up is still open. */
-  variant: 'join' | 'finish';
+  /** `created`: a specialist who just created the account on the web; `finish`: one whose sign-up is still open. */
+  variant: 'created' | 'finish';
   headingLevel?: 1 | 2;
   /** The published listings; from the environment by default (empty in the pilot). */
   stores?: StoreListings;
@@ -31,8 +31,9 @@ type AppAccessProps = {
 };
 
 /*
- * Where a specialist signs up: in the app, never on the web (owner's
- * decision, 2026-10-12). While the app is in testing, the way in is
+ * Where a specialist finishes signing up: in the app (owner's word,
+ * 2026-11-03: the web creates the account, the app registers the
+ * specialties and the licence). While the app is in testing, the way in is
  * support — WhatsApp or a call — who gives them access; once it is in the
  * stores, the store itself: a QR code on a computer, the store's button on
  * a phone (a phone cannot scan its own screen). Rendered on the server.

@@ -43,9 +43,10 @@ export function pickClientMessages(messages: Messages): ClientMessages {
  * sign-up form reads its fields, their errors and the support channels.
  */
 export const pageNamespaces = {
-  signIn: ['apiErrors'],
+  signIn: ['apiErrors', 'signup'],
   signUp: [
     'apiErrors',
+    'back',
     'input',
     'finishPatientSignup',
     'signUp',

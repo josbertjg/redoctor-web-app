@@ -72,7 +72,7 @@ transactional emails the API sends.
 | --- | --- |
 | M1 Foundations | Project, brand, environments, typed API client, error translation, `.well-known`, observability |
 | M2 Session | Google and Apple sign-in, `/me`, role guards (patient and specialist), return to the link after login, re-entry in 1–2 taps from another browser |
-| M3 Sign-up | Patients only (a specialist signs up in the app). One screen, prefilled with the invitation data |
+| M3 Sign-up | «¿Quién eres?», the account (Google or Apple, made in place), then the form: a patient's (one screen, prefilled with the invitation data) or, since 2026-11-03, a specialist's — the web creates the account and the app registers the specialties and the licence |
 | M4 Invitation `/i/{token}` | All states, claim for yourself or for a third party, ID-document warnings, confirm in the same step when < 24 h |
 | M5 Appointment `/a/{id}` | Confirm (from 24 h before), cancel, reschedule, directions, add to calendar |
 | M6 My appointments `/appointments` | Upcoming, past, pending reviews |
@@ -232,10 +232,11 @@ app/                                  # The application: routes, UI and logic
   (marketing)/                        # module: landing (M9)
     page.tsx                          #   /
     _components/                      #   hero, sections, faq, splash/ (the Rive veil) — this module only
-  (auth)/                             # module: session (M2)
+  (auth)/                             # module: session (M2) and sign-up (M3)
+    layout.tsx                        #   the blue scene both pages share (the designer's frames, 2026-11-03)
     sign-in/page.tsx                  #   /sign-in?redirect= — Google and Apple, the same accounts as the app
-    sign-up/page.tsx                  #   /sign-up?redirect= — the patient's sign-up (M3)
-    _components/                      #   sign-in-card, sign-up-flow, role-choice, patient-sign-up-form, sign-up-done
+    sign-up/page.tsx                  #   /sign-up?as=patient|specialist&redirect= — who the person is, the account in place, the form (M3)
+    _components/                      #   auth-scene, auth-card, sign-in-card, sign-up-flow, role-choice, create-account-step, patient-sign-up-form, specialist-sign-up-form, sign-up-consents, sign-up-done, sign-up-skeleton
   (invitations)/                      # module: the invitation link (M4)
     layout.tsx · error.tsx            #   the bar with the account; the error under it
     i/[token]/page.tsx                #   /i/{token} — read in the browser, claimed right there
@@ -313,7 +314,7 @@ app/                                  # The application: routes, UI and logic
     env.ts · public-env.ts · routes.ts · deep-links.ts · site.ts · support.ts (the API's support lines as channels; read by data/support.ts and queries/support.ts) · clipboard.ts · utils.ts · calendar.ts (.ics, Google Calendar)
   hooks/                              # shared client hooks: use-session, use-notifications (the inbox, its count and the push, as the provider keeps them), use-sign-in-tracking, use-focus-heading, use-infinite-scroll, use-link-origin, use-device, use-in-app-browser, use-person-checks (a person's data as the API checks it), use-price-words, use-debounced-value, use-device-location (the position, asked for on a tap), use-fading-edges (which sides of a scrolling row have more beyond them)
 tests/                                # env.ts · dom.ts (what jsdom lacks, before React loads) · setup.ts · msw/ (server + handlers per domain) · factories/ · e2e/ (Playwright; signed-in.ts signs in as a person does, §10)
-public/                               # .well-known/ (§6) · brand/ (logo.svg, logo-white.svg, icons) · illustrations/ · animations/ (the app's splash_logo.riv) · notifications-sw.js (the push's service worker, plain JavaScript)
+public/                               # .well-known/ (§6) · brand/ (logo.svg, logo-white.svg, icons) · illustrations/ (landing/, auth/ — the way in's room and the sign-up's figures) · animations/ (the app's splash_logo.riv) · notifications-sw.js (the push's service worker, plain JavaScript)
 proxy.ts                              # Next 16's name for middleware: the CSP nonce per request, /.well-known excluded — nothing else
 instrumentation.ts · instrumentation-client.ts   # Sentry and PostHog, each only when its variable is set
 next.config.ts · eslint.config.mjs · postcss.config.mjs · tsconfig.json · vitest.config.mts · playwright.config.ts
@@ -1615,10 +1616,12 @@ written out in full, or Next.js does not inline it).
   `unknown` and never sends anyone to sign up again. The web's sign-up
   (M3) is for patients only: a specialist signs up in the app, so the web
   points them to support (phone, WhatsApp) — or to the store's QR once the
-  app is published.
+  app is published. (Since 2026-11-03 a specialist creates the account on
+  the web and the app finishes it: Decided, 2026-11-03.)
 - **The sign-up (M3) as built (2026-10-12):** `/sign-up?redirect=`, in
   `(auth)`, needs a session (a stranger signs in first and comes back,
-  query included). What it asks comes from the account
+  query included; since 2026-11-03 the stranger makes the account on the
+  page itself: Decided, 2026-11-03). What it asks comes from the account
   (`app/lib/auth/sign-up.ts`): a brand-new account says who it is
   («¿Quién eres?», the app's two cards); a patient fills the app's form —
   names and the three consents (`POST /identity/register`) — and, only
@@ -2854,6 +2857,65 @@ written out in full, or Next.js does not inline it).
     elsewhere would break those writes in production today. To ask too:
     the Vercel previews in `CORS_ORIGINS` (`redoctorapp.com` and `www.`
     answer, checked 2026-11-02).
+
+### Decided (2026-11-03)
+
+- **The designer's new web screens (the owner's «revisa el figma… aplícalo
+  en la web, en diseño y en lógica», 2026-11-03).** Seventeen frames on the
+  Figma page «🌐 Landing page» (`4424:341`), desktop only, all on the blue
+  primary: the way in, the sign-up, and the specialist's panel with its
+  calendar and appointments. His calls the same day: the blue screens (not
+  the white-panel login, `4606:20`); a specialist signs up on the web with
+  the usual data, and finishing the sign-up (specialties, licence,
+  university) stays in the app; the frames are a reference — what they draw
+  that the API or the app does not do is left out —; four phases, each a
+  commit: (1) access and sign-up, (2) the panel and its home, (3) the
+  appointments and their actions, (4) a new appointment. The design and
+  each phase's plan: `docs/superpowers/specs/2026-11-03-web-redesign-design.md`
+  and `docs/superpowers/plans/`.
+- **Phase 1, the way in, as built:**
+  - **The scene** (`app/(auth)/layout.tsx`, `auth-scene.tsx`): the blue
+    primary to the edges, the white wordmark and — for someone signed in —
+    the bell and the account at the bar's edges (`SessionControls` with
+    `tone="inverse"` and `hideSignIn`: never «Entrar» where signing in is
+    the page); from laptops up the frames' room drawn around the card (a
+    person walking in through a door, a plant, a lamp; `aria-hidden`); on
+    phones the card alone. Every step is an `AuthCard`: the arrow back when
+    a step is behind, the emblem in its blue-50 circle, the title at 30 px,
+    its line, the content, and the line to the other door.
+  - **`/sign-in`** as drawn, plus «¿Aún no tienes una cuenta? Regístrate»
+    → `/sign-up`, the way back kept. Its logic is M2's.
+  - **`/sign-up`, open to strangers**, its role in the address (`?as=`, by
+    `pushState`: the browser's back returns to «¿Quién eres?»): «¿Quién
+    eres?» (the landing's two avatars) → «Crea tu cuenta como paciente |
+    especialista» with its figure and Google and Apple, made in place under
+    the blue wipe (`useSignInArrival`) → the form of the role. A flow that
+    needs a patient (`/i/…`, `/book/…`) skips the question; an account
+    already signed up goes where signing in leads.
+  - **The specialist's form**, the app's (`lowCost`) fields in its order:
+    names, date of birth (18+), document (checked against other accounts
+    first), sex, phone (+58), the three consents → one
+    `POST /identity/register` (`role: SPECIALIST`) through the write-once
+    guard, a fresh token, then «¡Tu cuenta está creada!» under the green
+    wipe: the app registers the specialties (`AppAccess variant="created"`:
+    support while the app is in testing, the stores once published) and
+    «Ir a mi panel». An open specialist sign-up keeps getting «Termina tu
+    registro en la app».
+  - **The landing's «Comenzar»** of the specialists' card leads to
+    `/sign-up?as=specialist`.
+  - **Where the web differs from the frames, on purpose and to confirm:**
+    no SMS code (the API has `PHONE_VERIFICATION_ENABLED=false` and the app
+    runs `lowCost: true` in every flavor; an account the API ever puts in
+    `PENDING_PHONE_VERIFICATION` is sent to the app); the specialist's form
+    asks what the API requires (the frame shows the phone alone); Apple
+    stays next to Google on «Crea tu cuenta» (the same accounts as the
+    app); the specialist's card keeps the app's «Quiero conectar con
+    pacientes y automatizar mis citas» (the frame's «historias clínicas»
+    promises records Redoctor does not keep, M10); its button says
+    «Continuar» (the frame's «Siguiente» led to the SMS step); the bar and
+    the card follow the tokens (radius 30, fields 40 px, titles in
+    grey-900) where the frames use 36 px fields and pure black; phones are
+    ours (no phone frames).
 
 ### Improvements noted (not scheduled)
 

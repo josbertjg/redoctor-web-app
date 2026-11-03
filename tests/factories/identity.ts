@@ -76,3 +76,23 @@ export function buildSpecialistMeResponse(
     ...overrides,
   });
 }
+
+/**
+ * A specialist just signed up on the web or the app, waiting for the
+ * specialties registered in the app (the API's `PENDING_SPECIALTIES`).
+ */
+export function buildPendingSpecialistMeResponse(
+  overrides: Partial<MeInput> = {},
+): MeInput {
+  return buildMeResponse({
+    displayName: 'Luis Gómez',
+    role: 'SPECIALIST',
+    registrationStatus: 'PENDING_COMPLETE_SPECIALIST',
+    profiles: {
+      patient: { exists: false },
+      specialist: specialistFacet({ status: 'PENDING_SPECIALTIES' }),
+    },
+    visibilityStatus: 'PROFILE_INCOMPLETE',
+    ...overrides,
+  });
+}

@@ -1,49 +1,48 @@
 'use client';
 
-import { useId } from 'react';
+import type { ReactNode } from 'react';
+
+import Image from 'next/image';
 
 import ChevronRight from '@material-symbols/svg-400/rounded/chevron_right.svg?svgr';
-import Person from '@material-symbols/svg-400/rounded/person.svg?svgr';
-import Stethoscope from '@material-symbols/svg-400/rounded/stethoscope.svg?svgr';
+import Emoticon from '@material-symbols/svg-400/rounded/emoticon.svg?svgr';
 import { useTranslations } from 'next-intl';
 
-import { Icon, type IconComponent } from '@/app/ui/icons';
+import type { SignUpRole } from '@/app/lib/auth/sign-up';
 
-export type SignUpRole = 'patient' | 'specialist';
+import { Icon } from '@/app/ui/icons';
+
+import { AuthCard } from './auth-card';
 
 type RoleChoiceProps = {
   onChoose: (role: SignUpRole) => void;
   /** A word for whoever arrived with Apple's private email. */
-  notice?: React.ReactNode;
+  notice?: ReactNode;
+  /** The way to sign in instead, for someone not signed in yet. */
+  footer?: ReactNode;
 };
 
 /*
- * «¿Quién eres?» as the app asks it, for an account with no sign-up behind
- * it: a patient signs up here; a specialist is shown the way to the app.
+ * «¿Quién eres?» as the app asks it, in the designer's card: the patient's
+ * and the specialist's avatars (the landing's own), the name of each mode
+ * and what it is for. The specialist's line stays the app's: the frame's
+ * «historias clínicas» promises records Redoctor does not keep (M10).
  */
-export function RoleChoice({ onChoose, notice }: RoleChoiceProps) {
+export function RoleChoice({ onChoose, notice, footer }: RoleChoiceProps) {
   const t = useTranslations();
-  const headingId = useId();
 
   return (
-    <section
-      aria-labelledby={headingId}
-      className="w-full max-w-md animate-fade-up rounded-2xl bg-pure-white p-6 shadow-md sm:p-8"
+    <AuthCard
+      icon={Emoticon}
+      title={t('auth.whoAreYou')}
+      description={t('auth.whichModeDoYouWantToUse')}
+      footer={footer}
     >
-      <h1
-        id={headingId}
-        className="text-center text-headline-sm text-text-primary"
-      >
-        {t('auth.whoAreYou')}
-      </h1>
-      <p className="mt-2 text-center text-body-md text-text-secondary">
-        {t('auth.whichModeDoYouWantToUse')}
-      </p>
       {notice}
-      <ul className="mt-6 flex flex-col gap-3">
+      <ul className="flex flex-col gap-4 sm:gap-6">
         <li>
           <RoleOption
-            icon={Person}
+            avatar="/illustrations/landing/avatar-patient.svg"
             title={t('patient')}
             description={t('auth.iWantToFindSpecialists')}
             onSelect={() => {
@@ -53,7 +52,7 @@ export function RoleChoice({ onChoose, notice }: RoleChoiceProps) {
         </li>
         <li>
           <RoleOption
-            icon={Stethoscope}
+            avatar="/illustrations/landing/avatar-specialist.svg"
             title={t('specialist')}
             description={t('auth.iWantToConnectWithPatients')}
             onSelect={() => {
@@ -62,17 +61,17 @@ export function RoleChoice({ onChoose, notice }: RoleChoiceProps) {
           />
         </li>
       </ul>
-    </section>
+    </AuthCard>
   );
 }
 
 function RoleOption({
-  icon,
+  avatar,
   title,
   description,
   onSelect,
 }: {
-  icon: IconComponent;
+  avatar: string;
   title: string;
   description: string;
   onSelect: () => void;
@@ -81,19 +80,28 @@ function RoleOption({
     <button
       type="button"
       onClick={onSelect}
-      className="group flex min-h-20 w-full items-center gap-4 rounded-2xl bg-pure-white p-4 text-left shadow-md transition-[translate,box-shadow] duration-base ease-house outline-none hover:-translate-y-0.5 hover:shadow-lg focus-visible:ring-3 focus-visible:ring-ring/50"
+      className="group flex w-full items-center gap-4 rounded-xl bg-pure-white px-3 py-3.5 text-left shadow-md transition-[translate,box-shadow] duration-base ease-house outline-none hover:-translate-y-0.5 hover:shadow-lg focus-visible:ring-3 focus-visible:ring-ring/50 sm:gap-4.5"
     >
-      <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-info-light text-primary transition-[scale] duration-base ease-house group-hover:scale-110">
-        <Icon icon={icon} size={24} />
-      </span>
-      <span className="flex min-w-0 flex-1 flex-col">
-        <span className="text-title-md text-text-primary">{title}</span>
-        <span className="text-body-sm text-text-secondary">{description}</span>
+      <Image
+        src={avatar}
+        alt=""
+        aria-hidden="true"
+        width={68}
+        height={68}
+        className="size-14 shrink-0 rounded-full transition-[scale] duration-base ease-house group-hover:scale-105 sm:size-17"
+      />
+      <span className="flex min-w-0 flex-1 flex-col gap-1">
+        <span className="text-subtitle-m font-bold text-text-primary">
+          {title}
+        </span>
+        <span className="text-body-md text-pretty text-grey-800">
+          {description}
+        </span>
       </span>
       <Icon
         icon={ChevronRight}
         size={24}
-        className="shrink-0 text-grey-400 transition-[translate] duration-base ease-house group-hover:translate-x-0.5"
+        className="shrink-0 text-grey-500 transition-[translate] duration-base ease-house group-hover:translate-x-0.5"
       />
     </button>
   );

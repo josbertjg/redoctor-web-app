@@ -52,6 +52,15 @@ describe('routes', () => {
     expect(routes.signUp('/i/tok')).toBe('/sign-up?redirect=%2Fi%2Ftok');
   });
 
+  it('names the role chosen on the sign-up, before the way back', () => {
+    expect(routes.signUp(undefined, 'specialist')).toBe(
+      '/sign-up?as=specialist',
+    );
+    expect(routes.signUp('/i/t', 'patient')).toBe(
+      '/sign-up?as=patient&redirect=%2Fi%2Ft',
+    );
+  });
+
   it('lets the app open the pages it shows, never the payment nor the web’s own', () => {
     expect(isAppOwnedPath(routes.subscription())).toBe(true);
     expect(isAppOwnedPath(routes.agenda())).toBe(true);

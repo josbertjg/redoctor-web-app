@@ -28,6 +28,8 @@ type SessionButtonProps = {
    * `list`: the same as items of a vertical menu (the landing's phone menu).
    */
   layout?: 'bar' | 'list';
+  /** Nothing for a stranger: on the sign-in and sign-up pages, signing in is the page. */
+  hideSignIn?: boolean;
   className?: string;
 };
 
@@ -68,6 +70,7 @@ const AccountMenu = lazy(loadAccountMenu);
 export function SessionButton({
   redirect,
   layout = 'bar',
+  hideSignIn = false,
   className,
 }: SessionButtonProps) {
   const t = useTranslations('auth');
@@ -82,6 +85,7 @@ export function SessionButton({
   }, [expected, layout]);
 
   if (status === 'signed-out' || (status === 'resolving' && !expected)) {
+    if (hideSignIn) return null;
     return (
       <Button
         asChild

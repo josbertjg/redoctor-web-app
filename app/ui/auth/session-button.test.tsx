@@ -87,6 +87,16 @@ describe('SessionButton', () => {
     );
   });
 
+  it('offers nothing to a stranger where signing in is the page itself', () => {
+    const { container } = renderWithSession(
+      session({}),
+      <SessionButton hideSignIn />,
+    );
+
+    expect(screen.queryByRole('link', { name: 'Entrar' })).toBeNull();
+    expect(container).toBeEmptyDOMElement();
+  });
+
   it('offers «Entrar» at once when no session is expected', () => {
     renderWithSession(
       session({ status: 'resolving', expected: false }),
