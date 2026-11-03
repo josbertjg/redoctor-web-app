@@ -8,6 +8,7 @@ import {
   wipeOpened,
 } from './signed-in';
 import { buildAppointment, hoursFromNow } from '../factories/appointments';
+import { buildSubscription } from '../factories/billing';
 
 import type { Locator, Page } from '@playwright/test';
 
@@ -549,6 +550,50 @@ test('a specialist closes out a consultation, on its page and from «Citas»', a
       `/scheduling/specialist/appointments/${appointment}/complete`,
     ),
   ).toBe(true);
+});
+
+test('a specialist books someone new from «Citas», and has their invitation', async ({
+  page,
+  providers,
+  api,
+}) => {
+  api.specialist(people.doctor);
+  providers.next = people.doctor;
+  // A plan in force: booking needs one.
+  await page.route('**/api/v1/billing/me/subscription', (route) =>
+    route.fulfill({
+      json: {
+        subscription: buildSubscription({ status: 'ACTIVE' }),
+        access: { hasAccess: true, status: 'ACTIVE' },
+      },
+    }),
+  );
+
+  // «Nueva cita» is in the address: it opens after signing in.
+  await page.goto('/panel/agenda?new=1');
+  await signInWith(page);
+  const sheet = page.getByRole('dialog', { name: 'Nueva cita' });
+  await chooseFirstFreeDay(sheet);
+  await sheet.getByText('8:30 a. m.', { exact: true }).click();
+  await sheet.getByRole('button', { name: 'Siguiente', exact: true }).click();
+
+  await page.getByRole('textbox', { name: 'Nombre' }).fill('Pedro');
+  await page.getByRole('textbox', { name: 'Apellido' }).fill('Gil');
+  await page
+    .getByRole('textbox', { name: 'Fecha de nacimiento' })
+    .fill('2020-01-10');
+  await page.getByText('Hombre', { exact: true }).click();
+  await page.getByRole('textbox', { name: 'Teléfono' }).fill('4141234567');
+  await page.getByRole('button', { name: 'Agendar cita' }).click();
+
+  const done = page.getByRole('dialog', { name: '¡Todo listo!' });
+  await expect(
+    done.getByText('¡La cita ha sido agendada con éxito!'),
+  ).toBeVisible();
+  await expect(
+    done.getByRole('button', { name: 'Compartir invitación' }),
+  ).toBeVisible();
+  expect(api.called('POST', '/scheduling/specialist/appointments')).toBe(true);
 });
 
 test('signing out from the menu leaves the link asking for the session again', async ({

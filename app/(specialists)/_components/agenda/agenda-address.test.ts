@@ -14,6 +14,7 @@ describe('agendaAddress', () => {
       status: null,
       officeId: null,
       appointmentId: null,
+      newAppointment: false,
     });
     expect(read(null, '', false).view).toBe('day');
     // A phone has no room for the week, whatever the address asks.
@@ -52,6 +53,7 @@ describe('agendaAddress', () => {
       status: null,
       officeId: null,
       appointmentId: null,
+      newAppointment: false,
     });
   });
 });
@@ -105,5 +107,16 @@ describe('agendaInPlaceHref', () => {
     expect(
       agendaInPlaceHref({ ...read(null), status: 'CONFIRMED' }, null),
     ).toBe('/panel/agenda?status=CONFIRMED');
+  });
+});
+
+describe('«Nueva cita» in the address', () => {
+  it('opens with ?new=1, and is written back so', () => {
+    const address = read('2026-10-14', 'new=1');
+    expect(address.newAppointment).toBe(true);
+    expect(read(null, 'new=yes').newAppointment).toBe(false);
+    expect(agendaInPlaceHref(address, '2026-10-14')).toBe(
+      '/panel/agenda/2026-10-14?new=1',
+    );
   });
 });

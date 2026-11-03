@@ -16,6 +16,8 @@ export type AgendaAddress = {
   officeId: string | null;
   /** The appointment open over the agenda («Ver cita»). */
   appointmentId: string | null;
+  /** «Nueva cita» open over the agenda (`?new=1`). */
+  newAppointment: boolean;
 };
 
 /** An id as the API writes them; anything else is not looked for. */
@@ -54,6 +56,7 @@ export function agendaAddress(
       : null,
     officeId: idOrNull(search.get('office')),
     appointmentId: idOrNull(search.get('appointment')),
+    newAppointment: search.get('new') === '1',
   };
 }
 
@@ -64,6 +67,7 @@ function agendaQuery(address: AgendaAddress, implied: AgendaView): string {
   if (address.status) params.set('status', address.status);
   if (address.officeId) params.set('office', address.officeId);
   if (address.appointmentId) params.set('appointment', address.appointmentId);
+  if (address.newAppointment) params.set('new', '1');
   const query = params.toString();
   return query ? `?${query}` : '';
 }

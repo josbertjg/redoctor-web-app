@@ -36,6 +36,7 @@ import { AgendaMonth, AgendaNext } from './agenda-side';
 import { AgendaToolbar } from './agenda-toolbar';
 import { AgendaWeek } from './agenda-week';
 import { AppointmentDialog } from './appointment-dialog';
+import { NewAppointmentDialog } from './new-appointment/new-appointment-dialog';
 
 /*
  * «Citas» (`/panel/agenda[/{YYYY-MM-DD}]`), as the designer drew it: the
@@ -100,14 +101,19 @@ function Agenda({
   };
   const openAppointment = (appointmentId: string) => {
     openedHere.current = true;
-    write({ appointmentId }, 'push');
+    write({ appointmentId, newAppointment: false }, 'push');
   };
-  const closeAppointment = () => {
+  const openNew = () => {
+    openedHere.current = true;
+    write({ newAppointment: true, appointmentId: null }, 'push');
+  };
+  /** A dialog closes: back when it was opened here, else it leaves the address. */
+  const closeDialog = () => {
     if (openedHere.current) {
       openedHere.current = false;
       window.history.back();
     } else {
-      write({ appointmentId: null }, 'replace');
+      write({ appointmentId: null, newAppointment: false }, 'replace');
     }
   };
 
@@ -124,6 +130,7 @@ function Agenda({
         onFilter={(change) => {
           write({ ...change, appointmentId: null }, 'replace');
         }}
+        onNew={openNew}
       />
       {content()}
       <AppointmentDialog
@@ -134,7 +141,30 @@ function Agenda({
         listed={week.data ?? []}
         listedAt={week.dataUpdatedAt}
         listReady={!week.isPending}
-        onClose={closeAppointment}
+        onClose={closeDialog}
+      />
+      <NewAppointmentDialog
+        open={address.newAppointment}
+        user={user}
+        today={today}
+        onClose={closeDialog}
+        onSeeDay={(date) => {
+          openedHere.current = false;
+          // In place of the entry that opened it: back does not reopen it.
+          router.replace(
+            agendaHref(
+              {
+                ...address,
+                date,
+                view: 'day',
+                appointmentId: null,
+                newAppointment: false,
+              },
+              today,
+            ) as Route,
+            { scroll: false },
+          );
+        }}
       />
     </div>
   );

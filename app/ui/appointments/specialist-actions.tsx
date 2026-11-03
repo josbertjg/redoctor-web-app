@@ -391,19 +391,20 @@ function RowAction({
  * the app builds it (the token leads; the API's own URL, an old path,
  * REDOC-255, only when no token came), tagged with the channel it goes by.
  */
-function useShareInvitationStep({
+export function useShareInvitationStep({
   appointment,
   user,
   enabled,
 }: {
-  appointment: AppointmentSummary;
+  /** None yet (a booking still to make): the step waits for it. */
+  appointment: AppointmentSummary | null;
   user: SessionUser;
   enabled: boolean;
 }): SheetStep {
   const t = useTranslations();
   const link = useQuery({
-    ...appointmentInvitationQueryOptions(user, appointment.id),
-    enabled,
+    ...appointmentInvitationQueryOptions(user, appointment?.id ?? ''),
+    enabled: enabled && appointment !== null,
   });
   const token = link.data?.token ?? null;
   const url =
@@ -411,6 +412,9 @@ function useShareInvitationStep({
       ? (link.data?.url ?? null)
       : new URL(routes.invitation(token), publicEnv.siteUrl).toString();
   const phone = link.data?.phone ?? null;
+  if (appointment === null) {
+    return { title: t('appointments.detail.shareInvitation'), body: null };
+  }
   const time = formatAppointmentTime(appointment.startTime);
   const linkLine = appointment.canConfirmNow
     ? t('appointments.messages.invitation.linkConfirmNow')

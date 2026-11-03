@@ -252,6 +252,18 @@ describe('«Citas»', () => {
     ).toBeVisible();
   });
 
+  it('opens «Nueva cita» from its «+», in the address', async () => {
+    renderAgenda();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Nueva cita' }),
+    );
+    expect(window.location.search).toBe('?view=day&new=1');
+    expect(
+      await screen.findByRole('dialog', { name: 'Nueva cita' }),
+    ).toBeInTheDocument();
+  });
+
   it('says so when the appointment a link opens is not there', async () => {
     renderAgenda(
       '/panel/agenda?appointment=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',

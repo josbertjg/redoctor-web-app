@@ -6,6 +6,7 @@ import {
   appointmentIds,
   buildAppointment,
   officeId,
+  specialistPatientIds,
   takenStartTime,
 } from '@/tests/factories/appointments';
 
@@ -13,6 +14,7 @@ import {
   appointmentInvitationQueryOptions,
   appointmentQueryOptions,
   availableDaysQueryOptions,
+  bookAsSpecialist,
   cancelAppointment,
   cancelAsSpecialist,
   completeAppointment,
@@ -21,6 +23,7 @@ import {
   rescheduleAppointment,
   rescheduleAsSpecialist,
   specialistAppointmentsQueryOptions,
+  specialistPatientsQueryOptions,
 } from './appointments';
 import { apiUrl } from '../../../tests/msw/api-url';
 import { validToken } from '../../../tests/msw/handlers/identity';
@@ -263,5 +266,139 @@ describe('specialistAppointmentsQueryOptions', () => {
       page: '1',
       pageSize: '100',
     });
+  });
+});
+
+describe('the specialist books a patient', () => {
+  const slot = { officeId, date: '2026-10-20', startTime: '09:00' };
+
+  it('finds their registered patients, with what their account lacks', async () => {
+    const patients = await new QueryClient().query(
+      specialistPatientsQueryOptions(user, '12345678'),
+    );
+    expect(patients).toEqual([
+      expect.objectContaining({
+        userId: specialistPatientIds.laura,
+        firstName: 'Laura',
+        lastName: 'Gómez',
+        document: { type: 'V', number: '12345678' },
+        sex: 'FEMALE',
+        dateOfBirth: '1990-05-04',
+        missing: [],
+      }),
+    ]);
+    const [jorge] = await new QueryClient().query(
+      specialistPatientsQueryOptions(user, 'jorge'),
+    );
+    expect(jorge).toMatchObject({
+      document: null,
+      missing: ['documentNumber'],
+    });
+  });
+
+  it('books a registered patient by their account', async () => {
+    let sent: unknown;
+    server.events.on('request:start', ({ request }) => {
+      if (request.method === 'POST')
+        void request
+          .clone()
+          .json()
+          .then((body: unknown) => {
+            sent = body;
+          });
+    });
+    const appointment = await bookAsSpecialist(user, {
+      ...slot,
+      specialtyId: null,
+      reasonId: null,
+      patient: { kind: 'registered', userId: specialistPatientIds.laura },
+    });
+    server.events.removeAllListeners();
+
+    expect(sent).toEqual({
+      ...slot,
+      patientUserId: specialistPatientIds.laura,
+    });
+    expect(appointment).toMatchObject({
+      patientUserId: specialistPatientIds.laura,
+      officeId,
+    });
+  });
+
+  it('books someone new with their data, the specialty and the reason', async () => {
+    let sent: unknown;
+    server.events.on('request:start', ({ request }) => {
+      if (request.method === 'POST')
+        void request
+          .clone()
+          .json()
+          .then((body: unknown) => {
+            sent = body;
+          });
+    });
+    const appointment = await bookAsSpecialist(user, {
+      ...slot,
+      specialtyId: 'a0000000-0000-4000-8000-000000000014',
+      reasonId: 'c0000000-0000-4000-8000-000000000001',
+      patient: {
+        kind: 'new',
+        firstName: 'Pedro',
+        lastName: 'Gil',
+        dateOfBirth: '2020-01-10',
+        document: null,
+        sex: 'MALE',
+        phone: '+584141234567',
+      },
+    });
+    server.events.removeAllListeners();
+
+    expect(sent).toEqual({
+      ...slot,
+      specialtyId: 'a0000000-0000-4000-8000-000000000014',
+      consultationReasonId: 'c0000000-0000-4000-8000-000000000001',
+      patient: {
+        firstName: 'Pedro',
+        lastName: 'Gil',
+        dateOfBirth: '2020-01-10',
+        sex: 'MALE',
+        phone: '+584141234567',
+      },
+    });
+    expect(appointment.patientUserId).toBeNull();
+  });
+
+  it('finds a booking whose answer was lost in that day’s agenda, and sends nothing again', async () => {
+    let posts = 0;
+    const landed = buildAppointment(
+      {
+        id: 'e1000000-0000-4000-8000-000000000001',
+        patientUserId: specialistPatientIds.laura,
+      },
+      new Date('2026-10-20T13:00:00.000Z'),
+    );
+    server.use(
+      http.post(apiUrl('/scheduling/specialist/appointments'), () => {
+        posts += 1;
+        return HttpResponse.error();
+      }),
+      http.get(apiUrl('/scheduling/specialist/appointments'), () =>
+        HttpResponse.json({
+          appointments: [landed],
+          total: 1,
+          page: 1,
+          pageSize: 100,
+        }),
+      ),
+    );
+
+    const appointment = await bookAsSpecialist(user, {
+      ...slot,
+      specialtyId: null,
+      reasonId: null,
+      patient: { kind: 'registered', userId: specialistPatientIds.laura },
+    });
+
+    expect(appointment.id).toBe(landed.id);
+    expect(posts).toBe(1);
   });
 });

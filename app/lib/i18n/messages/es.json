@@ -1516,6 +1516,50 @@
         "link": "Para ver los detalles de tu consulta, ingresa en el siguiente enlace:",
         "closing": "¡Te esperamos! 💙"
       }
+    },
+    "booking": {
+      "title": "Nueva cita",
+      "selectDate": "Selecciona una fecha",
+      "office": "Consultorio",
+      "selectTime": "Selecciona un horario",
+      "noActiveOfficeTitle": "No tienes consultorios activos",
+      "noActiveOfficeDescription": "Activa un consultorio desde la app para agendar citas en él.",
+      "patient": "Paciente",
+      "reason": "Motivo de consulta",
+      "reasonPlaceholder": "Seleccionar",
+      "searchingPatients": "Buscando pacientes…",
+      "patientSearchFailed": "No pudimos buscar pacientes",
+      "patientNotFound": "No encontramos a este paciente",
+      "patientNotFoundByDocument": "La cédula debe estar completa. Si no tiene cuenta, completa sus datos para registrarlo.",
+      "patientNotFoundByName": "Completa sus datos y lo registramos al agendar la cita.",
+      "patientResults": "Pacientes encontrados",
+      "unnamedPatient": "Paciente sin nombre",
+      "registeredPatient": "Paciente registrado",
+      "registeredPatientHint": "La cita quedará vinculada a su cuenta, con los datos que ya tiene registrados.",
+      "changePatient": "Cambiar por otro paciente",
+      "missingData": "A su cuenta le falta {fields}: pídeselo para completarla.",
+      "missing": {
+        "firstName": "el nombre",
+        "lastName": "el apellido",
+        "dateOfBirth": "la fecha de nacimiento",
+        "sex": "el sexo",
+        "documentNumber": "la cédula"
+      },
+      "phoneHint": "Ahí le llegará la invitación; si es menor de edad, el de su representante.",
+      "slotTakenTitle": "Ese horario ya no está libre",
+      "slotTakenDescription": "Reservaron esa franja mientras completabas los datos del paciente. Elige otro horario.",
+      "successTitle": "¡Todo listo!",
+      "successSubtitle": "¡La cita ha sido agendada con éxito!",
+      "successRegistered": "El paciente ya puede verla desde su cuenta y deberá confirmarla dentro de las 24 horas previas a la consulta.",
+      "successInvited": "El paciente todavía no tiene cuenta: compártele su invitación para que acceda a la cita y la confirme.",
+      "seeAppointments": "Ver citas",
+      "bookAppointment": "Agendar cita",
+      "next": "Siguiente",
+      "needsPlanTitle": "Para agendar citas necesitas un plan activo",
+      "needsPlanDescription": "Con un plan en vigor agendas a tus pacientes desde aquí y desde la app.",
+      "seePlans": "Ver planes",
+      "seeSubscription": "Ver mi suscripción",
+      "bookFailed": "No pudimos agendar la cita. Inténtalo de nuevo."
     }
   },
   "priceFormat": {
@@ -1703,7 +1747,7 @@
       },
       "profile": {
         "title": "Tu perfil",
-        "description": "Lo que ven tus pacientes y cómo va la revisión de tus especialidades. Agendar a tus pacientes y editar tu perfil, tus consultorios y tus horarios se hace desde la app.",
+        "description": "Lo que ven tus pacientes y cómo va la revisión de tus especialidades. Editar tu perfil, tus consultorios y tus horarios se hace desde la app.",
         "myProfile": {
           "title": "Mi perfil",
           "description": "Lo que ven tus pacientes."
@@ -1777,9 +1821,10 @@
       "appointmentNotFound": "No encontramos esta cita",
       "appointmentNotFoundDescription": "Puede que el enlace esté incompleto o que la cita sea de otra cuenta.",
       "appointmentLoadError": "No pudimos cargar esta cita",
-      "age": "{count, plural, one {1 año} other {# años}}",
+      "age": "{count, plural, =0 {Recién nacido} one {1 año} other {# años}}",
       "details": "Detalles",
-      "hours": "{from} – {to}"
+      "hours": "{from} – {to}",
+      "newAppointment": "Nueva cita"
     },
     "history": {
       "metaTitle": "Historial de citas",

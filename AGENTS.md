@@ -82,7 +82,7 @@ transactional emails the API sends.
 | M10 Legal and account | `/terms`, `/privacy` and `/delete-account` (2026-10-14): the terms of use, the privacy policy and how to have an account deleted, drafted from what the web and the app do, as the base the lawyer reviews (the owner's word); the company's identification is a placeholder until he fills it (§13). Since 2026-11-02 `/delete-account` deletes the account right there, signed in (REDOC-352, self-service on the owner's word) |
 | M11 Bridges | `/home/*` (pages that only open the app) and `/daily-summary/unsubscribe` (daily-summary email opt-out); `/panel/subscription`, `/panel/agenda`, `/panel/specialties` and `/panel/profile` were bridges until M14 made them pages |
 | M13 Specialist payment | `/panel/subscription` («Mi suscripción»: the plan, its state and its notice) and `/pay` (the payment, out of the paths the app opens, since no app may charge; the owner's split of 2026-10-13): choose a plan with a coupon — quoted as it opens and taken, with its payment reported, at «Confirmar» (REDOC-363, 2026-11-02; a payment left halfway is taken up again) —, Pago Móvil and transfer data in Bs from the API, report the payment, see it in review; changing plan — from «Mi suscripción» (`?view=plans`) or from a missing feature's invitation (`?plan=`) — and undoing a scheduled change (2026-10-13); and the rest of the app's «Mi suscripción» the same day (§13, Decided): cancelling and resuming, dropping an unpaid subscription, a coupon on the plan in force, the billing data, the receipts (`/panel/subscription/invoices[/{id}]`, each one payable from its page), the balance (`/panel/subscription/balance`) and «Mis cupones» (`/panel/subscription/coupons`) |
-| M14 Specialist panel | `/panel` and its sections (2026-10-13): the home (the plan and its notice, today's patients, the statistics, what stays in the app), «Citas» `/panel/agenda[/{date}]` (the week or the day, and «Ver cita» over it with what the app lets a specialist do: finish the consultation, mark a no-show, reschedule, cancel, share the invitation; 2026-11-03) and the history `/panel/appointments` (read only, each appointment opening `/a/{id}`), the statistics `/panel/reports` (the app's summary and four reports, PDF and CSV when the plan allows), «Mi perfil» `/panel/profile` (whether patients find the profile and, if not, why; the profile as the app shows it to its owner) and «Mis especialidades» `/panel/specialties` (each specialty and its review), both read only, the subscription (M13); a specialist stays in it until signing out |
+| M14 Specialist panel | `/panel` and its sections (2026-10-13): the home (the plan and its notice, today's patients, the statistics, what stays in the app), «Citas» `/panel/agenda[/{date}]` (the week or the day, and «Ver cita» over it with what the app lets a specialist do: finish the consultation, mark a no-show, reschedule, cancel, share the invitation; and «Nueva cita», a registered patient or someone new booked with the app's rules, the invitation shared after; 2026-11-03) and the history `/panel/appointments` (read only, each appointment opening `/a/{id}`), the statistics `/panel/reports` (the app's summary and four reports, PDF and CSV when the plan allows), «Mi perfil» `/panel/profile` (whether patients find the profile and, if not, why; the profile as the app shows it to its owner) and «Mis especialidades» `/panel/specialties` (each specialty and its review), both read only, the subscription (M13); a specialist stays in it until signing out |
 | M15 Booking | `/book/{specialistId}` (the owner's «vamos con el agendar desde /s», 2026-10-13; built 2026-10-14): a patient books with the specialist of a public profile in the app's four steps — the office, the day and hour, the reason and for whom (oneself, someone in one's care, someone new), the summary — and «¡Todo listo!»; the appointment is born pending and is confirmed on `/a/{id}` from 24 h before. The web's own page, out of `/s/*` (§6) |
 | M16 Search | `/search` (the owner's word, 2026-10-14: «darle vida a esa barra de búsqueda», with ZocDoc, Doctoralia and Webel as the references): the landing's search box live — a specialty of the catalog or a specialist's name offered as one types, the place («Usar mi ubicación», a Google place or one of the built-in cities, or the whole country) — and the results as patients know them: the cards (photo, name with the verified mark, specialties, rating, nearest office and how far, lowest price, the next days, each one a way into the booking), the app's filters (availability, distance), a Google map of the offices with «Buscar en esta zona», ten at a time. The web's own page, listed by no app (§6); public, the session asked for where the booking starts |
 | M17 Notifications | The bell on every page with a session (the owner's word, 2026-10-14, «sumamente importante»): the unread count, the inbox as a menu that unfolds from it (the app's: read, read all, delete, empty), the API's live channel (Socket.IO) that brings each notice as it is born — a banner, the count, and what the notice leaves stale read again, as the app's `NotificationEffects` — and the signals of data changed elsewhere (`data:changed`, REDOC-358), and the web push through a service worker of ours for when no tab is in view, offered from the menu and only with the VAPID key. No sound on the web |
@@ -257,7 +257,7 @@ app/                                  # The application: routes, UI and logic
   (search)/                           # module: the search for specialists (M16)
     search/page.tsx · error.tsx       #   /search — the search in the address, the first page read on the server, the rest in the browser
     _components/                      #   search-header (+ -header-bar), search-navigation (the address as the one state, the pending line), search-results, result-card, availability-strip, search-filters, map-panel, results-map, map-markers, results-states
-    _components/                      #   profile pieces; panel-* (panel-home: the home's rules; panel-greeting, panel-activation-card with use-profile-activation, panel-plan-card, panel-week-agenda, panel-week-chart), agenda/ («Citas»: agenda-view, agenda-address — the address as the one state —, agenda-toolbar, agenda-week with week-layout, agenda-day-list, agenda-side — the month and «Próxima cita» —, appointment-dialog — «Ver cita» —), agenda-header and agenda-skeleton, appointments-history, booking-action and book-at-office (the profile's «Agendar cita», `useBookingOffer`), edit-in-app-card, plan-offer-card; reports/ (the statistics' views, charts, filters, export and the plan that downloads); my-profile/ (the view, its state, identity, offices, prices, schedules and training blocks); my-specialties/ (the view, the specialty card, support)
+    _components/                      #   profile pieces; panel-* (panel-home: the home's rules; panel-greeting, panel-activation-card with use-profile-activation, panel-plan-card, panel-week-agenda, panel-week-chart), agenda/ («Citas»: agenda-view, agenda-address — the address as the one state —, agenda-toolbar, agenda-week with week-layout, agenda-day-list, agenda-side — the month and «Próxima cita» —, appointment-dialog — «Ver cita» —, new-appointment/ — «Nueva cita»: the dialog, who-step, use-patient-search —), agenda-header and agenda-skeleton, appointments-history, booking-action and book-at-office (the profile's «Agendar cita», `useBookingOffer`), edit-in-app-card, plan-offer-card; reports/ (the statistics' views, charts, filters, export and the plan that downloads); my-profile/ (the view, its state, identity, offices, prices, schedules and training blocks); my-specialties/ (the view, the specialty card, support)
   (account)/                          # module: legal and account (M10)
     layout.tsx                        #   the bar with the account over the legal pages
     terms/page.tsx · privacy/page.tsx · delete-account/page.tsx   # /terms, /privacy, /delete-account — public, indexed; every word in the catalog (`legal.*`)
@@ -633,7 +633,7 @@ docs point here instead of copying it.
 | `/i/{token}` | patient | Full invitation experience (M4); "Abrir en la app" once the app is published (patients have none in the pilot, §13) | the app (the specialist's WhatsApp); the API's `invitationUrl` |
 | `/a/{appointmentId}` | patient (and specialist in the app) | Full appointment experience (M5); its specialist acts on it as the app lets them (finish, no-show, reschedule, cancel, share the invitation), with the patient in full and the way back to the agenda | the app (reminders, confirmation); emails 11–13 and 15 |
 | `/panel/subscription` | specialist | «Mi suscripción» (M13): the plan, its state, its notice and the way to pay | billing emails 01–05 and 07–09 (REDOC-356) |
-| `/panel/agenda`, `/panel/agenda/{YYYY-MM-DD}` | specialist | «Citas» (M14): the week from laptops up, the day on phones (or `?view=`), «Ver cita» over it by `?appointment=`; a malformed date is today, as in the app | the daily summary, email 10 (REDOC-359) |
+| `/panel/agenda`, `/panel/agenda/{YYYY-MM-DD}` | specialist | «Citas» (M14): the week from laptops up, the day on phones (or `?view=`), «Ver cita» over it by `?appointment=`, «Nueva cita» by `?new=1`; a malformed date is today, as in the app | the daily summary, email 10 (REDOC-359) |
 | `/panel/appointments` | specialist | The appointments history (M14); the app opens its «Citas» (since its v0.169.1; an older build, its home) | the panel |
 | `/panel/reports` | specialist | The statistics (M14); the app opens its «Estadísticas» (since its v0.169.1; an older build, its home) | the panel |
 | `/panel/specialties` | specialist | «Mis especialidades» (M14), read only: each specialty and where its review stands | email 16 (REDOC-360) |
@@ -3028,6 +3028,46 @@ written out in full, or Next.js does not inline it).
     WhatsApp reminder to a claimed patient (`AppointmentReminderSection`)
     and a follow-up after a finished one (`AppointmentRebook`); the web
     has neither yet.
+
+- **Phase 4, a new appointment, as built (frames `4662:370` when,
+  `4663:3952` who, `4664:4414` done):**
+  - **Where:** the «+» at the end of «Citas»' bar, and «Agendar cita» on
+    the home's week (over the day chosen): `?new=1` in the agenda's
+    address, so back closes it; «Ver citas» at the end replaces that entry
+    with the new appointment's day.
+  - **When:** the first active office chosen (a select with two or more),
+    the month's free days and the day's free hours side by side from
+    tablets up (`SlotPicker`), «Siguiente».
+  - **Who:** the document (from 6 digits, exact) or the names (from 3
+    letters, partial) look for a registered patient after the app's 400 ms
+    (`usePatientSearch`: an older term's answer never shows); one chosen
+    becomes its card — «Paciente registrado», what its account lacks
+    (`missingData`, never in the way), «Cambiar por otro paciente» —;
+    otherwise the same fields register someone new: names, birth date, the
+    document from 9 years and a month, sex and the phone the invitation
+    goes to (a minor's representative's). The reason with its price, when
+    the office has any, optional as the API takes it. «Volver» and
+    «Agendar cita».
+  - **The write** (`bookAsSpecialist`): `POST
+    /scheduling/specialist/appointments` with the account's id or the
+    person's data, the specialty only with one branch (the own profile's
+    verified ones, their catalog `specialtyId`), through the write-once
+    guard (a lost answer is looked for in that day's agenda); ERR_4002
+    goes back to the hours with the app's «Ese horario ya no está libre»,
+    what was typed kept; ERR_5052 or a subscription without access offers
+    the plans («Ver planes», or «Ver mi suscripción» when there is one)
+    instead of the form; with no active office, the app is where one turns
+    on. The answer goes into the caches (the agenda, the history, the
+    statistics).
+  - **«¡Todo listo!»** with the app's words for a registered or an invited
+    patient; for an invited one «Compartir invitación» opens the actions'
+    share step inside the same sheet; «Ver citas».
+  - **Where the web differs, on purpose and to confirm:** «Agendar cita»
+    where the frame repeats «Siguiente» on the patient's step; the
+    registered patient's missing data said on its card (the app does not);
+    the reason optional (the app's select, the API's rule); no colour wipe
+    after booking (a specialist books often; §8.13 keeps it for the once-
+    or-twice moments).
 
 ### Improvements noted (not scheduled)
 

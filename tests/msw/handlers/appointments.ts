@@ -4,7 +4,9 @@ import { z } from 'zod';
 import { buildSpecialistAgenda } from '../../factories/agenda';
 import {
   appointmentFor,
+  buildSpecialistPatients,
   appointmentIds,
+  buildAppointment,
   buildAppointmentList,
   slotAt,
   takenStartTime,
@@ -24,6 +26,34 @@ const conflict = (code: string) =>
   HttpResponse.json(errorEnvelope(code, 'Conflict'), { status: 409 });
 
 const terminal = new Set(['CANCELLED', 'COMPLETED', 'NO_SHOW']);
+
+/** Case and accents aside, as the API compares names. */
+const plainText = (value: string) =>
+  value.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+
+/** `POST /scheduling/specialist/appointments`, as the API checks it. */
+const specialistBookingBody = z
+  .strictObject({
+    officeId: z.string(),
+    date: z.string(),
+    startTime: z.string(),
+    specialtyId: z.string().optional(),
+    consultationReasonId: z.string().optional(),
+    notes: z.string().optional(),
+    patientUserId: z.string().optional(),
+    patient: z
+      .strictObject({
+        firstName: z.string(),
+        lastName: z.string(),
+        dateOfBirth: z.string(),
+        documentType: z.string().optional(),
+        documentNumber: z.string().optional(),
+        sex: z.enum(['MALE', 'FEMALE']).optional(),
+        phone: z.string().min(1),
+      })
+      .optional(),
+  })
+  .refine((body) => !!body.patientUserId !== !!body.patient);
 
 function halfHourAfter(time: string): string {
   const [hours = 0, minutes = 0] = time.split(':').map(Number);
@@ -223,6 +253,62 @@ export const appointmentsHandlers = [
           canConfirmNow: false,
         },
       });
+    },
+  ),
+
+  // The specialist books a patient (phase 4 of the designer's screens):
+  // their registered patients by name, document or email, and the booking
+  // for one of them or for someone new, with the API's rules.
+  http.get(apiUrl('/scheduling/specialist/patients'), ({ request }) => {
+    if (isStranger(request)) return unauthorized();
+    const search =
+      new URL(request.url).searchParams.get('search')?.trim() ?? '';
+    if (search.length < 3) return badRequest();
+    const words = plainText(search);
+    const patients = buildSpecialistPatients().filter(
+      (patient) =>
+        patient.documentNumber === search.replace(/\D/g, '') ||
+        patient.email === search ||
+        plainText(`${patient.firstName} ${patient.lastName}`).includes(words),
+    );
+    return HttpResponse.json({ patients });
+  }),
+
+  http.post(
+    apiUrl('/scheduling/specialist/appointments'),
+    async ({ request }) => {
+      if (isStranger(request)) return unauthorized();
+      const body = specialistBookingBody.safeParse(await request.json());
+      if (!body.success) return badRequest();
+      const { data } = body;
+      if (data.startTime === takenStartTime) return conflict('ERR_4002');
+      const registered = buildSpecialistPatients().find(
+        (patient) => patient.userId === data.patientUserId,
+      );
+      const attendee = data.patient
+        ? { firstName: data.patient.firstName, lastName: data.patient.lastName }
+        : {
+            firstName: registered?.firstName ?? '',
+            lastName: registered?.lastName ?? '',
+          };
+      const appointment = buildAppointment(
+        {
+          id: 'e2000000-0000-4000-8000-000000000001',
+          patientUserId: data.patientUserId ?? null,
+          officeId: data.officeId,
+          attendee,
+        },
+        new Date(`${data.date}T${data.startTime}:00-04:00`),
+      );
+      return HttpResponse.json(
+        {
+          appointment,
+          invitation: data.patient
+            ? { token: 'tok-booked', invitedPhone: data.patient.phone }
+            : null,
+        },
+        { status: 201 },
+      );
     },
   ),
 

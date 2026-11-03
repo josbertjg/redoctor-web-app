@@ -7,9 +7,13 @@ import {
   appointmentInvitationLinkSchema,
   appointmentListResponseSchema,
   appointmentResponseSchema,
+  isThisSpecialistBooking,
   specialistAppointmentPageSchema,
+  specialistPatientsResponseSchema,
+  toSpecialistBookingBody,
   type AppointmentResponse,
   type AppointmentStatus,
+  type SpecialistBookingRequest,
 } from '../schemas/appointments';
 import { availableDaysSchema, daySlotsSchema } from '../schemas/availability';
 
@@ -139,6 +143,102 @@ export function specialistAppointmentsQueryOptions(
     },
     // The patient may confirm, move or cancel meanwhile: short, no polling.
     staleTime: 30_000,
+  });
+}
+
+/** The specialist's registered patients that match a name, a document or an email (3 characters at least). */
+export function specialistPatientsQueryOptions(
+  user: TokenHolder,
+  term: string,
+) {
+  return queryOptions({
+    queryKey: ['specialist-patients', user.id, term],
+    queryFn: async ({ signal }) =>
+      apiFetch({
+        path: '/scheduling/specialist/patients',
+        query: { search: term },
+        token: await user.getToken(),
+        schema: specialistPatientsResponseSchema,
+        signal,
+      }),
+    staleTime: 60_000,
+  });
+}
+
+const specialistBookings = createWriteOnceGuard<AppointmentResponse>();
+
+/**
+ * The specialist books a patient (`POST /scheduling/specialist/appointments`):
+ * one with an account by its id, someone new by their data — the API then
+ * issues an invitation, read as the actions read it. A lost answer looks
+ * for it in that day's agenda before calling it failed, and again before
+ * sending it a second time; so does a slot refused as taken, which a second
+ * tab may have taken with this very booking. What the API refuses is the
+ * flow's to explain: a slot just taken (409 ERR_4002), no plan in force
+ * (403 ERR_5052), an office or a reason no longer there (404, ERR_3045).
+ */
+export function bookAsSpecialist(
+  user: TokenHolder,
+  request: SpecialistBookingRequest,
+): Promise<AppointmentResponse> {
+  const lookAgain = async () => {
+    const { appointments } = await apiFetch({
+      path: '/scheduling/specialist/appointments',
+      query: {
+        from: request.date,
+        to: request.date,
+        page: 1,
+        pageSize: specialistPageSize,
+      },
+      token: await user.getToken(),
+      schema: specialistAppointmentPageSchema,
+    });
+    return (
+      appointments.find((appointment) =>
+        isThisSpecialistBooking(appointment, request),
+      ) ?? null
+    );
+  };
+  const { patient } = request;
+  const patientKey =
+    patient.kind === 'registered'
+      ? patient.userId
+      : `${patient.firstName} ${patient.lastName} ${patient.dateOfBirth}`.toLowerCase();
+
+  return specialistBookings({
+    intent: [
+      'specialist-book',
+      request.officeId,
+      `${request.date}T${request.startTime}`,
+      patientKey,
+    ].join(':'),
+    send: async () => {
+      try {
+        const { appointment } = await apiFetch({
+          method: 'POST',
+          path: '/scheduling/specialist/appointments',
+          token: await user.getToken(),
+          body: toSpecialistBookingBody(request),
+          schema: appointmentResponseSchema,
+          expected: (error) =>
+            error.status === 403 ||
+            error.status === 404 ||
+            error.status === 409,
+        });
+        return appointment;
+      } catch (error) {
+        if (
+          isApiError(error) &&
+          error.status === 409 &&
+          error.code === 'ERR_4002'
+        ) {
+          const landed = await lookAgain();
+          if (landed) return landed;
+        }
+        throw error;
+      }
+    },
+    findLanded: lookAgain,
   });
 }
 

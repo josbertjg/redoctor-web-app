@@ -184,6 +184,14 @@ export const pageNamespaces = {
     'appointments',
     'panel',
     'identityDocument',
+    // «Nueva cita»: the patient's fields and checks, the reasons' prices.
+    'input',
+    'signUp',
+    'name',
+    'lastName',
+    'dateOfBirth',
+    'phoneNumber',
+    'priceFormat',
     // «Ver cita» and its actions (the reschedule's calendar and slots).
     'sex',
     'male',

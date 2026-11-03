@@ -258,3 +258,43 @@ export function buildPendingReviews(
       isSensitive: appointment.id === appointmentIds.completed,
     }));
 }
+
+/** The specialist's registered patients (`GET /scheduling/specialist/patients`). */
+export const specialistPatientIds = {
+  laura: 'f0000000-0000-4000-8000-000000000001',
+  jorge: 'f0000000-0000-4000-8000-000000000002',
+} as const;
+
+/** As the API lists them: Laura complete, Jorge with no document yet. */
+export function buildSpecialistPatients() {
+  return [
+    {
+      patientProfileId: 'f1000000-0000-4000-8000-000000000001',
+      userId: specialistPatientIds.laura,
+      firstName: 'Laura',
+      lastName: 'Gómez',
+      email: 'laura@example.com',
+      documentType: 'V',
+      documentNumber: '12345678',
+      sex: 'FEMALE',
+      dateOfBirth: '1990-05-04T00:00:00.000Z',
+      phone: '+584121112233',
+      profileStatus: 'COMPLETED',
+      missingData: [],
+    },
+    {
+      patientProfileId: 'f1000000-0000-4000-8000-000000000002',
+      userId: specialistPatientIds.jorge,
+      firstName: 'Jorge',
+      lastName: 'Ruiz',
+      email: 'jorge@example.com',
+      documentType: null,
+      documentNumber: null,
+      sex: 'MALE',
+      dateOfBirth: '1985-11-20T00:00:00.000Z',
+      phone: null,
+      profileStatus: 'PENDING_PERSONAL_DATA',
+      missingData: ['documentNumber'],
+    },
+  ];
+}

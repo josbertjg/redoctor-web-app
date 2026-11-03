@@ -85,12 +85,33 @@ export function PanelWeekAgenda({
             {t('home.patientsOnDay', { count: open.length, day: dayPhrase })}
           </p>
         </div>
-        <Link
-          href={routes.agenda(chosen)}
-          className="rounded-sm text-label-lg font-bold text-blue-100 outline-none hover:text-pure-white focus-visible:ring-3 focus-visible:ring-white-50/70"
-        >
-          {t('home.seeAll')}
-        </Link>
+        <div className="flex items-center gap-4">
+          {/* «Nueva cita» over the agenda of the day chosen. */}
+          <Link
+            href={
+              agendaInPlaceHref(
+                {
+                  date: chosen,
+                  view: 'day',
+                  status: null,
+                  officeId: null,
+                  appointmentId: null,
+                  newAppointment: true,
+                },
+                chosen,
+              ) as Route
+            }
+            className="rounded-sm text-label-lg font-bold text-blue-100 outline-none hover:text-pure-white focus-visible:ring-3 focus-visible:ring-white-50/70"
+          >
+            {t('appointments.booking.bookAppointment')}
+          </Link>
+          <Link
+            href={routes.agenda(chosen)}
+            className="rounded-sm text-label-lg font-bold text-blue-100 outline-none hover:text-pure-white focus-visible:ring-3 focus-visible:ring-white-50/70"
+          >
+            {t('home.seeAll')}
+          </Link>
+        </div>
       </div>
       <div className="flex flex-col gap-6 rounded-xl bg-pure-white px-4 py-6 shadow-md sm:px-7">
         <ul
@@ -188,6 +209,7 @@ function WeekAppointment({
             status: null,
             officeId: null,
             appointmentId: appointment.id,
+            newAppointment: false,
           },
           appointment.date,
         ) as Route

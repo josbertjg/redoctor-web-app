@@ -197,6 +197,8 @@ function toGallery(
 
 const ownSpecialtySchema = z.object({
   id: z.string(),
+  /** The catalog's id: the one a booking sends as `specialtyId`. */
+  specialtyId: z.string().nullish(),
   specialtyName: z.string(),
   specialtyPath: z.array(z.string()),
   collegeName: z.string(),
@@ -237,6 +239,8 @@ export function toSpecialtyReview(raw: string): SpecialtyReview {
 
 export type MySpecialty = {
   id: string;
+  /** The catalog's (`bookingSpecialtyId` sends it); null if the API sent none. */
+  specialtyId: string | null;
   name: string;
   /** From the root of the catalog to the specialty itself. */
   path: string[];
@@ -271,6 +275,7 @@ export function toMyProfile(response: MyProfileResponse): MyProfile {
     gallery: toGallery(profile.gallery),
     specialties: [...response.specialties].reverse().map((specialty) => ({
       id: specialty.id,
+      specialtyId: specialty.specialtyId ?? null,
       name: specialty.specialtyName,
       path: specialty.specialtyPath,
       college: specialty.collegeName,

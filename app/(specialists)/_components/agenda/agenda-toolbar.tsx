@@ -4,6 +4,7 @@ import type { Route } from 'next';
 
 import Link from 'next/link';
 
+import Add from '@material-symbols/svg-400/rounded/add.svg?svgr';
 import FilterAlt from '@material-symbols/svg-400/rounded/filter_alt.svg?svgr';
 import History from '@material-symbols/svg-400/rounded/history.svg?svgr';
 import { useTranslations } from 'next-intl';
@@ -41,6 +42,8 @@ type AgendaToolbarProps = {
     status?: AppointmentStatus | null;
     officeId?: string | null;
   }) => void;
+  /** «+»: «Nueva cita» over the agenda. */
+  onNew: () => void;
 };
 
 /*
@@ -56,6 +59,7 @@ export function AgendaToolbar({
   wide,
   offices,
   onFilter,
+  onNew,
 }: AgendaToolbarProps) {
   const t = useTranslations('panel.agenda');
   const tomorrow = addDays(today, 1);
@@ -144,6 +148,14 @@ export function AgendaToolbar({
           <Icon icon={History} size={18} />
           {t('history')}
         </Link>
+        <button
+          type="button"
+          aria-label={t('newAppointment')}
+          onClick={onNew}
+          className="flex size-touch shrink-0 items-center justify-center rounded-full bg-pure-white text-primary shadow-md transition-[translate] duration-fast ease-house outline-none hover:-translate-y-0.5 focus-visible:ring-3 focus-visible:ring-white-50/70"
+        >
+          <Icon icon={Add} size={24} />
+        </button>
       </div>
     </nav>
   );

@@ -423,6 +423,154 @@ export function offerChangesAt(
   ].filter(Number.isFinite);
 }
 
+/* ---------- The specialist books a patient (phase 4) ----------------------- */
+
+const missingFields = [
+  'firstName',
+  'lastName',
+  'dateOfBirth',
+  'sex',
+  'documentNumber',
+] as const;
+
+/** What a registered patient's account lacks: the specialist knows what to ask. */
+export type MissingField = (typeof missingFields)[number];
+
+/**
+ * `GET /scheduling/specialist/patients`: the registered patients a
+ * specialist can book for, found by name (partial, accents aside), document
+ * or email (exact), with what their account lacks — which never stops the
+ * booking (the API's rule).
+ */
+export const specialistPatientsResponseSchema = z
+  .object({
+    patients: z.array(
+      z.object({
+        userId: z.string(),
+        firstName: z.string().nullish(),
+        lastName: z.string().nullish(),
+        documentType: z.string().nullish(),
+        documentNumber: z.string().nullish(),
+        sex: z.string().nullish(),
+        dateOfBirth: z.string().nullish(),
+        phone: z.string().nullish(),
+        missingData: z.array(z.string()).nullish(),
+      }),
+    ),
+  })
+  .transform(({ patients }) =>
+    patients.map((patient) => ({
+      userId: patient.userId,
+      firstName: patient.firstName?.trim() ?? '',
+      lastName: patient.lastName?.trim() ?? '',
+      // A type this version does not know reads as no document.
+      document:
+        patient.documentType &&
+        isDocumentType(patient.documentType) &&
+        patient.documentNumber
+          ? { type: patient.documentType, number: patient.documentNumber }
+          : null,
+      sex:
+        patient.sex === 'MALE' || patient.sex === 'FEMALE' ? patient.sex : null,
+      // The API sends the day as an instant at midnight UTC: the day is its date.
+      dateOfBirth: patient.dateOfBirth
+        ? patient.dateOfBirth.slice(0, 10)
+        : null,
+      phone: patient.phone ?? null,
+      missing: (patient.missingData ?? []).filter(
+        (field): field is MissingField =>
+          (missingFields as readonly string[]).includes(field),
+      ),
+    })),
+  );
+
+export type SpecialistPatient = z.output<
+  typeof specialistPatientsResponseSchema
+>[number];
+
+/** A booking the specialist makes: when, and for an account or for someone new. */
+export type SpecialistBookingRequest = {
+  officeId: string;
+  date: string;
+  startTime: string;
+  /** Only when the profile practises one branch (`bookingSpecialtyId`). */
+  specialtyId: string | null;
+  reasonId: string | null;
+  patient:
+    | { kind: 'registered'; userId: string }
+    | {
+        kind: 'new';
+        firstName: string;
+        lastName: string;
+        dateOfBirth: string;
+        /** From 9 years and a month (`terceroNeedsDocument`). */
+        document: { type: DocumentType; number: string } | null;
+        sex: 'MALE' | 'FEMALE' | null;
+        /** Where the invitation goes; a minor's representative's. */
+        phone: string;
+      };
+};
+
+/** The API's body: exactly one of the account or the person's data, nothing it does not need. */
+export function toSpecialistBookingBody(request: SpecialistBookingRequest) {
+  const { patient } = request;
+  return {
+    officeId: request.officeId,
+    date: request.date,
+    startTime: request.startTime,
+    ...(request.specialtyId ? { specialtyId: request.specialtyId } : {}),
+    ...(request.reasonId ? { consultationReasonId: request.reasonId } : {}),
+    ...(patient.kind === 'registered'
+      ? { patientUserId: patient.userId }
+      : {
+          patient: {
+            firstName: patient.firstName,
+            lastName: patient.lastName,
+            dateOfBirth: patient.dateOfBirth,
+            ...(patient.document
+              ? {
+                  documentType: patient.document.type,
+                  documentNumber: patient.document.number,
+                }
+              : {}),
+            ...(patient.sex ? { sex: patient.sex } : {}),
+            phone: patient.phone,
+          },
+        }),
+  };
+}
+
+const plainName = (value: string) =>
+  value.normalize('NFD').replace(/\p{M}/gu, '').trim().toLowerCase();
+
+/**
+ * Whether an appointment of the specialist's day is this booking — the
+ * office, the day and the hour, not cancelled, and the same patient: the
+ * account, or someone with no account and these names —, what is looked
+ * for after a lost answer, before sending it again.
+ */
+export function isThisSpecialistBooking(
+  appointment: AppointmentResponse,
+  request: SpecialistBookingRequest,
+): boolean {
+  if (
+    appointment.officeId !== request.officeId ||
+    appointment.slot.date !== request.date ||
+    appointment.slot.startTime.slice(0, 5) !== request.startTime ||
+    appointment.status === 'CANCELLED'
+  ) {
+    return false;
+  }
+  const { patient } = request;
+  return patient.kind === 'registered'
+    ? appointment.patientUserId === patient.userId
+    : !appointment.patientUserId &&
+        plainName(appointment.attendee.firstName) ===
+          plainName(patient.firstName) &&
+        plainName(appointment.attendee.lastName) ===
+          plainName(patient.lastName);
+}
+
 /** An empty text is no value: the API leaves some fields blank. */
 const emptyAsNull = (value: string | null | undefined) =>
   value === undefined || value === null || value === '' ? null : value;
