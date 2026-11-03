@@ -37,4 +37,22 @@ describe('SelectField', () => {
     );
     expect(await axe(container)).toHaveNoViolations();
   });
+
+  it('as a pill keeps its name for every reader, its label out of sight', async () => {
+    const { container } = render(
+      <SelectField
+        variant="pill"
+        label="Estado de las citas"
+        options={offices}
+        defaultValue="office-1"
+      />,
+    );
+
+    const select = screen.getByRole('combobox', {
+      name: 'Estado de las citas',
+    });
+    expect(select).toHaveValue('office-1');
+    expect(screen.getByText('Estado de las citas')).toHaveClass('sr-only');
+    expect(await axe(container)).toHaveNoViolations();
+  });
 });

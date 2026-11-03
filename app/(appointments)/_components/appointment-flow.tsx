@@ -22,7 +22,11 @@ import { useSkeletonHold } from '@/app/ui/motion/skeleton-hold';
 import { StatusCard } from '@/app/ui/status-card';
 
 import { AppointmentSkeleton } from './appointment-skeleton';
-import { AppointmentFrame, AppointmentView } from './appointment-view';
+import {
+  AppointmentFrame,
+  AppointmentView,
+  type AppointmentViewer,
+} from './appointment-view';
 
 /*
  * `/a/{id}` (M5): an appointment belongs to an account, so the page asks
@@ -157,9 +161,21 @@ function SignedInAppointment({
     <AppointmentView
       appointment={appointment}
       user={user}
-      readOnly={
-        appointment.patientId !== account.id && canUseSpecialistArea(account)
-      }
+      viewer={viewerOf(appointment, account)}
     />
   );
+}
+
+/**
+ * Who looks at the appointment the API let this account read: its patient;
+ * else its specialist, who acts on it; else an admin, who reads it.
+ */
+function viewerOf(
+  appointment: { patientId: string | null },
+  account: Account,
+): AppointmentViewer {
+  if (appointment.patientId === account.id || !canUseSpecialistArea(account)) {
+    return 'patient';
+  }
+  return account.specialist.exists ? 'specialist' : 'admin';
 }

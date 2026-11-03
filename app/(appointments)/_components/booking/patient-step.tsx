@@ -29,6 +29,7 @@ import {
   type BookingReason,
 } from '@/app/lib/schemas/booking';
 
+import { LoadFailure } from '@/app/ui/appointments/load-failure';
 import { ChoiceCards } from '@/app/ui/choice-cards';
 import { IdentityDocumentField } from '@/app/ui/identity-document-field';
 import { Skeleton } from '@/app/ui/skeleton';
@@ -36,8 +37,6 @@ import { TextField } from '@/app/ui/text-field';
 
 import { usePersonChecks } from '@/app/hooks/use-person-checks';
 import { usePriceWords } from '@/app/hooks/use-price-words';
-
-import { LoadFailure } from '../load-failure';
 
 import type { PatientChoice, PatientValues } from './booking-types';
 

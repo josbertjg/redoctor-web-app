@@ -4,7 +4,7 @@ import type { ComponentProps } from 'react';
 
 import { useTranslations } from 'next-intl';
 
-import { SlotPicker } from '../slot-picker';
+import { SlotPicker } from '@/app/ui/appointments/slot-picker';
 
 type SlotStepProps = ComponentProps<typeof SlotPicker> & {
   /** The hour chosen was taken meanwhile: the app's warning, until another is chosen. */

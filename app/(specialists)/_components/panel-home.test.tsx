@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 import { meResponseSchema, toAccount } from '@/app/lib/schemas/identity';
 
+import { agendaIds } from '@/tests/factories/agenda';
 import { buildInvoice, buildSubscription } from '@/tests/factories/billing';
 import {
   buildSpecialistMeResponse,
@@ -141,6 +142,11 @@ describe('the panel’s home', () => {
     // 8:00 one is over and the 16:00 one cancelled.
     expect(await screen.findByText('2 pacientes hoy')).toBeInTheDocument();
     expect(screen.getByText('Luisa Méndez')).toBeInTheDocument();
+    // The appointment opens «Ver cita» over that day of the agenda.
+    expect(screen.getByRole('link', { name: /Luisa Méndez/ })).toHaveAttribute(
+      'href',
+      `/panel/agenda/2026-10-14?appointment=${agendaIds.lateMorning}`,
+    );
     expect(screen.getByRole('link', { name: 'Ver todas' })).toHaveAttribute(
       'href',
       '/panel/agenda/2026-10-14',

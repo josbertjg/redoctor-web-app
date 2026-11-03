@@ -3,13 +3,11 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 
 import { pageNamespaces } from '@/app/lib/i18n/client-messages';
-import { isCalendarDay } from '@/app/lib/reports/period';
 
-import { PanelSurface } from '@/app/ui/layout/panel-surface';
 import { MessagesScope } from '@/app/ui/messages-scope';
 import { PageTransition } from '@/app/ui/motion/view-transitions';
 
-import { AgendaDay } from '../../../_components/agenda-day';
+import { AgendaView } from '../../../_components/agenda/agenda-view';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('panel.agenda');
@@ -17,10 +15,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /*
- * `/panel/agenda/{YYYY-MM-DD}` (M14): one day of the specialist's agenda,
- * the «Ver mi agenda» of the API's daily summary (email 10). A malformed
- * day is today, as the app reads it. Deeper paths match no route here, so
- * they answer a real 404 (AGENTS.md §4).
+ * `/panel/agenda/{YYYY-MM-DD}` (M14): one day of «Citas», the «Ver mi
+ * agenda» of the API's daily summary (email 10). A malformed day is today,
+ * as the app reads it (`agendaAddress`). Deeper paths match no route here,
+ * so they answer a real 404 (AGENTS.md §4).
  */
 export default async function AgendaDayPage({
   params,
@@ -30,9 +28,7 @@ export default async function AgendaDayPage({
   return (
     <PageTransition>
       <MessagesScope namespaces={pageNamespaces.agenda}>
-        <PanelSurface>
-          <AgendaDay day={isCalendarDay(date) ? date : null} />
-        </PanelSurface>
+        <AgendaView pathDate={date} />
       </MessagesScope>
     </PageTransition>
   );

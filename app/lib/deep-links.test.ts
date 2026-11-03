@@ -13,6 +13,7 @@ import {
   toAndroidIntentUrl,
   toAppSchemeUrl,
   universalLinkComponents,
+  withOrigin,
   withoutOrigin,
 } from './deep-links';
 
@@ -126,6 +127,23 @@ describe('withoutOrigin', () => {
     expect(
       withoutOrigin('https://redoctorapp.com/s/1?origin=share-profile&x=1'),
     ).toBe('https://redoctorapp.com/s/1?x=1');
+  });
+});
+
+describe('withOrigin', () => {
+  it('tags a link with the channel it is handed out through, keeping the rest', () => {
+    expect(
+      withOrigin(
+        'https://redoctorapp.com/i/tok?for=self',
+        'whatsapp-invitation',
+      ),
+    ).toBe('https://redoctorapp.com/i/tok?for=self&origin=whatsapp-invitation');
+    expect(
+      withOrigin(
+        'https://redoctorapp.com/i/tok?origin=share-profile',
+        'share-invitation',
+      ),
+    ).toBe('https://redoctorapp.com/i/tok?origin=share-invitation');
   });
 });
 

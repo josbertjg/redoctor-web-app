@@ -10,12 +10,16 @@ import {
 } from '@/tests/factories/appointments';
 
 import {
+  appointmentInvitationQueryOptions,
   appointmentQueryOptions,
   availableDaysQueryOptions,
   cancelAppointment,
+  cancelAsSpecialist,
+  completeAppointment,
   confirmAppointment,
   daySlotsQueryOptions,
   rescheduleAppointment,
+  rescheduleAsSpecialist,
   specialistAppointmentsQueryOptions,
 } from './appointments';
 import { apiUrl } from '../../../tests/msw/api-url';
@@ -79,6 +83,97 @@ describe('the patient’s changes', () => {
         startTime: takenStartTime,
       }),
     ).rejects.toMatchObject({ status: 409, code: 'ERR_4002' });
+  });
+});
+
+describe('the specialist’s changes', () => {
+  it('finishes the consultation, or marks the no-show', async () => {
+    const done = await completeAppointment(user, appointmentIds.confirmed, {
+      noShow: false,
+    });
+    expect(done.status).toBe('COMPLETED');
+
+    const missed = await completeAppointment(user, appointmentIds.upcoming, {
+      noShow: true,
+    });
+    expect(missed.status).toBe('NO_SHOW');
+  });
+
+  it('cancels as the specialist, asking no reason', async () => {
+    const cancelled = await cancelAsSpecialist(user, appointmentIds.upcoming);
+    expect(cancelled.status).toBe('CANCELLED');
+    expect(cancelled.cancelledBy).toBe('SPECIALIST');
+  });
+
+  it('moves it, and is refused an hour someone else just took', async () => {
+    const moved = await rescheduleAsSpecialist(user, appointmentIds.confirmed, {
+      date: '2026-11-03',
+      startTime: '14:00',
+    });
+    expect(moved.slot.startTime).toBe('14:00');
+    expect(moved.status).toBe('PENDING_CONFIRMATION');
+
+    await expect(
+      rescheduleAsSpecialist(user, appointmentIds.upcoming, {
+        date: '2026-11-03',
+        startTime: takenStartTime,
+      }),
+    ).rejects.toMatchObject({ status: 409, code: 'ERR_4002' });
+  });
+
+  it('counts a close that already landed as done', async () => {
+    server.use(
+      http.post(
+        apiUrl('/scheduling/specialist/appointments/:appointmentId/complete'),
+        () =>
+          HttpResponse.json(
+            { code: 'ERR_4005', message: 'Already closed' },
+            { status: 409 },
+          ),
+      ),
+      http.get(apiUrl('/scheduling/appointments/:appointmentId'), () =>
+        HttpResponse.json({
+          appointment: buildAppointment({
+            id: appointmentIds.confirmed,
+            status: 'COMPLETED',
+          }),
+        }),
+      ),
+    );
+
+    const done = await completeAppointment(user, appointmentIds.confirmed, {
+      noShow: false,
+    });
+    expect(done.status).toBe('COMPLETED');
+  });
+
+  it('reads the invitation to share, none for a patient with an account', async () => {
+    const client = new QueryClient();
+    const linked = await client.query(
+      appointmentInvitationQueryOptions(user, appointmentIds.upcoming),
+    );
+    expect(linked).toEqual({ phone: null, token: null, url: null });
+
+    server.use(
+      http.get(
+        apiUrl('/scheduling/specialist/appointments/:appointmentId/invitation'),
+        () =>
+          HttpResponse.json({
+            appointmentId: appointmentIds.upcoming,
+            invitedPhone: '+584141234567',
+            invitationToken: 'tok',
+            invitationUrl: 'https://redoctorapp.com/i/tok',
+          }),
+      ),
+    );
+    const invited = await new QueryClient().query(
+      appointmentInvitationQueryOptions(user, appointmentIds.upcoming),
+    );
+    expect(invited).toEqual({
+      phone: '+584141234567',
+      token: 'tok',
+      url: 'https://redoctorapp.com/i/tok',
+    });
   });
 });
 

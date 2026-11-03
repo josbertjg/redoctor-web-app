@@ -4,7 +4,7 @@ import type { TokenHolder } from '@/app/lib/api/types';
 import { availableDaysQueryOptions } from '@/app/lib/queries/appointments';
 import { freeDays, type AvailableDays } from '@/app/lib/schemas/availability';
 
-import { shiftMonth } from '../month-calendar';
+import { shiftMonth } from '@/app/ui/appointments/month-calendar';
 
 /** The first day with free slots from today on, or null. */
 function firstFrom(

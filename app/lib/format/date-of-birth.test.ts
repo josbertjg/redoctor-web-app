@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  ageOn,
   birthDateProblem,
   earliestBirthDate,
   formatBirthDate,
@@ -49,5 +50,17 @@ describe('date of birth', () => {
 
   it('writes a date of birth as the app does', () => {
     expect(formatBirthDate('1990-05-14')).toBe('14/05/1990');
+  });
+});
+
+describe('ageOn', () => {
+  it('counts whole years, the birthday itself included', () => {
+    expect(ageOn('1992-03-15', '2026-10-12')).toBe(34);
+    expect(ageOn('1992-10-12', '2026-10-12')).toBe(34);
+    expect(ageOn('1992-10-13', '2026-10-12')).toBe(33);
+  });
+
+  it('says nothing of a date it cannot read', () => {
+    expect(ageOn('15/03/1992', '2026-10-12')).toBeNull();
   });
 });

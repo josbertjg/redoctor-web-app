@@ -490,7 +490,9 @@ test('the specialist’s links from the emails come back to the same page after 
 
   await expect(page).toHaveURL('/panel/agenda/2026-10-20');
   await expect(
-    page.getByRole('heading', { name: 'martes 20 de octubre de 2026' }),
+    page.getByRole('heading', {
+      name: 'Agenda del martes 20 de octubre de 2026',
+    }),
   ).toBeVisible();
 
   // The billing emails: «Mi suscripción», with the session already there.
@@ -498,6 +500,55 @@ test('the specialist’s links from the emails come back to the same page after 
   await expect(
     page.getByRole('heading', { name: 'Todavía no tienes un plan' }),
   ).toBeVisible();
+});
+
+test('a specialist closes out a consultation, on its page and from «Citas»', async ({
+  page,
+  providers,
+  api,
+}) => {
+  const ana = api.patient(people.ana);
+  api.specialist(people.doctor);
+  providers.next = people.doctor;
+  // Over an hour ago and not closed: it still can be, for a day.
+  const booked = appointmentFor(ana.id, -1, {
+    status: 'CONFIRMED',
+    persistedStatus: 'CONFIRMED',
+  });
+  api.appointments.set(appointment, booked);
+
+  // The appointment's own page, as the specialist: what they can do.
+  await page.goto(`/a/${appointment}`);
+  await signInWith(page);
+  await expect(
+    page.getByRole('button', { name: 'Finalizar consulta' }),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'No asistió' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Gestiona esta cita desde la app' }),
+  ).toHaveCount(0);
+
+  // «Citas», that day: the card opens «Ver cita», and it closes there.
+  await page.goto(`/panel/agenda/${booked.slot.date}`);
+  await page.getByRole('button', { name: /Ana Pérez/ }).click();
+  const dialog = page.getByRole('dialog', { name: 'Ver cita' });
+  await dialog.getByRole('button', { name: 'Finalizar consulta' }).click();
+  await page
+    .getByRole('dialog', { name: 'Finalizar consulta' })
+    .getByRole('button', { name: 'Finalizar consulta' })
+    .click();
+
+  await expect(
+    page
+      .getByRole('dialog', { name: 'Ver cita' })
+      .getByText('Finalizada', { exact: true }),
+  ).toBeVisible();
+  expect(
+    api.called(
+      'POST',
+      `/scheduling/specialist/appointments/${appointment}/complete`,
+    ),
+  ).toBe(true);
 });
 
 test('signing out from the menu leaves the link asking for the session again', async ({

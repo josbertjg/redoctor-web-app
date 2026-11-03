@@ -17,11 +17,18 @@ import { Icon } from '@/app/ui/icons';
 import { Skeleton } from '@/app/ui/skeleton';
 
 type MonthCalendarProps = {
+  /**
+   * `slots` (the reschedule's and the booking's): the days with free slots
+   * in blue, no month before today's. `agenda` (the specialist's): every
+   * day alike, today in blue, a dot under the days with appointments, and
+   * the months before too.
+   */
+  variant?: 'slots' | 'agenda';
   /** YYYY-MM. */
   month: string;
-  /** Today in Caracas (YYYY-MM-DD): no earlier month is offered. */
+  /** Today in Caracas (YYYY-MM-DD). */
   today: string;
-  /** The days with free slots. */
+  /** The days with free slots; on the agenda, the days with appointments. */
   freeDays: ReadonlySet<string>;
   loading: boolean;
   selected: string | null;
@@ -56,6 +63,7 @@ function monthCells(month: string): (string | null)[] {
  * below. No month before today's.
  */
 export function MonthCalendar({
+  variant = 'slots',
   month,
   today,
   freeDays,
@@ -66,7 +74,8 @@ export function MonthCalendar({
 }: MonthCalendarProps) {
   const t = useTranslations('appointments.detail');
   const cells = monthCells(month);
-  const canGoBack = month > today.slice(0, 7);
+  const agenda = variant === 'agenda';
+  const canGoBack = agenda || month > today.slice(0, 7);
   const next = useRef<HTMLButtonElement>(null);
 
   return (
@@ -88,7 +97,9 @@ export function MonthCalendar({
                 onMonthChange(previous);
                 // Back on today's month this button goes: the focus stays
                 // on the calendar's other arrow instead of the page's start.
-                if (previous <= today.slice(0, 7)) next.current?.focus();
+                if (!agenda && previous <= today.slice(0, 7)) {
+                  next.current?.focus();
+                }
               }}
               className="flex size-touch items-center justify-center rounded-full text-primary outline-none hover:bg-white-200 focus-visible:ring-3 focus-visible:ring-ring/50"
             >
@@ -132,9 +143,15 @@ export function MonthCalendar({
               key={date}
               type="button"
               aria-label={
-                freeDays.has(date) && date >= today
-                  ? formatAppointmentDay(date)
-                  : t('dayWithoutSlots', { day: formatAppointmentDay(date) })
+                agenda
+                  ? freeDays.has(date)
+                    ? t('dayWithAppointments', {
+                        day: formatAppointmentDay(date),
+                      })
+                    : formatAppointmentDay(date)
+                  : freeDays.has(date) && date >= today
+                    ? formatAppointmentDay(date)
+                    : t('dayWithoutSlots', { day: formatAppointmentDay(date) })
               }
               aria-pressed={selected === date}
               onClick={() => {
@@ -144,15 +161,33 @@ export function MonthCalendar({
                 // A full tap target; on the narrowest phones the column
                 // trims its width, never its height.
                 'mx-auto flex h-touch w-full max-w-touch items-center justify-center rounded-full text-body-md transition-colors duration-fast ease-house outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
-                selected === date
-                  ? 'bg-primary text-on-primary'
-                  : freeDays.has(date) && date >= today
-                    ? 'font-semibold text-primary hover:bg-blue-50'
-                    : // Grey, but still AA: a day without slots is read, then tapped.
-                      'text-text-secondary hover:bg-white-200',
+                agenda
+                  ? cn(
+                      'relative',
+                      selected === date
+                        ? 'bg-primary text-on-primary'
+                        : date === today
+                          ? 'font-semibold text-primary hover:bg-blue-50'
+                          : 'text-text-primary hover:bg-blue-50',
+                    )
+                  : selected === date
+                    ? 'bg-primary text-on-primary'
+                    : freeDays.has(date) && date >= today
+                      ? 'font-semibold text-primary hover:bg-blue-50'
+                      : // Grey, but still AA: a day without slots is read, then tapped.
+                        'text-text-secondary hover:bg-white-200',
               )}
             >
               {Number(date.slice(8))}
+              {agenda && freeDays.has(date) ? (
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    'absolute bottom-1.5 left-1/2 size-1 -translate-x-1/2 rounded-full',
+                    selected === date ? 'bg-pure-white' : 'bg-primary',
+                  )}
+                />
+              ) : null}
             </button>
           ),
         )}

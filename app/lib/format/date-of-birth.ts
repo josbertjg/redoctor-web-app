@@ -27,6 +27,17 @@ export function todayInCaracas(now: Date = new Date()): string {
 
 const pad = (value: number, length = 2) => String(value).padStart(length, '0');
 
+/** Whole years from a birth date to a day (both YYYY-MM-DD); null for a date it cannot read. */
+export function ageOn(dateOfBirth: string, today: string): number | null {
+  const birth = isoDate.exec(dateOfBirth);
+  const now = isoDate.exec(today);
+  if (!birth || !now) return null;
+  const years = Number(now[1]) - Number(birth[1]);
+  const beforeBirthday =
+    `${now[2] ?? ''}-${now[3] ?? ''}` < `${birth[2] ?? ''}-${birth[3] ?? ''}`;
+  return beforeBirthday ? years - 1 : years;
+}
+
 /** The same day `years` earlier; a 29 February falls on the 28th. */
 export function yearsBefore(date: string, years: number): string {
   const match = isoDate.exec(date);

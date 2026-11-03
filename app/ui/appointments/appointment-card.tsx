@@ -13,7 +13,6 @@ import { formatIdentityDocument } from '@/app/lib/format/identity-document';
 import { routes } from '@/app/lib/routes';
 import {
   statusChips,
-  type AppointmentStatus,
   type AppointmentSummary,
 } from '@/app/lib/schemas/appointments';
 import { cn } from '@/app/lib/utils';
@@ -21,15 +20,7 @@ import { cn } from '@/app/lib/utils';
 import { Icon } from '@/app/ui/icons';
 import { StateChip } from '@/app/ui/state-chip';
 
-/** The app's coloured bar beside each card: one shade of the status's tone. */
-const statusBars: Record<AppointmentStatus, string> = {
-  PENDING_CONFIRMATION: 'bg-warning-300',
-  CONFIRMED: 'bg-green-300',
-  RESCHEDULE_PROPOSED: 'bg-orange-300',
-  CANCELLED: 'bg-error-400',
-  COMPLETED: 'bg-blue-300',
-  NO_SHOW: 'bg-grey-300',
-};
+import { statusTones } from './status-tones';
 
 type AppointmentCardProps = {
   appointment: AppointmentSummary;
@@ -72,7 +63,7 @@ export function AppointmentCard({
       >
         <span
           aria-hidden="true"
-          className={cn('w-1.5 shrink-0', statusBars[appointment.status])}
+          className={cn('w-1.5 shrink-0', statusTones[appointment.status].bar)}
         />
         <span className="flex min-w-0 flex-1 flex-col gap-2 p-4">
           <span className="flex items-start justify-between gap-3">

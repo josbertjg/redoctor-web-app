@@ -327,17 +327,24 @@ describe('AppointmentFlow', () => {
     ).toBeVisible();
   });
 
-  it('shows a specialist the appointment without the patient’s actions', async () => {
+  it('lets the specialist close out, move or cancel their patient’s appointment', async () => {
     renderAppointment(
-      appointmentIds.upcoming,
+      appointmentIds.started,
       signedIn(buildSpecialistMeResponse({ id: 'specialist-user-1' })),
     );
 
+    // On its day, what the app offers: no card sends them to the app.
     expect(
-      await screen.findByRole('heading', {
+      await screen.findByRole('button', { name: 'Finalizar consulta' }),
+    ).toBeVisible();
+    expect(screen.getByRole('button', { name: 'No asistió' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Reprogramar' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Cancelar' })).toBeVisible();
+    expect(
+      screen.queryByRole('heading', {
         name: 'Gestiona esta cita desde la app',
       }),
-    ).toBeInTheDocument();
+    ).not.toBeInTheDocument();
     // The specialist looks for the patient, and goes back to their day.
     expect(screen.getAllByText('Paciente').length).toBeGreaterThan(0);
     expect(
@@ -346,6 +353,46 @@ describe('AppointmentFlow', () => {
       'href',
       expect.stringMatching(/^\/panel\/agenda\/\d{4}-\d{2}-\d{2}$/),
     );
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Finalizar consulta' }),
+    );
+    const sheet = await screen.findByRole('dialog', {
+      name: 'Finalizar consulta',
+    });
+    await userEvent.click(
+      within(sheet).getByRole('button', { name: 'Finalizar consulta' }),
+    );
+
+    // The page shows the appointment the API answered: closed, nothing left.
+    expect(await status('Finalizada')).toBeVisible();
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('button', { name: 'No asistió' }),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it('shows an admin the appointment read only, with the way to the app', async () => {
+    renderAppointment(
+      appointmentIds.upcoming,
+      signedIn(
+        buildMeResponse({
+          id: 'admin-user-1',
+          role: 'ADMIN',
+          profiles: {
+            patient: { exists: false },
+            specialist: { exists: false },
+          },
+        }),
+      ),
+    );
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Gestiona esta cita desde la app',
+      }),
+    ).toBeInTheDocument();
     // On a computer the panel is where they are: no note to go to the phone.
     expect(
       screen.queryByText(

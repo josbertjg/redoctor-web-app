@@ -18,14 +18,9 @@ import { SpecialistHomeSkeleton } from './specialist-home-skeleton';
  */
 export function PanelSkeleton() {
   const pathname = usePathname();
+  // «Citas» has its design on the blue (`4647:2160`, `4669:2956`).
+  if (pathname.startsWith(routes.agenda())) return <AgendaSkeleton />;
   // The sections with no design of their own on the blue sit on its surface.
-  if (pathname.startsWith(routes.agenda())) {
-    return (
-      <PanelSurface>
-        <AgendaSkeleton />
-      </PanelSurface>
-    );
-  }
   if (pathname.startsWith(routes.specialistAppointments())) {
     return (
       <PanelSurface>

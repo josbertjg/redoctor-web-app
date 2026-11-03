@@ -2,6 +2,8 @@
 
 import { useId, useState } from 'react';
 
+import type { Route } from 'next';
+
 import Link from 'next/link';
 
 import ChevronRight from '@material-symbols/svg-400/rounded/chevron_right.svg?svgr';
@@ -27,6 +29,8 @@ import { fadingEdgesClass } from '@/app/ui/fading-edges';
 import { Icon } from '@/app/ui/icons';
 
 import { useFadingEdges } from '@/app/hooks/use-fading-edges';
+
+import { agendaInPlaceHref } from './agenda/agenda-address';
 
 type PanelWeekAgendaProps = {
   /** The week's seven days, Monday first. */
@@ -175,7 +179,19 @@ function WeekAppointment({
     `${appointment.attendee.firstName} ${appointment.attendee.lastName}`.trim();
   return (
     <Link
-      href={routes.appointment(appointment.id)}
+      // «Ver cita» over that day of the agenda, as the agenda opens it.
+      href={
+        agendaInPlaceHref(
+          {
+            date: appointment.date,
+            view: 'day',
+            status: null,
+            officeId: null,
+            appointmentId: appointment.id,
+          },
+          appointment.date,
+        ) as Route
+      }
       className="group flex items-center gap-4 rounded-xl bg-pure-white px-4 py-3.5 shadow-md transition-[translate,box-shadow] duration-base ease-house outline-none hover:-translate-y-0.5 hover:shadow-lg focus-visible:ring-3 focus-visible:ring-ring/50"
     >
       <Avatar name={name} src={null} size="md" decorative />

@@ -13,6 +13,8 @@ export const clientNamespaces = [
   'notifications',
   'retry',
   'close',
+  // A sheet's step back (app/ui/sheet.tsx).
+  'back',
   // «Abrir en la app» (app/ui/app-bridge): every page shared with the app.
   'appBridge',
   // The session (app/ui/auth): the account in the bar, the sign-in buttons.
@@ -177,7 +179,22 @@ export const pageNamespaces = {
     'profile',
   ],
   // The agenda and the history of the specialist's appointments (M14).
-  agenda: ['apiErrors', 'appointments', 'panel', 'identityDocument'],
+  agenda: [
+    'apiErrors',
+    'appointments',
+    'panel',
+    'identityDocument',
+    // «Ver cita» and its actions (the reschedule's calendar and slots).
+    'sex',
+    'male',
+    'female',
+    'cancel',
+    'pickADate',
+    'morning',
+    'afternoon',
+    'evening',
+    'no_slots_available',
+  ],
   // The statistics (M14): the filters, the four reports, the downloads
   // and, when the plan lacks them, the plan that has them.
   reports: ['apiErrors', 'reports', 'panel', 'appBridge'],

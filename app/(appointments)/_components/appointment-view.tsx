@@ -19,6 +19,7 @@ import {
 import { routes } from '@/app/lib/routes';
 import {
   appointmentActions,
+  offerChangesAt,
   statusChips,
   type AppointmentResponse,
   type AppointmentSummary,
@@ -30,6 +31,8 @@ import {
   type PatientFact,
 } from '@/app/ui/appointments/appointment-details';
 import { AppointmentHeadline } from '@/app/ui/appointments/appointment-headline';
+import { AppointmentRecord } from '@/app/ui/appointments/appointment-record';
+import { SpecialistActions } from '@/app/ui/appointments/specialist-actions';
 import { Button } from '@/app/ui/button';
 import { StateChip } from '@/app/ui/state-chip';
 import { StatusCard } from '@/app/ui/status-card';
@@ -37,26 +40,33 @@ import { StatusCard } from '@/app/ui/status-card';
 import { useFocusHeading } from '@/app/hooks/use-focus-heading';
 
 import { AppointmentActionsCard } from './appointment-actions';
-import { AppointmentRecord } from './appointment-record';
 import { ReviewForm } from './review-form';
+
+/**
+ * Who looks: the patient; the specialist of the appointment, who acts on it
+ * as the app lets them (the designer's panel, 2026-11-03); or an admin, who
+ * reads it and has their tools in the app.
+ */
+export type AppointmentViewer = 'patient' | 'specialist' | 'admin';
 
 type AppointmentViewProps = {
   appointment: AppointmentSummary;
   user: SessionUser;
-  /** A specialist's (or an admin's) look at their patient's appointment. */
-  readOnly: boolean;
+  viewer: AppointmentViewer;
 };
 
 /*
- * The appointment (M5), as the app's patient detail shows it: its state,
- * who and when, what can be done, where and how much, who attends and why,
- * and what happened to it. The actions come first on the page.
+ * The appointment (M5), as the app's detail shows it: its state, who and
+ * when, what can be done, where and how much, who attends and why, and
+ * what happened to it. The actions come first on the page: the patient's,
+ * or the specialist's.
  */
 export function AppointmentView({
   appointment,
   user,
-  readOnly,
+  viewer,
 }: AppointmentViewProps) {
+  const forSpecialist = viewer !== 'patient';
   const t = useTranslations();
   const queryClient = useQueryClient();
   const [now, setNow] = useState(() => new Date());
@@ -65,13 +75,17 @@ export function AppointmentView({
   // heading: the button that was pressed may be gone.
   const frame = useFocusHeading(appointment.status);
 
-  // What can be done changes at two moments: when the confirmation window
-  // opens and when the appointment starts (nothing changes after it, as
-  // REDOC-308 asks). The page follows at that very moment, without polling:
-  // it reads the appointment again, since whether it can be confirmed is the
-  // API's to say.
+  // What can be done changes at known moments: for the patient, when the
+  // confirmation window opens and when the appointment starts (nothing
+  // changes after it, as REDOC-308 asks); for the specialist, its day and
+  // its end (`offerChangesAt`). The page follows at that very moment,
+  // without polling: it reads the appointment again, since what it allows
+  // is the API's to say.
   useEffect(() => {
-    const next = nextChange(appointment, now);
+    const next = nextChange(
+      offerChangesAt(appointment, forSpecialist ? 'specialist' : 'patient'),
+      now,
+    );
     if (next === null) return;
     const timer = window.setTimeout(() => {
       setNow(new Date());
@@ -82,7 +96,7 @@ export function AppointmentView({
     return () => {
       window.clearTimeout(timer);
     };
-  }, [appointment, now, queryClient, user.id]);
+  }, [appointment, forSpecialist, now, queryClient, user.id]);
 
   return (
     <AppointmentFrame
@@ -95,9 +109,25 @@ export function AppointmentView({
     >
       <AppointmentHeadline
         appointment={appointment}
-        viewer={readOnly ? 'specialist' : 'patient'}
+        viewer={forSpecialist ? 'specialist' : 'patient'}
       />
-      {readOnly ? (
+      {viewer === 'patient' ? (
+        <>
+          <PendingReview appointment={appointment} user={user} />
+          <AppointmentActionsCard
+            appointment={appointment}
+            actions={appointmentActions(appointment, now)}
+            user={user}
+          />
+        </>
+      ) : viewer === 'specialist' ? (
+        <SpecialistActions
+          appointment={appointment}
+          user={user}
+          now={now}
+          className="animate-fade-up rounded-2xl bg-pure-white p-5 shadow-md"
+        />
+      ) : (
         <StatusCard
           icon={Stethoscope}
           title={t('appointments.detail.forSpecialists')}
@@ -110,22 +140,13 @@ export function AppointmentView({
             desktop="none"
           />
         </StatusCard>
-      ) : (
-        <>
-          <PendingReview appointment={appointment} user={user} />
-          <AppointmentActionsCard
-            appointment={appointment}
-            actions={appointmentActions(appointment, now)}
-            user={user}
-          />
-        </>
       )}
       <AppointmentDetails
         appointment={appointment}
-        patient={usePatient(appointment, readOnly)}
+        patient={usePatient(appointment, forSpecialist)}
       />
       <AppointmentRecord appointment={appointment} />
-      {readOnly ? (
+      {forSpecialist ? (
         // The specialist's day, in their panel (M14).
         <Button
           asChild
@@ -259,12 +280,10 @@ function usePatient(appointment: AppointmentSummary, forSpecialist: boolean) {
 const maxTimer = 2 ** 31 - 1;
 
 /** Milliseconds until what can be done changes next, or null when nothing will. */
-function nextChange(appointment: AppointmentSummary, now: Date): number | null {
-  const moments = [appointment.confirmationOpensAt, appointment.startsAt]
-    .map((instant) =>
-      instant ? new Date(instant).getTime() - now.getTime() : NaN,
-    )
-    .filter((wait) => Number.isFinite(wait) && wait > 0);
+function nextChange(changes: readonly number[], now: Date): number | null {
+  const moments = changes
+    .map((instant) => instant - now.getTime())
+    .filter((wait) => wait > 0);
   if (moments.length === 0) return null;
   return Math.min(Math.min(...moments) + 50, maxTimer);
 }

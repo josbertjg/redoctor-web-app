@@ -4,6 +4,7 @@ import { apiFetch } from '../api/client';
 import { isApiError, type ApiError } from '../api/errors';
 import { createWriteOnceGuard } from '../api/write-once';
 import {
+  appointmentInvitationLinkSchema,
   appointmentListResponseSchema,
   appointmentResponseSchema,
   specialistAppointmentPageSchema,
@@ -38,6 +39,9 @@ export const appointmentKeys = {
   list: (userId: string) => ['appointments', userId] as const,
   specialistList: (userId: string, filters: SpecialistAppointmentFilters) =>
     ['specialist-appointments', userId, filters] as const,
+  /** Every list of a specialist's appointments, whatever its filters. */
+  specialistLists: (userId: string) =>
+    ['specialist-appointments', userId] as const,
   detail: (userId: string, appointmentId: string) =>
     ['appointment', userId, appointmentId] as const,
   availableDays: (officeId: string, month: string) =>
@@ -153,7 +157,9 @@ export function appointmentQueryOptions(
 const writes = createWriteOnceGuard<AppointmentResponse>();
 
 type Change = {
-  action: 'confirm' | 'cancel' | 'reschedule';
+  action: 'confirm' | 'cancel' | 'reschedule' | 'complete';
+  /** Who acts: the patient's endpoints, or the specialist's (`/scheduling/specialist/…`). */
+  as?: 'patient' | 'specialist';
   /** Tells a write that landed from one that did not. */
   landed: (appointment: AppointmentResponse) => boolean;
   body?: unknown;
@@ -164,8 +170,9 @@ type Change = {
 function change(
   user: TokenHolder,
   appointmentId: string,
-  { action, landed, body, intent }: Change,
+  { action, as = 'patient', landed, body, intent }: Change,
 ): Promise<AppointmentResponse> {
+  const scope = as === 'specialist' ? '/scheduling/specialist' : '/scheduling';
   const lookAgain = async () => {
     const current = await readAppointment(user, appointmentId);
     return current.kind === 'found' && landed(current.appointment)
@@ -173,12 +180,12 @@ function change(
       : null;
   };
   return writes({
-    intent: `${intent}:${appointmentId}`,
+    intent: `${as}:${intent}:${appointmentId}`,
     send: async () => {
       try {
         const { appointment } = await apiFetch({
           method: 'POST',
-          path: `/scheduling/appointments/:appointmentId/${action}`,
+          path: `${scope}/appointments/:appointmentId/${action}`,
           params: { appointmentId },
           token: await user.getToken(),
           ...(body === undefined ? {} : { body }),
@@ -231,6 +238,74 @@ export function rescheduleAppointment(
     landed: (appointment) =>
       appointment.slot.date === slot.date &&
       appointment.slot.startTime.slice(0, 5) === slot.startTime,
+  });
+}
+
+/*
+ * The specialist's changes on their patient's appointment (the designer's
+ * panel, 2026-11-03), through the same write-once guard: closing the
+ * consultation — finished, or not attended (`noShow`), which leaves it out
+ * of the reviews —, cancelling it (the app asks no reason) and moving it,
+ * which sends it back to the patient's confirmation.
+ */
+
+export function completeAppointment(
+  user: TokenHolder,
+  appointmentId: string,
+  { noShow }: { noShow: boolean },
+) {
+  const closed = noShow ? 'NO_SHOW' : 'COMPLETED';
+  return change(user, appointmentId, {
+    action: 'complete',
+    as: 'specialist',
+    intent: closed,
+    body: noShow ? { noShow: true } : {},
+    landed: (appointment) => appointment.status === closed,
+  });
+}
+
+export function cancelAsSpecialist(user: TokenHolder, appointmentId: string) {
+  return change(user, appointmentId, {
+    action: 'cancel',
+    as: 'specialist',
+    intent: 'cancel',
+    body: {},
+    landed: (appointment) => appointment.status === 'CANCELLED',
+  });
+}
+
+export function rescheduleAsSpecialist(
+  user: TokenHolder,
+  appointmentId: string,
+  slot: { date: string; startTime: string },
+) {
+  return change(user, appointmentId, {
+    action: 'reschedule',
+    as: 'specialist',
+    intent: `reschedule:${slot.date}T${slot.startTime}`,
+    body: slot,
+    landed: (appointment) =>
+      appointment.slot.date === slot.date &&
+      appointment.slot.startTime.slice(0, 5) === slot.startTime,
+  });
+}
+
+/** The invitation's link and phone, for the specialist to send it themselves; none once someone has the appointment. */
+export function appointmentInvitationQueryOptions(
+  user: TokenHolder,
+  appointmentId: string,
+) {
+  return queryOptions({
+    queryKey: [...appointmentKeys.detail(user.id, appointmentId), 'invitation'],
+    queryFn: async ({ signal }) =>
+      apiFetch({
+        path: '/scheduling/specialist/appointments/:appointmentId/invitation',
+        params: { appointmentId },
+        token: await user.getToken(),
+        schema: appointmentInvitationLinkSchema,
+        signal,
+      }),
+    staleTime: 5 * 60_000,
   });
 }
 

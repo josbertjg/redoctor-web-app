@@ -75,6 +75,7 @@ const rescheduleBody = z.strictObject({
   startTime: z.string().regex(/^\d{2}:\d{2}$/),
 });
 const cancelBody = z.strictObject({ reason: z.string().optional() });
+const completeBody = z.strictObject({ noShow: z.boolean().optional() });
 
 /** A call the page made, as the API answered it. */
 export type ApiCall = {
@@ -225,13 +226,17 @@ export class FakeApi {
       const uid = request.headers.get(callerHeader);
       if (uid !== null) this.accounts.set(uid, me);
     };
-    /** An appointment of this store, read by its patient. */
+    /** A specialist's account: every appointment of this store is in their agenda. */
+    const isSpecialist = (me: Me) => me.profiles?.specialist?.exists === true;
+    /** An appointment of this store, read by its patient or its specialist. */
     const own = (request: Request, id: string) => {
       const appointment = this.appointments.get(id);
       if (!appointment) return undefined;
       const me = callerOf(request);
       if (me === null) return { refusal: unauthorized() };
-      if (appointment.patientUserId !== me.id) return { refusal: forbidden() };
+      if (appointment.patientUserId !== me.id && !isSpecialist(me)) {
+        return { refusal: forbidden() };
+      }
       return { appointment, me };
     };
     const save = (appointment: AppointmentPayload) => {
@@ -444,6 +449,71 @@ export class FakeApi {
                 to: body.data,
               },
             ],
+          });
+        },
+      ),
+
+      // The specialist's side (the designer's panel, phase 3): their agenda
+      // from this store, and the closes they make. A store with no
+      // appointment leaves the agenda to the unit tests' handler.
+      http.get(apiUrl('/scheduling/specialist/appointments'), ({ request }) => {
+        const me = callerOf(request);
+        if (me === null) return unauthorized();
+        if (this.appointments.size === 0 || !isSpecialist(me)) {
+          return undefined;
+        }
+        const { searchParams } = new URL(request.url);
+        const status = searchParams.get('status');
+        const from = searchParams.get('from');
+        const to = searchParams.get('to');
+        const appointments = [...this.appointments.values()].filter(
+          (appointment) =>
+            (status === null || appointment.status === status) &&
+            (from === null || appointment.slot.date >= from) &&
+            (to === null || appointment.slot.date <= to),
+        );
+        return HttpResponse.json({
+          appointments,
+          total: appointments.length,
+          page: 1,
+          pageSize: 100,
+        });
+      }),
+
+      http.post(
+        apiUrl('/scheduling/specialist/appointments/:appointmentId/complete'),
+        async ({ request, params }) => {
+          const found = own(request, String(params.appointmentId));
+          if (found === undefined) return undefined;
+          if ('refusal' in found) return found.refusal;
+          const body = completeBody.safeParse(await request.json());
+          if (!body.success) return badRequest();
+          const status = body.data.noShow === true ? 'NO_SHOW' : 'COMPLETED';
+          return save({
+            ...found.appointment,
+            status,
+            persistedStatus: status,
+            canConfirmNow: false,
+          });
+        },
+      ),
+
+      http.post(
+        apiUrl('/scheduling/specialist/appointments/:appointmentId/cancel'),
+        async ({ request, params }) => {
+          const found = own(request, String(params.appointmentId));
+          if (found === undefined) return undefined;
+          if ('refusal' in found) return found.refusal;
+          const body = cancelBody.safeParse(await request.json());
+          if (!body.success) return badRequest();
+          return save({
+            ...found.appointment,
+            status: 'CANCELLED',
+            persistedStatus: 'CANCELLED',
+            cancelledBy: 'SPECIALIST',
+            cancelReason: body.data.reason ?? null,
+            cancelledAt: new Date().toISOString(),
+            canConfirmNow: false,
           });
         },
       ),

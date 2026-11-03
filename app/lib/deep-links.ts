@@ -113,6 +113,17 @@ export function withoutOrigin(url: string | URL): string {
   return clean.toString();
 }
 
+/**
+ * `url` tagged with the channel it is handed out through, the rest of its
+ * query kept (the app's `AppDeepLinks.withOrigin`): where the web hands a
+ * link to a patient, as the app does, the funnel starts there.
+ */
+export function withOrigin(url: string, origin: LinkOrigin): string {
+  const tagged = new URL(url);
+  tagged.searchParams.set(originParameter, origin);
+  return tagged.toString();
+}
+
 /* ---------- "Abrir en la app" ------------------------------------------- */
 
 /**

@@ -6,13 +6,20 @@ import KeyboardArrowDown from '@material-symbols/svg-400/rounded/keyboard_arrow_
 
 import { cn } from '@/app/lib/utils';
 
-import { Icon } from './icons';
+import { Icon, type IconComponent } from './icons';
 
 export type SelectOption = { value: string; label: string };
 
 type SelectFieldProps = Omit<ComponentProps<'select'>, 'children'> & {
   label: string;
   options: readonly SelectOption[];
+  /**
+   * `pill`: a toolbar's choice (the agenda's «Pendientes ▾»), its label
+   * read by assistive technology only, a white pill a touch target tall.
+   */
+  variant?: 'field' | 'pill';
+  /** An icon before the value, in the pill. */
+  icon?: IconComponent;
   className?: string;
 };
 
@@ -26,12 +33,52 @@ type SelectFieldProps = Omit<ComponentProps<'select'>, 'children'> & {
 export function SelectField({
   label,
   options,
+  variant = 'field',
+  icon,
   className,
   id,
   ...props
 }: SelectFieldProps) {
   const generatedId = useId();
   const selectId = id ?? generatedId;
+
+  if (variant === 'pill') {
+    return (
+      <div className={cn('flex', className)}>
+        <label htmlFor={selectId} className="sr-only">
+          {label}
+        </label>
+        <div className="relative flex h-touch min-w-0 flex-1 items-center rounded-full bg-pure-white shadow-sm transition-shadow duration-fast ease-house focus-within:ring-3 focus-within:ring-white-50/70 hover:shadow-md">
+          {icon ? (
+            <Icon
+              icon={icon}
+              size={18}
+              className="pointer-events-none absolute left-4 text-primary"
+            />
+          ) : null}
+          <select
+            id={selectId}
+            className={cn(
+              'h-full w-full min-w-0 cursor-pointer appearance-none truncate rounded-full bg-transparent pr-10 text-body-xxs font-medium text-primary outline-none',
+              icon ? 'pl-10' : 'pl-4',
+            )}
+            {...props}
+          >
+            {options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <Icon
+            icon={KeyboardArrowDown}
+            size={20}
+            className="pointer-events-none absolute right-3 text-primary"
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={cn('flex flex-col gap-2', className)}>

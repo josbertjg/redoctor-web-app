@@ -32,6 +32,8 @@ export const appointmentIds = {
   completedDependent: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
   /** Finished and rated already: the API refuses a second review (409). */
   reviewed: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+  /** Booked by the specialist for someone with no account yet: nobody claimed it. */
+  invited: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
 } as const;
 
 /** The appointments the patient holds: every known case but another account's. */
@@ -139,6 +141,11 @@ export function appointmentFor(
   switch (id) {
     case appointmentIds.upcoming:
       return buildAppointment({}, hoursFromNow(72, now));
+    case appointmentIds.invited:
+      return buildAppointment(
+        { id, patientUserId: null },
+        hoursFromNow(72, now),
+      );
     case appointmentIds.confirmable:
       return buildAppointment(
         { id, canConfirmNow: true },

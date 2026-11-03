@@ -86,4 +86,21 @@ describe('Sheet', () => {
       expect(opener).toHaveFocus();
     });
   });
+
+  it('steps back inside the same sheet when the flow has a step behind', async () => {
+    const onBack = vi.fn();
+    renderWithIntl(
+      <Sheet
+        open
+        onOpenChange={vi.fn()}
+        title="Reprogramar cita"
+        onBack={onBack}
+      >
+        <p>El mes y sus horas.</p>
+      </Sheet>,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Volver' }));
+    expect(onBack).toHaveBeenCalledOnce();
+  });
 });

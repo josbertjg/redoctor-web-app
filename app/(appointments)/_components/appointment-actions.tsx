@@ -25,13 +25,13 @@ import type {
   AppointmentSummary,
 } from '@/app/lib/schemas/appointments';
 
+import { RescheduleSheet } from '@/app/ui/appointments/reschedule-sheet';
 import { Button } from '@/app/ui/button';
 import { Icon } from '@/app/ui/icons';
 import { toast } from '@/app/ui/toast';
 
 import { CalendarMenu } from './calendar-menu';
 import { CancelSheet } from './cancel-sheet';
-import { RescheduleSheet } from './reschedule-sheet';
 
 type AppointmentActionsCardProps = {
   appointment: AppointmentSummary;

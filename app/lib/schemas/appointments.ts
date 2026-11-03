@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { priceSchema } from './price';
+import { todayInCaracas } from '../format/date-of-birth';
 import { isDocumentType, type DocumentType } from '../format/identity-document';
 
 /*
@@ -351,6 +352,98 @@ export function appointmentActions(
 
   return { confirm, change: ahead, calendar: ahead };
 }
+
+/** What the specialist can do with their patient's appointment (the app's `offerFor`). */
+export type SpecialistOffer = {
+  /** «Finalizar consulta» and «No asistió». */
+  closeOut: boolean;
+  /** «Reprogramar» and «Cancelar». */
+  upcoming: boolean;
+  /** «Compartir invitación»: nobody claimed it yet. */
+  shareInvitation: boolean;
+};
+
+/** The API gives the specialist this long after the end to close a consultation. */
+const closeOutWindowMs = 24 * 60 * 60 * 1000;
+
+/**
+ * What the app offers a specialist on an appointment: nothing once it is
+ * closed (cancelled, finished, missed); closing it out — finished or not
+ * attended — on its own day or within a day of its end (the API refuses
+ * after); moving or cancelling it while it has not ended; and sharing the
+ * invitation while nobody claimed it. The patient's confirmation is not
+ * the specialist's. These conditions spare a trip, never replace the API's
+ * answer: out of time it answers 409, said in place.
+ */
+export function specialistOffer(
+  appointment: AppointmentSummary,
+  now: Date = new Date(),
+): SpecialistOffer {
+  if (terminalStatuses.has(appointment.status)) {
+    return { closeOut: false, upcoming: false, shareInvitation: false };
+  }
+  const endsAt = instant(appointment.endsAt ?? appointment.startsAt);
+  const ended = now.getTime() > endsAt;
+  const today = appointment.date === todayInCaracas(now);
+  return {
+    closeOut: today || (ended && now.getTime() - endsAt < closeOutWindowMs),
+    upcoming: !ended,
+    shareInvitation: appointment.patientId === null,
+  };
+}
+
+/** Venezuela keeps UTC−4 all year: its calendar days start at 04:00 UTC and last 24 h. */
+const caracasDayStart = (date: string) => Date.parse(`${date}T04:00:00.000Z`);
+const dayInMs = 24 * 60 * 60 * 1000;
+
+/**
+ * The instants at which what can be done with the appointment changes, for
+ * a page to follow the clock without polling: for the patient, when its
+ * confirmation opens and when it starts (REDOC-308); for the specialist,
+ * when its day starts and ends in Caracas, when it ends and a day after
+ * (`specialistOffer`). What the API did not send is left out.
+ */
+export function offerChangesAt(
+  appointment: AppointmentSummary,
+  viewer: 'patient' | 'specialist',
+): number[] {
+  const parse = (iso: string | null) => (iso === null ? NaN : Date.parse(iso));
+  if (viewer === 'patient') {
+    return [appointment.confirmationOpensAt, appointment.startsAt]
+      .map(parse)
+      .filter(Number.isFinite);
+  }
+  const dayStart = caracasDayStart(appointment.date);
+  const endsAt = parse(appointment.endsAt ?? appointment.startsAt);
+  return [
+    dayStart,
+    dayStart + dayInMs,
+    endsAt,
+    endsAt + closeOutWindowMs,
+  ].filter(Number.isFinite);
+}
+
+/** An empty text is no value: the API leaves some fields blank. */
+const emptyAsNull = (value: string | null | undefined) =>
+  value === undefined || value === null || value === '' ? null : value;
+
+/** `GET /scheduling/specialist/appointments/{id}/invitation`: the link to send, for a patient with no account. */
+export const appointmentInvitationLinkSchema = z
+  .object({
+    invitedPhone: z.string().nullish(),
+    invitationToken: z.string().nullish(),
+    invitationUrl: z.string().nullish(),
+  })
+  .transform((link) => ({
+    phone: link.invitedPhone ?? null,
+    token: emptyAsNull(link.invitationToken),
+    /** The API's own link: it still names an old path (REDOC-255). */
+    url: emptyAsNull(link.invitationUrl),
+  }));
+
+export type AppointmentInvitationLink = z.output<
+  typeof appointmentInvitationLinkSchema
+>;
 
 /** An instant as a number to compare; something that is not one sorts first. */
 const instant = (iso: string | null) => {

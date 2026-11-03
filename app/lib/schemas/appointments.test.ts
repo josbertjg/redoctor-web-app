@@ -12,6 +12,8 @@ import {
   appointmentSchema,
   groupAppointments,
   isAppointmentAhead,
+  offerChangesAt,
+  specialistOffer,
   statusChips,
   toAppointmentSummary,
 } from './appointments';
@@ -221,5 +223,75 @@ describe('appointmentSchema, with values this version does not know', () => {
         price: { ...base.price, type: 'PER_MINUTE' },
       }).price?.type,
     ).toBeNull();
+  });
+});
+
+describe('specialistOffer', () => {
+  // Monday 12 October 2026, 11:00 in Caracas.
+  const at = (start: string, overrides: Record<string, unknown> = {}) =>
+    summary(buildAppointment(overrides, new Date(start)));
+
+  it('closes out and changes on the appointment’s day, before it starts', () => {
+    expect(specialistOffer(at('2026-10-12T18:00:00.000Z'), now)).toEqual({
+      closeOut: true,
+      upcoming: true,
+      shareInvitation: false,
+    });
+  });
+
+  it('closes out up to a day after it ends, and nothing more', () => {
+    // Sunday 22:00 in Caracas, over at 22:30: 12.5 h ago.
+    expect(specialistOffer(at('2026-10-12T02:00:00.000Z'), now)).toEqual({
+      closeOut: true,
+      upcoming: false,
+      shareInvitation: false,
+    });
+    // Over 30 h ago.
+    expect(specialistOffer(at('2026-10-11T08:30:00.000Z'), now)).toEqual({
+      closeOut: false,
+      upcoming: false,
+      shareInvitation: false,
+    });
+  });
+
+  it('offers nothing on a closed appointment', () => {
+    expect(
+      specialistOffer(
+        at('2026-10-12T18:00:00.000Z', { status: 'COMPLETED' }),
+        now,
+      ),
+    ).toEqual({ closeOut: false, upcoming: false, shareInvitation: false });
+  });
+
+  it('only changes one of another day, and shares the invitation nobody claimed', () => {
+    expect(
+      specialistOffer(
+        at('2026-10-13T15:00:00.000Z', { patientUserId: null }),
+        now,
+      ),
+    ).toEqual({ closeOut: false, upcoming: true, shareInvitation: true });
+  });
+});
+
+describe('offerChangesAt', () => {
+  // Tuesday 13 October 2026, 11:00 to 11:30 in Caracas.
+  const appointment = summary(
+    buildAppointment({}, new Date('2026-10-13T15:00:00.000Z')),
+  );
+
+  it('names when the patient’s offer changes: its confirmation opens, it starts', () => {
+    expect(offerChangesAt(appointment, 'patient')).toEqual([
+      Date.parse('2026-10-12T15:00:00.000Z'),
+      Date.parse('2026-10-13T15:00:00.000Z'),
+    ]);
+  });
+
+  it('names when the specialist’s offer changes: its day starts and ends, it ends, a day after', () => {
+    expect(offerChangesAt(appointment, 'specialist')).toEqual([
+      Date.parse('2026-10-13T04:00:00.000Z'),
+      Date.parse('2026-10-14T04:00:00.000Z'),
+      Date.parse('2026-10-13T15:30:00.000Z'),
+      Date.parse('2026-10-14T15:30:00.000Z'),
+    ]);
   });
 });

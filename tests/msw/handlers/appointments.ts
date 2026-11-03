@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw';
 import { z } from 'zod';
 
+import { buildSpecialistAgenda } from '../../factories/agenda';
 import {
   appointmentFor,
   appointmentIds,
@@ -41,7 +42,10 @@ function lookUp(request: Request, id: string) {
   if (isStranger(request)) return { refusal: unauthorized() } as const;
   if (id === appointmentIds.someoneElse)
     return { refusal: forbidden() } as const;
-  const appointment = appointmentFor(id);
+  // The patient's cases, and the specialist's agenda (the panel's «Ver cita»).
+  const appointment =
+    appointmentFor(id) ??
+    buildSpecialistAgenda().find((candidate) => candidate.id === id);
   return appointment
     ? ({ appointment } as const)
     : ({ refusal: notFound() } as const);
@@ -146,6 +150,97 @@ export const appointmentsHandlers = [
             start.getTime() - 24 * 3_600_000,
           ).toISOString(),
         },
+      });
+    },
+  ),
+
+  // The specialist's writes on their patient's appointment (phase 3 of the
+  // designer's screens, 2026-11-03), with the API's rules.
+  http.post(
+    apiUrl('/scheduling/specialist/appointments/:appointmentId/complete'),
+    async ({ request, params }) => {
+      const found = lookUp(request, String(params.appointmentId));
+      if ('refusal' in found) return found.refusal;
+      const body = z
+        .strictObject({ noShow: z.boolean().optional() })
+        .safeParse(await request.json());
+      if (!body.success) return badRequest();
+      const { appointment } = found;
+      if (terminal.has(appointment.status)) return conflict('ERR_4005');
+      return HttpResponse.json({
+        appointment: {
+          ...appointment,
+          status: body.data.noShow === true ? 'NO_SHOW' : 'COMPLETED',
+          canConfirmNow: false,
+        },
+      });
+    },
+  ),
+
+  http.post(
+    apiUrl('/scheduling/specialist/appointments/:appointmentId/cancel'),
+    async ({ request, params }) => {
+      const found = lookUp(request, String(params.appointmentId));
+      if ('refusal' in found) return found.refusal;
+      const body = z
+        .strictObject({ reason: z.string().optional() })
+        .safeParse(await request.json());
+      if (!body.success) return badRequest();
+      const { appointment } = found;
+      if (terminal.has(appointment.status)) return conflict('ERR_4005');
+      return HttpResponse.json({
+        appointment: {
+          ...appointment,
+          status: 'CANCELLED',
+          cancelledBy: 'SPECIALIST',
+          cancelReason: body.data.reason ?? null,
+          cancelledAt: new Date().toISOString(),
+          canConfirmNow: false,
+        },
+      });
+    },
+  ),
+
+  http.post(
+    apiUrl('/scheduling/specialist/appointments/:appointmentId/reschedule'),
+    async ({ request, params }) => {
+      const found = lookUp(request, String(params.appointmentId));
+      if ('refusal' in found) return found.refusal;
+      const body = rescheduleBody.safeParse(await request.json());
+      if (!body.success) return badRequest();
+      const { appointment } = found;
+      if (terminal.has(appointment.status)) return conflict('ERR_4005');
+      if (body.data.startTime === takenStartTime) return conflict('ERR_4002');
+      const start = new Date(
+        `${body.data.date}T${body.data.startTime}:00-04:00`,
+      );
+      return HttpResponse.json({
+        appointment: {
+          ...appointment,
+          slot: slotAt(start),
+          status: 'PENDING_CONFIRMATION',
+          isRescheduled: true,
+          canConfirmNow: false,
+        },
+      });
+    },
+  ),
+
+  http.get(
+    apiUrl('/scheduling/specialist/appointments/:appointmentId/invitation'),
+    ({ request, params }) => {
+      const found = lookUp(request, String(params.appointmentId));
+      if ('refusal' in found) return found.refusal;
+      const { appointment } = found;
+      const open = appointment.patientUserId === null;
+      return HttpResponse.json({
+        appointmentId: appointment.id,
+        invitedPhone: open ? '+584141234567' : null,
+        invitationToken: open ? 'tok-invited' : null,
+        // The API's own URL still names the old path (REDOC-255).
+        invitationUrl: open
+          ? 'https://redoctorapp.com/citas/invitacion/tok-invited'
+          : null,
       });
     },
   ),

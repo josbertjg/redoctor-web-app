@@ -2,6 +2,7 @@
 
 import { useLayoutEffect, useRef, type ReactNode } from 'react';
 
+import ArrowBack from '@material-symbols/svg-400/rounded/arrow_back.svg?svgr';
 import Close from '@material-symbols/svg-400/rounded/close.svg?svgr';
 import { useTranslations } from 'next-intl';
 import { Dialog } from 'radix-ui';
@@ -21,7 +22,24 @@ type SheetProps = {
   children: ReactNode;
   /** The primary action, always in view at the bottom (AGENTS.md §8.8). */
   footer?: ReactNode;
+  /**
+   * A step of the flow behind this one, in the same sheet (one sheet at a
+   * time): an arrow before the title goes back to it.
+   */
+  onBack?: (() => void) | undefined;
   className?: string;
+};
+
+/**
+ * What one step of a flow puts in a sheet: its title, its body and its
+ * footer. A flow hands its steps to whichever sheet hosts it — its own, or
+ * the sheet it was opened from (one sheet at a time, AGENTS.md §8.8).
+ */
+export type SheetStep = {
+  title: string;
+  description?: string | undefined;
+  body: ReactNode;
+  footer?: ReactNode;
 };
 
 /** How far down, or how fast, a drag has to go to close the sheet. */
@@ -48,6 +66,7 @@ export function Sheet({
   description,
   children,
   footer,
+  onBack,
   className,
 }: SheetProps) {
   const t = useTranslations();
@@ -113,6 +132,16 @@ export function Sheet({
                 <span className="h-1.5 w-10 rounded-full bg-grey-300" />
               </div>
               <header className="flex shrink-0 items-start gap-3 px-gutter pt-2 pb-3 sm:px-6 sm:pt-6">
+                {onBack ? (
+                  <button
+                    type="button"
+                    aria-label={t('back')}
+                    onClick={onBack}
+                    className="-mt-2 -ml-2 flex size-touch shrink-0 animate-fade-in items-center justify-center rounded-full text-text-secondary transition-colors duration-fast ease-house outline-none hover:bg-white-200 focus-visible:ring-3 focus-visible:ring-ring/50"
+                  >
+                    <Icon icon={ArrowBack} size={24} />
+                  </button>
+                ) : null}
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <Dialog.Title className="text-title-lg text-text-primary">
                     {title}
