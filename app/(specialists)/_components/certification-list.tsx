@@ -16,8 +16,8 @@ const typeKeys = {
 
 /*
  * The specialist's certifications (the app's «Certificaciones» tab): the type
- * as a pill and «Name: institution (year)». The pill is green-700, not the
- * app's green-500, so its white text passes WCAG AA.
+ * as a pill and «Name: institution (year)». The pill is the app's green-500
+ * with white words (2.8:1, under AA: the owner's rule, 2026-11-16).
  */
 export function CertificationList({
   certifications,
@@ -59,7 +59,7 @@ export function CertificationList({
           className="flex flex-col items-start gap-2 sm:flex-row sm:items-center"
         >
           {certification.type ? (
-            <span className="min-w-26 rounded-full bg-green-700 px-3.5 py-2 text-center text-body-xxs font-medium text-pure-white">
+            <span className="min-w-26 rounded-full bg-secondary px-3.5 py-2 text-center text-body-xxs font-medium text-pure-white">
               {t(`certificationTypes.${typeKeys[certification.type]}`)}
             </span>
           ) : null}

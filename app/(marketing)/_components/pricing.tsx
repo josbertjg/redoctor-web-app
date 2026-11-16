@@ -137,11 +137,15 @@ export function Pricing({ plans }: { plans: LandingPlans }) {
                   <li
                     key={card.key}
                     data-piece={`card-${card.key}`}
-                    className={cn('relative', card.featured && 'z-10')}
+                    // What the pointer is over keeps still, the card inside lifts.
+                    className={cn(
+                      'group relative cursor-pointer',
+                      card.featured && 'z-10',
+                    )}
                   >
                     <article
                       className={cn(
-                        'flex h-full cursor-pointer flex-col gap-8 rounded-xl px-7 py-6 shadow-md transition-transform duration-base ease-house hover:-translate-y-1',
+                        'flex h-full flex-col gap-8 rounded-xl px-7 py-6 shadow-md transition-transform duration-base ease-house group-hover:-translate-y-1',
                         card.featured
                           ? 'bg-primary text-pure-white'
                           : 'bg-pure-white text-pure-black',

@@ -269,7 +269,7 @@ function SavedCouponCard({ coupon }: { coupon: SavedCoupon }) {
         className={cn(
           'flex size-9 shrink-0 items-center justify-center rounded-full',
           available
-            ? 'bg-success-light text-green-700'
+            ? 'bg-green-50 text-secondary'
             : 'bg-surface-variant text-text-secondary',
         )}
       >

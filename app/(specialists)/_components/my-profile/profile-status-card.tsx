@@ -26,7 +26,7 @@ const tones = {
   active: {
     chip: 'positive',
     icon: Visibility,
-    circle: 'bg-success-light text-green-700',
+    circle: 'bg-green-50 text-secondary',
   },
   review: {
     chip: 'info',

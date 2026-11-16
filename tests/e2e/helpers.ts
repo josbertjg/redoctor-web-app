@@ -62,10 +62,21 @@ export async function revealWholePage(page: Page): Promise<void> {
 }
 
 /**
- * Contrast below AA that the owner accepted (AGENTS.md §13): the white words
- * on the brand green card of «Sí, puedes confiar» (2.8:1).
+ * Contrast below AA that the owner accepted (AGENTS.md §13): the app's own
+ * greens, wherever the app paints them — the brand's green-500 (`secondary`)
+ * as words on white or on its tint, or under white words (2.6–2.8:1), and
+ * the balance's credits in green-600 (3.3:1) — his rule of 2026-10-08,
+ * made general on 2026-11-16. Told by the colours axe measured.
  */
-const acceptedContrast = '#verificacion [data-piece="card-2"]';
+const acceptedGreens = new Set(['#2faf7e', '#2b9f73']);
+
+function paintsAcceptedGreen(node: { any: { id: string; data: unknown }[] }) {
+  const colors = node.any.find((check) => check.id === 'color-contrast')
+    ?.data as { fgColor?: string; bgColor?: string } | undefined;
+  return [colors?.fgColor, colors?.bgColor].some(
+    (color) => color !== undefined && acceptedGreens.has(color.toLowerCase()),
+  );
+}
 
 /**
  * Contrast below AA waiting for the owner's call (AGENTS.md §13, open
@@ -98,9 +109,11 @@ export async function auditAccessibility(page: Page) {
             ? known.some((rule) => element.closest(rule) !== null)
             : false;
         }),
-      [selectors, [acceptedContrast, pendingContrast]] as const,
+      [selectors, [pendingContrast]] as const,
     );
-    const nodes = violation.nodes.filter((_, index) => !accepted[index]);
+    const nodes = violation.nodes.filter(
+      (node, index) => !accepted[index] && !paintsAcceptedGreen(node),
+    );
     if (nodes.length > 0) violations.push({ ...violation, nodes });
   }
   return violations;

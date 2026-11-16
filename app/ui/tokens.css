@@ -267,6 +267,9 @@
   --duration-base: 250ms; /* the house default */
   --duration-slow: 300ms;
   --duration-marquee: 45s; /* one loop of a ribbon that moves by itself */
+  /* A flick's glide: the time constant of a ribbon let go mid-drag, which
+     keeps a third of its speed after one (a native scroll slows so). */
+  --duration-glide: 400ms;
   --ease-house: cubic-bezier(0.42, 0, 0.58, 1); /* ease-in-out */
 
   /* ---------- Layout ---------------------------------------------------- */
@@ -314,6 +317,7 @@
     --duration-fast: 1ms;
     --duration-base: 1ms;
     --duration-slow: 1ms;
+    --duration-glide: 1ms;
     /* Page transitions keep their fades and lose every movement (AGENTS.md
        §8, rule 13): nothing travels, rises or slides. */
     --duration-page-move: 1ms;

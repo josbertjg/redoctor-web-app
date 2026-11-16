@@ -102,7 +102,7 @@ export function PaymentTotals({
                 <span className="flex flex-col items-end gap-0.5">
                   <span className="flex flex-wrap items-center justify-end gap-x-2">
                     <span className="font-semibold">{coupon.terms.code}</span>
-                    <span className="font-semibold text-green-700">
+                    <span className="font-semibold text-secondary">
                       ({couponShortDiscount(coupon.terms)})
                     </span>
                     <button

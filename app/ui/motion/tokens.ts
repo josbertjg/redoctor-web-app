@@ -16,6 +16,7 @@ export type DurationToken =
   | 'splash-fallback'
   | 'cursor-pause'
   | 'marquee'
+  | 'glide'
   | 'wipe-cover'
   | 'wipe-hold'
   | 'wipe-reveal';
@@ -29,6 +30,7 @@ const durations: Record<DurationToken, number> = {
   'splash-fallback': 2.5,
   'cursor-pause': 5,
   marquee: 45,
+  glide: 0.4,
   'wipe-cover': 0.45,
   'wipe-hold': 0.12,
   'wipe-reveal': 0.5,

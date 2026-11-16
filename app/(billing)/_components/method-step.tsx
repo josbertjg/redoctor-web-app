@@ -124,11 +124,11 @@ export function MethodStep({
       {free ? (
         <section
           aria-labelledby={freeHeadingId}
-          className="flex animate-fade-up flex-col gap-3 rounded-2xl bg-success-light p-5"
+          className="flex animate-fade-up flex-col gap-3 rounded-2xl bg-green-50 p-5"
         >
           <h2
             id={freeHeadingId}
-            className="flex items-start gap-2 text-title-md text-green-800"
+            className="flex items-start gap-2 text-title-md text-secondary"
           >
             <Icon
               icon={Celebration}
@@ -141,7 +141,7 @@ export function MethodStep({
                 : 'acquire.method.freeTitle',
             )}
           </h2>
-          <p className="text-body-md text-green-800">
+          <p className="text-body-md text-secondary">
             {t('acquire.method.freeDescription')}
           </p>
           <Button

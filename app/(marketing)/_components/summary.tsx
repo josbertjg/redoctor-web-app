@@ -27,8 +27,8 @@ const cardTitle =
   'block text-subtitle-l leading-none font-bold @2xs:text-title-xl @md:text-title-xxl';
 const cardSubtitle =
   'block text-subtitle-s font-medium @2xs:text-subtitle-m @md:text-subtitle-l';
-/* On the green card the lead stays "large text" (≥ 24 px): white on
-   green-600 is 3.3:1, enough for large text only (WCAG AA). */
+/* On the green card the lead stays large (≥ 24 px); white on the app's
+   green-500 measures 2.8:1, under AA, the owner's call (2026-11-16). */
 const greenLead =
   'block text-headline-sm leading-tight font-medium @md:text-subtitle-l';
 
@@ -128,8 +128,8 @@ export function Summary() {
                 className="absolute bottom-0 left-1/2 w-[70%] -translate-x-1/2 transition-[translate] duration-slow ease-house group-hover:translate-y-full"
               />
             </li>
-            {/* green-600, not the mockup's 500: white on the brand green is
-                2.8:1, under the 3:1 that large text needs (AGENTS.md §13). */}
+            {/* The mockup's and the app's green-500 (the owner's rule,
+                2026-11-16), white words at 2.8:1 (AGENTS.md §13). */}
             {/* Hover: the hand grows around the phone's centre in the photo
                 (50 % across, 31 % down) and settles a little lower, so the
                 phone gets bigger in place without leaving the card by the
@@ -141,7 +141,7 @@ export function Summary() {
                 to keep it. */}
             <li
               data-piece="card-right"
-              className="group @container relative aspect-344/307 cursor-pointer overflow-hidden rounded-xl bg-green-600 shadow-md sm:col-span-2 sm:mx-auto sm:w-1/2 lg:col-span-1 lg:w-auto"
+              className="group @container relative aspect-344/307 cursor-pointer overflow-hidden rounded-xl bg-secondary shadow-md sm:col-span-2 sm:mx-auto sm:w-1/2 lg:col-span-1 lg:w-auto"
             >
               <Image
                 data-piece="photo-right"

@@ -1568,12 +1568,14 @@ written out in full, or Next.js does not inline it).
   cards land on the rolling ribbon from the right 100 ms apart with their
   badges popping after. The ribbon can be dragged (`RoadmapBelt`:
   JavaScript takes the CSS marquee over where it stands, four copies so a
-  drag of a screen's width either way finds cards, the same pace, no
-  momentum so it rolls on from where it is let go, paused under the pointer
-  or a visible focus; not on touch screens, where it scrolls by hand);
+  drag of a screen's width either way finds cards, the same pace, paused
+  under the pointer or a visible focus; since 2026-11-16 a flick glides on
+  and slows into that pace, below; not on touch screens, where it scrolls
+  by hand);
   hover lifts a card, grows its badge and fills the card with the badge's
   tint growing out of the badge (a `::before` clipped to a circle centred
-  on it), the green words one shade darker to keep AA on the tint. «Elige
+  on it), the green words one shade darker to keep AA on the tint (green-500
+  since 2026-11-16). «Elige
   el plan ideal»: the box fades in, the chip, title and line follow, the
   recommended plan grows into place and the other two slide out from
   behind it (measured, so in a column they come from above and below it),
@@ -3121,6 +3123,41 @@ written out in full, or Next.js does not inline it).
   Instagram (@redoctorapp), in place of the mockup's placeholders. The
   WhatsApp message says nothing about the person: «Hola, les escribo desde
   la web de Redoctor.»
+- **The highlights' words (the owner's, same day, after v0.38.0):** the
+  section's line is «Especialistas destacados y verificados en los cuales
+  confían nuestros pacientes.»
+- **The flicker over the landing's cards (the owner's report, same day):**
+  a card that lifted itself on hover left the pointer behind near its
+  bottom edge, dropped back under it and lifted again (measured: with the
+  pointer 2 px inside the edge, every nudge toggled `:hover`), and in «Sí,
+  puedes confiar» each toggle started and turned back the colour wave.
+  What the pointer is over now keeps still and a layer inside it lifts:
+  the trust cards, the steps of «Así de simple», the plans, the roadmap's
+  cards and the specialties under the search. Elsewhere (the panel, the
+  billing pages, the day pills) the same 2 px lift remains, its wobble
+  smaller and with no colour fill: to fix the same way if he asks.
+- **The ribbon's glide (the owner's ask, same day):** a flick of
+  «Prepárate para lo que viene» glides on at the speed it was let go at,
+  losing it exponentially as a native scroll does (`glide.ts`, the time
+  constant `--duration-glide`, 400 ms; at most 4000 px a second), under
+  the pointer too, where it then rests; elsewhere it eases back into the
+  ribbon's pace. Mouse and pen only: touch screens scroll natively.
+- **The app's greens, everywhere (the owner's rule, same day, over the AA
+  shades chosen before):** wherever the app paints `secondary`, the web
+  paints green-500 too — the accent words on white (`accentOnWhite`), the
+  green card of «Del mensaje a la consulta», the steps' and the roadmap's
+  green words and the roadmap's «Pacientes» chip, the specialty's pill on
+  `/s/{id}` and the certifications' pill (so «Mi perfil» and `/s/{id}`
+  agree), «Mi perfil»'s price badge and status circle, the statistics'
+  icons, the coupon and «nothing to pay» notices (on green-50, as the
+  app), a receipt's settled amount, the discounts and the success circles
+  of «¡Todo listo!». Where the app chooses another shade, the web follows
+  it: the positive StateChip (green-700 words on green-50), the balance's
+  credits (green-600), a free day (black words on green-50); the status
+  tones' words stay 700, as the app's; the secondary button keeps its
+  hover and pressed shades, as the primary. The e2e audit accepts
+  contrast below AA only where one of the two colours is the app's green
+  (`tests/e2e/helpers.ts`).
 
 ### Improvements noted (not scheduled)
 

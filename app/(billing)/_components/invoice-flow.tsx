@@ -309,7 +309,7 @@ function Concepts({ invoice }: { invoice: InvoiceDetail }) {
     key: 'pending',
     label: t('pending'),
     value: (
-      <span className={owes ? 'text-warning-800' : 'text-green-700'}>
+      <span className={owes ? 'text-warning-800' : 'text-secondary'}>
         {formatBillingAmount(invoice.pending)}
       </span>
     ),

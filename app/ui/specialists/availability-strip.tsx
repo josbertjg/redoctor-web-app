@@ -60,7 +60,7 @@ export function AvailabilityStrip({
       className="relative z-10 -mx-4 flex snap-x scroll-px-4 scrollbar-none gap-2 overflow-x-auto px-4"
     >
       {shown.map((day) => {
-        // One ink per pill, whole: its words read on its tint at 11 px (AA).
+        // As the app paints a free day: black words on the green's lightest tint.
         const words = (
           <>
             <span className="text-label-sm capitalize">
@@ -82,7 +82,7 @@ export function AvailabilityStrip({
             })}
             className={cn(
               cell,
-              'bg-success-light text-green-800 transition-[translate,background-color,box-shadow] duration-fast ease-house outline-none hover:-translate-y-0.5 hover:bg-green-100 hover:shadow-sm focus-visible:ring-3 focus-visible:ring-ring/50',
+              'bg-green-50 text-pure-black transition-[translate,background-color,box-shadow] duration-fast ease-house outline-none hover:-translate-y-0.5 hover:bg-green-100 hover:shadow-sm focus-visible:ring-3 focus-visible:ring-ring/50',
             )}
           >
             {words}

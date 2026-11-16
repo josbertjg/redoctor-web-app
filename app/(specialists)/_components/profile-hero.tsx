@@ -19,8 +19,9 @@ export const OFFICES_ANCHOR = 'consultorios';
 /*
  * The top of the profile, as the app's header: photo, name with the verified
  * badge, the first specialty and office («y N más»), and the rating. Colors
- * follow the app except where white on its green or its lighter blue text
- * would fall under WCAG AA: the pill uses green-700, the counts blue-100.
+ * follow the app: the specialty's pill is its green-500 with white words
+ * (2.8:1, under AA: the owner's rule, 2026-11-16); only the counts keep
+ * blue-100, where the app's lighter blue would fall under AA.
  */
 export function ProfileHero({ profile }: { profile: SpecialistProfile }) {
   const t = useTranslations();
@@ -75,7 +76,7 @@ export function ProfileHero({ profile }: { profile: SpecialistProfile }) {
       </div>
       <div className="mt-2 flex max-w-full flex-col items-center gap-1">
         {firstSpecialty ? (
-          <p className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-green-700 px-2.5 py-1 text-body-xs font-medium text-pure-white">
+          <p className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-body-xs font-medium text-pure-white">
             <Icon icon={Stethoscope} size={16} />
             <span className="truncate">
               {firstSpecialty.name}

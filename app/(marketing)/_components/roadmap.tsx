@@ -21,47 +21,55 @@ import { landingSections, roadmapItems } from '../_data/landing-content';
  * to a circle centred on the badge (its padding plus half its size down).
  */
 const fill =
-  'before:absolute before:inset-0 before:-z-10 before:transition-[clip-path] before:duration-slow before:ease-house before:[clip-path:circle(0%_at_50%_calc(--spacing(9)_+_--spacing(8)))] hover:before:[clip-path:circle(100%_at_50%_calc(--spacing(9)_+_--spacing(8)))]';
+  'before:absolute before:inset-0 before:-z-10 before:transition-[clip-path] before:duration-slow before:ease-house before:[clip-path:circle(0%_at_50%_calc(--spacing(9)_+_--spacing(8)))] group-hover:before:[clip-path:circle(100%_at_50%_calc(--spacing(9)_+_--spacing(8)))]';
 
 export function Roadmap() {
   const t = useTranslations('landing.roadmap');
 
   const cards = roadmapItems.map((item) => (
+    // What the pointer is over keeps still and the card inside it lifts: a
+    // card that rose itself would leave the pointer behind at its bottom
+    // edge and fill and empty its tint back and forth.
     <li
       key={item.key}
       data-piece="card"
-      className={cn(
-        'group relative isolate w-72 shrink-0 snap-start overflow-hidden rounded-2xl bg-pure-white px-6 py-9 shadow-md transition-[translate,box-shadow] duration-base ease-house hover:-translate-y-1 hover:shadow-lg',
-        fill,
-        toneFills[item.tone],
-      )}
+      className="group relative w-72 shrink-0 snap-start"
     >
-      <Swirl
-        variant={item.swirl}
-        className="top-[-30%] left-[-10%] w-[175%] opacity-70"
-      />
-      <div className="relative flex flex-col items-center gap-4 text-center">
-        <IconBadge
-          data-piece="badge"
-          icon={item.icon}
-          tone={item.tone}
-          size="lg"
-          className="shadow-md transition-[scale] duration-base ease-house group-hover:scale-110"
+      <div
+        className={cn(
+          'relative isolate h-full overflow-hidden rounded-2xl bg-pure-white px-6 py-9 shadow-md transition-[translate,box-shadow] duration-base ease-house group-hover:-translate-y-1 group-hover:shadow-lg',
+          fill,
+          toneFills[item.tone],
+        )}
+      >
+        <Swirl
+          variant={item.swirl}
+          className="top-[-30%] left-[-10%] w-[175%] opacity-70"
         />
-        {/* On the tint the green words step one shade darker to keep AA. */}
-        <p className="text-subtitle-s font-semibold text-pure-black [&_span]:transition-colors [&_span]:duration-slow [&_span]:ease-house group-hover:[&_span]:text-green-800">
-          {t.rich(`items.${item.key}`, accentOnWhite)}
-        </p>
-        <span
-          className={cn(
-            'rounded-lg px-3 py-1.5 text-label-lg shadow-sm',
-            item.audience === 'patient'
-              ? 'bg-green-50 text-green-700'
-              : 'bg-blue-50 text-primary',
-          )}
-        >
-          {t(`audience.${item.audience}`)}
-        </span>
+        <div className="relative flex flex-col items-center gap-4 text-center">
+          <IconBadge
+            data-piece="badge"
+            icon={item.icon}
+            tone={item.tone}
+            size="lg"
+            className="shadow-md transition-[scale] duration-base ease-house group-hover:scale-110"
+          />
+          {/* The green words stay the app's green-500 on the tint too (the
+              owner's rule, 2026-11-16). */}
+          <p className="text-subtitle-s font-semibold text-pure-black">
+            {t.rich(`items.${item.key}`, accentOnWhite)}
+          </p>
+          <span
+            className={cn(
+              'rounded-lg px-3 py-1.5 text-label-lg shadow-sm',
+              item.audience === 'patient'
+                ? 'bg-green-50 text-secondary'
+                : 'bg-blue-50 text-primary',
+            )}
+          >
+            {t(`audience.${item.audience}`)}
+          </span>
+        </div>
       </div>
     </li>
   ));

@@ -34,7 +34,7 @@ export function SignUpDone({ purpose, onContinue }: SignUpDoneProps) {
       aria-labelledby={headingId}
       className="w-full max-w-md animate-fade-up rounded-2xl bg-pure-white p-6 text-center shadow-md sm:p-8"
     >
-      <span className="mx-auto flex size-16 items-center justify-center rounded-full bg-green-50 text-green-700">
+      <span className="mx-auto flex size-16 items-center justify-center rounded-full bg-green-50 text-secondary">
         <Icon icon={CheckCircle} className="size-8" />
       </span>
       <h1 id={headingId} className="mt-4 text-headline-sm text-text-primary">

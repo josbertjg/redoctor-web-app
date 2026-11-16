@@ -107,12 +107,12 @@ const stepLean = [
 ];
 /* Over a step, its badge's tint (the same icon-badge.tsx paints) sweeps
    across the row from the left, as if the circle spread out, and the words
-   take the tone's lightest shade that keeps 4.5:1 on that tint (measured:
-   blue-500 8.4, green-700 4.7, orange-800 6.6, warning-800 5.3; the 600s
-   and orange-700 fall short). */
+   take the tone's colour: the green is the app's 500 (2.6:1 on its tint,
+   the owner's rule of 2026-11-16); the others keep 4.5:1 (blue-500 8.4,
+   orange-800 6.6, warning-800 5.3). */
 const stepWords: Record<IconTone, string> = {
   blue: 'group-hover/step:text-primary',
-  green: 'group-hover/step:text-green-700',
+  green: 'group-hover/step:text-secondary',
   orange: 'group-hover/step:text-orange-800',
   warning: 'group-hover/step:text-warning-800',
 };
@@ -180,28 +180,33 @@ function RoleCard({
               stepLean[index],
             )}
           >
-            <div
-              className={cn(
-                'group/step relative isolate flex items-center gap-3 overflow-hidden rounded-lg bg-pure-white px-3 py-2.5 text-left shadow-md transition-[translate,box-shadow] duration-base ease-house hover:-translate-y-0.5 hover:shadow-lg',
-                'before:absolute before:inset-0 before:-z-10 before:origin-left before:scale-x-0 before:transition-[scale] before:duration-slow before:ease-house hover:before:scale-x-100',
-                toneFills[step.tone],
-              )}
-            >
-              <IconBadge
-                data-piece="badge"
-                icon={step.icon}
-                tone={step.tone}
-                size="sm"
-                className="transition-[scale] duration-base ease-house group-hover/step:scale-110"
-              />
-              <span
+            {/* What the pointer is over keeps still and the row inside it
+                lifts: a row that rose itself would leave the pointer behind
+                at its bottom edge and sweep its tint back and forth. */}
+            <div className="group/step relative">
+              <div
                 className={cn(
-                  'text-title-md font-semibold text-pure-black transition-colors duration-base ease-house sm:text-subtitle-s',
-                  stepWords[step.tone],
+                  'relative isolate flex items-center gap-3 overflow-hidden rounded-lg bg-pure-white px-3 py-2.5 text-left shadow-md transition-[translate,box-shadow] duration-base ease-house group-hover/step:-translate-y-0.5 group-hover/step:shadow-lg',
+                  'before:absolute before:inset-0 before:-z-10 before:origin-left before:scale-x-0 before:transition-[scale] before:duration-slow before:ease-house group-hover/step:before:scale-x-100',
+                  toneFills[step.tone],
                 )}
               >
-                {step.label}
-              </span>
+                <IconBadge
+                  data-piece="badge"
+                  icon={step.icon}
+                  tone={step.tone}
+                  size="sm"
+                  className="transition-[scale] duration-base ease-house group-hover/step:scale-110"
+                />
+                <span
+                  className={cn(
+                    'text-title-md font-semibold text-pure-black transition-colors duration-base ease-house sm:text-subtitle-s',
+                    stepWords[step.tone],
+                  )}
+                >
+                  {step.label}
+                </span>
+              </div>
             </div>
           </li>
         ))}

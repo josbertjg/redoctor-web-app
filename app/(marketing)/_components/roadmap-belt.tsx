@@ -14,6 +14,8 @@ import {
   useTransform,
 } from '@/app/ui/motion';
 
+import { glide, glideSpeedFrom } from './glide';
+
 /** Keeps `value` inside [min, max): a belt of copies loops without a seam. */
 function wrap(min: number, max: number, value: number): number {
   const range = max - min;
@@ -41,9 +43,11 @@ type RoadmapBeltProps = {
  * a track that rolls left by itself, pauses under the pointer or the
  * keyboard's focus, and can be dragged. The HTML arrives rolling by CSS
  * (`animate-marquee`); once mounted, JavaScript reads where CSS has rolled
- * the track to and takes over from there, so a hand can drag it and it
- * rolls on from wherever it is let go, at the same pace (one copy per
- * `--duration-marquee`). The track rests one copy in (and settles back
+ * the track to and takes over from there, so a hand can drag it. Let go,
+ * it glides on at the speed it was thrown at, slowing as a native scroll
+ * does (glide.ts, `--duration-glide`; the owner's ask, 2026-11-16) — under
+ * the pointer too, where it then rests —, and rolls on at its pace (one
+ * copy per `--duration-marquee`). The track rests one copy in (and settles back
  * there, one copy at a time, which the eye cannot tell), so a drag of a
  * screen's width either way still finds cards. On touch screens and with
  * reduced motion the ribbon stands still and scrolls by hand (CSS, one
@@ -59,6 +63,8 @@ export function RoadmapBelt({ label, children }: RoadmapBeltProps) {
   const [copy, setCopy] = useState(0);
   const [driven, setDriven] = useState(false);
   const dragging = useRef(false);
+  /** What is left of a flick's speed, in px a second (0: no glide). */
+  const thrown = useRef(0);
   const pace = useRef(0);
   /** The copy's width for the frame loop, which must not restart when it changes. */
   const copyWidth = useRef(0);
@@ -108,15 +114,22 @@ export function RoadmapBelt({ label, children }: RoadmapBeltProps) {
   useEffect(() => {
     const element = region.current;
     if (!driven || still || !element) return;
+    const timeConstant = readDuration('glide');
     let frame = 0;
     let last: number | null = null;
     const tick = (time: number) => {
-      const delta = last === null ? 0 : time - last;
+      const seconds = last === null ? 0 : (time - last) / 1000;
       last = time;
       frame = requestAnimationFrame(tick);
       if (dragging.current || copyWidth.current === 0) return;
+      // A flick glides on, under the pointer too, until its speed is spent.
+      if (thrown.current !== 0) {
+        const step = glide(thrown.current, seconds, timeConstant);
+        base.set(base.get() + step.distance);
+        thrown.current = step.velocity;
+      }
       if (element.matches(':hover, :focus-visible')) return;
-      base.set(base.get() - pace.current * (delta / 1000));
+      base.set(base.get() - pace.current * seconds);
     };
     const start = () => {
       if (frame !== 0) return;
@@ -157,12 +170,17 @@ export function RoadmapBelt({ label, children }: RoadmapBeltProps) {
         ref={track}
         style={{ x }}
         drag={driven && !still ? 'x' : false}
+        // The glide is the frame loop's (above): it moves `base`, which
+        // wraps the copies, where Motion's own momentum would move `x`.
         dragMomentum={false}
         onDragStart={() => {
+          // A hand catches a ribbon still gliding.
+          thrown.current = 0;
           dragging.current = true;
         }}
-        onDragEnd={() => {
+        onDragEnd={(_, info) => {
           base.set(wrap(-2 * copy, -copy, x.get()));
+          thrown.current = glideSpeedFrom(info.velocity.x);
           dragging.current = false;
         }}
         className={cn(

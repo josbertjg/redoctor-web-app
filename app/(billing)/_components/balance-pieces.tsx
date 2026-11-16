@@ -35,7 +35,7 @@ export function BalanceSummary({ balance }: { balance: Money }) {
         className={cn(
           'text-subtitle-l font-bold',
           // Green as text on white is the 700, as every green word of the web (AA).
-          positive ? 'text-green-700' : 'text-text-primary',
+          positive ? 'text-green-600' : 'text-text-primary',
         )}
       >
         {formatBillingAmount(balance)}
@@ -70,7 +70,7 @@ export function BalanceMovementRow({
         className={cn(
           'flex size-9 shrink-0 items-center justify-center rounded-full',
           credit
-            ? 'bg-success-light text-green-700'
+            ? 'bg-green-50 text-secondary'
             : 'bg-surface-variant text-text-secondary',
         )}
       >
@@ -90,7 +90,7 @@ export function BalanceMovementRow({
       <span
         className={cn(
           'shrink-0 text-label-lg font-bold',
-          credit ? 'text-green-700' : 'text-text-primary',
+          credit ? 'text-green-600' : 'text-text-primary',
         )}
       >
         {formatBillingAmount(signedMovement(movement), { showPlus: true })}

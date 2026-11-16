@@ -2,9 +2,9 @@ import type { ReactNode } from 'react';
 
 /*
  * The words a title paints green: `<accent>…</accent>` in es.json, through
- * next-intl's rich text. On the blue background the brand green reads as a
- * large title (3.7:1); on white it would not (2.8:1), so there the darker
- * green of the scale keeps WCAG AA.
+ * next-intl's rich text, always the app's green-500 (the owner's rule,
+ * 2026-11-16): on the blue background it reads as a large title (3.7:1);
+ * on white it measures 2.8:1, under AA, which he accepts for the brand.
  */
 
 export const accentOnBlue = {
@@ -15,6 +15,6 @@ export const accentOnBlue = {
 
 export const accentOnWhite = {
   accent: (chunks: ReactNode) => (
-    <span className="text-green-700">{chunks}</span>
+    <span className="text-secondary">{chunks}</span>
   ),
 };

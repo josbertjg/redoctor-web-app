@@ -11,7 +11,7 @@ const stateChipVariants = cva(
   {
     variants: {
       tone: {
-        positive: 'bg-success-light text-green-800',
+        positive: 'bg-green-50 text-green-700',
         accent: 'bg-orange-100 text-orange-800',
         neutral: 'bg-silver-100 text-silver-800',
         warning: 'bg-warning-light text-warning-800',

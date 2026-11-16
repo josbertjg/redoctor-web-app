@@ -164,7 +164,7 @@ export function SummaryReport({ report, days }: ReportViewProps) {
           {main ? (
             <MetricCard
               icon={Payments}
-              iconClassName="bg-success-light text-green-700"
+              iconClassName="bg-success-light text-secondary"
               title={t('income.title')}
               value={formatHeadlineMoney(main.total, main.currency)}
               unit={
@@ -182,7 +182,7 @@ export function SummaryReport({ report, days }: ReportViewProps) {
           ) : (
             <MetricCard
               icon={Payments}
-              iconClassName="bg-success-light text-green-700"
+              iconClassName="bg-success-light text-secondary"
               title={t('income.title')}
               value={missing}
               caption={
@@ -316,7 +316,7 @@ export function AppointmentsReport({ report, days }: ReportViewProps) {
         />
         <MetricCard
           icon={EventAvailable}
-          iconClassName="bg-success-light text-green-700"
+          iconClassName="bg-success-light text-secondary"
           title={t('appointments.completed')}
           value={formatHeadlineFigure(outcome.completed)}
           caption={previous(appointments.previous.completed)}
@@ -510,7 +510,7 @@ function CurrencyIncomeBlock({
       <div className="flex flex-col gap-4">
         <MetricCard
           icon={Payments}
-          iconClassName="bg-success-light text-green-700"
+          iconClassName="bg-success-light text-secondary"
           title={t('income.title')}
           value={formatHeadlineMoney(currency.total, code)}
           unit={t('income.appointments', { count: currency.appointments })}

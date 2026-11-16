@@ -27,8 +27,8 @@ export function CouponPreview({
   note?: string;
 }) {
   return (
-    <div className="animate-fade-in rounded-lg bg-success-light p-3">
-      <p className="flex items-start gap-2 text-label-lg text-green-800">
+    <div className="animate-fade-in rounded-lg bg-green-50 p-3">
+      <p className="flex items-start gap-2 text-label-lg text-secondary">
         <Icon
           icon={CheckCircleFill}
           size={18}
@@ -36,8 +36,8 @@ export function CouponPreview({
         />
         {summary}
       </p>
-      <p className="mt-1 text-body-md font-semibold text-green-800">{amount}</p>
-      {note ? <p className="mt-1 text-body-sm text-green-800">{note}</p> : null}
+      <p className="mt-1 text-body-md font-semibold text-secondary">{amount}</p>
+      {note ? <p className="mt-1 text-body-sm text-secondary">{note}</p> : null}
     </div>
   );
 }

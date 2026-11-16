@@ -46,7 +46,7 @@ export function BookingDone({
       aria-labelledby={headingId}
       className="flex animate-fade-up flex-col items-center gap-3 rounded-2xl bg-pure-white p-6 text-center shadow-md sm:p-8"
     >
-      <span className="flex size-16 items-center justify-center rounded-full bg-green-50 text-green-700">
+      <span className="flex size-16 items-center justify-center rounded-full bg-green-50 text-secondary">
         <Icon icon={EventAvailable} className="size-8" />
       </span>
       <h2

@@ -26,7 +26,11 @@ import {
  * that card as its one accepted exception (AGENTS.md §13). The pieces
  * carry `data-piece` for their entrance (trust-motion.tsx). Over a card it
  * lifts, its picture peeks up a little more and a wave of the opposite
- * surface washes over it, each from its own corner.
+ * surface washes over it, each from its own corner. What the pointer is
+ * over stays still — the list item —, and the card inside it lifts: were
+ * the item itself to rise, near its bottom edge it would leave the pointer
+ * behind, drop back under it and rise again, the wave starting and
+ * turning back each time (the flicker the owner saw, 2026-11-16).
  */
 const surfaces: Record<TrustTone, string> = {
   white: 'bg-pure-white text-primary',
@@ -42,16 +46,16 @@ const wave =
 const waves: Record<TrustStepKey, string> = {
   // Green rising from the bottom edge, its crest in the middle.
   identity:
-    'before:bg-secondary before:[clip-path:ellipse(100%_0%_at_50%_100%)] hover:text-pure-white hover:before:[clip-path:ellipse(100%_125%_at_50%_100%)]',
+    'before:bg-secondary before:[clip-path:ellipse(100%_0%_at_50%_100%)] group-hover:text-pure-white group-hover:before:[clip-path:ellipse(100%_125%_at_50%_100%)]',
   // White from the top right corner down to the bottom left.
   specialty:
-    'before:bg-pure-white before:[clip-path:circle(0%_at_100%_0%)] hover:text-primary hover:before:[clip-path:circle(142%_at_100%_0%)]',
+    'before:bg-pure-white before:[clip-path:circle(0%_at_100%_0%)] group-hover:text-primary group-hover:before:[clip-path:circle(142%_at_100%_0%)]',
   // White from the bottom left corner up to the top right.
   approved:
-    'before:bg-pure-white before:[clip-path:circle(0%_at_0%_100%)] hover:text-primary hover:before:[clip-path:circle(142%_at_0%_100%)]',
+    'before:bg-pure-white before:[clip-path:circle(0%_at_0%_100%)] group-hover:text-primary group-hover:before:[clip-path:circle(142%_at_0%_100%)]',
   // Green out of the circle behind the specialist, at the bottom centre.
   published:
-    'before:bg-secondary before:[clip-path:circle(0%_at_50%_100%)] hover:text-pure-white hover:before:[clip-path:circle(142%_at_50%_100%)]',
+    'before:bg-secondary before:[clip-path:circle(0%_at_50%_100%)] group-hover:text-pure-white group-hover:before:[clip-path:circle(142%_at_50%_100%)]',
 };
 /* Each card above the ones after it: a card entering from where an earlier
    one sits comes out from under it. */
@@ -89,44 +93,50 @@ export function Trust() {
                 key={step.key}
                 data-piece={`card-${String(index + 1)}`}
                 className={cn(
-                  'group relative isolate flex cursor-pointer flex-col overflow-hidden rounded-2xl shadow-md transition-[translate,box-shadow] duration-base ease-house hover:-translate-y-1 hover:shadow-lg',
-                  surfaces[step.tone],
+                  'group relative cursor-pointer',
                   cardDepth[index],
-                  wave,
-                  waves[step.key],
                 )}
               >
-                <div className="flex items-start gap-3 p-5 pb-3">
-                  <span
-                    data-piece="number"
-                    aria-hidden="true"
-                    className="flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-50 text-label-lg text-primary shadow-sm"
-                  >
-                    {index + 1}
-                  </span>
-                  {/* The words turn in a fast beat, a third of the wave in,
+                <div
+                  className={cn(
+                    'relative isolate flex h-full flex-col overflow-hidden rounded-2xl shadow-md transition-[translate,box-shadow] duration-base ease-house group-hover:-translate-y-1 group-hover:shadow-lg',
+                    surfaces[step.tone],
+                    wave,
+                    waves[step.key],
+                  )}
+                >
+                  <div className="flex items-start gap-3 p-5 pb-3">
+                    <span
+                      data-piece="number"
+                      aria-hidden="true"
+                      className="flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-50 text-label-lg text-primary shadow-sm"
+                    >
+                      {index + 1}
+                    </span>
+                    {/* The words turn in a fast beat, a third of the wave in,
                       so they flip as its front reaches them rather than
                       fading out on the old surface; on the way back they
                       turn at once, since the front leaves them first. */}
-                  <p className="text-body-xs font-semibold text-pretty transition-colors duration-fast ease-house group-hover:delay-[calc(var(--duration-slow)/3)]">
-                    {t(`steps.${step.key}`)}
-                  </p>
-                </div>
-                {/* The picture area: as tall as the mockup leaves under two
+                    <p className="text-body-xs font-semibold text-pretty transition-colors duration-fast ease-house group-hover:delay-[calc(var(--duration-slow)/3)]">
+                      {t(`steps.${step.key}`)}
+                    </p>
+                  </div>
+                  {/* The picture area: as tall as the mockup leaves under two
                     lines, and the card's edge cuts what sticks out. */}
-                <div className="relative mt-auto aspect-291/112">
-                  <Image
-                    data-piece="picture"
-                    src={`/illustrations/landing/${step.illustration}.svg`}
-                    alt=""
-                    aria-hidden="true"
-                    width={step.width}
-                    height={step.height}
-                    className={cn(
-                      'absolute left-1/2 h-auto -translate-x-1/2 transition-[translate] duration-base ease-house group-hover:-translate-y-2',
-                      step.placement,
-                    )}
-                  />
+                  <div className="relative mt-auto aspect-291/112">
+                    <Image
+                      data-piece="picture"
+                      src={`/illustrations/landing/${step.illustration}.svg`}
+                      alt=""
+                      aria-hidden="true"
+                      width={step.width}
+                      height={step.height}
+                      className={cn(
+                        'absolute left-1/2 h-auto -translate-x-1/2 transition-[translate] duration-base ease-house group-hover:-translate-y-2',
+                        step.placement,
+                      )}
+                    />
+                  </div>
                 </div>
               </li>
             ))}

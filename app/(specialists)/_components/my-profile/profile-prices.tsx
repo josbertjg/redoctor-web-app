@@ -75,7 +75,7 @@ function OfficePrices({
     <OfficeCard
       name={name}
       badge={
-        <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-secondary px-2.5 py-0.5 text-label-md text-green-700">
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-secondary px-2.5 py-0.5 text-label-md text-secondary">
           <Icon icon={standard ? AttachMoney : FormatListBulleted} size={16} />
           {standard
             ? t('specialistProfile.standardTariff')
