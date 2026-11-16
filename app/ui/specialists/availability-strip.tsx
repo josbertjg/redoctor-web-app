@@ -1,5 +1,3 @@
-'use client';
-
 import Link from 'next/link';
 
 import { useTranslations } from 'next-intl';
@@ -13,9 +11,7 @@ import { routes } from '@/app/lib/routes';
 import type { SearchResultDay } from '@/app/lib/schemas/search';
 import { cn } from '@/app/lib/utils';
 
-import { fadingEdgesClass } from '@/app/ui/fading-edges';
-
-import { useFadingEdges } from '@/app/hooks/use-fading-edges';
+import { FadingRow } from '@/app/ui/fading-row';
 
 /** The app's strip shows the twelve; the card shows a handful and the way to the rest. */
 const shownDays = 5;
@@ -28,10 +24,11 @@ type AvailabilityStripProps = {
 };
 
 /*
- * The nearest office's next days, as the app's strip under each result:
+ * The nearest office's next days, as the app's strip under each specialist:
  * a free day opens the booking on it (M15, `?date=`), a full one says so,
  * and «Más fechas» opens the booking's calendar. Nothing in the next days:
- * the strip says that instead.
+ * the strip says that instead. It renders where its card does, on the
+ * server too: only the row's faded sides need the browser (FadingRow).
  */
 export function AvailabilityStrip({
   specialistId,
@@ -41,7 +38,6 @@ export function AvailabilityStrip({
 }: AvailabilityStripProps) {
   const t = useTranslations();
   const shown = days.slice(0, shownDays);
-  const { ref: row, fade } = useFadingEdges<HTMLDivElement>(shown.length > 0);
 
   if (shown.length === 0) {
     return (
@@ -55,16 +51,13 @@ export function AvailabilityStrip({
     'flex min-h-touch min-w-18 shrink-0 snap-start flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-1.5 text-center';
 
   return (
-    <div
-      ref={row}
+    <FadingRow
       role="group"
       aria-label={t('search.web.nextDays')}
-      data-fade={fade}
-      // Above the card's own link (result-card.tsx): the days keep their taps.
-      className={cn(
-        'relative z-10 -mx-4 flex snap-x scrollbar-none gap-2 overflow-x-auto px-4',
-        fadingEdgesClass,
-      )}
+      // Above the card's own link (specialist-card.tsx): the days keep their
+      // taps. The snap counts from the padding: the first day starts whole,
+      // the row unscrolled, and only the far side fades.
+      className="relative z-10 -mx-4 flex snap-x scroll-px-4 scrollbar-none gap-2 overflow-x-auto px-4"
     >
       {shown.map((day) => {
         // One ink per pill, whole: its words read on its tint at 11 px (AA).
@@ -118,6 +111,6 @@ export function AvailabilityStrip({
       >
         {t('search.web.moreDates')}
       </Link>
-    </div>
+    </FadingRow>
   );
 }

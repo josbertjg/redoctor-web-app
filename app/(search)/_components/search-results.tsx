@@ -9,6 +9,7 @@ import { track } from '@/app/lib/analytics/track';
 import { googleMapsAvailable } from '@/app/lib/maps/google-maps';
 import { searchResultsQueryOptions } from '@/app/lib/queries/search';
 import type { SearchPage } from '@/app/lib/schemas/search';
+import type { FeaturedSpecialists } from '@/app/lib/schemas/search-highlights';
 import { locationCoordinates } from '@/app/lib/search/location';
 import {
   hasCriteria,
@@ -20,11 +21,15 @@ import { cn } from '@/app/lib/utils';
 import { Button } from '@/app/ui/button';
 import { useReducedMotion } from '@/app/ui/motion';
 import type { SearchCatalog } from '@/app/ui/search/search-bar-types';
+import {
+  SpecialistCard,
+  specialistCardId,
+} from '@/app/ui/specialists/specialist-card';
 
 import { useInfiniteScroll } from '@/app/hooks/use-infinite-scroll';
 
+import { HoverSyncItem } from './hover-sync-item';
 import { MapPanel } from './map-panel';
-import { ResultCard, resultCardId } from './result-card';
 import {
   ResultCardSkeleton,
   ResultsSkeleton,
@@ -40,7 +45,10 @@ type SearchResultsProps = {
   specialtyName: string | null;
   /** The first page, read on the server; null when nothing was asked or it failed. */
   initialPage: SearchPage | null;
-  catalog: SearchCatalog;
+  /** With nothing asked: the most booked specialties, or the catalog's first. */
+  topSpecialties: SearchCatalog;
+  /** With nothing asked: the best rated, read on the server; null otherwise or on a failure. */
+  featured: FeaturedSpecialists | null;
   today: string;
 };
 
@@ -56,7 +64,8 @@ export function SearchResults({
   query,
   specialtyName,
   initialPage,
-  catalog,
+  topSpecialties,
+  featured,
   today,
 }: SearchResultsProps) {
   const t = useTranslations();
@@ -117,13 +126,21 @@ export function SearchResults({
   // A pin tapped: its card comes into view.
   useEffect(() => {
     if (selectedId === null) return;
-    document.getElementById(resultCardId(selectedId))?.scrollIntoView({
+    document.getElementById(specialistCardId(selectedId))?.scrollIntoView({
       block: 'nearest',
       behavior: reducedMotion ? 'auto' : 'smooth',
     });
   }, [selectedId, reducedMotion]);
 
-  if (!asked) return <SearchStart catalog={catalog} />;
+  if (!asked) {
+    return (
+      <SearchStart
+        topSpecialties={topSpecialties}
+        featured={featured}
+        location={query.location}
+      />
+    );
+  }
 
   const point =
     query.location.kind === 'country'
@@ -205,15 +222,18 @@ export function SearchResults({
               </header>
               <ol className="mt-4 flex flex-col gap-3">
                 {items.map((result) => (
-                  <li key={result.id}>
-                    <ResultCard
-                      result={result}
+                  <HoverSyncItem
+                    key={result.id}
+                    id={result.id}
+                    onHover={setActiveId}
+                  >
+                    <SpecialistCard
+                      specialist={result}
                       showDistance={point !== null}
                       active={activeId === result.id}
                       selected={selectedId === result.id}
-                      onHover={setActiveId}
                     />
-                  </li>
+                  </HoverSyncItem>
                 ))}
               </ol>
               <div ref={foot} className="mt-3 flex flex-col gap-3">

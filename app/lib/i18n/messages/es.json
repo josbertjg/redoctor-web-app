@@ -25,6 +25,12 @@
       },
       "specialtiesLabel": "Especialidades"
     },
+    "featured": {
+      "chip": "Especialistas destacados",
+      "title": "Los <accent>mejor valorados</accent> por sus pacientes",
+      "description": "Especialistas verificados, ordenados por las reseñas de sus pacientes. Elige un día y agenda tu cita.",
+      "seeMore": "Ver más especialistas"
+    },
     "summary": {
       "title": "Del mensaje a la consulta, <accent>sin llamadas ni esperas</accent>.",
       "verified": {
@@ -156,6 +162,8 @@
     "footer": {
       "tagline": "Confianza, salud y gestión eficiente en un solo click.",
       "contact": "Contáctanos",
+      "whatsapp": "WhatsApp",
+      "whatsappMessage": "Hola, les escribo desde la web de Redoctor.",
       "legalLabel": "Legal",
       "terms": "Términos y condiciones",
       "privacy": "Política de privacidad",
@@ -603,6 +611,10 @@
       "distanceAway": "a {distance}",
       "startTitle": "¿Qué especialista buscas?",
       "startDescription": "Escribe una especialidad o el nombre de un especialista, o elige una especialidad para empezar.",
+      "featuredTitle": "Especialistas mejor valorados",
+      "featuredNearYou": "Mejor valorados cerca de ti",
+      "featuredNearPlace": "Mejor valorados cerca de {place}",
+      "featuredInMapArea": "Mejor valorados en la zona del mapa",
       "loadFailed": "No pudimos buscar especialistas.",
       "pageFailed": "No pudimos cargar más especialistas.",
       "widen": "Buscar en toda Venezuela",

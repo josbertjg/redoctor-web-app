@@ -3,10 +3,16 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 
 import { searchSpecialists } from '@/app/lib/data/search';
+import {
+  getFeaturedSpecialists,
+  getPopularSpecialties,
+} from '@/app/lib/data/search-highlights';
 import { getSearchCatalog } from '@/app/lib/data/specialties';
 import { todayInCaracas } from '@/app/lib/format/date-of-birth';
 import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 import { toSearchPage, type SearchPage } from '@/app/lib/schemas/search';
+import type { FeaturedSpecialists } from '@/app/lib/schemas/search-highlights';
+import { locationCoordinates } from '@/app/lib/search/location';
 import {
   hasCriteria,
   parseSearchQuery,
@@ -28,9 +34,11 @@ import { SearchResults } from '../_components/search-results';
  * address — what, where, how far, from when — and the first page of
  * results comes with the HTML, read on the server (the API's search is
  * public and cached for every visitor); the rest is read in the browser
- * through the web's own `/api/search`. The web's own page, listed by no
- * app (AGENTS.md §6). Never indexed: an address says what someone looked
- * for and from where.
+ * through the web's own `/api/search`. With nothing asked, the patient's
+ * highlights (REDOC-177): the most booked specialties and the best rated
+ * specialists, near the point in the address when there is one. The web's
+ * own page, listed by no app (AGENTS.md §6). Never indexed: an address
+ * says what someone looked for and from where.
  */
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -57,7 +65,12 @@ export default async function SearchPage({
   const params = await searchParams;
   const today = todayInCaracas();
   const query = parseSearchQuery(params, today);
-  const catalog = await getSearchCatalog();
+  const [catalog, popular] = await Promise.all([
+    getSearchCatalog(),
+    getPopularSpecialties(),
+  ]);
+  // The most booked specialties, or the catalog's first when they cannot be read.
+  const topSpecialties = popular ?? catalog;
   const specialtyName =
     catalog.find((specialty) => specialty.id === query.specialtyId)?.name ??
     null;
@@ -65,6 +78,7 @@ export default async function SearchPage({
   // A first page the server cannot read is not the page's end: the browser
   // asks again, with «Reintentar» in hand (apiFetch reported it already).
   let initialPage: SearchPage | null = null;
+  let featured: FeaturedSpecialists | null = null;
   if (hasCriteria(query)) {
     try {
       initialPage = toSearchPage(
@@ -73,6 +87,12 @@ export default async function SearchPage({
     } catch {
       initialPage = null;
     }
+  } else {
+    featured = await getFeaturedSpecialists(
+      query.location.kind === 'country'
+        ? null
+        : locationCoordinates(query.location),
+    );
   }
 
   return (
@@ -81,6 +101,7 @@ export default async function SearchPage({
         <SearchNavigationProvider>
           <SearchHeader
             catalog={catalog}
+            topSpecialties={topSpecialties}
             query={query}
             specialtyName={specialtyName}
           />
@@ -90,7 +111,8 @@ export default async function SearchPage({
                 query={query}
                 specialtyName={specialtyName}
                 initialPage={initialPage}
-                catalog={catalog}
+                topSpecialties={topSpecialties}
+                featured={featured}
                 today={today}
               />
             </main>

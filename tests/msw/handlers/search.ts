@@ -4,6 +4,10 @@ import {
   buildSearchResponse,
   buildSearchResult,
 } from '@/tests/factories/search';
+import {
+  buildFeaturedSpecialistsResponse,
+  buildPopularSpecialtiesResponse,
+} from '@/tests/factories/search-highlights';
 
 import { apiUrl } from '../api-url';
 
@@ -79,7 +83,45 @@ function suggest(name: string | null, limit: number) {
   );
 }
 
+/** The API's refusal of a malformed request, as it answers it. */
+function invalid(path: string) {
+  return HttpResponse.json(
+    {
+      code: 'ERR_1001',
+      message: 'Validation failed',
+      timestamp: '2026-11-16T12:00:00.000Z',
+      path: `/api/v1${path}`,
+      traceId: 'test-trace',
+    },
+    { status: 400 },
+  );
+}
+
+/** The highlights' `limit`: 10 by default, from 1 to 20 (REDOC-177). */
+function highlightsLimit(params: URLSearchParams): number | null {
+  const limit = Number(params.get('limit') ?? '10');
+  return Number.isInteger(limit) && limit >= 1 && limit <= 20 ? limit : null;
+}
+
 export const searchHandlers = [
+  // The highlights (REDOC-177), public: the best rated two, the nearest
+  // first around a point (`lat` and `lng` together or neither), and the
+  // most booked specialties.
+  http.get(apiUrl('/search/specialists/featured'), ({ request }) => {
+    const params = new URL(request.url).searchParams;
+    const limit = highlightsLimit(params);
+    if (params.has('lat') !== params.has('lng') || limit === null) {
+      return invalid('/search/specialists/featured');
+    }
+    return HttpResponse.json(
+      buildFeaturedSpecialistsResponse({ near: params.has('lat'), limit }),
+    );
+  }),
+  http.get(apiUrl('/search/specialties/popular'), ({ request }) => {
+    const limit = highlightsLimit(new URL(request.url).searchParams);
+    if (limit === null) return invalid('/search/specialties/popular');
+    return HttpResponse.json(buildPopularSpecialtiesResponse({ count: limit }));
+  }),
   http.get(apiUrl('/search/specialists'), ({ request }) => {
     const params = new URL(request.url).searchParams;
     const criteria = ['search', 'specialtyId', 'name', 'specialistId'].filter(

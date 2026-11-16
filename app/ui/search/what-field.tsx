@@ -43,7 +43,7 @@ import type {
 /** The app's pause before asking the API for names. */
 const suggestionsDebounceMs = 400;
 
-/** How many of the catalog an empty box offers. */
+/** How many specialties an empty box offers. */
 const featuredLimit = 8;
 
 /** What the box can take in hand. */
@@ -58,6 +58,11 @@ type WhatFieldProps = {
   onTextChange: (text: string) => void;
   onPick: (pick: WhatPick) => void;
   catalog: SearchCatalog;
+  /**
+   * What the empty box offers: the most booked specialties (REDOC-182),
+   * or the catalog's first when they cannot be read — the page decides.
+   */
+  topSpecialties: SearchCatalog;
   /** Where the specialists suggested are looked for first. */
   location: SearchLocation;
   recent: readonly RecentSearch[];
@@ -73,8 +78,8 @@ type WhatFieldProps = {
 
 /*
  * «¿Qué buscas?»: a specialty of the catalog or a specialist's name. Empty,
- * it offers what was looked for before and the catalog's first
- * specialties; from two letters, the specialties that match (found here,
+ * it offers what was looked for before and the most booked specialties
+ * («Especialidades destacadas», the app's word); from two letters, the specialties that match (found here,
  * at once) and the specialists whose name does (asked of the API after a
  * pause), with the letters that matched in bold, and the text itself as
  * the first option, so Enter and a tap do the same.
@@ -85,6 +90,7 @@ export function WhatField({
   onTextChange,
   onPick,
   catalog,
+  topSpecialties,
   location,
   recent,
   onForgetRecent,
@@ -135,7 +141,7 @@ export function WhatField({
       ]
     : [
         ...recent.map((entry) => ({ kind: 'recent' as const, entry })),
-        ...catalog
+        ...topSpecialties
           .slice(0, featuredLimit)
           .map((item) => ({ kind: 'featured' as const, specialty: item })),
       ];
@@ -206,7 +212,7 @@ export function WhatField({
   const recentCount = suggesting ? 0 : recent.length;
   const specialtiesStart = 1;
   const specialistsStart = specialtiesStart + specialties.length;
-  const hasEmptyOffer = recentCount > 0 || catalog.length > 0;
+  const hasEmptyOffer = recentCount > 0 || topSpecialties.length > 0;
 
   return (
     <div ref={root} className={cn('relative flex min-w-0 flex-1', className)}>
@@ -371,9 +377,9 @@ export function WhatField({
                 ))}
               </SuggestionGroup>
             ) : null}
-            {catalog.length > 0 ? (
+            {topSpecialties.length > 0 ? (
               <SuggestionGroup title={words.topSpecialties}>
-                {catalog.slice(0, featuredLimit).map((item, index) => (
+                {topSpecialties.slice(0, featuredLimit).map((item, index) => (
                   <SuggestionOption
                     key={item.id}
                     {...optionAt(recentCount + index)}

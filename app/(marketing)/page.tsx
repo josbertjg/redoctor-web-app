@@ -7,13 +7,19 @@ import { redirect } from 'next/navigation';
 
 import { panelHintCookie } from '@/app/lib/auth/session-hint';
 import { getLandingPlans } from '@/app/lib/data/plans';
+import {
+  getFeaturedSpecialists,
+  getPopularSpecialties,
+} from '@/app/lib/data/search-highlights';
 import { getSearchCatalog } from '@/app/lib/data/specialties';
+import { getSupportContact } from '@/app/lib/data/support';
 import { routes } from '@/app/lib/routes';
 
 import { MotionProvider } from '@/app/ui/motion/provider';
 import { PageTransition } from '@/app/ui/motion/view-transitions';
 
 import { Faq } from './_components/faq';
+import { FeaturedSpecialists } from './_components/featured-specialists';
 import { Hero } from './_components/hero';
 import { HowItWorks } from './_components/how-it-works';
 import { LandingFooter } from './_components/landing-footer';
@@ -36,7 +42,11 @@ export const metadata: Metadata = {
  * (M16) is live: a specialty or a name goes to `/search`, a specialist to
  * their profile; the plans are the API's when it answers the landing
  * (pricing.tsx), and «Comenzar» leads a patient to the search and a
- * specialist to the sign-in (how-it-works.tsx).
+ * specialist to the sign-in (how-it-works.tsx). The patient's highlights
+ * (REDOC-177): the most booked specialties under the search and in the
+ * empty box, the best rated specialists right after the search
+ * (featured-specialists.tsx); the footer's phones are the API's support
+ * lines (REDOC-357).
  *
  * A session's first visit opens with the splash veil (the app's logo); the
  * cookie it leaves says the next visits do not. The hero's words wait for it.
@@ -70,12 +80,17 @@ export default async function HomePage() {
       fetchPriority: 'low',
     });
   }
-  // The catalog for the search box and the plans on offer, read together;
-  // the landing stands without either.
-  const [catalog, plans] = await Promise.all([
+  // Read together, each from the Data Cache; the landing stands without any
+  // of them (a failed read is an empty list, or null).
+  const [catalog, plans, popular, featured, support] = await Promise.all([
     getSearchCatalog(),
     getLandingPlans(),
+    getPopularSpecialties(),
+    getFeaturedSpecialists(null),
+    getSupportContact(),
   ]);
+  // The most booked specialties, or the catalog's first when they cannot be read.
+  const topSpecialties = popular ?? catalog;
 
   return (
     <MotionProvider>
@@ -95,9 +110,18 @@ export default async function HomePage() {
           §8, rule 13). */}
       <PageTransition entrance="fade">
         <div className="relative isolate flex flex-1 flex-col overflow-clip bg-primary">
-          <LandingHeader waitForSplash={showSplash} catalog={catalog} />
+          <LandingHeader
+            waitForSplash={showSplash}
+            catalog={catalog}
+            topSpecialties={topSpecialties}
+          />
           <main className="flex flex-col">
-            <Hero waitForSplash={showSplash} catalog={catalog} />
+            <Hero
+              waitForSplash={showSplash}
+              catalog={catalog}
+              topSpecialties={topSpecialties}
+            />
+            <FeaturedSpecialists specialists={featured?.specialists ?? []} />
             <Summary />
             <HowItWorks />
             <Trust />
@@ -105,7 +129,7 @@ export default async function HomePage() {
             <Pricing plans={plans} />
             <Faq />
           </main>
-          <LandingFooter />
+          <LandingFooter support={support} />
         </div>
       </PageTransition>
     </MotionProvider>

@@ -13,7 +13,7 @@ import { AfterSplash } from './after-splash';
 import { beats } from './choreography';
 import { specialtyIcon } from '../_data/landing-content';
 
-/** With fewer specialties in the catalog, the row shows nothing (the owner's rule). */
+/** With fewer specialties to offer, the row shows nothing (the owner's rule). */
 const chipsFrom = 4;
 
 const chipsLimit = 10;
@@ -26,25 +26,29 @@ const rowPadding = 'py-3';
  * scroll sideways and fade at both ends, each one a search for its
  * specialty (M16). They enter from the middle of the row outwards: the two
  * central chips first (the central one, when they are odd), then each
- * pair further out, a beat apart. The names are the catalog's own — never
- * sample ones — and the row appears only with four specialties or more;
- * with fewer, its space stays, so the hero keeps its shape (the owner's
- * rule, 2026-10-14).
+ * pair further out, a beat apart. They are the most booked specialties
+ * (REDOC-182), which only names those some visible specialist practises,
+ * so a chip never leads to an empty search — the catalog's own when they
+ * cannot be read, never sample ones —, and the row appears only with four
+ * or more; with fewer, its space stays, so the hero keeps its shape (the
+ * owner's rule, 2026-10-14).
  */
 export function SpecialtyChips({
   waitForSplash,
-  catalog,
+  specialties,
   className,
 }: {
   waitForSplash: boolean;
-  catalog: SearchCatalog;
+  specialties: SearchCatalog;
   className?: string;
 }) {
   const t = useTranslations('landing.hero');
 
-  if (catalog.length < chipsFrom) return <ChipsSpace className={className} />;
+  if (specialties.length < chipsFrom) {
+    return <ChipsSpace className={className} />;
+  }
 
-  const chips = catalog.slice(0, chipsLimit).map((specialty) => ({
+  const chips = specialties.slice(0, chipsLimit).map((specialty) => ({
     id: specialty.id,
     name: specialty.name,
     icon: specialtyIcon(specialty.name),

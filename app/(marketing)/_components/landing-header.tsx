@@ -15,9 +15,11 @@ import { landingSections } from '../_data/landing-content';
 export function LandingHeader({
   waitForSplash,
   catalog,
+  topSpecialties,
 }: {
   waitForSplash: boolean;
   catalog: SearchCatalog;
+  topSpecialties: SearchCatalog;
 }) {
   const t = useTranslations('landing.nav');
   const search = useTranslations('landing.hero.search');
@@ -45,6 +47,7 @@ export function LandingHeader({
           label={search('barLabel')}
           words={words}
           catalog={catalog}
+          topSpecialties={topSpecialties}
           className="max-w-2xl opacity-0 transition-opacity duration-slow ease-house group-data-docked/bar:opacity-100"
         />
       }

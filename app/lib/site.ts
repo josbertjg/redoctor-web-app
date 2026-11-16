@@ -12,6 +12,18 @@ export function absoluteUrl(path: string): string {
 export const isIndexable = env.NEXT_PUBLIC_APP_ENV === 'production';
 
 /**
+ * Redoctor's own public channels (the owner's, 2026-11-16). The phones are
+ * not here: they are the support lines the API publishes (REDOC-357).
+ */
+export const siteContacts = {
+  email: 'gerencia@redoctorapp.com',
+  instagram: 'redoctorapp',
+} as const;
+
+export const instagramUrl = (handle: string) =>
+  `https://www.instagram.com/${handle}`;
+
+/**
  * The Open Graph tags of a page that names no one — a private link (/i, /a)
  * previews as the site's own card, with the page's words. A page that sets
  * `openGraph` replaces the root's whole object, image included, so it is

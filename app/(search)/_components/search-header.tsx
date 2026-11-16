@@ -16,6 +16,8 @@ import { SearchProgress } from './search-navigation';
 
 type SearchHeaderProps = {
   catalog: SearchCatalog;
+  /** What the empty box offers: the most booked specialties, or the catalog's first. */
+  topSpecialties: SearchCatalog;
   query: SearchQuery;
   specialtyName: string | null;
 };
@@ -28,6 +30,7 @@ type SearchHeaderProps = {
  */
 export function SearchHeader({
   catalog,
+  topSpecialties,
   query,
   specialtyName,
 }: SearchHeaderProps) {
@@ -47,6 +50,7 @@ export function SearchHeader({
         </Link>
         <SearchHeaderBar
           catalog={catalog}
+          topSpecialties={topSpecialties}
           query={query}
           specialtyName={specialtyName}
           label={t('search.findSpecialists')}

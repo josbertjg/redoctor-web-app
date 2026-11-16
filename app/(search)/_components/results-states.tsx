@@ -9,6 +9,8 @@ import WifiOff from '@material-symbols/svg-400/rounded/wifi_off.svg?svgr';
 import { useTranslations } from 'next-intl';
 
 import { routes } from '@/app/lib/routes';
+import type { FeaturedSpecialists } from '@/app/lib/schemas/search-highlights';
+import type { SearchLocation } from '@/app/lib/search/location';
 import { searchParamNames } from '@/app/lib/search/query';
 
 import { Button } from '@/app/ui/button';
@@ -16,38 +18,84 @@ import { EmptyState } from '@/app/ui/empty-state';
 import { Icon } from '@/app/ui/icons';
 import type { SearchCatalog } from '@/app/ui/search/search-bar-types';
 import { Skeleton } from '@/app/ui/skeleton';
+import { SpecialistCard } from '@/app/ui/specialists/specialist-card';
 
-/** Nothing asked yet: the catalog as a way to start. */
-export function SearchStart({ catalog }: { catalog: SearchCatalog }) {
+const featuredTitleId = 'search-featured-title';
+
+/*
+ * Nothing asked yet: a way to start (REDOC-177). The most booked
+ * specialties (the catalog's first when they cannot be read), and the
+ * best rated specialists — near the point in the address, nearest ring
+ * first, or the national ranking — each one a card to open or to book on.
+ */
+export function SearchStart({
+  topSpecialties,
+  featured,
+  location,
+}: {
+  topSpecialties: SearchCatalog;
+  featured: FeaturedSpecialists | null;
+  location: SearchLocation;
+}) {
   const t = useTranslations('search.web');
+  const specialists = featured?.specialists ?? [];
+  // A ring kept the list near the point: it says where; past 300 km, or
+  // without a point, it is the best rated anywhere.
+  const near = featured !== null && featured.radiusMeters !== null;
+  const featuredTitle = !near
+    ? t('featuredTitle')
+    : location.kind === 'place'
+      ? t('featuredNearPlace', { place: location.label })
+      : location.kind === 'area'
+        ? t('featuredInMapArea')
+        : t('featuredNearYou');
   return (
-    <EmptyState
-      headingLevel={1}
-      icon={PersonSearch}
-      title={t('startTitle')}
-      description={t('startDescription')}
-      action={
-        catalog.length > 0 ? (
-          <ul className="flex flex-wrap justify-center gap-2">
-            {catalog.slice(0, 12).map((specialty) => (
-              <li key={specialty.id}>
-                <Link
-                  href={routes.search(
-                    new URLSearchParams({
-                      [searchParamNames.specialty]: specialty.id,
-                    }),
-                  )}
-                  className="inline-flex min-h-touch items-center gap-1.5 rounded-full border border-divider bg-pure-white px-4 text-label-lg text-primary transition-[background-color,border-color] duration-fast ease-house outline-none hover:border-primary hover:bg-info-light focus-visible:ring-3 focus-visible:ring-ring/50"
-                >
-                  <Icon icon={Stethoscope} size={16} />
-                  {specialty.name}
-                </Link>
+    <div className="flex flex-col pb-16">
+      <EmptyState
+        headingLevel={1}
+        icon={PersonSearch}
+        title={t('startTitle')}
+        description={t('startDescription')}
+        action={
+          topSpecialties.length > 0 ? (
+            <ul className="flex flex-wrap justify-center gap-2">
+              {topSpecialties.slice(0, 12).map((specialty) => (
+                <li key={specialty.id}>
+                  <Link
+                    href={routes.search(
+                      new URLSearchParams({
+                        [searchParamNames.specialty]: specialty.id,
+                      }),
+                    )}
+                    className="inline-flex min-h-touch items-center gap-1.5 rounded-full border border-divider bg-pure-white px-4 text-label-lg text-primary transition-[background-color,border-color] duration-fast ease-house outline-none hover:border-primary hover:bg-info-light focus-visible:ring-3 focus-visible:ring-ring/50"
+                  >
+                    <Icon icon={Stethoscope} size={16} />
+                    {specialty.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : undefined
+        }
+      />
+      {specialists.length > 0 ? (
+        <section
+          aria-labelledby={featuredTitleId}
+          className="mx-auto w-full max-w-content px-gutter"
+        >
+          <h2 id={featuredTitleId} className="text-title-lg text-text-primary">
+            {featuredTitle}
+          </h2>
+          <ul className="mt-4 flex flex-col gap-3">
+            {specialists.map((specialist) => (
+              <li key={specialist.id}>
+                <SpecialistCard specialist={specialist} headingLevel={3} />
               </li>
             ))}
           </ul>
-        ) : undefined
-      }
-    />
+        </section>
+      ) : null}
+    </div>
   );
 }
 

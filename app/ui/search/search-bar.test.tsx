@@ -26,6 +26,12 @@ const catalog: SearchCatalog = [
   { id: 'a0000000-0000-4000-8000-000000000003', name: 'Odontología' },
 ];
 
+/** The most booked, in the API's order (REDOC-182): not the catalog's. */
+const topSpecialties: SearchCatalog = [
+  { id: 'a0000000-0000-4000-8000-000000000003', name: 'Odontología' },
+  { id: 'a0000000-0000-4000-8000-000000000002', name: 'Cardiología' },
+];
+
 /** The box with its words, as a page gives them (translated on the server). */
 function Box({ variant = 'hero' }: { variant?: 'hero' | 'bar' | 'page' }) {
   const words = useSearchBarWords();
@@ -35,6 +41,7 @@ function Box({ variant = 'hero' }: { variant?: 'hero' | 'bar' | 'page' }) {
       label="Buscar especialistas"
       words={words}
       catalog={catalog}
+      topSpecialties={topSpecialties}
     />
   );
 }
@@ -69,16 +76,20 @@ afterEach(() => {
 });
 
 describe('SearchBar', () => {
-  it('offers the catalog on focus and the specialties that match as one types', async () => {
+  it('offers the most booked specialties on focus and the catalog’s that match as one types', async () => {
     const user = userEvent.setup();
     const { container } = renderBox();
 
     await user.click(whatBox());
     const list = screen.getByRole('listbox', { name: 'Sugerencias' });
+    const top = within(list).getByRole('group', {
+      name: 'Especialidades destacadas',
+    });
     expect(
-      within(list).getByRole('group', { name: 'Especialidades destacadas' }),
-    ).toBeInTheDocument();
-    expect(within(list).getAllByRole('option')).toHaveLength(3);
+      within(top)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['Odontología', 'Cardiología']);
 
     await user.type(whatBox(), 'cardio');
     expect(

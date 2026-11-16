@@ -37,9 +37,12 @@ function accentSegments(markup: string): TextSegment[] {
 export function Hero({
   waitForSplash,
   catalog,
+  topSpecialties,
 }: {
   waitForSplash: boolean;
   catalog: SearchCatalog;
+  /** The most booked specialties, or the catalog's first (app/(marketing)/page.tsx). */
+  topSpecialties: SearchCatalog;
 }) {
   const t = useTranslations('landing.hero');
   const words = useSearchBarWords();
@@ -97,13 +100,14 @@ export function Hero({
                 label={t('search.label')}
                 words={words}
                 catalog={catalog}
+                topSpecialties={topSpecialties}
               />
             </AfterSplash>
           </div>
         </div>
         <SpecialtyChips
           waitForSplash={waitForSplash}
-          catalog={catalog}
+          specialties={topSpecialties}
           className="mt-4 w-full lg:mt-5"
         />
       </div>

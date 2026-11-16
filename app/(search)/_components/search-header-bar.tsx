@@ -13,12 +13,14 @@ import { useSearchNavigation } from './search-navigation';
 /** The search box of the page, handing each search to the page's navigation. */
 export function SearchHeaderBar({
   catalog,
+  topSpecialties,
   query,
   specialtyName,
   label,
   words,
 }: {
   catalog: SearchCatalog;
+  topSpecialties: SearchCatalog;
   query: SearchQuery;
   specialtyName: string | null;
   label: string;
@@ -31,6 +33,7 @@ export function SearchHeaderBar({
       label={label}
       words={words}
       catalog={catalog}
+      topSpecialties={topSpecialties}
       initialQuery={query}
       initialSpecialtyName={specialtyName}
       onSearch={navigate}

@@ -8,7 +8,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { forgetPlansRefusal } from '@/app/lib/data/plans';
 
 import { buildPlans } from '@/tests/factories/billing';
-import { buildSpecialtiesTreeResponse } from '@/tests/factories/specialties';
+import { searchIds } from '@/tests/factories/search';
+import { buildPopularSpecialtiesResponse } from '@/tests/factories/search-highlights';
 import { apiUrl } from '@/tests/msw/api-url';
 import { server } from '@/tests/msw/server';
 import { renderWithIntl } from '@/tests/render';
@@ -176,7 +177,7 @@ describe('HomePage', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('offers the catalog’s specialties under the search bar, each a search for it', async () => {
+  it('offers the most booked specialties under the search bar, each a search for it', async () => {
     await renderHome();
 
     const chips = within(
@@ -184,18 +185,38 @@ describe('HomePage', () => {
     ).getAllByRole('link');
 
     expect(chips.map((chip) => chip.textContent)).toEqual([
+      'Cardiología',
+      'Ginecología y Obstetricia',
+      'Medicina General',
+      'Medicina',
+    ]);
+    expect(chips[0]).toHaveAttribute('href', '/search?specialty=s2');
+  });
+
+  it('offers the catalog under the search bar when the most booked cannot be read', async () => {
+    server.use(
+      http.get(apiUrl('/search/specialties/popular'), () =>
+        HttpResponse.json({ code: 'ERR_1007' }, { status: 429 }),
+      ),
+    );
+
+    await renderHome();
+
+    const chips = within(
+      screen.getByRole('navigation', { name: 'Especialidades' }),
+    ).getAllByRole('link');
+    expect(chips.map((chip) => chip.textContent)).toEqual([
       'Medicina',
       'Medicina General',
       'Cardiología',
       'Ginecología y Obstetricia',
     ]);
-    expect(chips[1]).toHaveAttribute('href', '/search?specialty=s1');
   });
 
-  it('shows no specialty with three or fewer in the catalog, keeping the search', async () => {
+  it('shows no specialty with three or fewer booked, keeping the search', async () => {
     server.use(
-      http.get(apiUrl('/specialties/tree'), () =>
-        HttpResponse.json(buildSpecialtiesTreeResponse({ specialties: 2 })),
+      http.get(apiUrl('/search/specialties/popular'), () =>
+        HttpResponse.json(buildPopularSpecialtiesResponse({ count: 3 })),
       ),
     );
 
@@ -207,6 +228,64 @@ describe('HomePage', () => {
     expect(
       screen.getByRole('search', { name: 'Buscar especialistas' }),
     ).toBeInTheDocument();
+  });
+
+  it('shows the best rated specialists, each opening the profile and its days the booking', async () => {
+    await renderHome();
+
+    const section = screen.getByRole('region', {
+      name: 'Los mejor valorados por sus pacientes',
+    });
+    const cards = within(section).getAllByRole('article');
+    expect(cards.map((card) => card.getAttribute('aria-labelledby'))).toEqual([
+      `specialist-${searchIds.specialist}-name`,
+      'specialist-b1b2b3b4-0000-4000-8000-000000000002-name',
+    ]);
+    const first = within(section).getByRole('article', { name: 'Ana Pérez' });
+    expect(
+      within(first).getByRole('heading', { level: 3, name: /^Ana Pérez/ }),
+    ).toBeInTheDocument();
+    expect(
+      within(first).getByRole('link', { name: 'Ana Pérez' }),
+    ).toHaveAttribute('href', `/s/${searchIds.specialist}`);
+    // The national ranking: no point, so no distance.
+    expect(within(first).queryByText(/km/)).not.toBeInTheDocument();
+    expect(
+      within(section).getByRole('link', { name: 'Ver más especialistas' }),
+    ).toHaveAttribute('href', '/search');
+  });
+
+  it('leaves the best rated out when the API cannot answer them', async () => {
+    server.use(
+      http.get(apiUrl('/search/specialists/featured'), () =>
+        HttpResponse.json({ code: 'ERR_1007' }, { status: 429 }),
+      ),
+    );
+
+    await renderHome();
+
+    expect(
+      screen.queryByRole('region', {
+        name: 'Los mejor valorados por sus pacientes',
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Así de simple.' }),
+    ).toBeInTheDocument();
+  });
+
+  it('offers Redoctor’s channels in the footer: the email, the API’s lines and the Instagram', async () => {
+    await renderHome();
+
+    const contact = within(screen.getByRole('list', { name: 'Contáctanos' }));
+    expect(
+      contact.getAllByRole('link').map((link) => link.textContent),
+    ).toEqual([
+      'gerencia@redoctorapp.com',
+      'WhatsApp +58 424 0000002',
+      '+58 414 0000001',
+      '@redoctorapp',
+    ]);
   });
 
   it('leads a specialist to the sign-up and a patient to the search from «Comenzar»', async () => {

@@ -110,8 +110,10 @@ type SearchBarProps = {
   /** The landmark's name; two searches on one page need two names. */
   label: string;
   words: SearchBarWords;
-  /** The catalog, flat: what the box matches and offers. */
+  /** The catalog, flat: what the box matches as one types. */
   catalog: SearchCatalog;
+  /** What the empty box offers: the most booked specialties, or the catalog's first. */
+  topSpecialties: SearchCatalog;
   /** The search in the address, on the search page: the box starts from it. */
   initialQuery?: SearchQuery | undefined;
   /** The name of the specialty the address names, when the catalog has it. */
@@ -126,6 +128,7 @@ export function SearchBar({
   label,
   words,
   catalog,
+  topSpecialties,
   initialQuery,
   initialSpecialtyName,
   onSearch,
@@ -333,6 +336,7 @@ export function SearchBar({
           }}
           onPick={onPick}
           catalog={catalog}
+          topSpecialties={topSpecialties}
           location={location}
           recent={recent}
           onForgetRecent={forget}

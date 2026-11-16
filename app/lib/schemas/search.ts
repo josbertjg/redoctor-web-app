@@ -18,7 +18,11 @@ const searchPriceSchema = z.object({
   priceType: z.enum(priceTypes),
 });
 
-const searchResultSchema = z.object({
+/**
+ * One specialist as the search lists them: the API's card, which the
+ * highlights share (`GET /search/specialists/featured`, search-highlights.ts).
+ */
+export const searchResultSchema = z.object({
   specialistId: z.string(),
   displayName: z.string(),
   photoUrl: z.string().nullable().catch(null),
@@ -32,7 +36,9 @@ const searchResultSchema = z.object({
     address: z.string(),
     latitude: z.number(),
     longitude: z.number(),
-    distanceMeters: z.number(),
+    // The search always measures it; the highlights asked without a point
+    // send null, and their office is the specialist's first.
+    distanceMeters: z.number().nullable(),
     officeCount: z.number(),
   }),
   rating: z.number().nullable().catch(null),
@@ -79,7 +85,8 @@ export type SearchResult = {
     name: string;
     address: string;
     coordinates: Coordinates;
-    distanceMeters: number;
+    /** Null when the list was asked without a point: nothing to measure from. */
+    distanceMeters: number | null;
     count: number;
   };
   rating: { average: number | null; count: number };

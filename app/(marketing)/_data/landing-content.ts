@@ -43,6 +43,7 @@ export const heroSearchId = 'buscador';
 
 /** In-page anchors the header and the footer link to. */
 export const landingSections = {
+  featured: 'destacados',
   howItWorks: 'como-funciona',
   trust: 'verificacion',
   roadmap: 'novedades',
@@ -238,10 +239,3 @@ export const faqItems = [
   'family',
   'missing',
 ] as const;
-
-/** Placeholders from the mockup; the real channels come with REDOC-357. */
-export const footerContacts = {
-  email: 'redoctor@gmail.com',
-  phone: '0212-1234567',
-  instagram: 'redoctorvzla',
-};

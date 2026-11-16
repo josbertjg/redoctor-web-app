@@ -7,9 +7,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 import { searchResponseSchema, toSearchPage } from '@/app/lib/schemas/search';
+import {
+  featuredSpecialistsResponseSchema,
+  toFeaturedSpecialists,
+  type FeaturedSpecialists,
+} from '@/app/lib/schemas/search-highlights';
 import { emptySearchQuery, type SearchQuery } from '@/app/lib/search/query';
 
 import { buildSearchResponse, searchIds } from '@/tests/factories/search';
+import { buildFeaturedSpecialistsResponse } from '@/tests/factories/search-highlights';
 import {
   enterAll,
   stubIntersectionObserver,
@@ -28,7 +34,21 @@ vi.mock('next/navigation', () => ({
 }));
 
 const catalog = [{ id: searchIds.specialty, name: 'Cardiología' }];
+/** The most booked, in the API's order: not the catalog's. */
+const topSpecialties = [
+  { id: 's9', name: 'Pediatría' },
+  { id: searchIds.specialty, name: 'Cardiología' },
+];
 const today = '2026-10-14';
+
+const featuredList = (
+  options: Parameters<typeof buildFeaturedSpecialistsResponse>[0] = {},
+): FeaturedSpecialists =>
+  toFeaturedSpecialists(
+    featuredSpecialistsResponseSchema.parse(
+      buildFeaturedSpecialistsResponse(options),
+    ),
+  );
 
 const caracas: SearchQuery = {
   ...emptySearchQuery,
@@ -49,6 +69,7 @@ function renderResults(
   initialPage = query.text === null && query.specialtyId === null
     ? null
     : firstPage(),
+  featured: FeaturedSpecialists | null = featuredList(),
 ) {
   return renderWithPageMessages(
     <QueryClientProvider
@@ -63,7 +84,8 @@ function renderResults(
             catalog.find((item) => item.id === query.specialtyId)?.name ?? null
           }
           initialPage={initialPage}
-          catalog={catalog}
+          topSpecialties={topSpecialties}
+          featured={featured}
           today={today}
         />
       </SearchNavigationProvider>
@@ -81,18 +103,63 @@ afterEach(() => {
 });
 
 describe('SearchResults', () => {
-  it('offers the catalog when nothing was asked', () => {
-    renderResults(emptySearchQuery);
+  it('offers the most booked specialties and the best rated when nothing was asked', async () => {
+    const { container } = renderResults(emptySearchQuery);
     expect(
       screen.getByRole('heading', {
         level: 1,
         name: '¿Qué especialista buscas?',
       }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Cardiología' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Pediatría' })).toHaveAttribute(
       'href',
-      `/search?specialty=${searchIds.specialty}`,
+      '/search?specialty=s9',
     );
+
+    const best = screen.getByRole('region', {
+      name: 'Especialistas mejor valorados',
+    });
+    expect(within(best).getAllByRole('article')).toHaveLength(2);
+    expect(
+      within(best).getByRole('heading', { level: 3, name: /^Ana Pérez/ }),
+    ).toBeInTheDocument();
+    // The national ranking: no point, so no distance.
+    expect(within(best).queryByText(/km/)).not.toBeInTheDocument();
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('says the best rated are near the place in the address, and how far each one is', () => {
+    renderResults(
+      { ...emptySearchQuery, location: caracas.location },
+      null,
+      featuredList({ near: true }),
+    );
+
+    const near = screen.getByRole('region', {
+      name: 'Mejor valorados cerca de Caracas',
+    });
+    expect(within(near).getAllByText(/a 3,2 km/)).toHaveLength(2);
+  });
+
+  it('names them the best rated when the list had to reach the whole country', () => {
+    renderResults(
+      { ...emptySearchQuery, location: caracas.location },
+      null,
+      featuredList({ near: true, meta: { limit: 6, radiusMeters: null } }),
+    );
+
+    expect(
+      screen.getByRole('region', { name: 'Especialistas mejor valorados' }),
+    ).toBeInTheDocument();
+  });
+
+  it('offers only the specialties when there is nobody to highlight', () => {
+    renderResults(emptySearchQuery, null, null);
+
+    expect(
+      screen.queryByRole('region', { name: /mejor valorados/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Pediatría' })).toBeInTheDocument();
   });
 
   it('shows the first page as the server read it: the card, its price, rating, office and days', async () => {
