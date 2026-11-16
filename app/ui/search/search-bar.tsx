@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useRef, useState, useTransition } from 'react';
+import { useEffect, useId, useRef, useState, useTransition } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -50,12 +50,18 @@ import type { LocationSuggestion } from './use-location-suggestions';
  * side with a short line between them and the search icon alone at the
  * end; stacked on phones, the search as a labelled row. In the docked bar:
  * the same pieces in a 44 px pill on a light surface, the place only from
- * tablets up. On the search page: the pill on the page's surface, the
- * fields side by side from tablets up and stacked on phones.
+ * tablets up, working as the hero's; a list hangs under its field from
+ * 1280 px, as in the hero, and where the fields are narrow, under the
+ * whole pill (tablets, small laptops) or the whole bar (phones), and what
+ * is missing floats under the pill. On the search page: the pill on the
+ * page's surface, the fields side by side from tablets up and stacked on
+ * phones.
  */
 const variants: Record<
   SearchBarVariant,
   {
+    /** The box around the pill: what its lists and notice hang from. */
+    wrapper: string;
     form: string;
     field: string;
     input: string;
@@ -64,9 +70,12 @@ const variants: Record<
     secondDivider: string;
     button: string;
     label: string;
+    /** The line that says what is missing (`FieldError`). */
+    notice: string;
   }
 > = {
   hero: {
+    wrapper: '',
     form: 'mx-auto max-w-3xl flex-col rounded-2xl bg-pure-white shadow-md sm:min-h-14 sm:flex-row sm:items-center sm:gap-6 sm:rounded-full sm:px-5',
     field: 'px-5 py-3 sm:px-0 sm:py-0',
     input: 'text-subtitle-s',
@@ -78,10 +87,15 @@ const variants: Record<
     button:
       'min-h-touch gap-2 rounded-b-2xl px-5 hover:bg-blue-50 focus-visible:bg-blue-50 sm:-mr-2.5 sm:size-11 sm:shrink-0 sm:rounded-full sm:px-0 sm:hover:scale-110 sm:hover:bg-transparent sm:focus-visible:bg-transparent sm:focus-visible:ring-3 sm:focus-visible:ring-ring/50',
     label: 'sm:sr-only',
+    notice: 'mt-2 px-5 text-center [&_p]:text-white-50',
   },
   bar: {
+    // A field 138 px wide (1024) or a phone's 163 px is no width for a
+    // list: the positioned box a list hangs from is the field from 1280 px
+    // (xl), the pill from tablets up, and the bar itself on phones.
+    wrapper: 'max-md:static',
     form: 'h-11 flex-row items-center gap-3 rounded-full bg-white-200 px-4',
-    field: 'py-0',
+    field: 'py-0 max-xl:static',
     input: 'text-body-xs',
     where: 'hidden md:flex',
     divider: 'hidden h-5 w-px md:block',
@@ -91,8 +105,13 @@ const variants: Record<
     button:
       'relative -mr-1.5 size-9 shrink-0 rounded-full after:absolute after:-inset-1 after:rounded-full hover:scale-110 focus-visible:ring-3 focus-visible:ring-ring/50',
     label: 'sr-only',
+    // No room under the bar's pill: the line floats under it as a card,
+    // over the page and never in the way of a tap.
+    notice:
+      'pointer-events-none absolute top-[calc(100%+0.5rem)] left-0 z-20 rounded-xl bg-pure-white px-4 py-2.5 shadow-lg ring-1 ring-divider max-md:right-0 md:w-max md:max-w-full',
   },
   page: {
+    wrapper: '',
     form: 'flex-col rounded-2xl bg-pure-white shadow-sm ring-1 ring-divider sm:h-12 sm:flex-row sm:items-center sm:gap-4 sm:rounded-full sm:px-4',
     field: 'px-4 py-2.5 sm:px-0 sm:py-0',
     input: 'text-body-xs',
@@ -102,6 +121,7 @@ const variants: Record<
     button:
       'min-h-touch gap-2 rounded-b-2xl px-4 hover:bg-blue-50 focus-visible:bg-blue-50 sm:-mr-1.5 sm:size-9 sm:shrink-0 sm:rounded-full sm:px-0 sm:hover:scale-110 sm:hover:bg-transparent sm:focus-visible:bg-transparent sm:focus-visible:ring-3 sm:focus-visible:ring-ring/50',
     label: 'sm:sr-only',
+    notice: 'mt-2 px-5',
   },
 };
 
@@ -168,9 +188,17 @@ export function SearchBar({
   // first. The button shows it, and a second tap or Enter waits (§8.3).
   const [locating, setLocating] = useState(false);
   const busy = pending || locating;
+  // The bar's line floats over the page (the hero's sits in it and stays):
+  // a tap elsewhere or Escape puts it away, until the next try.
+  const wrapper = useRef<HTMLDivElement>(null);
+  const [noticeAway, setNoticeAway] = useState(false);
 
   const locate = () => {
     pendingPlace.current = null;
+    // The line answers the latest thing done: what the browser says of
+    // the position, no longer what an empty search lacked.
+    setProblem(null);
+    setNoticeAway(false);
     void device.locate().then((coordinates) => {
       if (coordinates) {
         setChosen({ kind: 'device', coordinates });
@@ -293,9 +321,32 @@ export function SearchBar({
         ? words.locationUnavailable
         : null;
   const notice = problem ?? deviceIssue;
+  const floats = variant === 'bar';
+  const shownNotice = floats && noticeAway ? null : notice;
+
+  useEffect(() => {
+    if (!floats || shownNotice === null) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const inside =
+        event.target instanceof Node && wrapper.current?.contains(event.target);
+      if (!inside) setNoticeAway(true);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setNoticeAway(true);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [floats, shownNotice]);
 
   return (
-    <div className={cn('relative w-full', className)}>
+    <div
+      ref={wrapper}
+      className={cn('relative w-full', style.wrapper, className)}
+    >
       <form
         ref={form}
         role="search"
@@ -303,6 +354,7 @@ export function SearchBar({
         noValidate
         onSubmit={(event) => {
           event.preventDefault();
+          setNoticeAway(false);
           const typed = text.trim();
           if (specialty !== null && typed === specialty.name) {
             void search({ specialty });
@@ -379,16 +431,11 @@ export function SearchBar({
           <span className={style.label}>{words.submit}</span>
         </button>
       </form>
-      {variant === 'bar' ? null : (
-        <FieldError
-          id={problemId}
-          message={notice ?? undefined}
-          className={cn(
-            'mt-2 px-5',
-            variant === 'hero' && 'text-center [&_p]:text-white-50',
-          )}
-        />
-      )}
+      <FieldError
+        id={problemId}
+        message={shownNotice ?? undefined}
+        className={style.notice}
+      />
     </div>
   );
 }

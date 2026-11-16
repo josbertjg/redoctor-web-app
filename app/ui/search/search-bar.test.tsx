@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { http, HttpResponse } from 'msw';
@@ -276,6 +276,118 @@ describe('SearchBar', () => {
         '/search?q=ana&lat=10.49&lng=-66.88&by=device',
       );
     });
+  });
+
+  it('closes its lists once the focus leaves the box, as when the docked bar hides it', async () => {
+    const user = userEvent.setup();
+    renderBox('bar');
+
+    // Scrolling back up turns the docked bar inert: the browser takes the
+    // focus away, naming nothing new, and the list must leave with it
+    // instead of waiting open for the bar's next docking.
+    await user.click(whatBox());
+    expect(
+      screen.getByRole('listbox', { name: 'Sugerencias' }),
+    ).toBeInTheDocument();
+    act(() => {
+      whatBox().blur();
+    });
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+
+    await user.click(whereBox());
+    expect(
+      screen.getByRole('listbox', { name: 'Ubicación' }),
+    ).toBeInTheDocument();
+    act(() => {
+      whereBox().blur();
+    });
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('tells in the docked bar what is missing, until a tap elsewhere or Escape puts it away', async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <QueryClientProvider client={new QueryClient()}>
+        <Box variant="bar" />
+        <p>Fuera del buscador</p>
+      </QueryClientProvider>,
+    );
+    const missing =
+      'Debes realizar una búsqueda o seleccionar una especialidad';
+
+    await user.click(screen.getByRole('button', { name: 'Buscar' }));
+    expect(screen.getByText(missing)).not.toHaveAttribute('aria-hidden');
+    expect(whatBox()).toHaveAccessibleDescription(missing);
+    expect(navigation.push).not.toHaveBeenCalled();
+
+    // The line floats over the page: a tap elsewhere puts it away…
+    await user.click(screen.getByText('Fuera del buscador'));
+    expect(screen.getByText(missing)).toHaveAttribute('aria-hidden', 'true');
+
+    // …until the next try, which tells it again; and Escape puts it away too.
+    await user.click(screen.getByRole('button', { name: 'Buscar' }));
+    expect(screen.getByText(missing)).not.toHaveAttribute('aria-hidden');
+    await user.keyboard('{Escape}');
+    expect(screen.getByText(missing)).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('tells in the docked bar when the browser refuses the position', async () => {
+    const user = userEvent.setup();
+    stubGeolocation(
+      vi.fn(
+        (
+          _success: PositionCallback,
+          failure: (error: GeolocationPositionError) => void,
+        ) => {
+          failure({
+            code: 1,
+            PERMISSION_DENIED: 1,
+            message: 'denied',
+          } as GeolocationPositionError);
+        },
+      ),
+    );
+    renderBox('bar');
+
+    await user.click(screen.getByRole('button', { name: 'Usar mi ubicación' }));
+    expect(
+      await screen.findByText(
+        'Necesitamos tu permiso de ubicación para buscar cerca de ti.',
+      ),
+    ).not.toHaveAttribute('aria-hidden');
+  });
+
+  it('tells what the browser said of the position, even after an empty search', async () => {
+    const user = userEvent.setup();
+    stubGeolocation(
+      vi.fn(
+        (
+          _success: PositionCallback,
+          failure: (error: GeolocationPositionError) => void,
+        ) => {
+          failure({
+            code: 1,
+            PERMISSION_DENIED: 1,
+            message: 'denied',
+          } as GeolocationPositionError);
+        },
+      ),
+    );
+    renderBox('bar');
+
+    await user.click(screen.getByRole('button', { name: 'Buscar' }));
+    // The latest thing done gets its answer: the place, not the old line.
+    await user.click(screen.getByRole('button', { name: 'Usar mi ubicación' }));
+    expect(
+      await screen.findByText(
+        'Necesitamos tu permiso de ubicación para buscar cerca de ti.',
+      ),
+    ).not.toHaveAttribute('aria-hidden');
+    expect(
+      screen.queryByText(
+        'Debes realizar una búsqueda o seleccionar una especialidad',
+      ),
+    ).not.toBeInTheDocument();
   });
 
   it('says so when the browser refuses the position', async () => {

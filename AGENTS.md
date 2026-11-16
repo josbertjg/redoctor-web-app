@@ -1598,8 +1598,9 @@ written out in full, or Next.js does not inline it).
   (`public/brand/logo-mark.svg`, the app's `logo-short` with blue letters;
   the width is measured and animated by Motion, the two cross-fade), a
   search of its own (`SearchBar variant="bar"`, inert until then) opens
-  between the mark and the links and takes the free room, which slides the
-  links over to «Entrar». CSS transitions on `data-docked`, 300 ms, house
+  right beside the mark (since 2026-11-16; it was centred in the free room
+  before) and takes the free room, which slides the links over to
+  «Entrar». CSS transitions on `data-docked`, 300 ms, house
   curve; scrolling back undoes it. Two search landmarks need two names
   (`landing.hero.search.barLabel`). Its specialty field hints «Especialidad»
   alone (2026-10-13; the hero's whole hint, 238 px, was cut at every width:
@@ -2685,7 +2686,8 @@ written out in full, or Next.js does not inline it).
     named «=…» as text (formula injection), figures keep their sign.
   - **Open for the owner:** the public profile's blue header has no
     account and so no bell for a signed-in patient (as designed in M8);
-    the docked bar's empty search moves the focus without a visible word.
+    the docked bar's empty search moves the focus without a visible word
+    (answered 2026-11-16: the bar says it, as the hero).
 
 ### Decided (2026-10-16)
 
@@ -3158,6 +3160,34 @@ written out in full, or Next.js does not inline it).
   hover and pressed shades, as the primary. The e2e audit accepts
   contrast below AA only where one of the two colours is the app's green
   (`tests/e2e/helpers.ts`).
+- **The docked bar's search, working as the hero's (the owner's report,
+  same day: «no está funcionando… debe estar pegada a la izquierda, al
+  logo resumido»).** The box that opens it in the bar clipped all round
+  to animate its opening, so everything under the 44 px pill was cut: the
+  suggestions and the places opened where nobody could see or tap them (a
+  click there reached the page beneath: a highlighted specialist's card,
+  which opened that profile), and only Enter searched. Now:
+  - It clips sideways only (`overflow-x: clip`, with 4 px for the focus
+    ring): the opening is the same, and the lists and the notice hang
+    under the bar.
+  - The pill sits right beside the «Re» mark at every width (it floated
+    in the middle of the free room from 1440 px up).
+  - A list hangs from its field from 1280 px, as in the hero; where the
+    fields are narrow, from the whole pill (tablets and small laptops: a
+    field is 138 px at 1024) or from the whole bar (phones).
+  - The hero's notices («Debes realizar una búsqueda…», the position
+    refused or unavailable) float under the pill as a card, put away by a
+    tap elsewhere or Escape until the next try, since they lie over the
+    page.
+  - A list closes once the focus leaves its box (WAI-ARIA's combobox):
+    the bar turning inert as the page scrolls back up took the focus and
+    left the list open, to reappear with the next docking.
+  - In the hero too: asking for the position answers with what the
+    browser said, no longer with the empty search's line, which used to
+    hide it.
+  - On phones the bar still asks only what is looked for (no room for the
+    place); it searches in the place in hand: the last searched from, or
+    the whole country.
 
 ### Improvements noted (not scheduled)
 

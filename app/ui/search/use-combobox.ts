@@ -11,9 +11,11 @@ import {
  * A text box with a list under it (WAI-ARIA's combobox): the arrows move
  * along the list, Enter takes the option in hand — or, with none, lets the
  * form search what was typed —, Escape and Tab close it, and a tap outside
- * closes it too. The list's options are identified by position, so the
- * box can say which one is in hand (`aria-activedescendant`) without
- * moving the focus out of the input.
+ * or the focus leaving the box close it too (the docked bar turning inert
+ * takes the focus away; a list left open would come back with the bar).
+ * The list's options are identified by position, so the box can say which
+ * one is in hand (`aria-activedescendant`) without moving the focus out of
+ * the input.
  */
 
 type UseComboboxOptions = {
@@ -61,9 +63,19 @@ export function useCombobox({ count, onPick, root }: UseComboboxOptions) {
         event.target instanceof Node && root.current?.contains(event.target);
       if (!inside) close();
     };
+    // A press on the list keeps the focus in the box (suggestion-popup.tsx),
+    // so the focus leaving the box means the box is left.
+    const box = root.current;
+    const onFocusOut = (event: FocusEvent) => {
+      const next = event.relatedTarget;
+      if (next instanceof Node && box?.contains(next)) return;
+      close();
+    };
     document.addEventListener('pointerdown', onPointerDown);
+    box?.addEventListener('focusout', onFocusOut);
     return () => {
       document.removeEventListener('pointerdown', onPointerDown);
+      box?.removeEventListener('focusout', onFocusOut);
     };
   }, [open, close, root]);
 

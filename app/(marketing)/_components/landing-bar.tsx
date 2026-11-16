@@ -42,8 +42,9 @@ type LandingBarProps = {
  * Once the hero's search bar slips under it, the bar docks (owner's
  * request, 2026-10-08, no mockup): it rises to the top edge and widens to
  * the whole screen, keeping its height; the wordmark narrows to the «Re»
- * mark; a search of its own opens between the mark and the links, taking
- * the room there is, and the links slide over to «Entrar». Everything
+ * mark; a search of its own opens right beside the mark (the owner's
+ * word, 2026-11-16), working as the hero's, taking the room there is, and
+ * the links slide over to «Entrar». Everything
  * moves on the house curve, 300 ms, through CSS on `data-docked` — the
  * logo's width through Motion, measured from the two marks. Scrolling
  * back up undoes it the same way.
@@ -71,11 +72,16 @@ export function LandingBar({
       >
         <LogoSwitch docked={docked} label={labels.home} />
         {/* No room at rest; once docked, all the free room, which pushes
-            the links over to «Entrar», with the search pill centred in it.
-            Inert until then, so nothing hidden can take focus. */}
+            the links over to «Entrar», with the search pill at its start,
+            right beside the mark. Inert until then, so nothing hidden can
+            take focus. It clips sideways only — what the pill does not fit
+            while the room grows —, never downwards: the search's lists and
+            its notice hang under the bar (a clip all round cut them at the
+            pill's 44 px). Its 4 px of padding, given back by the margins,
+            keep the pill's focus ring inside the clip. */}
         <div
           inert={!docked || undefined}
-          className="flex min-w-0 shrink grow-0 basis-0 justify-center overflow-hidden transition-[flex-grow] duration-slow ease-house group-data-docked/bar:grow"
+          className="-mx-1 flex min-w-0 shrink grow-0 basis-0 justify-start overflow-x-clip px-1 transition-[flex-grow] duration-slow ease-house group-data-docked/bar:grow"
         >
           {search}
         </div>
