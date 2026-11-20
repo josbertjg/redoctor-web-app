@@ -115,7 +115,8 @@ components read them from `app/lib/public-env.ts`. Preview and production
 values live in Vercel and are shared, except `NEXT_PUBLIC_APP_ENV`
 (`preview`), `NEXT_PUBLIC_SITE_URL` (`https://dev.redoctorapp.com`) and the
 `NEXT_PUBLIC_FIREBASE_*` of the `redoctor-dev` project, which the `develop`
-branch overrides (AGENTS.md §6 «Environments»).
+branch overrides, and `NEXT_PUBLIC_API_URL`, which each environment sets
+(AGENTS.md §6 «Environments»).
 
 ## Tests
 
@@ -173,9 +174,9 @@ One Vercel project, two branches (AGENTS.md §6 «Environments»):
   redirects to it). It moves only on the owner's word, by merging
   `develop`.
 
-Each uses its own Firebase project (`redoctor-dev` and `redoctor-3acf8`),
-but both still reach the same API, so signing in works on production only
-until the development API exists. After a deploy that touches a
+Each has its own API and Firebase project: production uses
+`api.redoctorapp.com` and `redoctor-3acf8`; `dev` and local development use
+`api-dev.redoctorapp.com` and `redoctor-dev`. After a deploy that touches a
 public link or `.well-known`, run the e2e `well-known` and `bridges` specs
 against production (AGENTS.md §6 "Domain cutover").
 

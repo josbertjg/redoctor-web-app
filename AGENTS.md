@@ -472,16 +472,15 @@ Every route path is built from one place, `app/lib/routes.ts` (the app has
 
 - Base URL: `https://api-dev.redoctorapp.com/api/v1`. OpenAPI:
   `https://api-dev.redoctorapp.com/api/v1/docs.json` — read it before
-  writing a datasource; it is the contract. There is **no production API
-  yet**: dev, preview and production of the web all point to `api-dev`.
-  The split is under way since 2026-11-20 (Heyscar's):
-  `api-dev.redoctorapp.com` runs on Render and becomes the development API
-  (the `redoctor-dev` Firebase project, its own database);
-  `api.redoctorapp.com`, another host, becomes production's
-  (`redoctor-3acf8`, the real data). **The order matters:** the production
-  web and the installed app move to `api.` before `api-dev` switches
-  projects. On 2026-11-20 Render switched first, and production's sessions
-  were rejected (401 `ERR_2005`) (§6 «Environments»).
+  writing a datasource; it is the contract. **Two APIs since 2026-11-20**
+  (Heyscar's): production at `https://api.redoctorapp.com/api/v1` (its own
+  host, the `redoctor-3acf8` Firebase project, the real data) and
+  development at `https://api-dev.redoctorapp.com/api/v1` (Render, the
+  `redoctor-dev` project), which `develop` and local work use (§6
+  «Environments»). **The order matters:** on 2026-11-20 Render switched to
+  `redoctor-dev` while production still called `api-dev`, and production's
+  sessions were rejected (401 `ERR_2005`) until the production web moved
+  to `api.`; the installed app recovers with its next build.
 - **Any doubt about the contract: the OpenAPI and the API's code together,
   read only** — the sibling clone `../redoctor-api`, branch `dev` (what
   api-dev runs): `git -C ../redoctor-api show dev:<file>`, `grep`, `cat`;
@@ -897,13 +896,16 @@ branches:
 
 - **The work goes to `develop`** (§0); `master` moves only on the owner's
   word, by merging `develop`.
-- **Variables.** Production and Preview share every value but those
+- **Variables.** Production and Preview share every value but these.
   `develop` alone overrides (Preview, branch `develop`):
   `NEXT_PUBLIC_APP_ENV=preview` (`isIndexable` false: robots and metadata
   say noindex, which matters because Vercel adds no `X-Robots-Tag` on a
-  branch's own domain), `NEXT_PUBLIC_SITE_URL=https://dev.redoctorapp.com`
-  and the eight `NEXT_PUBLIC_FIREBASE_*` of the `redoctor-dev` project
-  (its web app and its VAPID key). A change applies to the next deployment
+  branch's own domain), `NEXT_PUBLIC_SITE_URL=https://dev.redoctorapp.com`,
+  `NEXT_PUBLIC_API_URL` (the development API) and the eight
+  `NEXT_PUBLIC_FIREBASE_*` of the `redoctor-dev` project (its web app and
+  its VAPID key). Production has its own `NEXT_PUBLIC_API_URL` (the
+  production API). Vercel no longer accepts a `NEXT_PUBLIC_` variable as
+  a Secret: they are Config. A change applies to the next deployment
   (or a `vercel redeploy` of the latest one); Vercel refuses a
   branch-scoped variable until the branch exists on GitHub. With the CLI,
   feed `vercel env add` `< /dev/null` inside a loop, or it swallows the
@@ -920,12 +922,14 @@ branches:
   (created 2026-11-20: Google and Apple — the same Services ID,
   `com.redoctor.mobileapp.signin`, with that project's return URL —,
   `dev.redoctorapp.com` among its authorized domains; checked through the
-  CSP each environment sends), and the same API address as production
-  (`api-dev`, §5) until each environment gets its own. Signing in on `dev`
-  waits for the development API to accept `redoctor-dev`'s accounts and to
-  list `dev.redoctorapp.com` in its CORS; then `develop` takes its
-  `NEXT_PUBLIC_API_URL`, and production takes `api.redoctorapp.com`. Local
-  development (`.env.local`) keeps the production project until then.
+  CSP each environment sends), and the development API (§5). Production
+  reaches `api.redoctorapp.com` and `redoctor-3acf8`. Checked 2026-11-20:
+  each environment's CSP names its own API, socket and Firebase project,
+  and the public e2e specs pass on both. Signing in on `dev` waits for the
+  development API's CORS to list `dev.redoctorapp.com` (it listed neither
+  it nor `localhost:3000` that day); local development goes through the
+  dev proxy and needs none. Local development (`.env.local`) uses the
+  development API and `redoctor-dev` too.
 - **The Vercel CLI from this machine:** never `vercel link` in the repo (it
   pulls `.env.local`); `vercel link --project <name> --yes` creates a new,
   empty project when the name is not found (it did with `redoctor-prod`,
@@ -1479,13 +1483,16 @@ pnpm check          # typecheck + lint + format:check + test + build
 
 Environments: `development` (local), `preview` (the `develop` branch at
 `dev.redoctorapp.com`, §6 «Environments»), `production` (`redoctorapp.com`).
-All three point to the same API and Firebase project today.
+Production uses the production API and `redoctor-3acf8`; preview and
+development use the development API and `redoctor-dev`. The
+`NEXT_PUBLIC_FIREBASE_*` rows below give production's values; `develop`
+(Vercel) and local development (`.env.local`) carry `redoctor-dev`'s.
 
 | Variable | Scope | Value / notes |
 | --- | --- | --- |
 | `NEXT_PUBLIC_APP_ENV` | all | `development` · `preview` · `production`; `develop` overrides it to `preview` (noindex) |
 | `NEXT_PUBLIC_SITE_URL` | all | `https://redoctorapp.com` (canonical, OG, deep links); `develop` overrides it to `https://dev.redoctorapp.com` |
-| `NEXT_PUBLIC_API_URL` | all | `https://api-dev.redoctorapp.com/api/v1` |
+| `NEXT_PUBLIC_API_URL` | all | Production `https://api.redoctorapp.com/api/v1`; preview (`develop`) and development `https://api-dev.redoctorapp.com/api/v1` |
 | `NEXT_PUBLIC_FIREBASE_API_KEY` | all | `AIzaSyCt6Rzgu06_atWspSTVq2jZxPWSk9shxqI` (web app of project `redoctor-3acf8`; restrict by referrer) |
 | `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | all | `redoctorapp.com` once the `/__/auth/*` proxy exists; `redoctor-3acf8.firebaseapp.com` meanwhile |
 | `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | all | `redoctor-3acf8` |
