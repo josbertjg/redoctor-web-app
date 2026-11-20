@@ -33,8 +33,12 @@ When a rule here collides with a tool's default, this file wins.
   asked. Open decisions are listed in §13: never resolve them by assumption.
 - **Commit only when asked.** One line, no body, no trailers:
   `vX.Y.Z, description` — bump `version` in `package.json` first (minor for a
-  feature, patch for a fix). "Haz el push" means commit + `git push origin
-  master` (the repo's branch) after `git fetch` and a review of the diff.
+  feature, patch for a fix). **The work happens on `develop`** (the owner,
+  2026-11-20): "Haz el push" means commit + `git push origin develop` after
+  `git fetch` and a review of the diff, which deploys `dev.redoctorapp.com`
+  (§6 «Environments»). `master` — `redoctorapp.com` — moves only on the
+  owner's word («súbelo a producción»): merge `develop` into `master` and
+  push it.
 - **Never print secrets** (`.env*`, tokens, private keys). The Firebase web
   config and the public deep-link data are not secrets; everything else is.
 - **The owner's email never goes to a third party** (analytics, Sentry,
@@ -196,7 +200,7 @@ the public profile came on the owner's word (2026-10-13, 2026-10-14,
 | Lint/format | **ESLint 10** (flat) + typescript-eslint `strictTypeChecked` + `eslint-plugin-import-x` + `jsx-a11y` + `react-hooks`; **Prettier** + `prettier-plugin-tailwindcss` | Layer boundaries enforced with `import-x/no-restricted-paths` (`eslint-plugin-import` crashes under ESLint 10). Unused code is ESLint's job: `next dev` generates a route validator with unused imports, so `noUnusedLocals` stays off in tsconfig |
 | Git hooks | Husky + lint-staged | `--no-verify` is forbidden |
 | Package manager | **pnpm 12** | `packageManager` field pinned; `.nvmrc` = Node 24 LTS |
-| Hosting | **Vercel** | Preview per PR; production on `redoctorapp.com` |
+| Hosting | **Vercel** | One project (`redoctor`, Hobby): `develop` → Preview at `dev.redoctorapp.com`, `master` → production on `redoctorapp.com` (§6 «Environments») |
 
 Do not add a dependency without saying why in the PR/commit description and
 checking that nothing in `app/lib` or `app/ui` already does it.
@@ -470,6 +474,14 @@ Every route path is built from one place, `app/lib/routes.ts` (the app has
   `https://api-dev.redoctorapp.com/api/v1/docs.json` — read it before
   writing a datasource; it is the contract. There is **no production API
   yet**: dev, preview and production of the web all point to `api-dev`.
+  The split is under way since 2026-11-20 (Heyscar's):
+  `api-dev.redoctorapp.com` runs on Render and becomes the development API
+  (the `redoctor-dev` Firebase project, its own database);
+  `api.redoctorapp.com`, another host, becomes production's
+  (`redoctor-3acf8`, the real data). **The order matters:** the production
+  web and the installed app move to `api.` before `api-dev` switches
+  projects. On 2026-11-20 Render switched first, and production's sessions
+  were rejected (401 `ERR_2005`) (§6 «Environments»).
 - **Any doubt about the contract: the OpenAPI and the API's code together,
   read only** — the sibling clone `../redoctor-api`, branch `dev` (what
   api-dev runs): `git -C ../redoctor-api show dev:<file>`, `grep`, `cat`;
@@ -862,7 +874,8 @@ before: the `.well-known` files and static bridges for `/s`, `/i`, `/a` and
 way round: the app claims only the apex (`applinks:redoctorapp.com`, the
 Android host `redoctorapp.com`), and neither Apple's CDN nor Android's
 verifier follow a redirect to a `.well-known` file. Publishing is a push to
-`master` (Vercel's Git integration).
+`master` (Vercel's Git integration), on the owner's word; `develop`
+publishes `dev.redoctorapp.com` (below, «Environments»).
 
 After a deploy that touches a public link or `.well-known`, test production
 itself: the e2e `well-known` and `bridges` specs with
@@ -870,6 +883,54 @@ itself: the e2e `well-known` and `bridges` specs with
 not always redirect alike), Google's verdict at
 `https://digitalassetlinks.googleapis.com/v1/statements:list?source.web.site=https://redoctorapp.com&relation=delegate_permission/common.handle_all_urls`,
 and Apple's copy (above; each layer of its CDN keeps it 6 h).
+
+### Environments: `develop` → `dev.redoctorapp.com`, `master` → `redoctorapp.com` (2026-11-20)
+
+One Vercel project, `redoctor` (team `josbert-guedezs-projects`, Hobby;
+it was `redoctor-prod`, the name `.vercel/repo.json` still carries), two
+branches:
+
+| Branch | Vercel environment | Address | Search engines |
+| --- | --- | --- | --- |
+| `develop` | Preview | `https://dev.redoctorapp.com` (a domain assigned to the branch) and each deployment's own URL | Kept out: `noindex, nofollow`, `robots.txt` `Disallow: /` |
+| `master` | Production | `https://redoctorapp.com` | Indexed |
+
+- **The work goes to `develop`** (§0); `master` moves only on the owner's
+  word, by merging `develop`.
+- **Variables.** Production and Preview share every value but those
+  `develop` alone overrides (Preview, branch `develop`):
+  `NEXT_PUBLIC_APP_ENV=preview` (`isIndexable` false: robots and metadata
+  say noindex, which matters because Vercel adds no `X-Robots-Tag` on a
+  branch's own domain), `NEXT_PUBLIC_SITE_URL=https://dev.redoctorapp.com`
+  and the eight `NEXT_PUBLIC_FIREBASE_*` of the `redoctor-dev` project
+  (its web app and its VAPID key). A change applies to the next deployment
+  (or a `vercel redeploy` of the latest one); Vercel refuses a
+  branch-scoped variable until the branch exists on GitHub. With the CLI,
+  feed `vercel env add` `< /dev/null` inside a loop, or it swallows the
+  loop's input.
+- **Why a domain of its own:** Vercel never created the Git branch URL
+  (`redoctor-git-develop-…` answers `DEPLOYMENT_NOT_FOUND`). The domain goes
+  through Cloudflare like the apex (the same proxied zone, so Cloudflare's
+  settings, such as its email obfuscation, apply to both).
+- **Previews are public** (Vercel Authentication off, the owner's call of
+  2026-11-20): testers need no Vercel account (Hobby allows one Shareable
+  Link per account, for one deployment). `preview.yml` runs on every
+  `develop` deployment; `VERCEL_AUTOMATION_BYPASS_SECRET` is set in GitHub.
+- **What `dev` reaches today:** its own Firebase project, `redoctor-dev`
+  (created 2026-11-20: Google and Apple — the same Services ID,
+  `com.redoctor.mobileapp.signin`, with that project's return URL —,
+  `dev.redoctorapp.com` among its authorized domains; checked through the
+  CSP each environment sends), and the same API address as production
+  (`api-dev`, §5) until each environment gets its own. Signing in on `dev`
+  waits for the development API to accept `redoctor-dev`'s accounts and to
+  list `dev.redoctorapp.com` in its CORS; then `develop` takes its
+  `NEXT_PUBLIC_API_URL`, and production takes `api.redoctorapp.com`. Local
+  development (`.env.local`) keeps the production project until then.
+- **The Vercel CLI from this machine:** never `vercel link` in the repo (it
+  pulls `.env.local`); `vercel link --project <name> --yes` creates a new,
+  empty project when the name is not found (it did with `redoctor-prod`,
+  removed at once): link a scratch folder to a name `vercel project ls`
+  shows and check its `projectId` against `.vercel/repo.json` first.
 
 ### Auth return URL
 
@@ -1296,7 +1357,8 @@ pnpm check          # typecheck + lint + format:check + test + build
   pre-push → `pnpm typecheck && pnpm test`. Never `--no-verify`.
 - **CI (GitHub Actions)**: `pnpm check` on every PR and push to master
   (`ci.yml`, building with `.env.test`); Playwright and Lighthouse against
-  each Vercel preview (`preview.yml`, on `deployment_status`; Lighthouse
+  each Vercel preview, every `develop` deployment since 2026-11-20
+  (`preview.yml`, on `deployment_status`; Lighthouse
   blocks third parties so CI traffic never reaches analytics or Sentry);
   `pnpm audit` every Monday (`audit.yml`); Renovate weekly (`renovate.json`,
   majors wait for approval). Locally Playwright builds and serves the app
@@ -1356,8 +1418,13 @@ pnpm check          # typecheck + lint + format:check + test + build
   public, and the only ones that exist are public by design (Firebase web
   config, PostHog key, Sentry DSN, store ids). Server-only variables are
   validated in `env.ts` and never imported from client code.
-- Firebase web API key: restrict it in Google Cloud by HTTP referrer to
-  `redoctorapp.com` and the Vercel preview domain. The search's Google
+- Firebase web API key: restricted by HTTP referrer (2026-11-20) to
+  `redoctorapp.com`, `redoctor-3acf8.firebaseapp.com` (the sign-in handler
+  runs there and calls Firebase with the key), `api-dev.redoctorapp.com`
+  (the API's docs sign in with it) and `localhost:3000`; its APIs are the
+  list Firebase put on it. Checked from outside: any other site, or none,
+  gets 403. The keys of every platform are in §13, Decided 2026-11-20.
+  The search's Google
   keys (M16) are two: **Places is asked by the web's server alone**
   (`GOOGLE_PLACES_API_KEY`, never `NEXT_PUBLIC_`: the Place Autocomplete
   and Place Details web services the app calls, Venezuela only; the app's
@@ -1410,13 +1477,14 @@ pnpm check          # typecheck + lint + format:check + test + build
 
 ## 12. Environment variables (validated in `app/lib/env.ts`)
 
-Environments: `development` (local), `preview` (Vercel PR), `production`
-(`redoctorapp.com`). All three point to the same API today.
+Environments: `development` (local), `preview` (the `develop` branch at
+`dev.redoctorapp.com`, §6 «Environments»), `production` (`redoctorapp.com`).
+All three point to the same API and Firebase project today.
 
 | Variable | Scope | Value / notes |
 | --- | --- | --- |
-| `NEXT_PUBLIC_APP_ENV` | all | `development` · `preview` · `production` |
-| `NEXT_PUBLIC_SITE_URL` | all | `https://redoctorapp.com` (canonical, OG, deep links); preview uses its Vercel URL |
+| `NEXT_PUBLIC_APP_ENV` | all | `development` · `preview` · `production`; `develop` overrides it to `preview` (noindex) |
+| `NEXT_PUBLIC_SITE_URL` | all | `https://redoctorapp.com` (canonical, OG, deep links); `develop` overrides it to `https://dev.redoctorapp.com` |
 | `NEXT_PUBLIC_API_URL` | all | `https://api-dev.redoctorapp.com/api/v1` |
 | `NEXT_PUBLIC_FIREBASE_API_KEY` | all | `AIzaSyCt6Rzgu06_atWspSTVq2jZxPWSk9shxqI` (web app of project `redoctor-3acf8`; restrict by referrer) |
 | `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | all | `redoctorapp.com` once the `/__/auth/*` proxy exists; `redoctor-3acf8.firebaseapp.com` meanwhile |
@@ -1437,7 +1505,7 @@ Environments: `development` (local), `preview` (Vercel PR), `production`
 | `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID` | all | Optional: a Cloud map style for the search's map; without one, Google's `DEMO_MAP_ID` (Advanced Markers need one) |
 | `NEXT_PUBLIC_FIREBASE_VAPID_KEY` | all | The web push of the notifications (M17): the project's public VAPID key (Firebase Console → Project settings → Cloud Messaging → Web Push certificates). Public by design. **Empty** = no push; the bell, the inbox and the live channel work all the same |
 | `API_PROXY_TARGET` | development only | Dev-only proxy for authenticated calls (the API's CORS answers the production origins only, REDOC-362); must be absent in preview/production. Without it, `next dev` proxies to `NEXT_PUBLIC_API_URL` |
-| `VERCEL_AUTOMATION_BYPASS_SECRET` | GitHub Actions secret | Only if previews have Deployment Protection: Playwright and Lighthouse use it for one request and browse with Vercel's cookie |
+| `VERCEL_AUTOMATION_BYPASS_SECRET` | GitHub Actions secret | Only if previews have Deployment Protection: Playwright and Lighthouse use it for one request and browse with Vercel's cookie. Set since 2026-11-20 (previews are public meanwhile) |
 | `PLAYWRIGHT_BASE_URL` · `E2E_SPECIALIST_ID` | testing | Run the e2e suite against a deployed URL; the public profile the e2e and Lighthouse runs use (api-dev's test profile by default) |
 
 `.env.example` lists every variable with a comment; `.env*.local` are
@@ -1453,7 +1521,8 @@ written out in full, or Next.js does not inline it).
 2. PostHog event list and funnel definition (M12).
 3. Patient screens design (Figma) — the designer is working on them; the
    landing design and copy are hers too («Landing de Redoctor» doc).
-4. The API's CORS for the Vercel previews (REDOC-362; `redoctorapp.com`
+4. The API's CORS for the previews, now `dev.redoctorapp.com` with the
+   development API (REDOC-362; `redoctorapp.com`
    and `www.` are allowed, checked 2026-11-02) and for `Idempotency-Key`
    (REDOC-371); until then the dev-only proxy stays for development.
    REDOC-357 (the configuration endpoint) shipped: the web reads its
@@ -3257,6 +3326,46 @@ written out in full, or Next.js does not inline it).
     them; the app lists them); the search's cards still lead to `/book`
     (they could open the profile's modal on that day); the API's public
     agenda counts a finished today as free (its TODO; the web skips it).
+
+### Decided (2026-11-20)
+
+- **Production readiness (the owner's «vamos a desplegar ya en
+  producción»), checked from here the same day.** The web was already live;
+  what changed is the rest of the stack. `redoctor-3acf8`, the Firebase
+  project used since the start, is production; development gets its own
+  (`redoctor dev`, created the same day; a Firebase project only works with
+  an API that validates its tokens, hence the split goes with Heyscar's).
+  - **Authentication:** only Google and Apple sign in, the only providers
+    the app and the web use (the Phone provider disabled: the API's SMS
+    verification is off; turning it on means enabling it again, with an SMS
+    region policy). Authorized domains: `redoctorapp.com`, `localhost` and
+    Firebase's own. Public name, support email, environment type
+    «Production», members reviewed, test accounts deleted (their rows in
+    the API's database are Heyscar's to clean), the APNs key uploaded.
+  - **Android:** the app `com.redoctor.mobileapp` carries the SHA-1 and
+    SHA-256 of Play's app signing certificates (three), the upload key and
+    the debug keys; the old `com.redoctor.mobile_app` was removed. The
+    web's `assetlinks.json` already lists Play's three SHA-256.
+  - **API keys** (Google Cloud → Credentials): the browser key as in §11;
+    «Android key (auto created by Firebase)» and «Maps API Android» limited
+    to `com.redoctor.mobileapp` with its seven SHA-1, «iOS key» and «Maps
+    API iOS» to the bundle `com.redoctor.mobileapp` (checked from outside:
+    without the app's identity, 403); «Web App Google Maps» by referrer to
+    the Maps JavaScript API; «Places API + Geocoding API Mobile» limited to
+    those two APIs and to no application: the app calls the legacy web
+    services from the phone, which accept no app restriction (Google's
+    advice for mobile is a proxy), and the web's server uses the same key
+    (`GOOGLE_PLACES_API_KEY`). Pending: its daily caps, a Places key of the
+    web's own, and the app's places through the API.
+  - **Still open for the launch:** Cloudflare's Email Address Obfuscation
+    (React's hydration error #418 on `/`, `/privacy`, `/terms` and
+    `/delete-account`, on `dev.` too), Sentry and PostHog, `legal.entity`,
+    a Map ID of the web's own, a real Apple sign-in on the web, a test of
+    the real app (map, Google sign-in, push), Vercel Pro before charging.
+- **`develop` and `master` (the owner's word):** the work and every push go
+  to `develop`, which deploys `dev.redoctorapp.com`; `master` and
+  `redoctorapp.com` move only when he says so (§0). As built: §6
+  «Environments».
 
 ### Improvements noted (not scheduled)
 

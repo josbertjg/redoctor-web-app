@@ -112,7 +112,10 @@ Every variable is listed in `.env.example` and validated in
 `app/lib/env.ts`: a missing or malformed one fails the build by name.
 `NEXT_PUBLIC_*` values reach the browser and are public by design. Client
 components read them from `app/lib/public-env.ts`. Preview and production
-values live in Vercel.
+values live in Vercel and are shared, except `NEXT_PUBLIC_APP_ENV`
+(`preview`), `NEXT_PUBLIC_SITE_URL` (`https://dev.redoctorapp.com`) and the
+`NEXT_PUBLIC_FIREBASE_*` of the `redoctor-dev` project, which the `develop`
+branch overrides (AGENTS.md §6 «Environments»).
 
 ## Tests
 
@@ -125,22 +128,22 @@ values live in Vercel.
   The signed-in specs sign in as a person does, through Firebase's own
   popup flow, with Google's and Apple's window, Firebase's endpoints and
   the API answered in the browser (`tests/e2e/signed-in.ts`, AGENTS.md
-  §10). To test a deployed preview:
+  §10). To test the deployed `develop` branch:
 
   ```bash
-  PLAYWRIGHT_BASE_URL=https://<preview>.vercel.app pnpm test:e2e
+  PLAYWRIGHT_BASE_URL=https://dev.redoctorapp.com pnpm test:e2e
   ```
 
-  If previews have Deployment Protection, also set
+  If previews get Deployment Protection again, also set
   `VERCEL_AUTOMATION_BYPASS_SECRET`.
 
 ## CI
 
-| Workflow      | When                                    | What                                                                       |
-| ------------- | --------------------------------------- | -------------------------------------------------------------------------- |
-| `ci.yml`      | every pull request and push to `master` | `pnpm check`                                                               |
-| `preview.yml` | Vercel finishes a preview deployment    | Playwright and Lighthouse (budgets of AGENTS.md §8.10) against the preview |
-| `audit.yml`   | Mondays                                 | `pnpm audit --audit-level high`                                            |
+| Workflow      | When                                                           | What                                                                       |
+| ------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `ci.yml`      | every pull request and push to `master`                        | `pnpm check`                                                               |
+| `preview.yml` | Vercel finishes a preview deployment (every push to `develop`) | Playwright and Lighthouse (budgets of AGENTS.md §8.10) against the preview |
+| `audit.yml`   | Mondays                                                        | `pnpm audit --audit-level high`                                            |
 
 Renovate (`renovate.json`) proposes updates weekly once its GitHub app is
 installed on the repository. Majors wait for approval.
@@ -161,13 +164,24 @@ chunk only when it is on.
 
 ## Deployment
 
-Vercel builds every branch as a preview and `master` as production, on
-`redoctorapp.com` since 2026-10-12 (`www` redirects to it). After a deploy
-that touches a public link or `.well-known`, run the e2e `well-known` and
-`bridges` specs against production (AGENTS.md §6 "Domain cutover").
+One Vercel project, two branches (AGENTS.md §6 «Environments»):
+
+- **`develop`** → a preview at
+  [dev.redoctorapp.com](https://dev.redoctorapp.com), public and never
+  indexed. Every push lands there first, for testing.
+- **`master`** → production at `redoctorapp.com` since 2026-10-12 (`www`
+  redirects to it). It moves only on the owner's word, by merging
+  `develop`.
+
+Each uses its own Firebase project (`redoctor-dev` and `redoctor-3acf8`),
+but both still reach the same API, so signing in works on production only
+until the development API exists. After a deploy that touches a
+public link or `.well-known`, run the e2e `well-known` and `bridges` specs
+against production (AGENTS.md §6 "Domain cutover").
 
 ## Conventions
 
 Code, comments and commits in English; the product speaks Spanish through
 `app/lib/i18n/messages/es.json`. Commits are one line,
 `vX.Y.Z, description`, with the version bumped in `package.json` first.
+The work happens on `develop`; `master` moves on the owner's word.
