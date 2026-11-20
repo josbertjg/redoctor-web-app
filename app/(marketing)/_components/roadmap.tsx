@@ -2,7 +2,8 @@ import { useTranslations } from 'next-intl';
 
 import { cn } from '@/app/lib/utils';
 
-import { Swirl } from './decor';
+import { Swirl } from '@/app/ui/decor';
+
 import { IconBadge, toneFills } from './icon-badge';
 import { accentOnBlue, accentOnWhite } from './rich';
 import { RoadmapBelt } from './roadmap-belt';

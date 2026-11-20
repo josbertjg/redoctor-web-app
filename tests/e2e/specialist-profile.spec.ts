@@ -31,9 +31,10 @@ test('a shared profile shows the specialist and the way to the app', async ({
     expect(href).toMatch(new RegExp(`${profilePath}$`));
   }
 
+  // The booking opens in the profile's own modal (2026-11-16).
   await expect(
-    page.getByRole('link', { name: 'Agendar cita' }),
-  ).toHaveAttribute('href', `/book/${specialistId}`);
+    page.getByRole('button', { name: 'Agendar cita' }).first(),
+  ).toBeVisible();
   await expect(
     page.getByRole('link', { name: 'Abrir en la app' }),
   ).toHaveAttribute('href', /^(redoctor|intent):\/\//);
@@ -44,10 +45,14 @@ test('a shared profile shows the specialist and the way to the app', async ({
   expect(await auditAccessibility(page)).toEqual([]);
 });
 
-test('each office links to its directions', async ({ page }) => {
+test('each office links to its directions, from the offices’ sheet', async ({
+  page,
+}) => {
   await page.goto(profilePath);
 
-  const directions = page.getByRole('link', { name: /^Cómo llegar a / });
+  await page.getByRole('button', { name: /^Ver los consultorios de / }).click();
+  const sheet = page.getByRole('dialog', { name: 'Consultorios de atención' });
+  const directions = sheet.getByRole('link', { name: /^Cómo llegar a / });
   await expect(directions.first()).toHaveAttribute(
     'href',
     /^https:\/\/www\.google\.com\/maps\/dir\/\?api=1&destination=-?\d/,

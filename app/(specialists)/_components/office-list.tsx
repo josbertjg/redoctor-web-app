@@ -1,4 +1,5 @@
 import Directions from '@material-symbols/svg-400/rounded/directions.svg?svgr';
+import EditCalendar from '@material-symbols/svg-400/rounded/edit_calendar.svg?svgr';
 import LocationOn from '@material-symbols/svg-400/rounded/location_on.svg?svgr';
 import Signpost from '@material-symbols/svg-400/rounded/signpost.svg?svgr';
 import { useTranslations } from 'next-intl';
@@ -10,8 +11,6 @@ import type { SpecialistProfile } from '@/app/lib/schemas/specialists';
 import { Icon } from '@/app/ui/icons';
 import { StateChip } from '@/app/ui/state-chip';
 
-import { BookAtOffice } from './book-at-office';
-
 /*
  * The specialist's offices: the app's office card plus what its office sheet
  * shows (the description), and «Cómo llegar» to the exact coordinates in
@@ -20,16 +19,17 @@ import { BookAtOffice } from './book-at-office';
  * Each office's prices as the app's profile shows them (REDOC-367: they come
  * with the public profile, no session): «Por motivo» or «Estándar», each
  * reason with its price, «A consultar» when it has none. With two offices or
- * more, each offers the app's «Agendar en este consultorio» (with one, it
- * is the profile's «Agendar cita»).
+ * more and booking offered, each offers the app's «Agendar en este
+ * consultorio» (with one, it is the profile's «Agendar cita»): the office
+ * chosen in the profile's booking, its modal open.
  */
 export function OfficeList({
   offices,
-  booking,
+  onBook,
 }: {
   offices: SpecialistProfile['offices'];
-  /** Whose profile it is, for «Agendar en este consultorio». */
-  booking: { specialistId: string; expectSpecialist: boolean };
+  /** Booking is offered: «Agendar en este consultorio» chooses the office. */
+  onBook?: (officeId: string) => void;
 }) {
   const t = useTranslations('specialists');
   const search = useTranslations('search');
@@ -101,13 +101,17 @@ export function OfficeList({
               </ul>
             </div>
           ) : null}
-          {perOffice ? (
-            <BookAtOffice
-              specialistId={booking.specialistId}
-              officeId={office.id}
-              label={search('bookAtThisOffice')}
-              expectSpecialist={booking.expectSpecialist}
-            />
+          {perOffice && onBook ? (
+            <button
+              type="button"
+              onClick={() => {
+                onBook(office.id);
+              }}
+              className="inline-flex min-h-touch animate-fade-in items-center gap-1.5 self-start rounded-sm text-label-lg text-primary outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              <Icon icon={EditCalendar} size={18} />
+              {search('bookAtThisOffice')}
+            </button>
           ) : null}
         </li>
       ))}

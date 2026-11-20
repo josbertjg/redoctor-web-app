@@ -14,11 +14,14 @@ export function Gallery({
   images,
   name,
   inset = false,
+  variant = 'squares',
 }: {
   images: SpecialistProfile['gallery'];
   name: string;
   /** Inside a card: the row keeps to the card's padding instead of reaching the page's edges. */
   inset?: boolean;
+  /** `strip`: the public profile's (Figma, 2026-11-16): 136 px tall, each photo at its own shape. */
+  variant?: 'squares' | 'strip';
 }) {
   const t = useTranslations('specialists');
 
@@ -31,7 +34,8 @@ export function Gallery({
       // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
       tabIndex={0}
       className={cn(
-        'flex snap-x gap-2 overflow-x-auto pb-1 outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+        'flex snap-x overflow-x-auto pb-1 outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
+        variant === 'strip' ? 'gap-1.5' : 'gap-2',
         // Edge to edge on the page; the snap points keep the gutter, so the
         // first photo starts aligned with the text.
         !inset && '-mx-gutter scroll-px-gutter px-gutter',
@@ -45,7 +49,12 @@ export function Gallery({
           width={200}
           height={200}
           unoptimized
-          className="size-50 shrink-0 snap-start rounded-sm bg-surface-variant object-cover"
+          className={cn(
+            'shrink-0 snap-start rounded-sm bg-surface-variant object-cover',
+            // The width follows the photo once it loads: `auto` keeps its
+            // own ratio over the attributes.
+            variant === 'strip' ? 'h-34 w-auto' : 'size-50',
+          )}
         />
       ))}
     </div>

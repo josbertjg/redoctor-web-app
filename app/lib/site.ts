@@ -51,3 +51,16 @@ export function brandOpenGraph(words: {
     ],
   };
 }
+
+/**
+ * The landing's sections, by their anchors: the landing's own links, and
+ * the site's bar on other pages (`/#planes`), lead to them.
+ */
+export const landingSections = {
+  featured: 'destacados',
+  howItWorks: 'como-funciona',
+  trust: 'verificacion',
+  roadmap: 'novedades',
+  pricing: 'planes',
+  faq: 'preguntas',
+} as const;

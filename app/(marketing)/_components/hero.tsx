@@ -2,6 +2,7 @@ import Image from 'next/image';
 
 import { useTranslations } from 'next-intl';
 
+import { Swirl } from '@/app/ui/decor';
 import type { TextSegment } from '@/app/ui/motion';
 import { SearchBar } from '@/app/ui/search/search-bar';
 import type { SearchCatalog } from '@/app/ui/search/search-bar-types';
@@ -9,7 +10,6 @@ import { useSearchBarWords } from '@/app/ui/search/search-bar-words';
 
 import { AfterSplash } from './after-splash';
 import { beats } from './choreography';
-import { Swirl } from './decor';
 import { HeroTitle } from './hero-title';
 import { SpecialtyChips } from './specialty-chips';
 import { heroSearchId } from '../_data/landing-content';
@@ -69,7 +69,10 @@ export function Hero({
           title={title}
           waitForSplash={waitForSplash}
         />
-        <div className="relative mt-6 w-full lg:mt-8">
+        {/* While the search is in use the page dims, the landing's bar
+            included (search-shade.tsx); this block — the search and the
+            specialist behind it — stays bright over the shade (Figma). */}
+        <div className="relative mt-6 w-full has-data-engaged:z-40 lg:mt-8">
           {/* The specialist stands behind the search bar: this box ends at
               the bar's top edge, so nothing of him shows under it — and his
               entrance rises out of it. */}

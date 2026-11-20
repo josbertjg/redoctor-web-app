@@ -9,6 +9,7 @@ import { yearsBefore, todayInCaracas } from '@/app/lib/format/date-of-birth';
 import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 import { meResponseSchema, toAccount } from '@/app/lib/schemas/identity';
 
+import type { BookingSpecialist } from '@/app/ui/booking/booking-types';
 import {
   buildAppointment,
   officeId,
@@ -33,8 +34,6 @@ import { BookingFlow } from './booking-flow';
 import { apiUrl } from '../../../../tests/msw/api-url';
 import { validToken } from '../../../../tests/msw/handlers/identity';
 import { server } from '../../../../tests/msw/server';
-
-import type { BookingSpecialist } from './booking-types';
 
 const navigation = vi.hoisted(() => ({
   push: vi.fn(),

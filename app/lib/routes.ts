@@ -46,6 +46,17 @@ export const routes = {
 
   /* Paths shared with the app (AGENTS.md §6). */
   specialist: (specialistId: string) => `/s/${segment(specialistId)}` as const,
+  /**
+   * The profile with its booking chosen (2026-11-16): where a sign-up
+   * finished from the booking's modal comes back to, the office, the day
+   * and the hour kept, and the modal open again (`book=1`). Never shared:
+   * the web's own way back, so the app's claim on `/s/*` never meets it.
+   */
+  specialistBooking: (
+    specialistId: string,
+    choice: { officeId: string; date: string; time: string },
+  ) =>
+    `/s/${segment(specialistId)}?office=${encodeURIComponent(choice.officeId)}&date=${encodeURIComponent(choice.date)}&time=${encodeURIComponent(choice.time)}&book=1` as const,
   /** `claimFor` keeps the person's answer to «¿Para quién es esta cita?» across the sign-up. */
   invitation: (token: string, claimFor?: 'self' | 'dependent') =>
     claimFor

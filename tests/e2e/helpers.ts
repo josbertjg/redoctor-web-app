@@ -85,6 +85,14 @@ function paintsAcceptedGreen(node: { any: { id: string; data: unknown }[] }) {
  */
 const pendingContrast = 'label:has(input:checked) > .text-text-secondary';
 
+/**
+ * Text that is pure decoration, which WCAG 1.4.3 exempts from contrast,
+ * marked so by the page itself: the faint days of the month before in the
+ * public profile's calendar (Figma, 2026-11-16), hidden from screen readers
+ * and never a choice.
+ */
+const decoration = '[data-decoration]';
+
 /** axe on the settled page; everything but the contrast above must pass. */
 
 export async function auditAccessibility(page: Page) {
@@ -109,7 +117,7 @@ export async function auditAccessibility(page: Page) {
             ? known.some((rule) => element.closest(rule) !== null)
             : false;
         }),
-      [selectors, [pendingContrast]] as const,
+      [selectors, [pendingContrast, decoration]] as const,
     );
     const nodes = violation.nodes.filter(
       (node, index) => !accepted[index] && !paintsAcceptedGreen(node),

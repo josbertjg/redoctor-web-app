@@ -1,7 +1,8 @@
 import Help from '@material-symbols/svg-400/rounded/help.svg?svgr';
 import { useTranslations } from 'next-intl';
 
-import { Swirl } from './decor';
+import { Swirl } from '@/app/ui/decor';
+
 import { FaqAccordion } from './faq-accordion';
 import { FaqMotion } from './faq-motion';
 import { accentOnBlue } from './rich';

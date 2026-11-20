@@ -278,6 +278,37 @@ describe('SearchBar', () => {
     });
   });
 
+  it('dims the page while a field is in use, until the person leaves the box or taps the shade', async () => {
+    const user = userEvent.setup();
+    renderWithIntl(
+      <QueryClientProvider client={new QueryClient()}>
+        <Box />
+        <button type="button">Fuera del buscador</button>
+      </QueryClientProvider>,
+    );
+    const shade = () => document.querySelector('[data-search-shade]');
+
+    // Nothing over the page before the box is used.
+    expect(shade()).toBeNull();
+    await user.click(whatBox());
+    expect(shade()).toHaveAttribute('data-open');
+    // From one field to the other, the page stays dimmed.
+    await user.click(whereBox());
+    expect(shade()).toHaveAttribute('data-open');
+    await user.click(
+      screen.getByRole('button', { name: 'Fuera del buscador' }),
+    );
+    expect(shade()).not.toHaveAttribute('data-open');
+
+    // A tap on the shade itself leaves the box, list and all.
+    await user.click(whatBox());
+    const open = shade();
+    if (!open) throw new Error('The shade should be there');
+    await user.click(open);
+    expect(shade()).not.toHaveAttribute('data-open');
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
   it('closes its lists once the focus leaves the box, as when the docked bar hides it', async () => {
     const user = userEvent.setup();
     renderBox('bar');

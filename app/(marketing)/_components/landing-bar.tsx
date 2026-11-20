@@ -9,13 +9,13 @@ import { routes } from '@/app/lib/routes';
 import { cn } from '@/app/lib/utils';
 
 import { SessionButton } from '@/app/ui/auth/session-button';
+import { SiteMenu } from '@/app/ui/layout/site-menu';
 import { Logo } from '@/app/ui/logo';
 import { houseTransition, m, useReducedMotion } from '@/app/ui/motion';
 import { NotificationsBell } from '@/app/ui/notifications/notifications-bell';
 
 import { AfterSplash } from './after-splash';
 import { beats } from './choreography';
-import { LandingNav } from './landing-nav';
 import { heroSearchId } from '../_data/landing-content';
 
 type LandingBarProps = {
@@ -104,7 +104,7 @@ export function LandingBar({
               the account, from tablets up: the phone menu holds it. */}
           <NotificationsBell />
           <SessionButton className="hidden sm:inline-flex" />
-          <LandingNav
+          <SiteMenu
             links={links}
             labels={{ open: labels.openMenu, close: labels.closeMenu }}
           />

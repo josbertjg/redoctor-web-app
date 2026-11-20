@@ -25,6 +25,38 @@ export type ClientMessages = Pick<Messages, (typeof clientNamespaces)[number]>;
 
 export type Namespace = keyof Messages;
 
+/** The booking's steps (M15): `/book/{id}` and the public profile's modal. */
+const bookingNamespaces = [
+  'apiErrors',
+  'appointments',
+  'search',
+  'priceFormat',
+  'price',
+  'pickADate',
+  'morning',
+  'afternoon',
+  'evening',
+  'no_slots_available',
+  'next',
+  'back',
+  'edit',
+  'book',
+  'dateAndTime',
+  'office',
+  'noOptionsAvailable',
+  'patient',
+  'specialist',
+  'name',
+  'lastName',
+  'dateOfBirth',
+  'identityDocument',
+  'sex',
+  'male',
+  'female',
+  'input',
+  'signUp',
+] as const satisfies readonly Namespace[];
+
 /** The given namespaces of the catalog, and nothing else. */
 export function pickMessages(
   messages: Messages,
@@ -112,35 +144,17 @@ export const pageNamespaces = {
   // Booking from a profile (M15): its sign-in, the four steps (the
   // reschedule's calendar and hours, the reasons and their prices, the
   // person in one's care) and «¡Todo listo!».
-  book: [
-    'apiErrors',
-    'appointments',
-    'search',
-    'priceFormat',
-    'price',
-    'pickADate',
-    'morning',
-    'afternoon',
-    'evening',
-    'no_slots_available',
-    'next',
-    'back',
-    'edit',
-    'book',
-    'dateAndTime',
-    'office',
-    'noOptionsAvailable',
-    'patient',
-    'specialist',
-    'name',
-    'lastName',
-    'dateOfBirth',
-    'identityDocument',
-    'sex',
-    'male',
-    'female',
-    'input',
-    'signUp',
+  book: bookingNamespaces,
+  // The public profile (2026-11-16): the booking's panel and modal, the
+  // heart, the share, the tabs and the offices' sheet.
+  specialistProfile: [
+    ...bookingNamespaces,
+    'specialists',
+    'favorites',
+    'description',
+    'reviews',
+    'specialistProfile',
+    'profile',
   ],
   // The search (M16): the results, their days and prices, the filters and
   // the map, all read in the browser (the box gets its words from the

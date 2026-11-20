@@ -4,38 +4,22 @@ import { useId, useState, type ReactNode } from 'react';
 
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
-import { track } from '@/app/lib/analytics/track';
-import { failureMessageKey, isApiError } from '@/app/lib/api/errors';
 import type { SessionUser } from '@/app/lib/firebase/client';
 import { todayInCaracas } from '@/app/lib/format/date-of-birth';
-import { appointmentKeys } from '@/app/lib/queries/appointments';
 import {
-  bookAppointment,
-  bookingKeys,
   isInactiveSpecialist,
   officeServicesQueryOptions,
 } from '@/app/lib/queries/booking';
 import { isCalendarDay } from '@/app/lib/reports/period';
 import { routes } from '@/app/lib/routes';
 import type { AppointmentResponse } from '@/app/lib/schemas/appointments';
-import type { BookingRequest } from '@/app/lib/schemas/booking';
 import { cn } from '@/app/lib/utils';
 
-import { Button } from '@/app/ui/button';
-import { FieldError } from '@/app/ui/field-error';
-import { BottomActions } from '@/app/ui/layout/bottom-actions';
-import { moveStep } from '@/app/ui/motion/directions';
-import { wipeScreen } from '@/app/ui/motion/screen-wipe';
-import { StepTransition } from '@/app/ui/motion/view-transitions';
-
-import { useFocusHeading } from '@/app/hooks/use-focus-heading';
-
-import { BookingDone } from './booking-done';
-import { BookingFrame } from './booking-frame';
-import { BookingUnavailable } from './booking-notices';
+import { BookingDone } from '@/app/ui/booking/booking-done';
+import { BookingUnavailable } from '@/app/ui/booking/booking-notices';
 import {
   bookingSteps,
   emptyPatientValues,
@@ -43,11 +27,21 @@ import {
   type BookingStep,
   type PatientChoice,
   type PatientValues,
-} from './booking-types';
+} from '@/app/ui/booking/booking-types';
+import { patientFormId, PatientStep } from '@/app/ui/booking/patient-step';
+import { SummaryStep } from '@/app/ui/booking/summary-step';
+import { useBookAppointment } from '@/app/ui/booking/use-book-appointment';
+import { Button } from '@/app/ui/button';
+import { FieldError } from '@/app/ui/field-error';
+import { BottomActions } from '@/app/ui/layout/bottom-actions';
+import { moveStep } from '@/app/ui/motion/directions';
+import { StepTransition } from '@/app/ui/motion/view-transitions';
+
+import { useFocusHeading } from '@/app/hooks/use-focus-heading';
+
+import { BookingFrame } from './booking-frame';
 import { OfficeStep } from './office-step';
-import { patientFormId, PatientStep } from './patient-step';
 import { SlotStep } from './slot-step';
-import { SummaryStep } from './summary-step';
 import { useFirstFreeDay } from './use-first-free-day';
 
 const stepOrder: Record<BookingStep, number> = {
@@ -88,7 +82,6 @@ export function BookingSteps({
 }: BookingStepsProps) {
   const t = useTranslations();
   const router = useRouter();
-  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const problemId = useId();
   const [today] = useState(() => todayInCaracas());
@@ -164,75 +157,21 @@ export function BookingSteps({
     });
   };
 
-  const book = useMutation({
-    mutationFn: (request: BookingRequest) => bookAppointment(user, request),
-    onSuccess: (appointment, request) => {
-      queryClient.setQueryData(
-        appointmentKeys.detail(user.id, appointment.id),
-        {
-          kind: 'found',
-          appointment,
-        },
+  const book = useBookAppointment(user, {
+    onBooked: setBooked,
+    onSlotTaken: () => {
+      setTime(null);
+      setSlotTaken(true);
+      goTo('slot');
+    },
+    onSignUpNeeded: () => {
+      router.push(
+        routes.signUp(
+          routes.book(specialist.id, officeId, namedDay ?? undefined),
+        ),
       );
-      void queryClient.invalidateQueries({
-        queryKey: appointmentKeys.list(user.id),
-      });
-      // The slot is no longer free: the office's days and hours, read again.
-      void queryClient.invalidateQueries({
-        queryKey: ['office', request.officeId],
-      });
-      if (request.attendee.kind === 'new') {
-        void queryClient.invalidateQueries({
-          queryKey: bookingKeys.terceros(user.id),
-        });
-      }
-      track('web_appointment_booked', {
-        relationship: request.attendee.kind === 'self' ? 'self' : 'dependent',
-      });
-      // A big moment: «¡Todo listo!» arrives under the green wipe. «Agendar»
-      // stays busy until then (`isSuccess`): back to its words, it would
-      // flash where the colour starts growing.
-      void wipeScreen({
-        tone: 'success',
-        whileCovered: () => {
-          setBooked(appointment);
-        },
-      });
     },
-    onError: (error, request) => {
-      if (isApiError(error) && error.code === 'ERR_4002') {
-        // Taken meanwhile: the day read again, another hour to choose.
-        setTime(null);
-        setSlotTaken(true);
-        void queryClient.invalidateQueries({
-          queryKey: appointmentKeys.slots(request.officeId, request.date),
-        });
-        void queryClient.invalidateQueries({
-          queryKey: appointmentKeys.availableDays(
-            request.officeId,
-            request.date.slice(0, 7),
-          ),
-        });
-        goTo('slot');
-        return;
-      }
-      if (
-        isApiError(error) &&
-        error.status === 403 &&
-        error.code === 'ERR_2010'
-      ) {
-        router.push(
-          routes.signUp(
-            routes.book(specialist.id, officeId, namedDay ?? undefined),
-          ),
-        );
-        return;
-      }
-      // A specialist who stopped being active: the page says so.
-      if (isInactiveSpecialist(error)) return;
-      const failure = failureMessageKey(error, 'appointments.book.failed');
-      setProblem(failure ? t(failure) : null);
-    },
+    onFailure: setProblem,
   });
 
   if (booked !== null) {

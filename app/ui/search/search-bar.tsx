@@ -24,6 +24,7 @@ import { Icon } from '@/app/ui/icons';
 
 import { useDeviceLocation } from '@/app/hooks/use-device-location';
 
+import { SearchShade, searchShadeHost } from './search-shade';
 import { useLastLocation, useRecentSearches } from './use-remembered';
 import { WhatField, type WhatPick } from './what-field';
 import { WhereField } from './where-field';
@@ -72,12 +73,22 @@ const variants: Record<
     label: string;
     /** The line that says what is missing (`FieldError`). */
     notice: string;
+    /** The shade's layer: over the page's bar (the hero), or under it. */
+    shade: string;
+    /**
+     * Where each list hangs (Figma): under the pill, from its left edge to
+     * the divider («¿Qué?») or from the divider to its right edge
+     * («¿Dónde?»), 16 px down — the fields span the pill's height, and the
+     * offsets are the pill's padding and gaps.
+     */
+    whatPopup: string;
+    wherePopup: string;
   }
 > = {
   hero: {
     wrapper: '',
     form: 'mx-auto max-w-3xl flex-col rounded-2xl bg-pure-white shadow-md sm:min-h-14 sm:flex-row sm:items-center sm:gap-6 sm:rounded-full sm:px-5',
-    field: 'px-5 py-3 sm:px-0 sm:py-0',
+    field: 'px-5 py-3 sm:self-stretch sm:px-0 sm:py-0',
     input: 'text-subtitle-s',
     where: '',
     divider: 'mx-5 h-px sm:mx-0 sm:h-6.5 sm:w-px',
@@ -88,6 +99,11 @@ const variants: Record<
       'min-h-touch gap-2 rounded-b-2xl px-5 hover:bg-blue-50 focus-visible:bg-blue-50 sm:-mr-2.5 sm:size-11 sm:shrink-0 sm:rounded-full sm:px-0 sm:hover:scale-110 sm:hover:bg-transparent sm:focus-visible:bg-transparent sm:focus-visible:ring-3 sm:focus-visible:ring-ring/50',
     label: 'sm:sr-only',
     notice: 'mt-2 px-5 text-center [&_p]:text-white-50',
+    // Over the landing's bar (z-20): the hero's block rises over it.
+    shade: 'z-30',
+    whatPopup: 'sm:-right-6 sm:-left-5 sm:mt-4',
+    // The button (44 px, 10 px into the padding) and the gap: 78 px.
+    wherePopup: 'sm:-right-19.5 sm:-left-6 sm:mt-4',
   },
   bar: {
     // A field 138 px wide (1024) or a phone's 163 px is no width for a
@@ -95,7 +111,7 @@ const variants: Record<
     // (xl), the pill from tablets up, and the bar itself on phones.
     wrapper: 'max-md:static',
     form: 'h-11 flex-row items-center gap-3 rounded-full bg-white-200 px-4',
-    field: 'py-0 max-xl:static',
+    field: 'py-0 max-xl:static xl:self-stretch',
     input: 'text-body-xs',
     where: 'hidden md:flex',
     divider: 'hidden h-5 w-px md:block',
@@ -109,11 +125,16 @@ const variants: Record<
     // over the page and never in the way of a tap.
     notice:
       'pointer-events-none absolute top-[calc(100%+0.5rem)] left-0 z-20 rounded-xl bg-pure-white px-4 py-2.5 shadow-lg ring-1 ring-divider max-md:right-0 md:w-max md:max-w-full',
+    // Under the bar (z-20), which stays the search's surface.
+    shade: 'z-15',
+    whatPopup: 'md:mt-4 xl:-right-3 xl:-left-4',
+    // The button (36 px, 6 px into the padding) and the gap: 58 px.
+    wherePopup: 'md:mt-4 xl:-right-14.5 xl:-left-3',
   },
   page: {
     wrapper: '',
     form: 'flex-col rounded-2xl bg-pure-white shadow-sm ring-1 ring-divider sm:h-12 sm:flex-row sm:items-center sm:gap-4 sm:rounded-full sm:px-4',
-    field: 'px-4 py-2.5 sm:px-0 sm:py-0',
+    field: 'px-4 py-2.5 sm:self-stretch sm:px-0 sm:py-0',
     input: 'text-body-xs',
     where: '',
     divider: 'mx-4 h-px sm:mx-0 sm:h-5 sm:w-px',
@@ -122,6 +143,11 @@ const variants: Record<
       'min-h-touch gap-2 rounded-b-2xl px-4 hover:bg-blue-50 focus-visible:bg-blue-50 sm:-mr-1.5 sm:size-9 sm:shrink-0 sm:rounded-full sm:px-0 sm:hover:scale-110 sm:hover:bg-transparent sm:focus-visible:bg-transparent sm:focus-visible:ring-3 sm:focus-visible:ring-ring/50',
     label: 'sm:sr-only',
     notice: 'mt-2 px-5',
+    // Under the search page's bar (z-20).
+    shade: 'z-15',
+    whatPopup: 'sm:-right-4 sm:-left-4 sm:mt-4',
+    // The button (36 px, 6 px into the padding) and the gap: 62 px.
+    wherePopup: 'sm:-right-15.5 sm:-left-4 sm:mt-4',
   },
 };
 
@@ -192,6 +218,10 @@ export function SearchBar({
   // a tap elsewhere or Escape puts it away, until the next try.
   const wrapper = useRef<HTMLDivElement>(null);
   const [noticeAway, setNoticeAway] = useState(false);
+  // A field in use dims the page (SearchShade), from the first use on, in
+  // the page's own stacking context when it names one.
+  const [engaged, setEngaged] = useState(false);
+  const [shadeHost, setShadeHost] = useState<Element | null>(null);
 
   const locate = () => {
     pendingPlace.current = null;
@@ -324,6 +354,30 @@ export function SearchBar({
   const floats = variant === 'bar';
   const shownNotice = floats && noticeAway ? null : notice;
 
+  // In use while the focus is in the box; the shade's place is found on the
+  // first use, from the box up.
+  useEffect(() => {
+    const box = wrapper.current;
+    if (!box) return;
+    const onFocusIn = () => {
+      setEngaged(true);
+      setShadeHost(
+        (host) => host ?? box.closest(`[${searchShadeHost}]`) ?? document.body,
+      );
+    };
+    const onFocusOut = (event: FocusEvent) => {
+      const next = event.relatedTarget;
+      if (next instanceof Node && box.contains(next)) return;
+      setEngaged(false);
+    };
+    box.addEventListener('focusin', onFocusIn);
+    box.addEventListener('focusout', onFocusOut);
+    return () => {
+      box.removeEventListener('focusin', onFocusIn);
+      box.removeEventListener('focusout', onFocusOut);
+    };
+  }, []);
+
   useEffect(() => {
     if (!floats || shownNotice === null) return;
     const onPointerDown = (event: PointerEvent) => {
@@ -345,6 +399,8 @@ export function SearchBar({
   return (
     <div
       ref={wrapper}
+      // The page's layers read it: the hero's block rises over the shade.
+      data-engaged={engaged || undefined}
       className={cn('relative w-full', style.wrapper, className)}
     >
       <form
@@ -398,6 +454,7 @@ export function SearchBar({
           invalid={problem !== null}
           className={style.field}
           inputClassName={style.input}
+          popupClassName={style.whatPopup}
         />
         <Divider className={style.divider} />
         <WhereField
@@ -413,6 +470,7 @@ export function SearchBar({
           words={words}
           className={cn(style.field, style.where)}
           inputClassName={style.input}
+          popupClassName={style.wherePopup}
         />
         <Divider className={cn(style.divider, style.secondDivider)} />
         <button
@@ -436,6 +494,9 @@ export function SearchBar({
         message={shownNotice ?? undefined}
         className={style.notice}
       />
+      {shadeHost ? (
+        <SearchShade host={shadeHost} open={engaged} className={style.shade} />
+      ) : null}
     </div>
   );
 }

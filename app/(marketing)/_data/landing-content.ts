@@ -42,14 +42,7 @@ import type { IconComponent } from '@/app/ui/icons';
 export const heroSearchId = 'buscador';
 
 /** In-page anchors the header and the footer link to. */
-export const landingSections = {
-  featured: 'destacados',
-  howItWorks: 'como-funciona',
-  trust: 'verificacion',
-  roadmap: 'novedades',
-  pricing: 'planes',
-  faq: 'preguntas',
-} as const;
+export { landingSections } from '@/app/lib/site';
 
 /** Tinted circles behind the icons (background and icon color). */
 export type IconTone = 'blue' | 'green' | 'orange' | 'warning';

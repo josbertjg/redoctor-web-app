@@ -5,7 +5,6 @@ import { useId, useRef, useState } from 'react';
 import Close from '@material-symbols/svg-400/rounded/close.svg?svgr';
 import LocationOn from '@material-symbols/svg-400/rounded/location_on.svg?svgr';
 import MyLocation from '@material-symbols/svg-400/rounded/my_location.svg?svgr';
-import PinDrop from '@material-symbols/svg-400/rounded/pin_drop.svg?svgr';
 import ProgressActivity from '@material-symbols/svg-400/rounded/progress_activity.svg?svgr';
 import Public from '@material-symbols/svg-400/rounded/public.svg?svgr';
 
@@ -45,6 +44,8 @@ type WhereFieldProps = {
   words: SearchBarWords;
   className?: string;
   inputClassName?: string;
+  /** Where its list hangs (the box's geometry, SearchBar). */
+  popupClassName?: string;
 };
 
 /*
@@ -63,6 +64,7 @@ export function WhereField({
   words,
   className,
   inputClassName,
+  popupClassName,
 }: WhereFieldProps) {
   const root = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -213,9 +215,10 @@ export function WhereField({
         open={combobox.open && (fixed.length > 0 || typing)}
         id={combobox.listboxId}
         label={words.whereLabel}
+        {...(popupClassName ? { className: popupClassName } : {})}
       >
         {fixed.length > 0 ? (
-          <div className="py-1">
+          <>
             <SuggestionOption
               id={combobox.optionId(0)}
               active={combobox.activeIndex === 0}
@@ -226,7 +229,11 @@ export function WhereField({
                 combobox.pick(0);
               }}
               icon={locating ? ProgressActivity : MyLocation}
-              className="font-medium text-primary"
+              iconClassName={cn(
+                'text-primary',
+                locating && 'animate-spin motion-reduce:animate-none',
+              )}
+              className="text-primary"
             >
               {locating ? words.locating : words.useMyLocation}
             </SuggestionOption>
@@ -240,10 +247,11 @@ export function WhereField({
                 combobox.pick(1);
               }}
               icon={Public}
+              iconClassName="text-primary"
             >
               {words.wholeCountry}
             </SuggestionOption>
-          </div>
+          </>
         ) : null}
         {!typing ? null : suggestions.loading ? (
           <SuggestionSkeletonRows />
@@ -262,16 +270,12 @@ export function WhereField({
                   onPick={() => {
                     combobox.pick(position);
                   }}
-                  icon={PinDrop}
-                  trailing={
-                    item.secondaryText ? (
-                      <span className="max-w-[45%] shrink-0 truncate text-body-sm text-text-secondary">
-                        {item.secondaryText}
-                      </span>
-                    ) : undefined
-                  }
+                  icon={LocationOn}
+                  iconClassName="text-primary"
                 >
+                  {/* One line, as drawn: «Barquisimeto, Lara, Venezuela». */}
                   <Highlight text={item.mainText} match={item.match} />
+                  {item.secondaryText ? `, ${item.secondaryText}` : null}
                 </SuggestionOption>
               );
             })}

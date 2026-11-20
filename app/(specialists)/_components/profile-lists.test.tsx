@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { buildSpecialistProfile } from '@/tests/factories/specialists';
 import { renderWithIntl } from '@/tests/render';
@@ -14,11 +14,9 @@ import { SpecialtyList } from './specialty-list';
 const profile = buildSpecialistProfile();
 
 describe('OfficeList', () => {
-  const booking = { specialistId: profile.id, expectSpecialist: false };
-
   it('gives each office its directions in Google Maps', async () => {
     const { container } = renderWithIntl(
-      <OfficeList offices={profile.offices} booking={booking} />,
+      <OfficeList offices={profile.offices} onBook={vi.fn()} />,
     );
 
     expect(screen.getByText('Piso 6, consultorio 604')).toBeInTheDocument();
@@ -30,12 +28,13 @@ describe('OfficeList', () => {
     );
     // One office: the profile's «Agendar cita» already books there.
     expect(
-      screen.queryByRole('link', { name: 'Agendar en este consultorio' }),
+      screen.queryByRole('button', { name: 'Agendar en este consultorio' }),
     ).not.toBeInTheDocument();
     expect(await axe(container)).toHaveNoViolations();
   });
 
-  it('with two offices, books at the one chosen', () => {
+  it('with two offices, books at the one chosen', async () => {
+    const user = userEvent.setup();
     const [first] = profile.offices;
     if (first === undefined) throw new Error('The fixture has an office.');
     const second = {
@@ -43,16 +42,28 @@ describe('OfficeList', () => {
       id: 'office-2',
       name: 'Centro Médico La Floresta',
     };
-    renderWithIntl(<OfficeList offices={[first, second]} booking={booking} />);
+    const onBook = vi.fn();
+    renderWithIntl(<OfficeList offices={[first, second]} onBook={onBook} />);
 
-    const links = screen.getAllByRole('link', {
+    const buttons = screen.getAllByRole('button', {
       name: 'Agendar en este consultorio',
     });
-    expect(links).toHaveLength(2);
-    expect(links[1]).toHaveAttribute(
-      'href',
-      `/book/${profile.id}?office=office-2`,
+    expect(buttons).toHaveLength(2);
+    const [, atTheSecond] = buttons;
+    if (atTheSecond === undefined) throw new Error('Two buttons, two offices');
+    await user.click(atTheSecond);
+    expect(onBook).toHaveBeenCalledWith('office-2');
+  });
+
+  it('offers no booking where booking is not offered', () => {
+    const [first] = profile.offices;
+    if (first === undefined) throw new Error('The fixture has an office.');
+    renderWithIntl(
+      <OfficeList offices={[first, { ...first, id: 'office-2' }]} />,
     );
+    expect(
+      screen.queryByRole('button', { name: 'Agendar en este consultorio' }),
+    ).not.toBeInTheDocument();
   });
 
   it('shows each office’s prices, from the profile itself (REDOC-367)', async () => {
@@ -76,9 +87,7 @@ describe('OfficeList', () => {
         { id: 'reason-2', name: 'Control', price: null },
       ],
     };
-    const { container } = renderWithIntl(
-      <OfficeList offices={[priced]} booking={booking} />,
-    );
+    const { container } = renderWithIntl(<OfficeList offices={[priced]} />);
 
     expect(screen.getByText('Precios')).toBeInTheDocument();
     expect(screen.getByText('Por motivo')).toBeInTheDocument();

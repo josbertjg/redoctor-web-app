@@ -1,6 +1,6 @@
 import { splitMatch, type TextMatch } from '@/app/lib/search/text';
 
-/** A suggestion's name with the letters that matched in bold. */
+/** A suggestion's name with the letters that matched in the primary blue (Figma). */
 export function Highlight({
   text,
   match,
@@ -13,9 +13,7 @@ export function Highlight({
     <>
       {before}
       {matched === '' ? null : (
-        <mark className="bg-transparent font-semibold text-current">
-          {matched}
-        </mark>
+        <mark className="bg-transparent text-primary">{matched}</mark>
       )}
       {after}
     </>

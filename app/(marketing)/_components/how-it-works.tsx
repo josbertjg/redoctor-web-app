@@ -9,8 +9,8 @@ import { routes } from '@/app/lib/routes';
 import { cn } from '@/app/lib/utils';
 
 import { Button } from '@/app/ui/button';
+import { Plus, Swirl } from '@/app/ui/decor';
 
-import { Plus, Swirl } from './decor';
 import { IconBadge, toneFills } from './icon-badge';
 import { Reveal } from './reveal';
 import { accentOnBlue } from './rich';

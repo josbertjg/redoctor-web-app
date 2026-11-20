@@ -36,7 +36,8 @@ describe('ReviewsView', () => {
       );
     if (!first || !second) throw new Error('Expected two reviews');
     expect(within(first).getByText('María José R.')).toBeInTheDocument();
-    expect(within(first).getByText('20/09/2026')).toBeInTheDocument();
+    // The month short, as drawn (Figma, 2026-11-16).
+    expect(within(first).getByText('20 sept 2026')).toBeInTheDocument();
     expect(
       within(second).getByText('Esta reseña no tiene comentarios.'),
     ).toBeInTheDocument();

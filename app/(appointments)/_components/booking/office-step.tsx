@@ -2,9 +2,8 @@
 
 import { useTranslations } from 'next-intl';
 
+import type { BookingSpecialist } from '@/app/ui/booking/booking-types';
 import { ChoiceCards } from '@/app/ui/choice-cards';
-
-import type { BookingSpecialist } from './booking-types';
 
 /**
  * The app's first step, «Selecciona un consultorio»: every office the

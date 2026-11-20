@@ -22,8 +22,11 @@ const typeKeys = {
 export function CertificationList({
   certifications,
   emptyDescription,
+  variant = 'pills',
 }: {
   certifications: SpecialistProfile['certifications'];
+  /** `bullets`: the public profile's plain list (Figma, 2026-11-16), no type pills. */
+  variant?: 'pills' | 'bullets';
   /** A line under «Aún no hay certificaciones…»: the specialist's own profile invites to add them. */
   emptyDescription?: string;
 }) {
@@ -51,6 +54,21 @@ export function CertificationList({
     );
   }
 
+  if (variant === 'bullets') {
+    return (
+      <ul className="flex list-disc flex-col gap-1 pl-5 text-body-xxs text-on-surface marker:text-text-secondary">
+        {certifications.map((certification, index) => (
+          <li key={`${String(index)}-${certification.name}`}>
+            {certification.name}
+            {certification.institution
+              ? `, ${certification.institution}`
+              : null}
+            {certification.year ? ` (${String(certification.year)})` : null}
+          </li>
+        ))}
+      </ul>
+    );
+  }
   return (
     <ul className="flex flex-col gap-3">
       {certifications.map((certification, index) => (

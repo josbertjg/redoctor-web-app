@@ -25,6 +25,7 @@ import {
   patientFacet,
   specialistFacet,
 } from '../factories/identity';
+import { buildSpecialistAvailability } from '../factories/public-availability';
 import { buildCreatedReview } from '../factories/reviews';
 import { apiUrl, errorEnvelope } from '../msw/api-url';
 
@@ -48,6 +49,26 @@ const callerHeader = 'x-e2e-caller';
 // The handlers build their URLs from it (tests/msw/api-url.ts), as the
 // e2e build's browser calls api-dev.
 process.env.NEXT_PUBLIC_API_URL ??= 'https://api-dev.redoctorapp.com/api/v1';
+
+/** Each specialist's offices on api-dev, read once (the profile's server read them too). */
+const realOffices = new Map<string, Promise<string[]>>();
+function realOfficesOf(specialistId: string): Promise<string[]> {
+  let offices = realOffices.get(specialistId);
+  if (!offices) {
+    offices = fetch(
+      `${process.env.NEXT_PUBLIC_API_URL ?? ''}/specialists/${specialistId}/public-profile`,
+    )
+      .then((response) => response.json() as Promise<unknown>)
+      .then((body) =>
+        ((body as { offices?: { id: string }[] }).offices ?? []).map(
+          (office) => office.id,
+        ),
+      )
+      .catch(() => []);
+    realOffices.set(specialistId, offices);
+  }
+  return offices;
+}
 
 /** The unit tests' handlers, loaded once the URL above is set. */
 let unitHandlers: Promise<{ handlers: HttpHandler[]; bearer: string }> | null =
@@ -245,6 +266,25 @@ export class FakeApi {
     };
 
     return [
+      // The public agenda (no session) of a profile the server read from
+      // api-dev: the windows of twelve days for that specialist's real
+      // offices, looked up once from api-dev itself (Node has no CORS).
+      http.get(
+        apiUrl('/search/specialists/:specialistId/availability'),
+        async ({ request, params }) => {
+          const specialistId = String(params.specialistId);
+          const fromDate =
+            new URL(request.url).searchParams.get('fromDate') ??
+            new Date().toISOString().slice(0, 10);
+          return HttpResponse.json(
+            buildSpecialistAvailability({
+              specialistId,
+              fromDate,
+              officeIds: await realOfficesOf(specialistId),
+            }),
+          );
+        },
+      ),
       http.get(apiUrl('/identity/me'), ({ request }) => {
         const uid = request.headers.get(callerHeader);
         if (uid !== null && this.refusing.delete(uid)) return unauthorized();

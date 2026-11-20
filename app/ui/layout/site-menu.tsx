@@ -10,18 +10,18 @@ import { SessionButton } from '@/app/ui/auth/session-button';
 import { Button } from '@/app/ui/button';
 import { Icon } from '@/app/ui/icons';
 
-type LandingNavProps = {
+type SiteMenuProps = {
   links: { href: string; label: string }[];
   /** Already translated on the server (i18n: `landing.nav.*`). */
   labels: { open: string; close: string };
 };
 
 /*
- * The menu on phones and tablets: the links and the session («Entrar», or
+ * The menu on phones and tablets (the landing's bar, the site's bar): the links and the session («Entrar», or
  * the account's options) unfold under the bar and fold back on a choice or
- * on Escape. Desktop shows the links inline (landing-header.tsx).
+ * on Escape. Desktop shows the links inline.
  */
-export function LandingNav({ links, labels }: LandingNavProps) {
+export function SiteMenu({ links, labels }: SiteMenuProps) {
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
 

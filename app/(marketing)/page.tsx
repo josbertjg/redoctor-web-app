@@ -109,7 +109,12 @@ export default async function HomePage() {
           own entrance: the page only fades as it comes and goes (AGENTS.md
           §8, rule 13). */}
       <PageTransition entrance="fade">
-        <div className="relative isolate flex flex-1 flex-col overflow-clip bg-primary">
+        {/* Also where the search's shade lives (search-shade.tsx): in this
+            stacking context, among the bar and the hero's search. */}
+        <div
+          data-search-shade-host=""
+          className="relative isolate flex flex-1 flex-col overflow-clip bg-primary"
+        >
           <LandingHeader
             waitForSplash={showSplash}
             catalog={catalog}

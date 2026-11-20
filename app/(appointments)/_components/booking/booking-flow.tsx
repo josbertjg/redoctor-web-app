@@ -21,20 +21,19 @@ import { SignInButtons } from '@/app/ui/auth/sign-in-buttons';
 import { SignInLegalNote } from '@/app/ui/auth/sign-in-legal-note';
 import { useSignInArrival } from '@/app/ui/auth/use-sign-in-arrival';
 import { BackLink } from '@/app/ui/back-link';
-import { StatusCard } from '@/app/ui/status-card';
-
-import { BookingFrame } from './booking-frame';
 import {
   BookingUnavailable,
   FinishSignUpFirst,
   ForSpecialists,
   OwnPreview,
-} from './booking-notices';
+} from '@/app/ui/booking/booking-notices';
+import type { BookingSpecialist } from '@/app/ui/booking/booking-types';
+import { StatusCard } from '@/app/ui/status-card';
+
+import { BookingFrame } from './booking-frame';
 import { BookingSkeleton } from './booking-skeleton';
 import { BookingSpecialistCard } from './booking-specialist';
 import { BookingSteps } from './booking-steps';
-
-import type { BookingSpecialist } from './booking-types';
 
 type BookingFlowProps = {
   specialist: BookingSpecialist;

@@ -14,6 +14,7 @@ import {
 } from '@/app/lib/format/appointment-time';
 import { routes } from '@/app/lib/routes';
 import type { AppointmentResponse } from '@/app/lib/schemas/appointments';
+import { cn } from '@/app/lib/utils';
 
 import { Button } from '@/app/ui/button';
 import { Icon } from '@/app/ui/icons';
@@ -27,9 +28,12 @@ import { Icon } from '@/app/ui/icons';
 export function BookingDone({
   appointment,
   specialistName,
+  className,
 }: {
   appointment: AppointmentResponse;
   specialistName: string;
+  /** A host that frames it already (a modal) takes its card off. */
+  className?: string;
 }) {
   const t = useTranslations();
   const headingId = useId();
@@ -44,7 +48,10 @@ export function BookingDone({
   return (
     <section
       aria-labelledby={headingId}
-      className="flex animate-fade-up flex-col items-center gap-3 rounded-2xl bg-pure-white p-6 text-center shadow-md sm:p-8"
+      className={cn(
+        'flex animate-fade-up flex-col items-center gap-3 rounded-2xl bg-pure-white p-6 text-center shadow-md sm:p-8',
+        className,
+      )}
     >
       <span className="flex size-16 items-center justify-center rounded-full bg-green-50 text-secondary">
         <Icon icon={EventAvailable} className="size-8" />

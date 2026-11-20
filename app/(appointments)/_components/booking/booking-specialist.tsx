@@ -2,9 +2,8 @@ import VerifiedFill from '@material-symbols/svg-400/rounded/verified-fill.svg?sv
 import { useTranslations } from 'next-intl';
 
 import { Avatar } from '@/app/ui/avatar';
+import type { BookingSpecialist } from '@/app/ui/booking/booking-types';
 import { Icon } from '@/app/ui/icons';
-
-import type { BookingSpecialist } from './booking-types';
 
 /** Who the appointment is with, at the top of every step: the app's summary opens with it. */
 export function BookingSpecialistCard({

@@ -13,9 +13,11 @@ import { StarsRating } from '@/app/ui/stars-rating';
 const starRows = [5, 4, 3, 2, 1] as const;
 
 /*
- * The specialist's reviews as the app shows them: the overall rating with the
- * share of each star, the count, and the latest reviews. Authors are «María
- * P.» at most (shortened on the server), or «Usuario de Redoctor».
+ * The specialist's reviews (Figma, 2026-11-16): the overall rating, big,
+ * with its stars, the share of each star as a bar in the primary blue, the
+ * count, and the latest reviews — the stars, the words, the day and the
+ * author. Authors are «María P.» at most (shortened on the server), or
+ * «Usuario de Redoctor».
  */
 export function ReviewsView({
   reviews,
@@ -47,15 +49,15 @@ export function ReviewsView({
   }
 
   return (
-    <div className="flex animate-fade-in flex-col gap-6">
+    <div className="flex animate-fade-in flex-col gap-5">
       <RatingSummary reviews={reviews} />
-      <div className="flex flex-col gap-1">
-        <h3 className="text-subtitle-s font-semibold text-text-primary">
+      <div className="flex flex-col gap-2.5">
+        <h3 className="text-body-xs font-semibold text-pure-black">
           {reviews.total === 1
             ? t('reviews.list.countOne', { count: reviews.total })
             : t('reviews.list.countMany', { count: reviews.total })}
         </h3>
-        <ul className="divide-y divide-divider">
+        <ul className="flex flex-col gap-3">
           {reviews.reviews.map((review) => (
             <ReviewItem key={review.id} review={review} />
           ))}
@@ -75,14 +77,14 @@ function RatingSummary({ reviews }: { reviews: SpecialistReviews }) {
   });
 
   return (
-    <div className="flex items-center gap-6 rounded-xl bg-pure-white p-4 shadow-sm">
-      <div className="flex shrink-0 flex-col items-center gap-1">
+    <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-12">
+      <div className="flex shrink-0 flex-col gap-1.5">
         <p className="text-body-xxs font-medium text-text-secondary">
           {t('reviews.list.overall')}
         </p>
         <p
           aria-hidden="true"
-          className="text-title-xxxl font-bold text-text-primary"
+          className="text-title-xxxl leading-none font-bold text-pure-black"
         >
           {averageText}
         </p>
@@ -92,7 +94,7 @@ function RatingSummary({ reviews }: { reviews: SpecialistReviews }) {
           label={t('specialists.starsLabel', { rating: averageText })}
         />
       </div>
-      <ul className="flex min-w-0 flex-1 flex-col gap-1.5">
+      <ul className="flex min-w-0 flex-1 flex-col gap-0.5">
         {starRows.map((stars) => {
           const { percent } = reviews.distribution[stars];
           const percentText = format.number(percent / 100, {
@@ -102,7 +104,7 @@ function RatingSummary({ reviews }: { reviews: SpecialistReviews }) {
           return (
             <li
               key={stars}
-              className="flex items-center gap-1.5 text-body-xxxs text-text-secondary"
+              className="flex h-6 items-center gap-2 text-body-xxs font-medium"
             >
               <span className="sr-only">
                 {t('specialists.distributionLabel', {
@@ -110,21 +112,27 @@ function RatingSummary({ reviews }: { reviews: SpecialistReviews }) {
                   percent: percentText,
                 })}
               </span>
-              <span aria-hidden="true" className="w-2 text-right">
-                {stars}
-              </span>
-              <Icon icon={StarFill} size={16} className="text-warning-500" />
               <span
                 aria-hidden="true"
-                className="h-2 flex-1 overflow-hidden rounded-full bg-surface-variant"
+                className="flex w-9 shrink-0 items-center gap-1 text-pure-black"
+              >
+                {stars}
+                <Icon icon={StarFill} size={24} className="text-warning-500" />
+              </span>
+              <span
+                aria-hidden="true"
+                className="h-3.5 flex-1 overflow-hidden rounded-full bg-blue-50"
               >
                 <span
-                  className="block h-full rounded-full bg-warning-500"
+                  className="block h-full rounded-full bg-primary"
                   // The share comes from the data: no token can express it.
                   style={{ width: `${String(percent)}%` }}
                 />
               </span>
-              <span aria-hidden="true" className="w-10 text-right">
+              <span
+                aria-hidden="true"
+                className="w-10 shrink-0 text-right text-text-secondary"
+              >
                 {percentText}
               </span>
             </li>
@@ -140,30 +148,32 @@ function ReviewItem({ review }: { review: Review }) {
   const format = useFormatter();
 
   return (
-    <li className="flex flex-col gap-2 py-4">
+    <li className="flex flex-col gap-1.5">
       <StarsRating
         value={review.rating}
         label={t('specialists.starsLabel', { rating: review.rating })}
       />
       {review.comment ? (
-        <p className="text-body-xs whitespace-pre-line text-text-primary">
+        <p className="text-body-xxs whitespace-pre-line text-pure-black">
           {review.comment}
         </p>
       ) : (
-        <p className="text-body-xs text-text-secondary italic">
+        <p className="text-body-xxs text-text-secondary italic">
           {t('reviews.list.noComment')}
         </p>
       )}
-      <p className="flex items-center gap-1.5 text-body-xxxs text-text-secondary">
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-body-xxxs text-text-secondary">
         <time dateTime={review.createdAt}>
           {format.dateTime(new Date(review.createdAt), {
-            day: '2-digit',
-            month: '2-digit',
+            day: 'numeric',
+            month: 'short',
             year: 'numeric',
           })}
         </time>
-        <Icon icon={Person} size={16} />
-        <span>{review.author ?? t('reviews.list.anonymous')}</span>
+        <span className="inline-flex items-center gap-0.5 font-semibold text-grey-800">
+          <Icon icon={Person} size={16} />
+          {review.author ?? t('reviews.list.anonymous')}
+        </span>
       </p>
     </li>
   );

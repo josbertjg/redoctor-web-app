@@ -4,6 +4,7 @@ import { useId, useRef, useState } from 'react';
 
 import Close from '@material-symbols/svg-400/rounded/close.svg?svgr';
 import History from '@material-symbols/svg-400/rounded/history.svg?svgr';
+import Person from '@material-symbols/svg-400/rounded/person.svg?svgr';
 import Search from '@material-symbols/svg-400/rounded/search.svg?svgr';
 import Stethoscope from '@material-symbols/svg-400/rounded/stethoscope.svg?svgr';
 import VerifiedFill from '@material-symbols/svg-400/rounded/verified-fill.svg?svgr';
@@ -19,7 +20,6 @@ import {
 } from '@/app/lib/search/suggestions';
 import { cn } from '@/app/lib/utils';
 
-import { Avatar } from '@/app/ui/avatar';
 import { Icon } from '@/app/ui/icons';
 
 import { useDebouncedValue } from '@/app/hooks/use-debounced-value';
@@ -74,6 +74,8 @@ type WhatFieldProps = {
   invalid?: boolean;
   className?: string;
   inputClassName?: string;
+  /** Where its list hangs (the box's geometry, SearchBar). */
+  popupClassName?: string;
 };
 
 /*
@@ -100,6 +102,7 @@ export function WhatField({
   invalid = false,
   className,
   inputClassName,
+  popupClassName,
 }: WhatFieldProps) {
   const root = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -274,18 +277,18 @@ export function WhatField({
         open={combobox.open && touched && (suggesting || hasEmptyOffer)}
         id={combobox.listboxId}
         label={words.suggestions}
+        {...(popupClassName ? { className: popupClassName } : {})}
       >
         {suggesting ? (
           <>
-            <div className="py-1">
-              <SuggestionOption
-                {...optionAt(0)}
-                icon={Search}
-                className="font-medium text-primary"
-              >
-                {words.searchFor} «{typed}»
-              </SuggestionOption>
-            </div>
+            <SuggestionOption
+              {...optionAt(0)}
+              icon={Search}
+              iconClassName="text-primary"
+              className="text-primary"
+            >
+              {words.searchFor} «{typed}»
+            </SuggestionOption>
             {specialties.length > 0 ? (
               <SuggestionGroup title={words.specialtiesGroup}>
                 {specialties.map((suggestion, index) => (
@@ -308,21 +311,8 @@ export function WhatField({
                   <SuggestionOption
                     key={suggestion.id}
                     {...optionAt(specialistsStart + index)}
-                    leading={
-                      <Avatar
-                        name={suggestion.name}
-                        src={suggestion.photoUrl}
-                        size="sm"
-                        decorative
-                      />
-                    }
-                    trailing={
-                      suggestion.specialty ? (
-                        <span className="max-w-[40%] shrink-0 truncate text-body-sm text-text-secondary">
-                          {suggestion.specialty}
-                        </span>
-                      ) : undefined
-                    }
+                    icon={Person}
+                    description={suggestion.specialty ?? undefined}
                   >
                     <span className="inline-flex max-w-full items-center gap-1">
                       <span className="truncate">
@@ -358,6 +348,7 @@ export function WhatField({
                     key={`${entry.kind}:${entry.kind === 'text' ? entry.label : entry.id}`}
                     {...optionAt(index)}
                     icon={entry.kind === 'specialty' ? Stethoscope : History}
+                    iconClassName="text-text-secondary"
                     trailing={
                       <button
                         type="button"
@@ -366,7 +357,7 @@ export function WhatField({
                           event.stopPropagation();
                           onForgetRecent(entry);
                         }}
-                        className="-mr-1 flex size-8 shrink-0 items-center justify-center rounded-full text-text-secondary transition-colors duration-fast ease-house outline-none hover:bg-white-300 focus-visible:ring-3 focus-visible:ring-ring/50"
+                        className="-my-1 -mr-1 flex size-7 shrink-0 items-center justify-center rounded-full text-text-secondary transition-colors duration-fast ease-house outline-none hover:bg-white-300 focus-visible:ring-3 focus-visible:ring-ring/50 touch:size-touch"
                       >
                         <Icon icon={Close} size={16} />
                       </button>

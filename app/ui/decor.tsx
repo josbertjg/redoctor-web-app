@@ -3,7 +3,7 @@ import Image from 'next/image';
 import { cn } from '@/app/lib/utils';
 
 /*
- * The shapes that float behind the landing (Figma): white swirls at 10 % on
+ * The shapes that float behind the landing and the public profile (Figma): white swirls at 10 % on
  * the blue page, blue ones at 10 % inside white cards, and white plus signs.
  * They are decoration: hidden from assistive technology, no pointer events,
  * positioned by whoever places them.

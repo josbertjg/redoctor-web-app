@@ -14,10 +14,12 @@ import {
 import { Skeleton } from '@/app/ui/skeleton';
 
 /*
- * The list under a search box: a white card that fades down into place
- * and up out of it, its options in groups with a small title each. The
- * pointer keeps the focus in the box (a press on the list never blurs
- * it), so a tap on an option is one tap.
+ * The list under a search box (Figma, 2026-11-16): a white card that fades
+ * down into place and up out of it, its rows a 16 px icon and the words —
+ * a second, smaller line when there is one —, the row in hand on the blue
+ * tint. The icon tells a row's kind apart, so no title shows over a group
+ * (screen readers still hear it). The pointer keeps the focus in the box
+ * (a press on the list never blurs it), so a tap on an option is one tap.
  */
 
 type SuggestionPopupProps = {
@@ -25,6 +27,7 @@ type SuggestionPopupProps = {
   id: string;
   label: string;
   children: ReactNode;
+  /** Where it hangs: by default the box's whole width, just under it. */
   className?: string;
 };
 
@@ -54,7 +57,7 @@ export function SuggestionPopup({
             event.preventDefault();
           }}
           className={cn(
-            'absolute inset-x-0 top-[calc(100%+0.5rem)] z-30 max-h-[min(60vh,28rem)] overflow-y-auto overscroll-contain rounded-2xl bg-pure-white p-2 text-left text-text-primary shadow-lg ring-1 ring-divider',
+            'absolute inset-x-0 top-full z-30 mt-2 flex max-h-[min(60vh,28rem)] flex-col gap-2.5 overflow-y-auto overscroll-contain rounded-md bg-pure-white px-3 py-2.5 text-left shadow-sm',
             className,
           )}
         >
@@ -65,7 +68,7 @@ export function SuggestionPopup({
   );
 }
 
-/** A group of options with its title («Especialidades», «Lugares»). */
+/** A group of options; its title («Especialidades», «Lugares») for screen readers. */
 export function SuggestionGroup({
   title,
   children,
@@ -75,11 +78,12 @@ export function SuggestionGroup({
 }) {
   const titleId = useId();
   return (
-    <div role="group" aria-labelledby={titleId} className="py-1">
-      <div
-        id={titleId}
-        className="px-3 pt-2 pb-1 text-label-sm tracking-wide text-text-secondary uppercase"
-      >
+    <div
+      role="group"
+      aria-labelledby={titleId}
+      className="flex flex-col gap-2.5"
+    >
+      <div id={titleId} className="sr-only">
         {title}
       </div>
       {children}
@@ -92,11 +96,13 @@ type SuggestionOptionProps = {
   active: boolean;
   onActivate: () => void;
   onPick: () => void;
-  /** An icon in front, or a picture of its own (an avatar). */
-  icon?: IconComponent;
-  leading?: ReactNode;
+  icon: IconComponent;
+  /** The icon's colour, by the row's kind (Figma: a person blue-300, a place the primary). */
+  iconClassName?: string;
   children: ReactNode;
-  /** At the row's end: a specialty beside a specialist, a button to forget a search. */
+  /** A second, smaller line: a specialist's specialty. */
+  description?: ReactNode;
+  /** At the row's end: a button to forget a search. */
   trailing?: ReactNode;
   className?: string;
 };
@@ -108,8 +114,9 @@ export function SuggestionOption({
   onActivate,
   onPick,
   icon,
-  leading,
+  iconClassName,
   children,
+  description,
   trailing,
   className,
 }: SuggestionOptionProps) {
@@ -133,30 +140,37 @@ export function SuggestionOption({
         }
       }}
       className={cn(
-        'flex min-h-touch cursor-pointer items-center gap-3 rounded-lg px-3 py-1.5 text-body-md transition-colors duration-fast ease-house data-active:bg-info-light',
+        // Compact with a mouse, as drawn; a full tap target on touch screens.
+        'flex shrink-0 cursor-pointer items-center gap-2.5 rounded-sm px-2 py-1.5 text-body-xxs text-pure-black transition-colors duration-fast ease-house data-active:bg-blue-50 touch:min-h-touch',
         className,
       )}
     >
-      {leading ??
-        (icon ? (
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface-variant text-text-secondary">
-            <Icon icon={icon} size={18} />
+      <Icon
+        icon={icon}
+        size={16}
+        className={cn('shrink-0 text-blue-300', iconClassName)}
+      />
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="truncate">{children}</span>
+        {description ? (
+          <span className="truncate text-body-xxxs text-text-secondary">
+            {description}
           </span>
-        ) : null)}
-      <span className="min-w-0 flex-1 truncate">{children}</span>
+        ) : null}
+      </span>
       {trailing}
     </div>
   );
 }
 
-/** Rows that stand for what is still on its way (the app's five). */
+/** Rows that stand for what is still on its way. */
 export function SuggestionSkeletonRows({ rows = 3 }: { rows?: number }) {
   return (
-    <div aria-hidden="true" className="flex flex-col gap-1 px-3 py-1.5">
+    <div aria-hidden="true" className="flex flex-col gap-2.5">
       {Array.from({ length: rows }, (_, index) => (
-        <div key={index} className="flex min-h-touch items-center gap-3">
-          <Skeleton className="size-7 rounded-full" />
-          <Skeleton className="h-4 w-2/3" />
+        <div key={index} className="flex items-center gap-2.5 px-2 py-1.5">
+          <Skeleton className="size-4 rounded-full" />
+          <Skeleton className="h-3.5 w-2/3" />
         </div>
       ))}
     </div>
@@ -166,6 +180,6 @@ export function SuggestionSkeletonRows({ rows = 3 }: { rows?: number }) {
 /** A line with no options to offer. */
 export function SuggestionNote({ children }: { children: ReactNode }) {
   return (
-    <p className="px-3 py-3 text-body-md text-text-secondary">{children}</p>
+    <p className="px-2 py-1.5 text-body-xxs text-text-secondary">{children}</p>
   );
 }

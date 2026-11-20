@@ -1,6 +1,10 @@
 import { http, HttpResponse } from 'msw';
 
 import {
+  buildPublicDaySlots,
+  buildSpecialistAvailability,
+} from '@/tests/factories/public-availability';
+import {
   buildSearchResponse,
   buildSearchResult,
 } from '@/tests/factories/search';
@@ -104,6 +108,28 @@ function highlightsLimit(params: URLSearchParams): number | null {
 }
 
 export const searchHandlers = [
+  // The public agenda (no session): each office's next twelve days with
+  // hours from `fromDate`, and a day's hours with the booked ones taken.
+  http.get(
+    apiUrl('/search/specialists/:specialistId/availability'),
+    ({ request, params }) => {
+      const fromDate =
+        new URL(request.url).searchParams.get('fromDate') ??
+        new Date().toISOString().slice(0, 10);
+      return HttpResponse.json(
+        buildSpecialistAvailability({
+          specialistId: String(params.specialistId),
+          fromDate,
+        }),
+      );
+    },
+  ),
+  http.get(apiUrl('/search/offices/:officeId/slots'), ({ request, params }) => {
+    const date = new URL(request.url).searchParams.get('date') ?? '';
+    return HttpResponse.json(
+      buildPublicDaySlots(String(params.officeId), date),
+    );
+  }),
   // The highlights (REDOC-177), public: the best rated two, the nearest
   // first around a point (`lat` and `lng` together or neither), and the
   // most booked specialties.

@@ -77,22 +77,22 @@ transactional emails the API sends.
 | M5 Appointment `/a/{id}` | Confirm (from 24 h before), cancel, reschedule, directions, add to calendar |
 | M6 My appointments `/appointments` | Upcoming, past, pending reviews |
 | M7 Review | Stars, comment, "your review is public / anonymous by default" notice |
-| M8 Public profile `/s/{id}` | Read-only: photo, verified specialties, offices with directions and each one's prices (they come with the profile since REDOC-367), rating and reviews, and «Agendar cita» toward the booking (M15). Found by search engines (2026-10-14): the sitemap lists every profile, each page carries its schema.org data and a title and description built from the profile, and an unknown id is a real 404 |
+| M8 Public profile `/s/{id}` | As the designer drew it (2026-11-16): the header card (photo, name, verified specialty, the offices' sheet with directions and each one's prices — REDOC-367 —, rating, the favourites' heart, «Agendar cita», «Compartir»), its tabs (Descripción, Opiniones, Sobre este especialista) and the content card; beside it, from laptops up, the booking (M15) — the specialist's public agenda, the office, the day and the hour —, whose «Agendar» opens the modal with the rest. Found by search engines (2026-10-14): the sitemap lists every profile, each page carries its schema.org data and a title and description built from the profile, and an unknown id is a real 404 |
 | M9 Landing | Designed by the designer; copy in the doc «Landing de Redoctor» |
 | M10 Legal and account | `/terms`, `/privacy` and `/delete-account` (2026-10-14): the terms of use, the privacy policy and how to have an account deleted, drafted from what the web and the app do, as the base the lawyer reviews (the owner's word); the company's identification is a placeholder until he fills it (§13). Since 2026-11-02 `/delete-account` deletes the account right there, signed in (REDOC-352, self-service on the owner's word) |
 | M11 Bridges | `/home/*` (pages that only open the app) and `/daily-summary/unsubscribe` (daily-summary email opt-out); `/panel/subscription`, `/panel/agenda`, `/panel/specialties` and `/panel/profile` were bridges until M14 made them pages |
 | M13 Specialist payment | `/panel/subscription` («Mi suscripción»: the plan, its state and its notice) and `/pay` (the payment, out of the paths the app opens, since no app may charge; the owner's split of 2026-10-13): choose a plan with a coupon — quoted as it opens and taken, with its payment reported, at «Confirmar» (REDOC-363, 2026-11-02; a payment left halfway is taken up again) —, Pago Móvil and transfer data in Bs from the API, report the payment, see it in review; changing plan — from «Mi suscripción» (`?view=plans`) or from a missing feature's invitation (`?plan=`) — and undoing a scheduled change (2026-10-13); and the rest of the app's «Mi suscripción» the same day (§13, Decided): cancelling and resuming, dropping an unpaid subscription, a coupon on the plan in force, the billing data, the receipts (`/panel/subscription/invoices[/{id}]`, each one payable from its page), the balance (`/panel/subscription/balance`) and «Mis cupones» (`/panel/subscription/coupons`) |
 | M14 Specialist panel | `/panel` and its sections (2026-10-13): the home (the plan and its notice, today's patients, the statistics, what stays in the app), «Citas» `/panel/agenda[/{date}]` (the week or the day, and «Ver cita» over it with what the app lets a specialist do: finish the consultation, mark a no-show, reschedule, cancel, share the invitation; and «Nueva cita», a registered patient or someone new booked with the app's rules, the invitation shared after; 2026-11-03) and the history `/panel/appointments` (read only, each appointment opening `/a/{id}`), the statistics `/panel/reports` (the app's summary and four reports, PDF and CSV when the plan allows), «Mi perfil» `/panel/profile` (whether patients find the profile and, if not, why; the profile as the app shows it to its owner) and «Mis especialidades» `/panel/specialties` (each specialty and its review), both read only, the subscription (M13); a specialist stays in it until signing out |
-| M15 Booking | `/book/{specialistId}` (the owner's «vamos con el agendar desde /s», 2026-10-13; built 2026-10-14): a patient books with the specialist of a public profile in the app's four steps — the office, the day and hour, the reason and for whom (oneself, someone in one's care, someone new), the summary — and «¡Todo listo!»; the appointment is born pending and is confirmed on `/a/{id}` from 24 h before. The web's own page, out of `/s/*` (§6) |
+| M15 Booking | `/book/{specialistId}` (the owner's «vamos con el agendar desde /s», 2026-10-13; built 2026-10-14): a patient books with the specialist of a public profile in the app's four steps — the office, the day and hour, the reason and for whom (oneself, someone in one's care, someone new), the summary — and «¡Todo listo!»; the appointment is born pending and is confirmed on `/a/{id}` from 24 h before. The web's own page, out of `/s/*` (§6); the search's cards lead there. Since 2026-11-16 the public profile books in place too — its panel and its modal, the same steps (`app/ui/booking`) |
 | M16 Search | `/search` (the owner's word, 2026-10-14: «darle vida a esa barra de búsqueda», with ZocDoc, Doctoralia and Webel as the references): the landing's search box live — a specialty of the catalog or a specialist's name offered as one types, the place («Usar mi ubicación», a Google place or one of the built-in cities, or the whole country) — and the results as patients know them: the cards (photo, name with the verified mark, specialties, rating, nearest office and how far, lowest price, the next days, each one a way into the booking), the app's filters (availability, distance), a Google map of the offices with «Buscar en esta zona», ten at a time. With nothing asked, and on the landing, the patient's highlights (REDOC-177, 2026-11-16): the most booked specialties and the best rated specialists. The web's own page, listed by no app (§6); public, the session asked for where the booking starts |
 | M17 Notifications | The bell on every page with a session (the owner's word, 2026-10-14, «sumamente importante»): the unread count, the inbox as a menu that unfolds from it (the app's: read, read all, delete, empty), the API's live channel (Socket.IO) that brings each notice as it is born — a banner, the count, and what the notice leaves stale read again, as the app's `NotificationEffects` — and the signals of data changed elsewhere (`data:changed`, REDOC-358), and the web push through a service worker of ours for when no tab is in view, offered from the menu and only with the VAPID key. No sound on the web |
 | M12 Release | PostHog funnel by origin, tests on real phones from WhatsApp and Gmail, domain cutover |
 
-**Explicitly out of the pilot:** favorites; they come after. Booking from
-a profile (M15), searching from the web (M16), the notifications (M17, the
-inbox included) and acting on appointments from the specialist's panel
-(the designer's screens) came on the owner's word (2026-10-13, 2026-10-14
-and 2026-11-03).
+Booking from a profile (M15), searching from the web (M16), the
+notifications (M17, the inbox included), acting on appointments from the
+specialist's panel (the designer's screens) and the favourites' heart on
+the public profile came on the owner's word (2026-10-13, 2026-10-14,
+2026-11-03 and 2026-11-16). A page listing one's favourites is not built.
 
 ### Non-negotiable product rules (decided with Josbert)
 
@@ -257,7 +257,7 @@ app/                                  # The application: routes, UI and logic
   (search)/                           # module: the search for specialists (M16)
     search/page.tsx · error.tsx       #   /search — the search in the address, the first page read on the server, the rest in the browser
     _components/                      #   search-header (+ -header-bar), search-navigation (the address as the one state, the pending line), search-results (+ hover-sync-item: a card's pin on the map), search-filters, map-panel, results-map, map-markers, results-states (the start: the most booked specialties and the best rated)
-    _components/                      #   profile pieces; panel-* (panel-home: the home's rules; panel-greeting, panel-activation-card with use-profile-activation, panel-plan-card, panel-week-agenda, panel-week-chart), agenda/ («Citas»: agenda-view, agenda-address — the address as the one state —, agenda-toolbar, agenda-week with week-layout, agenda-day-list, agenda-side — the month and «Próxima cita» —, appointment-dialog — «Ver cita» —, new-appointment/ — «Nueva cita»: the dialog, who-step, use-patient-search —), agenda-header and agenda-skeleton, appointments-history, booking-action and book-at-office (the profile's «Agendar cita», `useBookingOffer`), edit-in-app-card, plan-offer-card; reports/ (the statistics' views, charts, filters, export and the plan that downloads); my-profile/ (the view, its state, identity, offices, prices, schedules and training blocks); my-specialties/ (the view, the specialty card, support)
+    _components/                      #   profile pieces; panel-* (panel-home: the home's rules; panel-greeting, panel-activation-card with use-profile-activation, panel-plan-card, panel-week-agenda, panel-week-chart), agenda/ («Citas»: agenda-view, agenda-address — the address as the one state —, agenda-toolbar, agenda-week with week-layout, agenda-day-list, agenda-side — the month and «Próxima cita» —, appointment-dialog — «Ver cita» —, new-appointment/ — «Nueva cita»: the dialog, who-step, use-patient-search —), agenda-header and agenda-skeleton, appointments-history, public-profile/ (the public profile as drawn: profile-header, profile-tabs — the sections, marked as they are read, sticky —, profile-content, offices-link — the offices' sheet —), profile-booking/ (its booking: profile-booking — the one state the panel and the modal share, `useBookingOffer` —, booking-picker, booking-panel, booking-dialog, book-button), favorite-button, share-link-button, edit-in-app-card, plan-offer-card; reports/ (the statistics' views, charts, filters, export and the plan that downloads); my-profile/ (the view, its state, identity, offices, prices, schedules and training blocks); my-specialties/ (the view, the specialty card, support)
   (account)/                          # module: legal and account (M10)
     layout.tsx                        #   the bar with the account over the legal pages
     terms/page.tsx · privacy/page.tsx · delete-account/page.tsx   # /terms, /privacy, /delete-account — public, indexed; every word in the catalog (`legal.*`)
@@ -282,13 +282,15 @@ app/                                  # The application: routes, UI and logic
   ui/                                 # ALL shared UI
     button.tsx · back-link.tsx · text-field.tsx · identity-document-field.tsx · select-field.tsx · text-area.tsx · checkbox.tsx · choice-cards.tsx · stars-input.tsx · tabs.tsx · filter-chips.tsx · field-error.tsx · sheet.tsx · skeleton.tsx · toast.tsx · empty-state.tsx · status-card.tsx · link-card.tsx · avatar.tsx · count-badge.tsx · fading-edges.ts (the faded sides of a row that scrolls) · fading-row.tsx (that row: the one piece of a strip that needs the browser) …
     messages-scope.tsx                #   a page's own client messages (§9)
-    layout/                           #   site-header, page-frame (a page's column and its main, in the guarded layouts), panel-frame (the specialist's panel on the blue: the sidebar from laptops up, panel-bar with the controls at the top right, panel-nav vertical or as tabs, panel-surface for the pages with no design of their own), bottom-actions
+    layout/                           #   site-header, site-bar (the landing's bar at rest for the other pages on the blue: the public profile) with site-menu (the phone's menu, the landing's too), page-frame (a page's column and its main, in the guarded layouts), panel-frame (the specialist's panel on the blue: the sidebar from laptops up, panel-bar with the controls at the top right, panel-nav vertical or as tabs, panel-surface for the pages with no design of their own), bottom-actions
+    booking/                          #   the booking's steps (M15), `/book` and the public profile's modal: booking-types, patient-step, summary-step, booking-done, booking-notices, use-book-appointment (the write, its caches, the green wipe)
+    decor.tsx                         #   the shapes behind the landing and the public profile (swirls, plus signs)
     auth/                             #   session-provider, session-button (+ account-menu, loaded for a signed-in person only, and account-item), session-controls (the bell and the account, for a bar), require-session, sign-in-buttons, use-sign-in-arrival (an in-place sign-in under the blue wipe), sign-in-legal-note, account-error-state, in-app-browser-help, provider-logos
     notifications/                    #   the notifications (M17): notifications-provider (the inbox, the live channel, the effects, the push), notifications-bell (nothing for a stranger; bell-popover, the count and the menu from it, loads for a signed-in person), notifications-menu (+ -menu-skeleton), notification-banner (a live notice over the page, on the Toaster), notification-tone (icon and colour by family), use-push (the web push in this browser)
     app-bridge/                       #   open-in-app-button, store-badges, app-access (a specialist's way to the app), store-qr
     appointments/ · specialists/ · billing/ · reviews/   # domain components used by two or more modules (appointments/: headline, details, appointment-card, appointment-record, status-tones — each status's bar, tint and words —, the slot picking — month-calendar, slot-picker, slot-choices, load-failure —, reschedule-sheet with `useRescheduleStep`, specialist-actions — `useSpecialistActions`, the app's offer as steps —; billing/: notice-panel, plan-emblem; specialists/: profile-state-chip, the profile's state in the panel's bar; specialist-card with availability-strip, the search's card, which the landing's highlights render on the server too)
     support/                          #   support-links: the API's support lines, to write or to call (REDOC-357)
-    search/                           #   the search box (M16), on the landing and on /search: search-bar (+ what-field, where-field, suggestion-popup, highlight, use-combobox, use-location-suggestions — Google's places —, use-remembered), its words from the server (search-bar-words)
+    search/                           #   the search box (M16), on the landing and on /search: search-bar (+ what-field, where-field, suggestion-popup, highlight, use-combobox, use-location-suggestions — Google's places —, use-remembered, search-shade — the page dimmed while it is in use —), its words from the server (search-bar-words)
     analytics/ · og/ · seo/           #   link-origin-tracker; the Open Graph brand card (next/og); the JSON-LD data block a page carries for search engines
     motion/                           #   the one door to Motion: provider, m, tokens, staggered-text (§8.11); the page transitions (§8.13): view-transitions (server-safe), page-transitions.css, directions, skeleton-hold, screen-wipe, navigation-progress (+ navigation-events)
     icons.tsx                         #   the Icon primitive (not icon.tsx: that name is a Next.js metadata file)
@@ -297,7 +299,7 @@ app/                                  # The application: routes, UI and logic
     api/                              #   client.ts (fetch wrapper), errors.ts (ApiError + codes), retry.ts, write-once.ts
     schemas/                          #   zod schemas + inferred types per domain — THE contract with the API
     data/                             #   server-only fetchers for Server Components (fetch + cache tags → DTOs); places.ts asks Google Places for the search's places (M16); plans.ts reads the landing's plans with no session and remembers a refusal (M9); public-profiles.ts lists every public profile for the sitemap through the public search, a day at a time (M8); search-highlights.ts reads the patient's highlights (REDOC-177) from the Data Cache, null on a failure
-    queries/                          #   TanStack queryOptions + mutation functions per domain (client)
+    queries/                          #   TanStack queryOptions + mutation functions per domain (client); public-availability.ts reads the public agenda with no session (the profile's booking), favorites.ts the patient's favourites
     actions/                          #   Server Actions — only where no user token is needed
     firebase/                         #   client.ts: Firebase Auth; messaging.ts: Cloud Messaging for the push (the device token through our own worker); both loaded on demand (client-only)
     notifications/                    #   the inbox's logic (M17): socket.ts (the live channel: Socket.IO, our own reconnection with a fresh token; notices and `data:changed`), effects.ts (what a notice or a signal leaves stale, the keys to read again, one refresh per target), destination.ts (where a notice leads, by its ids before its kind, the billing by family), local-writes.ts (whether this tab wrote just now: its own echoes), inbox.ts (the inbox after each action), time.ts («Hace 5 min»), push.ts (what this browser remembers of the push: device id, registration, heartbeat, «Ahora no»)
@@ -511,6 +513,18 @@ Every route path is built from one place, `app/lib/routes.ts` (the app has
   from the catalog by name; no figures). Everything about an appointment
   or an invitation needs a session, except reading an invitation by its
   token (the token is the credential).
+- **The public agenda and the favourites (2026-11-16, read in the API's
+  code):** with no session, `GET /search/specialists/{id}/availability?
+  fromDate=` — each office's next twelve days with hours from that day
+  (blocked and empty days left out; the full ones should come `available:
+  false`, but the API's own TODO still counts every day with hours free,
+  so today stays «free» after its last hour) — and `GET /search/offices/
+  {id}/slots?date=` — every hour of the day, the booked and the past ones
+  `available: false`; both under the search's 30 a minute, read from the
+  visitor's own browser. A patient's favourites: `GET /patients/
+  favorites/?page=&limit≤100`, `POST /patients/favorites/` `{specialistId}`
+  and `DELETE /patients/favorites/{specialistId}` (`removed: false` when it
+  was not there).
 - **Notifications (M17), as the app reads them:** the inbox
   `GET /notifications/?limit≤100` (no pagination: `{ notifications,
   unreadCount }`, the count the person's and not the list's),
@@ -3188,6 +3202,61 @@ written out in full, or Next.js does not inline it).
   - On phones the bar still asks only what is looked for (no room for the
     place); it searches in the place in hand: the last searched from, or
     the whole country.
+
+- **The search's lists, as the designer drew them (the owner's «Barra de
+  búsqueda: implementar», same day; frames `4698:3379`, `4701:4179`).** A
+  field in use dims the page — black at 52 %, the hero's search and the
+  specialist behind it above it; under the bar in the docked bar and on
+  `/search` (`search-shade.tsx`, in the page's own stacking context:
+  `data-search-shade-host` on the landing's `isolate` wrapper) —, and a tap
+  on the shade leaves the box. The lists hang 16 px under the pill, from
+  its left edge to the divider («¿Qué?») or from the divider to its right
+  edge («¿Dónde?»): white cards of radius `md`, rows of a 16 px icon and
+  14 px words with a 12 px second line (a specialist's specialty), the row
+  in hand on blue-50, the letters that matched in the primary blue, no
+  group titles on screen (the icons tell the kinds apart; screen readers
+  still hear each group's name), compact with a mouse and 44 px on touch
+  screens. Kept on purpose: «Buscar «…»» first, the empty box's recent and
+  featured specialties, «Usar mi ubicación» and «Toda Venezuela», the
+  hints, the hero's pill (2026-10-08).
+- **The public profile, as the designer drew it (the owner's «Perfil
+  público del especialista: implementar», same day; frames `4757:1002`,
+  `4757:2672`, `4757:4027`; the design doc
+  `docs/superpowers/specs/2026-11-16-search-popup-and-public-profile-design.md`).**
+  The landing's bar at rest (`SiteBar`) on the blue with its swirl; the
+  header card — the photo (178 px from laptops up), the name with the
+  verified mark, the first specialty as the green pill, the first office
+  opening the offices' sheet (directions, prices, «Agendar en este
+  consultorio»), the stars, the heart, «Agendar cita» and «Compartir» —
+  whose foot are the tabs, which take the page to their section, mark the
+  one being read and stay at the top while it scrolls; the content card
+  (Descripción; Opiniones with the bars in the primary blue; Sobre este
+  especialista: the photos as a strip, the experience, «Educación» with an
+  icon by depth, «Certificaciones» as a list). Beside it from laptops up,
+  sticky, the booking panel: the office, the month, the hours by Mañana,
+  Tarde and Noche — the specialist's public agenda, no session needed (§5),
+  the first free day in hand (today skipped once its hours are gone) — and
+  «Agendar», the owner's addition to the frames, which opens the modal at
+  the patient; «Agendar cita» opens it at the first step not done (on a
+  phone, always at the day and hour: no panel there). The modal (`Sheet`)
+  asks for the session in place, sends an unfinished sign-up away and back
+  with the choice in the address (`routes.specialistBooking`), and ends in
+  «¡Todo listo!» under the green wipe; the steps are `/book`'s, moved to
+  `app/ui/booking`, the write one hook (`useBookAppointment`). The heart
+  keeps the specialist among the patient's favourites (§5), at once, a
+  refusal putting it back; a visitor signs in from its sheet and the
+  specialist is kept. A specialist is never offered booking nor a heart.
+  - **Where the web differs from the frames, on purpose:** weeks from
+    Monday; stars `warning-500`; the offices link in blue-300 (Figma's
+    blue-100 reads 2:1 on white); a day without hours and a taken hour in
+    grey-700 (Figma's greys read under AA); radii and shadows to the
+    nearest token; the modal's «Paso N de 3»; no frames for phones: one
+    column, the booking in the modal, «Agendar cita» in the bar at the
+    bottom with «Abrir en la app».
+  - **Left for the owner:** a page of one's favourites (the heart keeps
+    them; the app lists them); the search's cards still lead to `/book`
+    (they could open the profile's modal on that day); the API's public
+    agenda counts a finished today as free (its TODO; the web skips it).
 
 ### Improvements noted (not scheduled)
 

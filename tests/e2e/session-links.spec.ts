@@ -304,38 +304,41 @@ test('«Mis citas» for an account with no sign-up: the sign-up first, then back
   ).toBeVisible();
 });
 
-test('booking from the public profile: sign in right there and book, a taken hour said in place', async ({
+test('booking from the public profile: the hour first, the session right there in the modal, a taken hour said in place', async ({
   page,
   api,
 }) => {
   api.patient(people.ana);
 
   await page.goto(`/s/${e2eSpecialistId}?origin=share-profile`);
-  await page.getByRole('link', { name: 'Agendar cita' }).first().click();
-  await expect(
-    page.getByRole('heading', { name: 'Entra para agendar tu cita' }),
-  ).toBeVisible();
-  await signInWith(page);
-
-  // Someone else takes the hour meanwhile: the page says so, and another
+  // On a phone the booking is the profile's modal, from the day and hour
+  // (2026-11-16): the specialist's public agenda, before any session.
+  await page.getByRole('button', { name: 'Agendar cita' }).first().click();
+  const modal = page.getByRole('dialog');
+  await expect(modal.getByText('Paso 1 de 3')).toBeVisible();
+  // Someone else takes the hour meanwhile: the modal says so, and another
   // one is chosen.
-  await expect(page.getByText('Paso 1 de 3')).toBeVisible();
+  await modal.getByText('10:00 a. m.', { exact: true }).click();
+  await modal.getByRole('button', { name: 'Siguiente', exact: true }).click();
+
+  // The patient needs the session: asked for right there.
+  await expect(modal.getByText('Entra para agendar tu cita')).toBeVisible();
+  await signInWith(page);
   await wipeOpened(page);
-  await page.getByText('10:00 a. m.', { exact: true }).click();
-  await page.getByRole('button', { name: 'Siguiente', exact: true }).click();
+  await expect(modal.getByText('Paso 2 de 3')).toBeVisible();
   // The reasons come with the public profile, read on the server from
   // api-dev (REDOC-367): the first one its office offers, whatever it is.
-  await page
+  await modal
     .getByRole('group', { name: 'Motivo de consulta' })
     .getByRole('radio')
     .first()
     .check();
-  await page.getByText('Para mí', { exact: true }).click();
-  await page.getByRole('button', { name: 'Siguiente', exact: true }).click();
+  await modal.getByText('Para mí', { exact: true }).click();
+  await modal.getByRole('button', { name: 'Siguiente', exact: true }).click();
   await expect(
-    page.getByRole('heading', { name: 'Resumen de tu cita' }),
+    modal.getByRole('heading', { name: 'Resumen de tu cita' }),
   ).toBeVisible();
-  await expect(page.getByText('ana.perez@gmail.com')).toBeVisible();
+  await expect(modal.getByText('ana.perez@gmail.com')).toBeVisible();
   // The summary wraps each «Editar» with its term in a <div> inside the
   // <dl>, which HTML does not allow (axe: definition-list, dlitem). Found
   // 2026-10-17; its fix waits for the owner's word.
@@ -344,13 +347,15 @@ test('booking from the public profile: sign in right there and book, a taken hou
       (violation) => !['definition-list', 'dlitem'].includes(violation.id),
     ),
   ).toEqual([]);
-  await page.getByRole('button', { name: 'Agendar', exact: true }).click();
+  await modal.getByRole('button', { name: 'Agendar', exact: true }).click();
 
-  await expect(page.getByText('Horario no disponible')).toBeVisible();
-  await page.getByText('2:00 p. m.', { exact: true }).click();
-  await page.getByRole('button', { name: 'Siguiente', exact: true }).click();
-  await page.getByRole('button', { name: 'Siguiente', exact: true }).click();
-  await page.getByRole('button', { name: 'Agendar', exact: true }).click();
+  await expect(modal.getByText('Horario no disponible')).toBeVisible();
+  // The hours come by the part of the day (Figma): the afternoon's.
+  await modal.getByText('Tarde', { exact: true }).click();
+  await modal.getByText('2:00 p. m.', { exact: true }).click();
+  await modal.getByRole('button', { name: 'Siguiente', exact: true }).click();
+  await modal.getByRole('button', { name: 'Siguiente', exact: true }).click();
+  await modal.getByRole('button', { name: 'Agendar', exact: true }).click();
 
   await expect(
     page.getByRole('heading', { name: '¡Todo listo!' }),
@@ -361,6 +366,30 @@ test('booking from the public profile: sign in right there and book, a taken hou
   await expect(page).toHaveURL(/\/a\/[0-9a-f-]{36}$/);
   await expect(page.getByText('Pendiente', { exact: true })).toBeVisible();
   await expect(page.getByText('2:00 p. m.', { exact: true })).toBeVisible();
+});
+
+test.describe('the profile on a computer', () => {
+  test.use({
+    viewport: { width: 1440, height: 1000 },
+    isMobile: false,
+    hasTouch: false,
+  });
+
+  test('the panel beside it chooses the day and hour, and «Agendar» opens the modal at the patient', async ({
+    page,
+  }) => {
+    await page.goto(`/s/${e2eSpecialistId}`);
+    const panel = page.getByRole('region', { name: 'Agendar cita' });
+    // «Agendar» before an hour says to choose one.
+    await panel.getByRole('button', { name: 'Agendar', exact: true }).click();
+    await expect(panel.getByText('Selecciona un horario').last()).toBeVisible();
+    await panel.getByText('8:30 a. m.', { exact: true }).click();
+    await panel.getByRole('button', { name: 'Agendar', exact: true }).click();
+
+    const modal = page.getByRole('dialog');
+    await expect(modal.getByText('Entra para agendar tu cita')).toBeVisible();
+    expect(await auditAccessibility(page)).toEqual([]);
+  });
 });
 
 test('booking for an account with no sign-up: the sign-up first, then the steps', async ({

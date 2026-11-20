@@ -17,10 +17,10 @@ import { planTier } from '@/app/lib/schemas/billing';
 import { cn } from '@/app/lib/utils';
 
 import { Button } from '@/app/ui/button';
+import { Swirl } from '@/app/ui/decor';
 import { EmptyState } from '@/app/ui/empty-state';
 import { Icon } from '@/app/ui/icons';
 
-import { Swirl } from './decor';
 import { LabelChip } from './label-chip';
 import { PricingMotion } from './pricing-motion';
 import { accentOnWhite } from './rich';

@@ -23,13 +23,23 @@ const avatarVariants = cva(
         xl: 'size-24 text-headline-sm',
         // The specialist profile's header (the app's 110 px avatar).
         '2xl': 'size-27.5 text-headline-md',
+        // The public profile's header from laptops up (Figma, 2026-11-16):
+        // 178 px; smaller screens size it down with a class.
+        '3xl': 'size-44.5 text-display-sm',
       },
     },
     defaultVariants: { size: 'md' },
   },
 );
 
-const pixels = { sm: 32, md: 40, lg: 64, xl: 96, '2xl': 110 } as const;
+const pixels = {
+  sm: 32,
+  md: 40,
+  lg: 64,
+  xl: 96,
+  '2xl': 110,
+  '3xl': 178,
+} as const;
 
 type AvatarProps = VariantProps<typeof avatarVariants> & {
   /** The person's name: initials fallback and accessible name. */

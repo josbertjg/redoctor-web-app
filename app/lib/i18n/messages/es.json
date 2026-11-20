@@ -514,7 +514,15 @@
       "title": "Este perfil no está disponible",
       "description": "Puede que el enlace esté incompleto o que el perfil ya no esté publicado. Pídele a tu especialista que te lo envíe de nuevo."
     },
-    "ownProfileNote": "Así ven tu perfil tus pacientes."
+    "ownProfileNote": "Así ven tu perfil tus pacientes.",
+    "share": "Compartir",
+    "shareCopied": "Copiamos el enlace del perfil.",
+    "sectionsLabel": "Secciones del perfil",
+    "officesLink": "Ver los consultorios de {name}",
+    "booking": {
+      "pickADay": "Elige un día para ver sus horarios.",
+      "taken": "{time}, ocupado"
+    }
   },
   "search": {
     "verifiedSpecialist": "Especialista verificado",
@@ -2321,5 +2329,12 @@
     "channel": "{label}: {number}",
     "whatsappTo": "Escribir por WhatsApp a {name}",
     "callTo": "Llamar a {name}"
+  },
+  "favorites": {
+    "add": "Guardar en favoritos",
+    "remove": "Quitar de favoritos",
+    "noAuthTitle": "Tus especialistas de confianza",
+    "noAuthDescription": "Guarda a los profesionales que más te gustaron y tenlos a mano para cuando quieras agendar de nuevo.",
+    "failed": "No pudimos actualizar tus favoritos. Intenta de nuevo."
   }
 }
