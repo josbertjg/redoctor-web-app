@@ -27,6 +27,16 @@ describe('routes', () => {
     expect(routes.book('a0af9566', 'of 1')).toBe(
       '/book/a0af9566?office=of%201',
     );
+    expect(
+      routes.specialistBooking('a0af9566', {
+        officeId: 'of 1',
+        date: '2026-12-01',
+        time: '09:30',
+      }),
+    ).toBe('/s/a0af9566?office=of%201&date=2026-12-01&time=09%3A30&book=1');
+    expect(routes.specialistFavorite('a0af9566')).toBe(
+      '/s/a0af9566?favorite=1',
+    );
   });
 
   it('builds the payment, out of the panel’s paths', () => {

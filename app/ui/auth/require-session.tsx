@@ -12,6 +12,7 @@ import {
   needsSignUp,
   type Account,
 } from '@/app/lib/auth/account';
+import { forgetPanelHint } from '@/app/lib/auth/session-hint';
 import { returnPath, routes } from '@/app/lib/routes';
 
 import { Button } from '@/app/ui/button';
@@ -77,6 +78,13 @@ export function RequireSession({
     session.account !== null &&
     !session.account.patient.exists &&
     canUseSpecialistArea(session.account);
+  // Conversely, a patient-only account on the specialist's panel goes straight
+  // back to `/` automatically (owner, 2026-11-25).
+  const toHome =
+    facet === 'specialist' &&
+    session.account !== null &&
+    !canUseSpecialistArea(session.account) &&
+    session.account.patient.exists;
 
   useEffect(() => {
     // The address is read as the page leaves: the plan a link asks for, a
@@ -85,7 +93,11 @@ export function RequireSession({
     if (signedOut) router.replace(routes.signIn(back));
     else if (mustSignUp) router.replace(routes.signUp(back));
     else if (toPanel) router.replace(routes.specialistHome());
-  }, [signedOut, mustSignUp, toPanel, returnTo, pathname, router]);
+    else if (toHome) {
+      forgetPanelHint();
+      router.replace(routes.home());
+    }
+  }, [signedOut, mustSignUp, toPanel, toHome, returnTo, pathname, router]);
 
   // The skeleton gives way to the page in a transition, so the page enters
   // as on any navigation (AGENTS.md §8, rule 13).
@@ -103,7 +115,9 @@ export function RequireSession({
   }
 
   const { account } = session;
-  if (account === null || mustSignUp || toPanel || holding) return fallback;
+  if (account === null || mustSignUp || toPanel || toHome || holding) {
+    return fallback;
+  }
 
   if (!isAllowed(account, facet)) {
     const area = facet === 'specialist' ? 'specialist' : 'patient';

@@ -370,11 +370,36 @@ describe('the profile’s booking', () => {
     // The panel lies under the modal, hidden from assistive technology.
     expect(
       document.querySelector<HTMLInputElement>(
-        'input[name="booking-office"]:checked',
+        'input[name$="booking-office"]:checked',
       )?.value,
     ).toBe(publicAgendaSecondOfficeId);
     await waitFor(() => {
       expect(window.location.search).toBe('');
     });
+  });
+
+  it('keeps the office and part of the day preselected in both the panel and the modal when both are mounted', async () => {
+    renderProfileBooking(signedIn());
+    await freeHour(/^8:30/);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Agendar cita' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(
+      await within(dialog).findByRole('radio', { name: /^8:30/ }),
+    ).toBeInTheDocument();
+
+    expect(
+      within(dialog).getByRole('radio', { name: /Clínica El Ávila/ }),
+    ).toBeChecked();
+    expect(
+      within(panel()).getByRole('radio', {
+        name: /Clínica El Ávila/,
+        hidden: true,
+      }),
+    ).toBeChecked();
+    expect(within(dialog).getByRole('radio', { name: 'Mañana' })).toBeChecked();
+    expect(
+      within(panel()).getByRole('radio', { name: 'Mañana', hidden: true }),
+    ).toBeChecked();
   });
 });

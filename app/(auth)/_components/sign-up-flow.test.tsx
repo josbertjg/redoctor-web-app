@@ -469,6 +469,25 @@ describe('SignUpFlow', () => {
     expect(router.replace).toHaveBeenCalledWith('/a/abc');
   });
 
+  it('clears a stale panel hint and lands a patient on / instead of /panel even if redirect pointed to /panel', () => {
+    document.cookie = 'redoctor-panel=1; path=/';
+    renderFlow(
+      session(
+        buildMeResponse({
+          registrationStatus: 'PENDING_COMPLETE_PATIENT',
+          profiles: {
+            patient: patientFacet({ status: 'PENDING_PERSONAL_DATA' }),
+            specialist: { exists: false },
+          },
+        }),
+      ),
+      '/panel',
+    );
+
+    expect(document.cookie).not.toContain('redoctor-panel=1');
+    expect(router.replace).toHaveBeenCalledWith('/');
+  });
+
   it('warns whoever arrived with Apple’s private email', () => {
     renderWithIntl(
       <QueryClientProvider client={new QueryClient()}>

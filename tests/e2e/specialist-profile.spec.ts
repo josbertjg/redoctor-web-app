@@ -31,6 +31,11 @@ test('a shared profile shows the specialist and the way to the app', async ({
     expect(href).toMatch(new RegExp(`${profilePath}$`));
   }
 
+  // The navigation bar offers specialist search in place of the landing's links.
+  await expect(
+    page.getByRole('search', { name: 'Buscar especialistas' }),
+  ).toBeVisible();
+
   // The booking opens in the profile's own modal (2026-11-16).
   await expect(
     page.getByRole('button', { name: 'Agendar cita' }).first(),

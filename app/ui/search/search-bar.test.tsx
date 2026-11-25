@@ -1,9 +1,13 @@
+import { useState } from 'react';
+
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { emptySearchQuery, type SearchQuery } from '@/app/lib/search/query';
 
 import { renderWithIntl } from '@/tests/render';
 
@@ -33,15 +37,27 @@ const topSpecialties: SearchCatalog = [
 ];
 
 /** The box with its words, as a page gives them (translated on the server). */
-function Box({ variant = 'hero' }: { variant?: 'hero' | 'bar' | 'page' }) {
+function Box({
+  variant = 'hero',
+  label = 'Buscar especialistas',
+  initialQuery,
+  initialSpecialtyName,
+}: {
+  variant?: 'hero' | 'bar' | 'page';
+  label?: string;
+  initialQuery?: SearchQuery;
+  initialSpecialtyName?: string | null;
+}) {
   const words = useSearchBarWords();
   return (
     <SearchBar
       variant={variant}
-      label="Buscar especialistas"
+      label={label}
       words={words}
       catalog={catalog}
       topSpecialties={topSpecialties}
+      initialQuery={initialQuery}
+      initialSpecialtyName={initialSpecialtyName}
     />
   );
 }
@@ -444,5 +460,93 @@ describe('SearchBar', () => {
         'Necesitamos tu permiso de ubicación para buscar cerca de ti.',
       ),
     ).toBeVisible();
+  });
+
+  it('keeps the active text search across subsequent pages that show the bar', async () => {
+    const user = userEvent.setup();
+    const first = renderBox('hero');
+
+    await user.type(whatBox(), 'Medicina{Enter}');
+    await waitFor(() => {
+      expect(navigation.push).toHaveBeenCalledWith('/search?q=Medicina');
+    });
+    first.unmount();
+
+    const next = renderBox('bar');
+    expect(whatBox()).toHaveValue('Medicina');
+
+    // Clearing via «Borrar» drops the active search for later pages too.
+    await user.click(screen.getByRole('button', { name: 'Borrar' }));
+    expect(whatBox()).toHaveValue('');
+    next.unmount();
+
+    renderBox('bar');
+    expect(whatBox()).toHaveValue('');
+  });
+
+  it('keeps the active specialty search and its id across subsequent pages', async () => {
+    const user = userEvent.setup();
+    const first = renderBox('hero');
+
+    await user.type(whatBox(), 'odont');
+    await user.click(screen.getByRole('option', { name: 'Odontología' }));
+    await waitFor(() => {
+      expect(navigation.push).toHaveBeenCalledWith(
+        '/search?specialty=a0000000-0000-4000-8000-000000000003',
+      );
+    });
+    navigation.push.mockClear();
+    first.unmount();
+
+    renderBox('bar');
+    expect(whatBox()).toHaveValue('Odontología');
+    await user.click(screen.getByRole('button', { name: 'Buscar' }));
+    await waitFor(() => {
+      expect(navigation.push).toHaveBeenCalledWith(
+        '/search?specialty=a0000000-0000-4000-8000-000000000003',
+      );
+    });
+  });
+
+  it('syncs the search page’s URL query into the active search and follows URL changes', async () => {
+    const user = userEvent.setup();
+    function PageHarness() {
+      const [step, setStep] = useState<'specialty' | 'text'>('specialty');
+      return (
+        <QueryClientProvider client={new QueryClient()}>
+          <Box
+            variant="page"
+            initialQuery={
+              step === 'specialty'
+                ? {
+                    ...emptySearchQuery,
+                    specialtyId: 'a0000000-0000-4000-8000-000000000002',
+                  }
+                : { ...emptySearchQuery, text: 'Medicina' }
+            }
+            initialSpecialtyName={step === 'specialty' ? 'Cardiología' : null}
+          />
+          <button
+            type="button"
+            onClick={() => {
+              setStep('text');
+            }}
+          >
+            Cambiar URL
+          </button>
+        </QueryClientProvider>
+      );
+    }
+
+    const { unmount } = renderWithIntl(<PageHarness />);
+    expect(whatBox()).toHaveValue('Cardiología');
+
+    await user.click(screen.getByRole('button', { name: 'Cambiar URL' }));
+    expect(whatBox()).toHaveValue('Medicina');
+    unmount();
+
+    // Moving to a specialist profile afterwards shows the latest search from /search.
+    renderBox('bar');
+    expect(whatBox()).toHaveValue('Medicina');
   });
 });

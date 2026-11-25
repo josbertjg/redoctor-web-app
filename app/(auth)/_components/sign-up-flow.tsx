@@ -12,8 +12,12 @@ import Stethoscope from '@material-symbols/svg-400/rounded/stethoscope.svg?svgr'
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
-import { isApplePrivateRelayEmail } from '@/app/lib/auth/account';
+import {
+  canUseSpecialistArea,
+  isApplePrivateRelayEmail,
+} from '@/app/lib/auth/account';
 import { destinationAfterSignIn } from '@/app/lib/auth/destination';
+import { forgetPanelHint } from '@/app/lib/auth/session-hint';
 import {
   invitationOf,
   planSignUp,
@@ -119,6 +123,7 @@ function SignUpSteps({
 
   useEffect(() => {
     if (!leaving || account === null) return;
+    if (!canUseSpecialistArea(account)) forgetPanelHint();
     router.replace(destinationAfterSignIn(account, redirect) as Route);
   }, [leaving, account, redirect, router]);
 
@@ -167,7 +172,11 @@ function SignUpSteps({
       <SignUpDone
         purpose={purpose}
         onContinue={() => {
-          router.replace((redirect ?? routes.home()) as Route);
+          forgetPanelHint();
+          const destination = account
+            ? destinationAfterSignIn(account, redirect)
+            : (redirect ?? routes.home());
+          router.replace(destination as Route);
         }}
       />
     );
@@ -338,10 +347,17 @@ function SignUpStep({
         personalData: plan.personalData,
       };
       const booking = purpose === 'book';
+      const favorite = purpose === 'favorite';
       const title = !parts.register
         ? t('finishPatientSignup.title')
         : parts.personalData
-          ? t(booking ? 'signUp.bookTitle' : 'signUp.claimTitle')
+          ? t(
+              booking
+                ? 'signUp.bookTitle'
+                : favorite
+                  ? 'signUp.createTitle.patient'
+                  : 'signUp.claimTitle',
+            )
           : t('signUp.createTitle.patient');
       const prefilled =
         defaults !== undefined && Object.keys(defaults).length > 0;
@@ -349,11 +365,13 @@ function SignUpStep({
         ? t('signUp.createDescription.patient')
         : booking
           ? t('finishPatientSignup.toBook')
-          : t(
-              prefilled
-                ? 'finishPatientSignup.toClaimPrefilled'
-                : 'finishPatientSignup.toClaim',
-            );
+          : favorite
+            ? t('finishPatientSignup.toFavorite')
+            : t(
+                prefilled
+                  ? 'finishPatientSignup.toClaimPrefilled'
+                  : 'finishPatientSignup.toClaim',
+              );
       return (
         <AuthCard
           icon={Person}

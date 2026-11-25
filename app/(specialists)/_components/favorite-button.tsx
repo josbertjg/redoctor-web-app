@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import FavoriteFill from '@material-symbols/svg-400/rounded/favorite-fill.svg?svgr';
 import Favorite from '@material-symbols/svg-400/rounded/favorite.svg?svgr';
@@ -10,15 +10,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 
 import type { TokenHolder } from '@/app/lib/api/types';
-import {
-  canUseSpecialistArea,
-  mustFinishPatientSignup,
-  needsSignUp,
-} from '@/app/lib/auth/account';
+import { canUseSpecialistArea, needsSignUp } from '@/app/lib/auth/account';
 import {
   addFavorite,
   favoriteKeys,
   favoritesQueryOptions,
+  isFavoriteSignUpNeeded,
   removeFavorite,
 } from '@/app/lib/queries/favorites';
 import { routes } from '@/app/lib/routes';
@@ -47,23 +44,35 @@ const noSession: TokenHolder = {
 export function FavoriteButton({ specialistId }: { specialistId: string }) {
   const t = useTranslations();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { status, user, account } = useSession();
   const [askSignIn, setAskSignIn] = useState(false);
-  // A visitor pressed it: kept once they are in.
-  const wanted = useRef(false);
+  const [returned] = useState(() => searchParams.get('favorite') === '1');
+  // A visitor pressed it, or just came back from `/sign-up`: kept once in.
+  const wanted = useRef(returned);
+
+  useEffect(() => {
+    if (!returned) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete('favorite');
+    window.history.replaceState(window.history.state, '', url);
+  }, [returned]);
 
   const patient =
     user !== null &&
     account !== null &&
     !canUseSpecialistArea(account) &&
-    !needsSignUp(account) &&
-    !mustFinishPatientSignup(account);
+    !needsSignUp(account);
   const list = useQuery({
     ...favoritesQueryOptions(user ?? noSession),
     enabled: patient,
   });
   const kept = list.data?.includes(specialistId) ?? false;
+
+  const goFinishSignUp = () => {
+    router.push(routes.signUp(routes.specialistFavorite(specialistId)));
+  };
 
   const toggle = useMutation({
     mutationFn: (keep: boolean) => {
@@ -84,26 +93,41 @@ export function FavoriteButton({ specialistId }: { specialistId: string }) {
       );
       return { previous };
     },
-    onError: (_error, _keep, context) => {
+    onError: (error, _keep, context) => {
       if (user !== null && context) {
         queryClient.setQueryData(favoriteKeys.list(user.id), context.previous);
       }
+      if (isFavoriteSignUpNeeded(error)) {
+        goFinishSignUp();
+        return;
+      }
       toast.error(t('favorites.failed'));
     },
-    onSettled: () => {
-      if (user === null) return;
+    onSettled: (_data, error) => {
+      if (user === null || isFavoriteSignUpNeeded(error)) return;
       void queryClient.invalidateQueries({
         queryKey: favoriteKeys.list(user.id),
       });
     },
   });
 
-  // In from the sheet, the list read: the specialist kept, as was asked.
+  // In from the sheet or back from sign-up: finish sign-up if still brand-new,
+  // or keep the specialist once the list has answered.
   useEffect(() => {
-    if (!wanted.current || !patient || !list.isSuccess) return;
+    if (!wanted.current || account === null) return;
+    if (canUseSpecialistArea(account)) {
+      wanted.current = false;
+      return;
+    }
+    if (needsSignUp(account)) {
+      wanted.current = false;
+      router.push(routes.signUp(routes.specialistFavorite(specialistId)));
+      return;
+    }
+    if (!patient || !list.isSuccess) return;
     wanted.current = false;
     if (!kept) toggle.mutate(true);
-  }, [patient, list.isSuccess, kept, toggle]);
+  }, [account, patient, list.isSuccess, kept, router, specialistId, toggle]);
 
   if (account !== null && canUseSpecialistArea(account)) return null;
 
@@ -120,8 +144,8 @@ export function FavoriteButton({ specialistId }: { specialistId: string }) {
             return;
           }
           if (user === null || account === null) return;
-          if (needsSignUp(account) || mustFinishPatientSignup(account)) {
-            router.push(routes.signUp(routes.specialist(specialistId)));
+          if (needsSignUp(account)) {
+            goFinishSignUp();
             return;
           }
           toggle.mutate(!kept);

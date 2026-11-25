@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 
 import Bedtime from '@material-symbols/svg-400/rounded/bedtime.svg?svgr';
 import CalendarToday from '@material-symbols/svg-400/rounded/calendar_today.svg?svgr';
@@ -125,6 +125,7 @@ function PickerSection({
 /** The offices as cards to choose one; more than fit scroll sideways. */
 function OfficeChoices() {
   const t = useTranslations();
+  const groupName = `${useId()}-booking-office`;
   const { specialist, officeId, chooseOffice } = useProfileBooking();
   return (
     <fieldset>
@@ -141,7 +142,7 @@ function OfficeChoices() {
           >
             <input
               type="radio"
-              name="booking-office"
+              name={groupName}
               value={office.id}
               checked={office.id === officeId}
               onChange={() => {
@@ -169,6 +170,7 @@ function OfficeChoices() {
  */
 function HourChoices({ day, time }: { day: string; time: string | null }) {
   const t = useTranslations();
+  const scope = useId();
   const { officeId, today, chooseTime, agendaShown } = useProfileBooking();
   const slots = useQuery({
     ...publicDaySlotsQueryOptions(officeId, day),
@@ -217,7 +219,7 @@ function HourChoices({ day, time }: { day: string; time: string | null }) {
             >
               <input
                 type="radio"
-                name="booking-day-part"
+                name={`${scope}-booking-day-part`}
                 value={option}
                 checked={part === option}
                 onChange={() => {
@@ -248,6 +250,7 @@ function HourChoices({ day, time }: { day: string; time: string | null }) {
             {inPart.map((slot) => (
               <HourChip
                 key={slot.startTime}
+                groupName={`${scope}-booking-hour`}
                 slot={slot}
                 chosen={time === slot.startTime.slice(0, 5)}
                 onChoose={chooseTime}
@@ -265,10 +268,12 @@ const hourGrid =
   'grid grid-cols-[repeat(auto-fill,minmax(4.5rem,1fr))] gap-2.5';
 
 function HourChip({
+  groupName,
   slot,
   chosen,
   onChoose,
 }: {
+  groupName: string;
   slot: DaySlot;
   chosen: boolean;
   onChoose: (startTime: string) => void;
@@ -302,7 +307,7 @@ function HourChip({
     >
       <input
         type="radio"
-        name="booking-hour"
+        name={groupName}
         value={startTime}
         checked={chosen}
         onChange={() => {

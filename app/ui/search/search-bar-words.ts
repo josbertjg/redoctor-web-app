@@ -8,8 +8,9 @@ import type { SearchBarWords } from './search-bar-types';
  * app has the words (`search.*`, `location`, `geoLocation.*`), the web's
  * own under `search.web`.
  */
-export function useSearchBarWords(): SearchBarWords {
-  const t = useTranslations();
+export function searchBarWords(
+  t: ReturnType<typeof useTranslations<never>>,
+): SearchBarWords {
   return {
     submit: t('search.web.submit'),
     whatHint: t('search.searchHint'),
@@ -38,4 +39,8 @@ export function useSearchBarWords(): SearchBarWords {
     locationDenied: t('geoLocation.issue.permissionDenied'),
     locationUnavailable: t('geoLocation.issue.unavailable'),
   };
+}
+
+export function useSearchBarWords(): SearchBarWords {
+  return searchBarWords(useTranslations());
 }

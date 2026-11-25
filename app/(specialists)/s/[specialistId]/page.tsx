@@ -9,12 +9,14 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 
 import { smartAppBanner } from '@/app/lib/app-bridge';
 import { panelHintCookie } from '@/app/lib/auth/session-hint';
+import { getPopularSpecialties } from '@/app/lib/data/search-highlights';
 import { getSpecialistProfile as readSpecialistProfile } from '@/app/lib/data/specialists';
+import { getSearchCatalog } from '@/app/lib/data/specialties';
 import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 import { routes } from '@/app/lib/routes';
 import { bookingSpecialtyId } from '@/app/lib/schemas/booking';
 import { specialistJsonLd } from '@/app/lib/seo/specialist';
-import { absoluteUrl, landingSections } from '@/app/lib/site';
+import { absoluteUrl } from '@/app/lib/site';
 
 import { LinkOriginTracker } from '@/app/ui/analytics/link-origin-tracker';
 import { OpenInAppButton } from '@/app/ui/app-bridge/open-in-app-button';
@@ -23,6 +25,8 @@ import { BottomActions } from '@/app/ui/layout/bottom-actions';
 import { SiteBar } from '@/app/ui/layout/site-bar';
 import { MessagesScope } from '@/app/ui/messages-scope';
 import { PageTransition } from '@/app/ui/motion/view-transitions';
+import { SearchBar } from '@/app/ui/search/search-bar';
+import { searchBarWords } from '@/app/ui/search/search-bar-words';
 import { JsonLd } from '@/app/ui/seo/json-ld';
 
 import { BookButton } from '../../_components/profile-booking/book-button';
@@ -105,12 +109,15 @@ export default async function SpecialistProfilePage({
   const profile = await getSpecialistProfile(specialistId);
   if (!profile) notFound();
 
-  const t = await getTranslations();
+  const [t, notice, cookieStore, catalog, popular] = await Promise.all([
+    getTranslations(),
+    getTranslations('profile.preview.notice'),
+    cookies(),
+    getSearchCatalog(),
+    getPopularSpecialties(),
+  ]);
   // A specialist's browser: booking waits for the session (useBookingOffer).
-  const expectSpecialist =
-    (await cookies()).get(panelHintCookie)?.value === '1';
-  const notice = await getTranslations('profile.preview.notice');
-  const landing = (section: string) => `${routes.home()}#${section}`;
+  const expectSpecialist = cookieStore.get(panelHintCookie)?.value === '1';
 
   return (
     <>
@@ -122,30 +129,28 @@ export default async function SpecialistProfilePage({
       />
       <LinkOriginTracker link="specialist" />
       {/* The page clips its background shape at its own edges (`clip`
-          keeps the tabs and the booking sticky). */}
-      <div className="relative isolate flex flex-1 flex-col overflow-clip bg-primary">
+          keeps the tabs and the booking sticky); the search's shade lives
+          in this stacking context, below the bar. */}
+      <div
+        data-search-shade-host=""
+        className="relative isolate flex flex-1 flex-col overflow-clip bg-primary"
+      >
         <Swirl
           variant="bg-1"
           className="top-[-14rem] left-[-15rem] w-[110rem]"
         />
         <SiteBar
-          links={[
-            {
-              href: landing(landingSections.howItWorks),
-              label: t('landing.nav.specialists'),
-            },
-            {
-              href: landing(landingSections.pricing),
-              label: t('landing.nav.plans'),
-            },
-            { href: landing(landingSections.faq), label: t('landing.nav.faq') },
-          ]}
-          labels={{
-            home: t('common.homeLabel'),
-            nav: t('landing.nav.label'),
-            openMenu: t('landing.nav.openMenu'),
-            closeMenu: t('landing.nav.closeMenu'),
-          }}
+          homeLabel={t('common.homeLabel')}
+          search={
+            <SearchBar
+              variant="bar"
+              label={t('search.findSpecialists')}
+              words={searchBarWords(t)}
+              catalog={catalog}
+              topSpecialties={popular ?? catalog}
+              className="max-w-2xl min-w-0 flex-1"
+            />
+          }
         />
         <PageTransition>
           <main className="flex flex-1 flex-col">

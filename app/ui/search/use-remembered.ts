@@ -1,6 +1,11 @@
 import { useSyncExternalStore } from 'react';
 
 import {
+  loadActiveSearch,
+  saveActiveSearch,
+  type ActiveSearch,
+} from '@/app/lib/search/active-search';
+import {
   loadLastLocation,
   saveLastLocation,
 } from '@/app/lib/search/last-location';
@@ -96,4 +101,28 @@ export function useLastLocation() {
       lastLocationStore.notify();
     },
   };
+}
+
+const activeSearchStore = createStore<ActiveSearch | null>(
+  loadActiveSearch,
+  sameJson,
+);
+
+function keepActive(entry: ActiveSearch) {
+  saveActiveSearch(entry);
+  activeSearchStore.notify();
+}
+
+function clearActive() {
+  saveActiveSearch(null);
+  activeSearchStore.notify();
+}
+
+export function useActiveSearch() {
+  const active = useSyncExternalStore(
+    activeSearchStore.subscribe,
+    activeSearchStore.read,
+    () => null,
+  );
+  return { active, keepActive, clearActive };
 }

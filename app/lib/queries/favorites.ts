@@ -1,6 +1,7 @@
 import { queryOptions } from '@tanstack/react-query';
 
 import { apiFetch } from '../api/client';
+import { isApiError } from '../api/errors';
 import {
   favoriteResponseSchema,
   favoritesResponseSchema,
@@ -8,6 +9,10 @@ import {
 } from '../schemas/favorites';
 
 import type { TokenHolder } from '../api/types';
+
+export function isFavoriteSignUpNeeded(error: unknown): boolean {
+  return isApiError(error) && error.status === 403 && error.code === 'ERR_2010';
+}
 
 /*
  * The patient's favourites, read and written in the browser with the
@@ -30,16 +35,22 @@ export function favoritesQueryOptions(user: TokenHolder) {
     queryKey: favoriteKeys.list(user.id),
     queryFn: async ({ signal }) => {
       const ids: string[] = [];
-      for (let page = 1; page <= maxPages; page++) {
-        const { favorites, meta } = await apiFetch({
-          path: '/patients/favorites/',
-          query: { page, limit: pageLimit },
-          token: await user.getToken(),
-          schema: favoritesResponseSchema,
-          signal,
-        });
-        ids.push(...favorites.map((favorite) => favorite.specialistId));
-        if (page >= meta.totalPages) break;
+      try {
+        for (let page = 1; page <= maxPages; page++) {
+          const { favorites, meta } = await apiFetch({
+            path: '/patients/favorites/',
+            query: { page, limit: pageLimit },
+            token: await user.getToken(),
+            schema: favoritesResponseSchema,
+            expected: isFavoriteSignUpNeeded,
+            signal,
+          });
+          ids.push(...favorites.map((favorite) => favorite.specialistId));
+          if (page >= meta.totalPages) break;
+        }
+      } catch (error) {
+        if (isFavoriteSignUpNeeded(error)) return [];
+        throw error;
       }
       return ids;
     },
@@ -57,6 +68,7 @@ export async function addFavorite(
     body: { specialistId },
     token: await user.getToken(),
     schema: favoriteResponseSchema,
+    expected: isFavoriteSignUpNeeded,
   });
 }
 

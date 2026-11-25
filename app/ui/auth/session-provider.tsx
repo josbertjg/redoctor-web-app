@@ -168,6 +168,7 @@ export function SessionProvider({
           const previous = lastPerson.current;
           lastPerson.current = user?.id ?? null;
           if (previous !== null && previous !== lastPerson.current) {
+            forgetPanelHint();
             forgetPerson();
             reportPerson(null);
             // A payment left halfway is the person's alone (REDOC-363).

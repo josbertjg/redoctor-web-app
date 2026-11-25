@@ -113,7 +113,10 @@ describe('RequireSession', () => {
     expect(value.retryAccount).toHaveBeenCalledOnce();
   });
 
-  it('keeps a patient out of the specialist area, with a way out', () => {
+  it('sends a patient-only account from the specialist area straight home', () => {
+    router.replace.mockClear();
+    document.cookie = 'redoctor-panel=1; path=/';
+
     renderGuard(
       session({
         status: 'signed-in',
@@ -124,16 +127,40 @@ describe('RequireSession', () => {
       'specialist',
     );
 
+    expect(screen.getByText('Esqueleto')).toBeInTheDocument();
+    expect(router.replace).toHaveBeenCalledWith('/');
+    expect(document.cookie).not.toContain('redoctor-panel=1');
     expect(
-      screen.getByRole('heading', {
+      screen.queryByRole('heading', {
         name: 'Esta página es para especialistas',
       }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Ir al inicio' })).toHaveAttribute(
-      'href',
-      '/',
-    );
+    ).not.toBeInTheDocument();
     expect(screen.queryByText('Contenido privado')).not.toBeInTheDocument();
+  });
+
+  it('lets a specialist who is also a patient into the specialist area', () => {
+    router.replace.mockClear();
+    renderGuard(
+      session({
+        status: 'signed-in',
+        user,
+        account: toAccount(
+          meResponseSchema.parse(
+            buildSpecialistMeResponse({
+              profiles: {
+                patient: patientFacet(),
+                specialist: specialistFacet(),
+              },
+            }),
+          ),
+        ),
+        accountStatus: 'ready',
+      }),
+      'specialist',
+    );
+
+    expect(screen.getByText('Contenido privado')).toBeInTheDocument();
+    expect(router.replace).not.toHaveBeenCalled();
   });
 
   it('sends an account with no sign-up behind it to sign up, with the way back', () => {

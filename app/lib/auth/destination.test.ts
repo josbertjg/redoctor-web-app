@@ -33,6 +33,20 @@ describe('destinationAfterSignIn', () => {
     expect(destinationAfterSignIn(patient, '//evil.example')).toBe('/');
   });
 
+  it('never sends a patient to the specialist panel or payment, nor a specialist to patient-only pages', () => {
+    const patient = account('PATIENT', true, false);
+    expect(destinationAfterSignIn(patient, '/panel')).toBe('/');
+    expect(destinationAfterSignIn(patient, '/panel/agenda')).toBe('/');
+    expect(destinationAfterSignIn(patient, '/pay?plan=profesional')).toBe('/');
+
+    const specialist = account('SPECIALIST', false, true);
+    expect(destinationAfterSignIn(specialist, '/appointments')).toBe('/panel');
+    expect(destinationAfterSignIn(specialist, '/book/abc')).toBe('/panel');
+    expect(destinationAfterSignIn(specialist, '/pay?plan=profesional')).toBe(
+      '/pay?plan=profesional',
+    );
+  });
+
   it('keeps a patient on the landing and sends a specialist to their page', () => {
     expect(destinationAfterSignIn(account('PATIENT', true, false), null)).toBe(
       '/',

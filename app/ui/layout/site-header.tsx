@@ -38,6 +38,7 @@ export function SiteHeader({
     >
       <Link
         href="/"
+        prefetch={false}
         aria-label={homeLabel}
         className={cn(
           '-mx-2 inline-flex min-h-touch items-center rounded-lg px-2 outline-none focus-visible:ring-3',

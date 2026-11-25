@@ -20,6 +20,7 @@ type SignUpDoneProps = {
 const nextWords = {
   claim: { steps: 'claimNextSteps', action: 'claimAppointment' },
   book: { steps: 'bookNextSteps', action: 'bookAppointment' },
+  favorite: { steps: 'favoriteNextSteps', action: 'backToProfile' },
   none: { steps: 'nextSteps', action: 'findSpecialists' },
 } as const;
 

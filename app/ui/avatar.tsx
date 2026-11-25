@@ -69,13 +69,19 @@ export function Avatar({
   decorative = false,
   className,
 }: AvatarProps) {
-  const [status, setStatus] = useState<'loading' | 'loaded' | 'failed'>(
-    'loading',
-  );
   const sizeKey = size ?? 'md';
   const side = pixels[sizeKey];
-  const showImage =
-    typeof src === 'string' && src !== '' && status !== 'failed';
+  const resolvedSrc =
+    typeof src === 'string' && src !== '' ? sizedPhotoUrl(src, side * 3) : null;
+  const [outcome, setOutcome] = useState<{
+    src: string;
+    status: 'loaded' | 'failed';
+  } | null>(null);
+  const status =
+    resolvedSrc !== null && outcome?.src === resolvedSrc
+      ? outcome.status
+      : 'loading';
+  const showImage = resolvedSrc !== null && status !== 'failed';
 
   return (
     <span
@@ -89,17 +95,28 @@ export function Avatar({
       <span aria-hidden="true">{initialsOf(name)}</span>
       {showImage ? (
         <Image
-          src={sizedPhotoUrl(src, side * 3)}
+          ref={(img) => {
+            if (
+              img !== null &&
+              img.complete &&
+              img.naturalWidth > 0 &&
+              status !== 'loaded'
+            ) {
+              setOutcome({ src: resolvedSrc, status: 'loaded' });
+            }
+          }}
+          src={resolvedSrc}
           alt=""
           width={side}
           height={side}
           unoptimized
           preload={preload}
+          referrerPolicy="no-referrer"
           onLoad={() => {
-            setStatus('loaded');
+            setOutcome({ src: resolvedSrc, status: 'loaded' });
           }}
           onError={() => {
-            setStatus('failed');
+            setOutcome({ src: resolvedSrc, status: 'failed' });
           }}
           className={cn(
             'absolute inset-0 size-full object-cover transition-opacity duration-base ease-house',

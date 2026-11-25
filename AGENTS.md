@@ -140,7 +140,8 @@ the public profile came on the owner's word (2026-10-13, 2026-10-14,
   cannot: a browser whose session is a specialist's (or an admin's) carries
   the panel hint (§9), so the server sends `/` to `/panel` before painting
   it; the patients' «Mis citas» sends a specialist there too, unless the
-  account is also a patient's. Links still open, since a link never breaks
+  account is also a patient's, and conversely `/panel` (and `/pay`) sends a
+  patient-only account straight home to `/` (owner, 2026-11-25). Links still open, since a link never breaks
   (`/a` read only, `/i`, `/s`, the panel's paths, the opt-out, the legal
   pages), and none of them offers booking: on their own profile a
   specialist reads «Así ven tu perfil tus pacientes». Signing in from a
@@ -286,7 +287,7 @@ app/                                  # The application: routes, UI and logic
   ui/                                 # ALL shared UI
     button.tsx · back-link.tsx · text-field.tsx · identity-document-field.tsx · select-field.tsx · text-area.tsx · checkbox.tsx · choice-cards.tsx · stars-input.tsx · tabs.tsx · filter-chips.tsx · field-error.tsx · sheet.tsx · skeleton.tsx · toast.tsx · empty-state.tsx · status-card.tsx · link-card.tsx · avatar.tsx · count-badge.tsx · fading-edges.ts (the faded sides of a row that scrolls) · fading-row.tsx (that row: the one piece of a strip that needs the browser) …
     messages-scope.tsx                #   a page's own client messages (§9)
-    layout/                           #   site-header, site-bar (the landing's bar at rest for the other pages on the blue: the public profile) with site-menu (the phone's menu, the landing's too), page-frame (a page's column and its main, in the guarded layouts), panel-frame (the specialist's panel on the blue: the sidebar from laptops up, panel-bar with the controls at the top right, panel-nav vertical or as tabs, panel-surface for the pages with no design of their own), bottom-actions
+    layout/                           #   site-header, site-bar (the bar on the blue for the public profile: the logo, the specialist search box with the active search, the bell and the session), site-menu (the landing's phone menu), page-frame (a page's column and its main, in the guarded layouts), panel-frame (the specialist's panel on the blue: the sidebar from laptops up, panel-bar with the controls at the top right, panel-nav vertical or as tabs, panel-surface for the pages with no design of their own), bottom-actions
     booking/                          #   the booking's steps (M15), `/book` and the public profile's modal: booking-types, patient-step, summary-step, booking-done, booking-notices, use-book-appointment (the write, its caches, the green wipe)
     decor.tsx                         #   the shapes behind the landing and the public profile (swirls, plus signs)
     auth/                             #   session-provider, session-button (+ account-menu, loaded for a signed-in person only, and account-item), session-controls (the bell and the account, for a bar), require-session, sign-in-buttons, use-sign-in-arrival (an in-place sign-in under the blue wipe), sign-in-legal-note, account-error-state, in-app-browser-help, provider-logos
@@ -294,7 +295,7 @@ app/                                  # The application: routes, UI and logic
     app-bridge/                       #   open-in-app-button, store-badges, app-access (a specialist's way to the app), store-qr
     appointments/ · specialists/ · billing/ · reviews/   # domain components used by two or more modules (appointments/: headline, details, appointment-card, appointment-record, status-tones — each status's bar, tint and words —, the slot picking — month-calendar, slot-picker, slot-choices, load-failure —, reschedule-sheet with `useRescheduleStep`, specialist-actions — `useSpecialistActions`, the app's offer as steps —; billing/: notice-panel, plan-emblem; specialists/: profile-state-chip, the profile's state in the panel's bar; specialist-card with availability-strip, the search's card, which the landing's highlights render on the server too)
     support/                          #   support-links: the API's support lines, to write or to call (REDOC-357)
-    search/                           #   the search box (M16), on the landing and on /search: search-bar (+ what-field, where-field, suggestion-popup, highlight, use-combobox, use-location-suggestions — Google's places —, use-remembered, search-shade — the page dimmed while it is in use —), its words from the server (search-bar-words)
+    search/                           #   the search box (M16), on the landing, on /search and in the public profile's bar: search-bar (+ what-field, where-field, suggestion-popup, highlight, use-combobox, use-location-suggestions — Google's places —, use-remembered, search-shade — the page dimmed while it is in use —), its words from the server (search-bar-words)
     analytics/ · og/ · seo/           #   link-origin-tracker; the Open Graph brand card (next/og); the JSON-LD data block a page carries for search engines
     motion/                           #   the one door to Motion: provider, m, tokens, staggered-text (§8.11); the page transitions (§8.13): view-transitions (server-safe), page-transitions.css, directions, skeleton-hold, screen-wipe, navigation-progress (+ navigation-events)
     icons.tsx                         #   the Icon primitive (not icon.tsx: that name is a Next.js metadata file)
@@ -309,7 +310,7 @@ app/                                  # The application: routes, UI and logic
     notifications/                    #   the inbox's logic (M17): socket.ts (the live channel: Socket.IO, our own reconnection with a fresh token; notices and `data:changed`), effects.ts (what a notice or a signal leaves stale, the keys to read again, one refresh per target), destination.ts (where a notice leads, by its ids before its kind, the billing by family), local-writes.ts (whether this tab wrote just now: its own echoes), inbox.ts (the inbox after each action), time.ts («Hace 5 min»), push.ts (what this browser remembers of the push: device id, registration, heartbeat, «Ahora no»)
     auth/                             #   account (the account's model and rules, no zod), session-hint (the session and panel cookies), last-provider, token (the bearer's source), destination, sign-up (the plan)
     format/                           #   names, phone (+58), identity-document, date-of-birth — the forms' rules; money, appointment-time, dates — prices and billing amounts, days and hours; figures — the statistics' numbers, periods, weekdays and hours; distance — «3,2 km»
-    search/                           #   the search's logic (M16): query.ts (the address ↔ the search ↔ the API's request), location.ts (the point, the app's radii), text.ts (matching case and accents aside), suggestions.ts, recent.ts and last-location.ts (what the browser remembers)
+    search/                           #   the search's logic (M16): query.ts (the address ↔ the search ↔ the API's request), location.ts (the point, the app's radii), text.ts (matching case and accents aside), suggestions.ts, active-search.ts, recent.ts and last-location.ts (what the browser remembers)
     maps/                             #   google-maps.ts: the Maps JavaScript API for the results' map, loaded on demand with the page's nonce (client-only)
     security/                         #   csp.ts (the nonce policy proxy.ts sends), rate-limit.ts (so many a minute per address, for the endpoints that spend Google's quota)
     billing/                          #   banks.ts: the app's list of Venezuelan banks (the API publishes none); plan-benefits.ts: what a plan includes, from its limits (the landing's plans and the payment's); payment-draft.ts: the payment left halfway (localStorage, seven days, no zod)
@@ -3299,7 +3300,9 @@ written out in full, or Next.js does not inline it).
   público del especialista: implementar», same day; frames `4757:1002`,
   `4757:2672`, `4757:4027`; the design doc
   `docs/superpowers/specs/2026-11-16-search-popup-and-public-profile-design.md`).**
-  The landing's bar at rest (`SiteBar`) on the blue with its swirl; the
+  The site's bar (`SiteBar`, with the specialist search carrying the active
+  search in place of the landing's section links and phone menu) on the blue
+  with its swirl; the
   header card — the photo (178 px from laptops up), the name with the
   verified mark, the first specialty as the green pill, the first office
   opening the offices' sheet (directions, prices, «Agendar en este

@@ -56,6 +56,11 @@ test('a search in the address is rendered on the server', async ({ page }) => {
       .first()
       .click({ force: true });
     await expect(page).toHaveURL(/\/s\/[0-9a-f-]{36}$/);
+    await expect(
+      page.getByRole('combobox', {
+        name: 'Especialidad o nombre del especialista',
+      }),
+    ).toHaveValue('Guedez');
   }
 });
 

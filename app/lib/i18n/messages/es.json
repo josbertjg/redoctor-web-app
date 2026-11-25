@@ -392,7 +392,10 @@
     "claimAppointment": "Reclamar mi cita",
     "toBook": "Para agendar tu cita solo falta completar tus datos.",
     "bookNextSteps": "Ya puedes agendar tu cita.",
-    "bookAppointment": "Agendar mi cita"
+    "bookAppointment": "Agendar mi cita",
+    "toFavorite": "Para guardar este especialista en tus favoritos solo falta completar tus datos.",
+    "favoriteNextSteps": "Ya puedes guardar especialistas en tus favoritos.",
+    "backToProfile": "Volver al perfil"
   },
   "input": {
     "empty": "Este campo es requerido.",

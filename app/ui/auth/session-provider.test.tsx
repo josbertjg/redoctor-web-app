@@ -174,6 +174,33 @@ describe('SessionProvider', () => {
     });
   });
 
+  it('forgets the panel hint immediately when switching from a specialist to another user without signing out', async () => {
+    let currentRole: 'specialist' | 'new' = 'specialist';
+    server.use(
+      http.get(apiUrl('/identity/me'), () =>
+        currentRole === 'specialist'
+          ? HttpResponse.json(buildSpecialistMeResponse())
+          : new Promise(() => undefined),
+      ),
+    );
+    renderProvider();
+    await waitFor(() => {
+      expect(firebase.listener).toBeDefined();
+    });
+    firebase.listener?.(user);
+    await waitFor(() => {
+      expect(document.cookie).toContain('redoctor-panel=1');
+    });
+
+    currentRole = 'new';
+    firebase.listener?.({
+      ...user,
+      id: 'uid-2',
+      email: 'paciente@example.com',
+    });
+    expect(document.cookie).not.toContain('redoctor-panel=1');
+  });
+
   it('signs out through Firebase and forgets everything', async () => {
     renderProvider(true);
     await waitFor(() => {

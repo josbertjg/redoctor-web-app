@@ -56,6 +56,7 @@ type WhatFieldProps = {
   text: string;
   specialty: SpecialtyRef | null;
   onTextChange: (text: string) => void;
+  onClear?: (() => void) | undefined;
   onPick: (pick: WhatPick) => void;
   catalog: SearchCatalog;
   /**
@@ -90,6 +91,7 @@ export function WhatField({
   text,
   specialty,
   onTextChange,
+  onClear,
   onPick,
   catalog,
   topSpecialties,
@@ -112,7 +114,7 @@ export function WhatField({
   const typed = text.trim();
   const suggesting = canSuggest(typed) && specialty === null;
   const settled = useDebouncedValue(
-    suggesting ? typed : '',
+    touched && suggesting ? typed : '',
     suggestionsDebounceMs,
   );
   const specialists = useQuery(
@@ -264,7 +266,8 @@ export function WhatField({
               event.preventDefault();
             }}
             onClick={() => {
-              onTextChange('');
+              if (onClear) onClear();
+              else onTextChange('');
               input.current?.focus();
             }}
             className="flex size-8 shrink-0 items-center justify-center rounded-full text-text-secondary transition-colors duration-fast ease-house outline-none hover:bg-surface-variant focus-visible:ring-3 focus-visible:ring-ring/50"

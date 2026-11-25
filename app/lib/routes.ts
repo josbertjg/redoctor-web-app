@@ -57,6 +57,12 @@ export const routes = {
     choice: { officeId: string; date: string; time: string },
   ) =>
     `/s/${segment(specialistId)}?office=${encodeURIComponent(choice.officeId)}&date=${encodeURIComponent(choice.date)}&time=${encodeURIComponent(choice.time)}&book=1` as const,
+  /**
+   * The profile with its favourite waiting (`favorite=1`): where a sign-up
+   * finished from the heart comes back to, so the specialist is kept once in.
+   */
+  specialistFavorite: (specialistId: string) =>
+    `/s/${segment(specialistId)}?favorite=1` as const,
   /** `claimFor` keeps the person's answer to «¿Para quién es esta cita?» across the sign-up. */
   invitation: (token: string, claimFor?: 'self' | 'dependent') =>
     claimFor

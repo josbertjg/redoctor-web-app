@@ -17,6 +17,9 @@ const appStoreId = z
   .string()
   .regex(/^\d+$/, 'expected the numeric App Store id')
   .optional();
+const firebaseApiKey = z
+  .string()
+  .regex(/^AIza[\w-]{35}$/, 'expected a Firebase web API key');
 const playStoreId = z
   .string()
   .regex(/^[A-Za-z]\w*(\.[A-Za-z]\w*)+$/, 'expected an Android package name')
@@ -49,7 +52,7 @@ export const env = createEnv({
     NEXT_PUBLIC_APP_ENV: appEnvironment,
     NEXT_PUBLIC_SITE_URL: url,
     NEXT_PUBLIC_API_URL: url,
-    NEXT_PUBLIC_FIREBASE_API_KEY: nonEmpty,
+    NEXT_PUBLIC_FIREBASE_API_KEY: firebaseApiKey,
     NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: nonEmpty,
     NEXT_PUBLIC_FIREBASE_PROJECT_ID: nonEmpty,
     NEXT_PUBLIC_FIREBASE_APP_ID: nonEmpty,

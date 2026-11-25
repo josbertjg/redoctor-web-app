@@ -34,6 +34,15 @@ describe('env', () => {
     await expect(loadEnv()).rejects.toThrow(/NEXT_PUBLIC_APP_STORE_ID/);
   });
 
+  it('refuses a malformed or multiline Firebase web API key', async () => {
+    vi.stubEnv(
+      'NEXT_PUBLIC_FIREBASE_API_KEY',
+      'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=redoctor-dev.firebaseapp.com\nNEXT_PUBLIC_FIREBASE_PROJECT_ID=redoctor-dev',
+    );
+
+    await expect(loadEnv()).rejects.toThrow(/NEXT_PUBLIC_FIREBASE_API_KEY/);
+  });
+
   it('refuses the development proxy outside development', async () => {
     vi.stubEnv('NEXT_PUBLIC_APP_ENV', 'production');
     vi.stubEnv('API_PROXY_TARGET', 'https://api-dev.redoctorapp.com/api/v1');

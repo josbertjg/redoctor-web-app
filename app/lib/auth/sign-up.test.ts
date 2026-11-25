@@ -39,17 +39,31 @@ const registeredPatient = account({
 });
 
 describe('flowNeedsPersonalData', () => {
-  it('is the invitation or the booking, and only a same-origin one', () => {
+  it('is the invitation, the booking or a profile action that needs it, and only a same-origin one', () => {
     expect(flowNeedsPersonalData('/i/tok')).toBe(true);
     expect(flowNeedsPersonalData('/book/abc?office=o1')).toBe(true);
+    expect(
+      flowNeedsPersonalData(
+        '/s/a0af9566?office=o1&date=2026-12-01&time=09%3A30&book=1',
+      ),
+    ).toBe(true);
+    expect(flowNeedsPersonalData('/s/a0af9566?favorite=1')).toBe(true);
+    expect(flowNeedsPersonalData('/s/a0af9566')).toBe(false);
     expect(flowNeedsPersonalData('/a/abc')).toBe(false);
     expect(flowNeedsPersonalData('//evil.example/i/x')).toBe(false);
     expect(flowNeedsPersonalData(null)).toBe(false);
   });
 
-  it('tells the two flows apart, for the words the sign-up uses', () => {
+  it('tells the flows apart, for the words the sign-up uses', () => {
     expect(signUpPurposeOf('/i/tok?for=self')).toBe('claim');
     expect(signUpPurposeOf('/book/abc')).toBe('book');
+    expect(
+      signUpPurposeOf(
+        '/s/a0af9566?office=o1&date=2026-12-01&time=09%3A30&book=1',
+      ),
+    ).toBe('book');
+    expect(signUpPurposeOf('/s/a0af9566?favorite=1')).toBe('favorite');
+    expect(signUpPurposeOf('/s/a0af9566')).toBeNull();
     expect(signUpPurposeOf('/appointments')).toBeNull();
     expect(invitationOf('/book/abc')).toBeNull();
   });
@@ -65,13 +79,31 @@ describe('planSignUp', () => {
     });
   });
 
-  it('asks a registered patient for the personal data only when claiming or booking', () => {
+  it('asks a registered patient for the personal data when claiming, booking (on /book or /s) or keeping a favourite', () => {
     expect(planSignUp(registeredPatient, '/i/tok', null)).toEqual({
       step: 'patient',
       register: false,
       personalData: true,
     });
     expect(planSignUp(registeredPatient, '/book/abc', null)).toEqual({
+      step: 'patient',
+      register: false,
+      personalData: true,
+    });
+    expect(
+      planSignUp(
+        registeredPatient,
+        '/s/a0af9566?office=o1&date=2026-12-01&time=09%3A30&book=1',
+        null,
+      ),
+    ).toEqual({
+      step: 'patient',
+      register: false,
+      personalData: true,
+    });
+    expect(
+      planSignUp(registeredPatient, '/s/a0af9566?favorite=1', null),
+    ).toEqual({
       step: 'patient',
       register: false,
       personalData: true,

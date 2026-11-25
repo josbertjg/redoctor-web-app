@@ -9,7 +9,9 @@ import { meResponseSchema, toAccount } from '@/app/lib/schemas/identity';
 
 import {
   buildMeResponse,
+  buildNewAccountMeResponse,
   buildSpecialistMeResponse,
+  patientFacet,
 } from '@/tests/factories/identity';
 import { knownSpecialistId } from '@/tests/factories/specialists';
 import { apiUrl } from '@/tests/msw/api-url';
@@ -26,10 +28,11 @@ import {
 
 import { FavoriteButton } from './favorite-button';
 
+const navigation = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
-  usePathname: () => '/s/x',
-  useSearchParams: () => new URLSearchParams(),
+  useRouter: () => navigation,
+  usePathname: () => window.location.pathname,
+  useSearchParams: () => new URLSearchParams(window.location.search),
 }));
 
 function signedIn(me = buildMeResponse()): Session {
@@ -173,5 +176,87 @@ describe('FavoriteButton', () => {
   it('shows no heart to a specialist', () => {
     renderHeart(signedIn(buildSpecialistMeResponse()));
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('lets a patient with open personal data keep a favourite without bouncing to sign-up when the API accepts it', async () => {
+    navigation.push.mockClear();
+    const writes = keepingApi();
+    renderHeart(
+      signedIn(
+        buildMeResponse({
+          registrationStatus: 'PENDING_COMPLETE_PATIENT',
+          profiles: {
+            patient: patientFacet({ status: 'PENDING_PERSONAL_DATA' }),
+            specialist: { exists: false },
+          },
+        }),
+      ),
+    );
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Guardar en favoritos' }),
+    );
+    expect(navigation.push).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(writes).toEqual(['POST']);
+    });
+  });
+
+  it('sends a patient to finish sign-up with ?favorite=1 when the API demands complete registration (ERR_2010)', async () => {
+    navigation.push.mockClear();
+    server.use(
+      http.get(apiUrl('/patients/favorites/'), () =>
+        HttpResponse.json(
+          { code: 'ERR_2010', message: 'Registration incomplete' },
+          { status: 403 },
+        ),
+      ),
+      http.post(apiUrl('/patients/favorites/'), () =>
+        HttpResponse.json(
+          { code: 'ERR_2010', message: 'Registration incomplete' },
+          { status: 403 },
+        ),
+      ),
+    );
+    renderHeart(
+      signedIn(
+        buildMeResponse({
+          registrationStatus: 'PENDING_COMPLETE_PATIENT',
+          profiles: {
+            patient: patientFacet({ status: 'PENDING_PERSONAL_DATA' }),
+            specialist: { exists: false },
+          },
+        }),
+      ),
+    );
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Guardar en favoritos' }),
+    );
+    await waitFor(() => {
+      expect(navigation.push).toHaveBeenCalledWith(
+        `/sign-up?redirect=${encodeURIComponent(`/s/${knownSpecialistId}?favorite=1`)}`,
+      );
+    });
+  });
+
+  it('sends a brand-new account to sign up with ?favorite=1, and keeps the specialist on the way back', async () => {
+    navigation.push.mockClear();
+    renderHeart(signedIn(buildNewAccountMeResponse()));
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Guardar en favoritos' }),
+    );
+    expect(navigation.push).toHaveBeenCalledWith(
+      `/sign-up?redirect=${encodeURIComponent(`/s/${knownSpecialistId}?favorite=1`)}`,
+    );
+
+    const writes = keepingApi();
+    window.history.replaceState(null, '', `/s/${knownSpecialistId}?favorite=1`);
+    renderHeart(signedIn());
+    await waitFor(() => {
+      expect(writes).toEqual(['POST']);
+    });
+    expect(window.location.search).toBe('');
   });
 });

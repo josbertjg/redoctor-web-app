@@ -17,9 +17,35 @@ export function destinationAfterSignIn(
     redirect && isSafeRedirect(redirect) ? redirect : undefined,
   );
   if (needsSignUp(account)) return routes.signUp(back);
-  if (back) return back;
+  if (back && isAllowedBack(account, back)) return back;
   if (canUseSpecialistArea(account)) return routes.specialistHome();
   return routes.home();
+}
+
+function isSpecialistOnlyPath(pathname: string): boolean {
+  return (
+    pathname === routes.specialistHome() ||
+    pathname.startsWith(`${routes.specialistHome()}/`) ||
+    pathname === routes.subscriptionPay()
+  );
+}
+
+function isPatientOnlyPath(pathname: string): boolean {
+  return (
+    pathname === routes.appointments() ||
+    pathname.startsWith(`${routes.appointments()}/`) ||
+    pathname.startsWith('/book/')
+  );
+}
+
+/** A way back to an area the signed-in account cannot enter is ignored. */
+function isAllowedBack(account: Account, back: string): boolean {
+  const { pathname } = new URL(back, 'https://redoctorapp.invalid');
+  if (isSpecialistOnlyPath(pathname)) return canUseSpecialistArea(account);
+  if (isPatientOnlyPath(pathname)) {
+    return account.patient.exists || !canUseSpecialistArea(account);
+  }
+  return true;
 }
 
 /**

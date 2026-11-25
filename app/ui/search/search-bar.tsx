@@ -10,6 +10,7 @@ import Search from '@material-symbols/svg-400/rounded/search.svg?svgr';
 import { track } from '@/app/lib/analytics/track';
 import { findPlace } from '@/app/lib/queries/places';
 import { routes } from '@/app/lib/routes';
+import type { ActiveSearch } from '@/app/lib/search/active-search';
 import { wholeCountry, type SearchLocation } from '@/app/lib/search/location';
 import {
   emptySearchQuery,
@@ -25,7 +26,11 @@ import { Icon } from '@/app/ui/icons';
 import { useDeviceLocation } from '@/app/hooks/use-device-location';
 
 import { SearchShade, searchShadeHost } from './search-shade';
-import { useLastLocation, useRecentSearches } from './use-remembered';
+import {
+  useActiveSearch,
+  useLastLocation,
+  useRecentSearches,
+} from './use-remembered';
 import { WhatField, type WhatPick } from './what-field';
 import { WhereField } from './where-field';
 
@@ -110,7 +115,7 @@ const variants: Record<
     // list: the positioned box a list hangs from is the field from 1280 px
     // (xl), the pill from tablets up, and the bar itself on phones.
     wrapper: 'max-md:static',
-    form: 'h-11 flex-row items-center gap-3 rounded-full bg-white-200 px-4',
+    form: 'h-11 flex-row items-center gap-2 rounded-full bg-white-200 px-3 sm:gap-3 sm:px-4',
     field: 'py-0 max-xl:static xl:self-stretch',
     input: 'text-body-xs',
     where: 'hidden md:flex',
@@ -186,17 +191,53 @@ export function SearchBar({
   const form = useRef<HTMLFormElement>(null);
   const [pending, startTransition] = useTransition();
   const { recent, remember, forget } = useRecentSearches();
+  const { active, keepActive, clearActive } = useActiveSearch();
   const { last, keep } = useLastLocation();
   const device = useDeviceLocation();
 
-  const [text, setText] = useState(
-    () => initialQuery?.text ?? initialSpecialtyName ?? '',
-  );
-  const [specialty, setSpecialty] = useState<SpecialtyRef | null>(() =>
-    initialQuery?.specialtyId && initialSpecialtyName
-      ? { id: initialQuery.specialtyId, name: initialSpecialtyName }
-      : null,
-  );
+  // What is looked for: on /search the address leads; elsewhere the active
+  // search from this browser fills the bar until the person edits or clears it.
+  const hasUrlQuery = initialQuery !== undefined;
+  const urlSpecialtyId = initialQuery?.specialtyId ?? null;
+  const urlText = initialQuery?.text ?? null;
+  const baseWhat: ActiveSearch | null = hasUrlQuery
+    ? urlSpecialtyId !== null && initialSpecialtyName
+      ? {
+          kind: 'specialty',
+          id: urlSpecialtyId,
+          name: initialSpecialtyName,
+        }
+      : urlText !== null && urlText !== ''
+        ? { kind: 'text', text: urlText }
+        : null
+    : active;
+  const baseKey = hasUrlQuery
+    ? `url:${urlSpecialtyId ?? ''}:${urlText ?? ''}:${initialSpecialtyName ?? ''}`
+    : active === null
+      ? 'active:none'
+      : active.kind === 'specialty'
+        ? `active:specialty:${active.id}:${active.name}`
+        : `active:text:${active.text}`;
+  const [draft, setDraft] = useState<{
+    forKey: string;
+    text: string;
+    specialty: SpecialtyRef | null;
+  } | null>(null);
+  const currentDraft = draft?.forKey === baseKey ? draft : null;
+  const text =
+    currentDraft !== null
+      ? currentDraft.text
+      : baseWhat === null
+        ? ''
+        : baseWhat.kind === 'specialty'
+          ? baseWhat.name
+          : baseWhat.text;
+  const specialty: SpecialtyRef | null =
+    currentDraft !== null
+      ? currentDraft.specialty
+      : baseWhat?.kind === 'specialty'
+        ? { id: baseWhat.id, name: baseWhat.name }
+        : null;
   // The place in hand: chosen here, named by the address, or the last one
   // this browser searched from.
   const [chosen, setChosen] = useState<SearchLocation | null>(() =>
@@ -316,6 +357,15 @@ export function SearchBar({
             label: criteria.specialty.name,
           };
     remember(entry);
+    keepActive(
+      'text' in criteria
+        ? { kind: 'text', text: criteria.text }
+        : {
+            kind: 'specialty',
+            id: criteria.specialty.id,
+            name: criteria.specialty.name,
+          },
+    );
     go(query);
   };
 
@@ -323,18 +373,21 @@ export function SearchBar({
     setProblem(null);
     switch (pick.kind) {
       case 'text':
-        setText(pick.text);
-        setSpecialty(null);
+        setDraft({ forKey: baseKey, text: pick.text, specialty: null });
         void search({ text: pick.text });
         break;
       case 'specialty':
-        setText(pick.specialty.name);
-        setSpecialty(pick.specialty);
+        setDraft({
+          forKey: baseKey,
+          text: pick.specialty.name,
+          specialty: pick.specialty,
+        });
         track('web_search_suggestion_taken', { kind: 'specialty' });
         void search({ specialty: pick.specialty });
         break;
       case 'specialist':
-        setText(pick.name);
+        setDraft({ forKey: baseKey, text: pick.name, specialty: null });
+        keepActive({ kind: 'text', text: pick.name });
         remember({ kind: 'specialist', id: pick.id, label: pick.name });
         track('web_search_suggestion_taken', { kind: 'specialist' });
         startTransition(() => {
@@ -353,6 +406,21 @@ export function SearchBar({
   const notice = problem ?? deviceIssue;
   const floats = variant === 'bar';
   const shownNotice = floats && noticeAway ? null : notice;
+
+  // A search arrived at through its URL (a specialty chip, a shared search)
+  // becomes the active search for subsequent pages too.
+  useEffect(() => {
+    if (!hasUrlQuery) return;
+    if (urlSpecialtyId !== null && initialSpecialtyName) {
+      keepActive({
+        kind: 'specialty',
+        id: urlSpecialtyId,
+        name: initialSpecialtyName,
+      });
+    } else if (urlText !== null && urlText !== '') {
+      keepActive({ kind: 'text', text: urlText });
+    }
+  }, [hasUrlQuery, urlSpecialtyId, initialSpecialtyName, urlText, keepActive]);
 
   // In use while the focus is in the box; the shade's place is found on the
   // first use, from the box up.
@@ -424,7 +492,7 @@ export function SearchBar({
             return;
           }
           setProblem(null);
-          setSpecialty(null);
+          setDraft({ forKey: baseKey, text, specialty: null });
           void search({ text: typed });
         }}
         className={cn(
@@ -436,11 +504,24 @@ export function SearchBar({
           text={text}
           specialty={specialty}
           onTextChange={(next) => {
-            setText(next);
             setProblem(null);
-            if (specialty !== null && next !== specialty.name) {
-              setSpecialty(null);
-            }
+            setDraft({
+              forKey: baseKey,
+              text: next,
+              specialty:
+                specialty !== null && next === specialty.name
+                  ? specialty
+                  : null,
+            });
+          }}
+          onClear={() => {
+            setProblem(null);
+            clearActive();
+            setDraft(
+              hasUrlQuery
+                ? { forKey: baseKey, text: '', specialty: null }
+                : null,
+            );
           }}
           onPick={onPick}
           catalog={catalog}

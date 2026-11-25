@@ -43,11 +43,13 @@ export type SignUpPlan =
   | { step: 'done' };
 
 /** A flow that needs a patient whose sign-up is complete. */
-export type SignUpPurpose = 'claim' | 'book';
+export type SignUpPurpose = 'claim' | 'book' | 'favorite';
 
 /**
  * The flow a sign-up comes from, by where it returns: claiming an
- * invitation (`/i/{token}`) or booking (`/book/{specialistId}`).
+ * invitation (`/i/{token}`), booking (`/book/{specialistId}` or the
+ * profile's modal `/s/{specialistId}?…&book=1`), or keeping a favourite
+ * (`/s/{specialistId}?favorite=1`).
  */
 export function signUpPurposeOf(
   redirect: string | null | undefined,
@@ -55,6 +57,13 @@ export function signUpPurposeOf(
   if (typeof redirect !== 'string' || !isSafeRedirect(redirect)) return null;
   if (redirect.startsWith('/i/')) return 'claim';
   if (redirect.startsWith('/book/')) return 'book';
+  if (redirect.startsWith('/s/')) {
+    const url = new URL(redirect, 'https://redoctorapp.invalid');
+    if (/^\/s\/[^/]+$/.test(url.pathname)) {
+      if (url.searchParams.get('book') === '1') return 'book';
+      if (url.searchParams.get('favorite') === '1') return 'favorite';
+    }
+  }
   return null;
 }
 
