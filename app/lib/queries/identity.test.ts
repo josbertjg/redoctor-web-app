@@ -78,12 +78,94 @@ describe('meQueryOptions', () => {
       client().query(meQueryOptions(user('uid-2', 'expired'))),
     ).rejects.toSatisfy((error) => isApiError(error) && error.status === 401);
   });
+
+  it('refreshes the Firebase ID token when its custom claims lack dbUserId', async () => {
+    const jwtWith = (claims: Record<string, unknown>) =>
+      [
+        Buffer.from(JSON.stringify({ alg: 'RS256' })).toString('base64url'),
+        Buffer.from(JSON.stringify(claims)).toString('base64url'),
+        'sig',
+      ].join('.');
+
+    server.use(
+      http.get(apiUrl('/identity/me'), () =>
+        HttpResponse.json(buildMeResponse()),
+      ),
+    );
+
+    const calls: (boolean | undefined)[] = [];
+    const staleJwt = jwtWith({ sub: 'uid-claims-1' });
+    const syncedJwt = jwtWith({
+      sub: 'uid-claims-1',
+      dbUserId: knownUserId,
+      role: 'PATIENT',
+      registrationStatus: 'COMPLETED',
+    });
+
+    await client().query(
+      meQueryOptions({
+        id: 'uid-claims-1',
+        getToken: (force) => {
+          calls.push(force);
+          return Promise.resolve(force ? syncedJwt : staleJwt);
+        },
+      }),
+    );
+
+    expect(calls).toEqual([undefined, true]);
+  });
+
+  it('keeps the cached Firebase ID token when its custom claims already match /identity/me', async () => {
+    const jwtWith = (claims: Record<string, unknown>) =>
+      [
+        Buffer.from(JSON.stringify({ alg: 'RS256' })).toString('base64url'),
+        Buffer.from(JSON.stringify(claims)).toString('base64url'),
+        'sig',
+      ].join('.');
+
+    server.use(
+      http.get(apiUrl('/identity/me'), () =>
+        HttpResponse.json(buildMeResponse()),
+      ),
+    );
+
+    const calls: (boolean | undefined)[] = [];
+    const syncedJwt = jwtWith({
+      sub: 'uid-claims-2',
+      dbUserId: knownUserId,
+      role: 'PATIENT',
+      registrationStatus: 'COMPLETED',
+    });
+
+    await client().query(
+      meQueryOptions({
+        id: 'uid-claims-2',
+        getToken: (force) => {
+          calls.push(force);
+          return Promise.resolve(syncedJwt);
+        },
+      }),
+    );
+
+    expect(calls).toEqual([undefined]);
+  });
 });
 
 describe('the patient sign-up', () => {
-  it('registers the patient and answers the account', async () => {
-    const account = await registerAccount(user('uid-3'), registrationBody);
+  it('registers the patient and refreshes the ID token before answering', async () => {
+    const calls: (boolean | undefined)[] = [];
+    const account = await registerAccount(
+      {
+        id: 'uid-3',
+        getToken: (force) => {
+          calls.push(force);
+          return Promise.resolve(validToken);
+        },
+      },
+      registrationBody,
+    );
 
+    expect(calls).toEqual([undefined, true]);
     expect(account.registration).toBe('pendingCompletePatient');
     expect(account.patient).toMatchObject({
       exists: true,

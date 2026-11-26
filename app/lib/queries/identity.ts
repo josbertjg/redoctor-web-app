@@ -26,6 +26,29 @@ import type { TokenHolder } from '../api/types';
 
 export { identityKeys } from './identity-keys';
 
+/** How long `/identity/me` waits per attempt: generous enough for a cold preview server. */
+const ME_TIMEOUT_MS = 15_000;
+
+/** Decodes a 3-part JWT payload; `null` when the bearer is not a JWT (e.g. unit-test stubs). */
+function jwtClaims(token: string): Record<string, unknown> | null {
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  const payload = parts[1];
+  if (!payload) return null;
+  try {
+    const base64 = payload
+      .replace(/-/g, '+')
+      .replace(/_/g, '/')
+      .padEnd(Math.ceil(payload.length / 4) * 4, '=');
+    const parsed: unknown = JSON.parse(atob(base64));
+    return typeof parsed === 'object' && parsed !== null
+      ? (parsed as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
 /** The signed-in person's account (`GET /identity/me`). */
 export async function readAccount(
   user: TokenHolder,
@@ -36,11 +59,24 @@ export async function readAccount(
     path: '/identity/me',
     token,
     schema: meResponseSchema,
+    timeoutMs: ME_TIMEOUT_MS,
     // How the API closes a session: the provider signs out and says so.
     expected: (error) =>
       error.status === 401 || error.status === 403 || error.status === 404,
     ...(signal ? { signal } : {}),
   });
+  // `/identity/me` syncs `dbUserId`, `role` and `registrationStatus` into
+  // Firebase custom claims; other API guards reject the cached JWT until
+  // Firebase refreshes it.
+  const claims = jwtClaims(token);
+  if (
+    claims !== null &&
+    (claims.dbUserId !== me.id ||
+      claims.role !== me.role ||
+      claims.registrationStatus !== me.registrationStatus)
+  ) {
+    await refreshIdToken(user);
+  }
   return toAccount(me);
 }
 
@@ -102,6 +138,7 @@ export function registerAccount(
           schema: meResponseSchema,
           expected: (error) => error.status === 409,
         });
+        await refreshIdToken(user);
         return toAccount(me);
       } catch (error) {
         return alreadyDone(error, 409, user, isRegistered);
@@ -131,6 +168,7 @@ export function completePatientRegistration(
           schema: meResponseSchema,
           expected: (error) => error.status === 403,
         });
+        await refreshIdToken(user);
         return toAccount(me);
       } catch (error) {
         return alreadyDone(error, 403, user, isComplete);

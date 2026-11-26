@@ -55,4 +55,25 @@ describe('SelectField', () => {
     expect(screen.getByText('Estado de las citas')).toHaveClass('sr-only');
     expect(await axe(container)).toHaveNoViolations();
   });
+
+  it('renders a flex-centered visible value while keeping the native select invisible so browser arrows never overlap the chevron', async () => {
+    const { container } = render(
+      <SelectField
+        variant="pill"
+        label="Estado de las citas"
+        options={offices}
+        defaultValue=""
+      />,
+    );
+
+    const select = screen.getByRole('combobox', {
+      name: 'Estado de las citas',
+    });
+    const visibleValue = container.querySelector('[data-slot="select-value"]');
+    expect(select).toHaveClass('opacity-0', 'appearance-none', 'text-body-xs');
+    expect(visibleValue).toHaveTextContent('Todos los consultorios');
+
+    await userEvent.selectOptions(select, 'office-2');
+    expect(visibleValue).toHaveTextContent('Clínica Norte');
+  });
 });

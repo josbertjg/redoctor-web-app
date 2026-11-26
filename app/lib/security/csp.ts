@@ -29,6 +29,8 @@ export type ContentSecurityPolicyOptions = {
   googleMaps?: boolean | undefined;
   /** The notifications' web push: only with the VAPID key. */
   webPush?: boolean | undefined;
+  /** Vercel Preview deployments (`dev.redoctorapp.com`): lets the preview toolbar frame load cleanly. */
+  isPreview?: boolean | undefined;
 };
 
 /*
@@ -97,6 +99,7 @@ export function buildContentSecurityPolicy(
     ...(options.sentryDsn ? [originOf(options.sentryDsn)] : []),
     ...(options.googleMaps ? googleMapsOrigins.connect : []),
     ...(options.webPush ? firebaseMessagingApis : []),
+    ...(options.isPreview ? ['https://vercel.live'] : []),
     // Fast Refresh talks over a websocket in development.
     ...(isDevelopment ? ['ws:'] : []),
   ];
@@ -128,6 +131,7 @@ export function buildContentSecurityPolicy(
       "'self'",
       firebaseAuthOrigin,
       ...(options.googleMaps ? googleMapsOrigins.frame : []),
+      ...(options.isPreview ? ['https://vercel.live'] : []),
     ],
     'worker-src': ["'self'", 'blob:'],
     'manifest-src': ["'self'"],

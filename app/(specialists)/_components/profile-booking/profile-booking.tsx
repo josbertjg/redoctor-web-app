@@ -39,6 +39,8 @@ type ProfileBooking = {
   officeId: string;
   /** The day in hand: the one chosen, or the office's first free one; null while unknown. */
   day: string | null;
+  /** Candidate days already checked and found to have zero available slots left. */
+  exhaustedDays: readonly string[];
   /** The month on screen. */
   month: string;
   time: string | null;
@@ -116,11 +118,17 @@ export function ProfileBookingProvider({
         ? date
         : null;
     const hour = day !== null && time !== null && timeOfDay.test(time);
+    const wantsBook = searchParams.get('book') === '1';
+    const openStep: BookingDialogStep | null = wantsBook
+      ? hour
+        ? 'patient'
+        : 'slot'
+      : null;
     return {
       officeId: office?.id ?? null,
       day,
       time: hour ? time : null,
-      open: hour && searchParams.get('book') === '1',
+      openStep,
     };
   });
 
@@ -134,13 +142,17 @@ export function ProfileBookingProvider({
     useState<PatientValues>(emptyPatientValues);
   const [patient, setPatient] = useState<PatientChoice | null>(null);
   const [dialog, setDialog] = useState<BookingDialogStep | null>(
-    arrival.open ? 'patient' : null,
+    arrival.openStep,
   );
+  const [exhaustedState, setExhaustedState] = useState<{
+    scope: string;
+    days: readonly string[];
+  }>({ scope: '', days: [] });
 
   // The way back from the sign-up is spent: the address goes back to the
   // profile's own, so a reload or a share never opens the modal again.
   useEffect(() => {
-    if (!arrival.open && arrival.officeId === null) return;
+    if (arrival.openStep === null && arrival.officeId === null) return;
     const url = new URL(window.location.href);
     for (const name of ['office', 'date', 'time', 'book']) {
       url.searchParams.delete(name);
@@ -153,20 +165,32 @@ export function ProfileBookingProvider({
     ...specialistFreeDaysQueryOptions(specialist.id, today),
     enabled: agendaShown && officeId !== '',
   });
-  // The API counts today free while it has hours at all, gone or not: when
-  // none of today's is left (the hours' own read, shared with the panel),
-  // the next free day is the one in hand.
+  // The API's availability window lists days that have office hours scheduled,
+  // even when all slots on a day are already past or booked: walk candidates
+  // until one actually has at least one selectable slot.
   const candidates = firstFree.data?.[officeId] ?? [];
-  const todaysHours = useQuery({
-    ...publicDaySlotsQueryOptions(officeId, today),
-    enabled: agendaShown && chosenDay === null && candidates[0] === today,
+  const exhaustionScope = `${officeId}:${today}`;
+  const exhaustedDays =
+    exhaustedState.scope === exhaustionScope ? exhaustedState.days : [];
+  const candidateDay =
+    candidates.find((candidate) => !exhaustedDays.includes(candidate)) ?? null;
+  const candidateHours = useQuery({
+    ...publicDaySlotsQueryOptions(officeId, candidateDay ?? today),
+    enabled: agendaShown && chosenDay === null && candidateDay !== null,
   });
-  const todayIsOver =
-    candidates[0] === today &&
-    todaysHours.isSuccess &&
-    !todaysHours.data.slots.some((slot) => slot.available);
-  const day =
-    chosenDay ?? (todayIsOver ? candidates[1] : candidates[0]) ?? null;
+  if (
+    chosenDay === null &&
+    candidateDay !== null &&
+    candidateHours.isSuccess &&
+    !candidateHours.data.slots.some((slot) => slot.available) &&
+    !exhaustedDays.includes(candidateDay)
+  ) {
+    setExhaustedState({
+      scope: exhaustionScope,
+      days: [...exhaustedDays, candidateDay],
+    });
+  }
+  const day = chosenDay ?? candidateDay ?? candidates[0] ?? null;
   const month = shownMonth ?? (day ?? today).slice(0, 7);
 
   const value: ProfileBooking = {
@@ -177,6 +201,7 @@ export function ProfileBookingProvider({
     today,
     officeId,
     day,
+    exhaustedDays,
     month,
     time,
     patientValues,

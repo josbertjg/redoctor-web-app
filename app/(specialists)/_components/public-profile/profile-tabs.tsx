@@ -24,13 +24,38 @@ const corners = ['rounded-tr-xl', 'rounded-t-xl', 'rounded-tl-xl'] as const;
 export function ProfileTabs({ label, sections }: ProfileTabsProps) {
   const nav = useRef<HTMLElement>(null);
   const sentinel = useRef<HTMLDivElement>(null);
+  const pinned = useRef<{
+    id: string;
+    armedAt: number;
+    settledY: number | null;
+  } | null>(null);
   const [active, setActive] = useState(sections[0]?.id ?? '');
   const [stuck, setStuck] = useState(false);
 
-  // The section being read: the last whose top has passed under the tabs.
+  // The section being read: the last whose top has reached the scroll-mt-20
+  // anchor line below the sticky tabs; a tab just clicked stays pinned at the
+  // scroll position its anchor jump landed on until the reader scrolls away.
   useEffect(() => {
     const onScroll = () => {
-      const line = (nav.current?.getBoundingClientRect().bottom ?? 0) + 8;
+      const pin = pinned.current;
+      if (pin !== null) {
+        if (performance.now() - pin.armedAt < 150) {
+          pin.settledY = window.scrollY;
+          setActive(pin.id);
+          return;
+        }
+        pin.settledY ??= window.scrollY;
+        if (Math.abs(window.scrollY - pin.settledY) < 12) {
+          setActive(pin.id);
+          return;
+        }
+        pinned.current = null;
+      }
+
+      const line = Math.max(
+        (nav.current?.getBoundingClientRect().bottom ?? 0) + 44,
+        96,
+      );
       let current = sections[0]?.id ?? '';
       for (const section of sections) {
         const top = document
@@ -80,6 +105,11 @@ export function ProfileTabs({ label, sections }: ProfileTabsProps) {
                 href={`#${section.id}`}
                 aria-current={active === section.id ? 'location' : undefined}
                 onClick={() => {
+                  pinned.current = {
+                    id: section.id,
+                    armedAt: performance.now(),
+                    settledY: null,
+                  };
                   setActive(section.id);
                 }}
                 className={cn(

@@ -104,4 +104,18 @@ describe('the public agenda', () => {
     ).toEqual([...takenPublicStartTimes]);
     expect(slots.length).toBeGreaterThan(takenPublicStartTimes.length);
   });
+
+  it('shares the initial availability window between free-days and month queries so the API is asked once', async () => {
+    const asked = countWindows();
+    const client = new QueryClient();
+
+    await Promise.all([
+      client.query(specialistFreeDaysQueryOptions(specialistId, '2099-03-20')),
+      client.query(
+        specialistMonthQueryOptions(specialistId, '2099-03', '2099-03-20'),
+      ),
+    ]);
+
+    expect(asked).toEqual(['2099-03-20']);
+  });
 });

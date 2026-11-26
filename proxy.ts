@@ -26,6 +26,7 @@ export function proxy(request: NextRequest) {
     sentryDsn: env.NEXT_PUBLIC_SENTRY_DSN,
     googleMaps: env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY !== undefined,
     webPush: env.NEXT_PUBLIC_FIREBASE_VAPID_KEY !== undefined,
+    isPreview: env.NEXT_PUBLIC_APP_ENV === 'preview',
   });
 
   const requestHeaders = new Headers(request.headers);

@@ -147,6 +147,19 @@ describe('buildContentSecurityPolicy', () => {
     expect(directive(policy, 'connect-src')).toContain('ws:');
     expect(policy).not.toContain('upgrade-insecure-requests');
   });
+
+  it('lets the Vercel Preview toolbar frame in only on preview, never in production', () => {
+    const prod = buildContentSecurityPolicy(base);
+    expect(prod).not.toContain('vercel.live');
+
+    const preview = buildContentSecurityPolicy({ ...base, isPreview: true });
+    expect(directive(preview, 'frame-src')).toContain('https://vercel.live');
+    expect(directive(preview, 'connect-src')).toContain('https://vercel.live');
+    // script-src stays strict nonce + strict-dynamic even on preview.
+    expect(directive(preview, 'script-src')).not.toContain(
+      'https://vercel.live',
+    );
+  });
 });
 
 describe('createNonce', () => {

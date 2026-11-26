@@ -46,14 +46,25 @@ const dayParts: readonly { part: DayPart; icon: IconComponent }[] = [
 export function BookingPicker() {
   const t = useTranslations();
   const booking = useProfileBooking();
-  const { specialist, today, officeId, day, month, time, agendaShown } =
-    booking;
+  const {
+    specialist,
+    today,
+    officeId,
+    day,
+    exhaustedDays,
+    month,
+    time,
+    agendaShown,
+  } = booking;
 
   const monthDays = useQuery({
     ...specialistMonthQueryOptions(specialist.id, month, today),
     enabled: agendaShown,
   });
   const free = new Set(monthDays.data?.[officeId] ?? []);
+  for (const gone of exhaustedDays) {
+    free.delete(gone);
+  }
 
   return (
     <div className="flex flex-col gap-9">

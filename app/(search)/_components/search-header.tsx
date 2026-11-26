@@ -38,8 +38,8 @@ export function SearchHeader({
   const words = useSearchBarWords();
 
   return (
-    <header className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm vt-search-header">
-      <div className="mx-auto flex w-full max-w-landing items-center gap-3 px-gutter pt-3 pb-2 sm:gap-4 sm:py-3">
+    <header className="sticky top-0 z-20 overflow-x-clip bg-background/95 backdrop-blur-sm vt-search-header">
+      <div className="mx-auto flex w-full max-w-landing min-w-0 items-center gap-3 px-gutter pt-3 pb-2 sm:gap-4 sm:py-3">
         <Link
           href={routes.home()}
           aria-label={t('common.homeLabel')}
@@ -57,8 +57,8 @@ export function SearchHeader({
           words={words}
         />
         {/* The bell and the account from tablets up: on a phone the box takes the bar. */}
-        <NotificationsBell className="hidden sm:inline-flex" />
-        <SessionButton className="hidden sm:inline-flex" />
+        <NotificationsBell className="hidden shrink-0 sm:inline-flex" />
+        <SessionButton className="hidden shrink-0 sm:inline-flex" />
       </div>
       <SearchProgress />
     </header>

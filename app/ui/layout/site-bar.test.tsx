@@ -73,6 +73,11 @@ describe('SiteBar', () => {
     // Sign-in stays visible even on phone widths since the hamburger menu is gone.
     const signIn = screen.getByRole('link', { name: 'Entrar' });
     expect(signIn).not.toHaveClass('hidden');
+    // Decorative leading stethoscope icon hides on phones so 360px/390px viewports leave ample room for the search query text.
+    const searchForm = screen.getByRole('search', {
+      name: 'Buscar especialistas',
+    });
+    expect(searchForm.querySelector('svg')).toHaveClass('max-sm:hidden');
     expect(await axe(container)).toHaveNoViolations();
   });
 

@@ -5,6 +5,7 @@ import { axe } from 'jest-axe';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { todayInCaracas } from '@/app/lib/format/date-of-birth';
 import { pageNamespaces } from '@/app/lib/i18n/client-messages';
 import { meResponseSchema, toAccount } from '@/app/lib/schemas/identity';
 
@@ -18,6 +19,7 @@ import {
 import {
   publicAgendaOfficeId,
   publicAgendaSecondOfficeId,
+  weekdaysFrom,
 } from '@/tests/factories/public-availability';
 import { knownSpecialistId } from '@/tests/factories/specialists';
 import { apiUrl } from '@/tests/msw/api-url';
@@ -401,5 +403,89 @@ describe('the profile’s booking', () => {
     expect(
       within(panel()).getByRole('radio', { name: 'Mañana', hidden: true }),
     ).toBeChecked();
+  });
+
+  it('skips candidate days whose slots are all exhausted and preselects the first day with actual available slots', async () => {
+    const firstTwoDays = new Set(weekdaysFrom(todayInCaracas(), 2));
+    server.use(
+      http.get(
+        apiUrl('/search/offices/:officeId/slots'),
+        ({ params, request }) => {
+          const officeId = String(params.officeId);
+          const date = new URL(request.url).searchParams.get('date') ?? '';
+          if (firstTwoDays.has(date)) {
+            return HttpResponse.json({
+              date,
+              officeId,
+              slots: [
+                { startTime: '08:00', endTime: '08:30', available: false },
+              ],
+            });
+          }
+          // Fall through to the default MSW slots handler for subsequent days.
+          return undefined;
+        },
+      ),
+    );
+
+    renderProfileBooking();
+
+    expect(await freeHour(/^8:30/)).toBeInTheDocument();
+    expect(
+      within(panel()).queryByText('No hay cupos disponibles'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('opens the modal at Step 1 when arriving with ?book=1 alone and cleans the URL', async () => {
+    window.history.replaceState(null, '', `/s/${knownSpecialistId}?book=1`);
+    renderProfileBooking(signedIn());
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Paso 1 de 3')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(window.location.search).toBe('');
+    });
+  });
+
+  it('shows inline required errors on every empty field of «Para un tercero» when clicking Siguiente in the modal', async () => {
+    server.use(
+      http.get(apiUrl('/scheduling/terceros'), () =>
+        HttpResponse.json({ terceros: [] }),
+      ),
+    );
+    renderProfileBooking(signedIn());
+
+    await userEvent.click(await freeHour(/^8:30/));
+    await userEvent.click(
+      within(panel()).getByRole('button', { name: 'Agendar' }),
+    );
+    const dialog = await screen.findByRole('dialog');
+    await userEvent.click(
+      await within(dialog).findByRole('radio', { name: /Consulta general/ }),
+    );
+    await userEvent.click(
+      within(dialog).getByRole('radio', { name: 'Para un tercero' }),
+    );
+    expect(await within(dialog).findByLabelText('Nombre')).toBeInTheDocument();
+
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: 'Siguiente' }),
+    );
+
+    expect(within(dialog).getByLabelText('Nombre')).toHaveAccessibleDescription(
+      'Este campo es requerido.',
+    );
+    expect(
+      within(dialog).getByLabelText('Apellido'),
+    ).toHaveAccessibleDescription('Este campo es requerido.');
+    expect(
+      within(dialog).getByLabelText('Fecha de nacimiento'),
+    ).toHaveAccessibleDescription('Este campo es requerido.');
+    expect(
+      within(dialog).getByLabelText('Cédula de identidad'),
+    ).toHaveAccessibleDescription('Este campo es requerido.');
+    expect(
+      within(dialog).getAllByText('Este campo es requerido.'),
+    ).toHaveLength(5);
   });
 });

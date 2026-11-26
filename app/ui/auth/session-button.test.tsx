@@ -97,6 +97,23 @@ describe('SessionButton', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it('hides the account button on the sign-in page while /identity/me is still loading or has failed', () => {
+    const loading = renderWithSession(
+      session({ status: 'signed-in', user, accountStatus: 'loading' }),
+      <SessionButton hideSignIn />,
+    );
+    expect(screen.queryByRole('button', { name: 'Tu cuenta' })).toBeNull();
+    expect(loading.container).toBeEmptyDOMElement();
+    loading.unmount();
+
+    const failed = renderWithSession(
+      session({ status: 'signed-in', user, accountStatus: 'error' }),
+      <SessionButton hideSignIn />,
+    );
+    expect(screen.queryByRole('button', { name: 'Tu cuenta' })).toBeNull();
+    expect(failed.container).toBeEmptyDOMElement();
+  });
+
   it('offers «Entrar» at once when no session is expected', () => {
     renderWithSession(
       session({ status: 'resolving', expected: false }),

@@ -6,7 +6,9 @@ import { useTranslations } from 'next-intl';
 
 import {
   googleMapId,
+  hasMapsAuthFailed,
   importMapsLibrary,
+  markMapsAuthFailed,
   onMapsAuthFailure,
 } from '@/app/lib/maps/google-maps';
 import type { SearchResult } from '@/app/lib/schemas/search';
@@ -65,8 +67,8 @@ export function ResultsMap({
     map: google.maps.Map;
     markers: MarkerStore;
   } | null>(null);
-  const [status, setStatus] = useState<'loading' | 'ready' | 'failed'>(
-    'loading',
+  const [status, setStatus] = useState<'loading' | 'ready' | 'failed'>(() =>
+    hasMapsAuthFailed() ? 'failed' : 'loading',
   );
   const [moved, setMoved] = useState(false);
   const fitting = useRef(false);
@@ -79,12 +81,16 @@ export function ResultsMap({
   // The map itself, once: the API arrives in its own time.
   useEffect(() => {
     const node = container.current;
-    if (!node) return;
+    if (!node || hasMapsAuthFailed()) return;
     const gone = new AbortController();
     let markers: MarkerStore | null = null;
     // A key Google refuses for this API: the map says so, in our words.
     const stopListening = onMapsAuthFailure(() => {
-      if (!gone.signal.aborted) setStatus('failed');
+      if (!gone.signal.aborted) {
+        markers?.clear();
+        setScene(null);
+        setStatus('failed');
+      }
     });
     void (async () => {
       try {
@@ -92,7 +98,7 @@ export function ResultsMap({
           importMapsLibrary('maps'),
           importMapsLibrary('marker'),
         ]);
-        if (gone.signal.aborted) return;
+        if (gone.signal.aborted || hasMapsAuthFailed()) return;
         const map = new maps.Map(node, {
           mapId: googleMapId(),
           center: venezuelaCenter,
@@ -125,27 +131,38 @@ export function ResultsMap({
   // The pins and the point follow the results; then the map shows them all.
   useEffect(() => {
     if (!scene) return;
-    scene.markers.sync(results, (name) => t('officePin', { name }));
-    scene.markers.place(point, t('yourLocation'));
-    const bounds = scene.markers.bounds();
-    if (!bounds) return;
-    fitting.current = true;
-    scene.map.fitBounds(bounds, 56);
-    const once = google.maps.event.addListenerOnce(scene.map, 'idle', () => {
-      if ((scene.map.getZoom() ?? 0) > closestZoom) {
-        scene.map.setZoom(closestZoom);
-      }
-      fitting.current = false;
-      setMoved(false);
-    });
-    return () => {
-      once.remove();
-    };
+    try {
+      scene.markers.sync(results, (name) => t('officePin', { name }));
+      scene.markers.place(point, t('yourLocation'));
+      const bounds = scene.markers.bounds();
+      if (!bounds) return;
+      fitting.current = true;
+      scene.map.fitBounds(bounds, 56);
+      const once = google.maps.event.addListenerOnce(scene.map, 'idle', () => {
+        if ((scene.map.getZoom() ?? 0) > closestZoom) {
+          scene.map.setZoom(closestZoom);
+        }
+        fitting.current = false;
+        setMoved(false);
+      });
+      return () => {
+        once.remove();
+      };
+    } catch {
+      scene.markers.clear();
+      queueMicrotask(markMapsAuthFailed);
+      return;
+    }
   }, [scene, results, point, t]);
 
   // The pin of the card in hand stands out.
   useEffect(() => {
-    scene?.markers.highlight([activeId, selectedId]);
+    try {
+      scene?.markers.highlight([activeId, selectedId]);
+    } catch {
+      scene?.markers.clear();
+      queueMicrotask(markMapsAuthFailed);
+    }
   }, [scene, activeId, selectedId, results]);
 
   const searchArea = () => {

@@ -25,7 +25,8 @@ export type DeviceLocation = {
   coordinates: Coordinates | null;
 };
 
-const fixTimeoutMs = 10_000;
+const fixTimeoutMs = 6_000;
+const fixGuardMs = fixTimeoutMs + 500;
 const fixMaxAgeMs = 300_000;
 
 const idle: DeviceLocation = { status: 'idle', coordinates: null };
@@ -43,8 +44,20 @@ class DeviceLocationError extends Error {
 
 function askBrowser(): Promise<Coordinates> {
   return new Promise((resolve, reject) => {
+    let settled = false;
+    // Some desktop/headless browsers never fire Geolocation's error callback
+    // when no network location provider is configured: guard the wait in JS.
+    const guard = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      reject(new Error('Geolocation timed out'));
+    }, fixGuardMs);
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(guard);
         resolve(
           roundCoordinates({
             lat: position.coords.latitude,
@@ -53,6 +66,9 @@ function askBrowser(): Promise<Coordinates> {
         );
       },
       (error: GeolocationPositionError) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(guard);
         reject(new DeviceLocationError(error));
       },
       {

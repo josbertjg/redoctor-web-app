@@ -73,6 +73,8 @@ type WhatFieldProps = {
   /** The id of the line that says what is wrong, when something is. */
   describedBy?: string | undefined;
   invalid?: boolean;
+  /** Hides the decorative stethoscope icon on phones so compact top bars keep room for text. */
+  hideLeadingIconOnMobile?: boolean;
   className?: string;
   inputClassName?: string;
   /** Where its list hangs (the box's geometry, SearchBar). */
@@ -102,6 +104,7 @@ export function WhatField({
   hint,
   describedBy,
   invalid = false,
+  hideLeadingIconOnMobile = false,
   className,
   inputClassName,
   popupClassName,
@@ -221,12 +224,13 @@ export function WhatField({
 
   return (
     <div ref={root} className={cn('relative flex min-w-0 flex-1', className)}>
-      <div className="flex min-w-0 flex-1 items-center gap-2.5 text-grey-700">
+      <div className="flex min-w-0 flex-1 items-center gap-1.5 text-grey-700 sm:gap-2.5">
         <Icon
           icon={Stethoscope}
           size={24}
           className={cn(
             'shrink-0 transition-colors duration-fast ease-house',
+            hideLeadingIconOnMobile && 'max-sm:hidden',
             specialty !== null && 'text-primary',
           )}
         />
@@ -270,7 +274,7 @@ export function WhatField({
               else onTextChange('');
               input.current?.focus();
             }}
-            className="flex size-8 shrink-0 items-center justify-center rounded-full text-text-secondary transition-colors duration-fast ease-house outline-none hover:bg-surface-variant focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="flex size-7 shrink-0 items-center justify-center rounded-full text-text-secondary transition-colors duration-fast ease-house outline-none hover:bg-surface-variant focus-visible:ring-3 focus-visible:ring-ring/50 sm:size-8"
           >
             <Icon icon={Close} size={18} />
           </button>

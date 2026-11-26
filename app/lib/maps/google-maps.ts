@@ -28,6 +28,19 @@ type MapsWindow = Window & {
 const authFailureListeners = new Set<() => void>();
 let authFailed = false;
 
+/** Whether Google has already refused the key on this page. */
+export function hasMapsAuthFailed(): boolean {
+  return authFailed;
+}
+
+/** Marks the Google Maps runtime unusable on this page and notifies listeners. */
+export function markMapsAuthFailed(): void {
+  authFailed = true;
+  authFailureListeners.forEach((listener) => {
+    listener();
+  });
+}
+
 /**
  * Tells when Google refuses the key for the Maps JavaScript API (a key
  * restricted to other APIs, or an invalid one): the API loads, the map
@@ -73,18 +86,16 @@ export function loadGoogleMaps(): Promise<typeof google.maps> {
   if (apiKey === undefined) {
     return Promise.reject(new Error('Google Maps is not configured'));
   }
+  if (authFailed) {
+    return Promise.reject(new Error('Google Maps key was refused'));
+  }
   loading ??= new Promise<typeof google.maps>((resolve, reject) => {
     const already = mapsWindow().google?.maps;
     if (already?.importLibrary) {
       resolve(already);
       return;
     }
-    mapsWindow().gm_authFailure = () => {
-      authFailed = true;
-      authFailureListeners.forEach((listener) => {
-        listener();
-      });
-    };
+    mapsWindow().gm_authFailure = markMapsAuthFailed;
     mapsWindow()[callbackName] = () => {
       mapsWindow()[callbackName] = undefined;
       const maps = mapsWindow().google?.maps;

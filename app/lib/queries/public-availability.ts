@@ -19,6 +19,8 @@ import {
 
 export const publicAgendaKeys = {
   all: ['public-agenda'] as const,
+  rawWindow: (specialistId: string, fromDate: string) =>
+    ['public-agenda', specialistId, 'raw-window', fromDate] as const,
   window: (specialistId: string, fromDate: string) =>
     ['public-agenda', specialistId, 'window', fromDate] as const,
   month: (specialistId: string, month: string, from: string) =>
@@ -27,17 +29,18 @@ export const publicAgendaKeys = {
     ['public-agenda', 'office', officeId, 'slots', date] as const,
 };
 
-function readWindow(
-  specialistId: string,
-  fromDate: string,
-  signal?: AbortSignal,
-) {
-  return apiFetch({
-    path: '/search/specialists/:specialistId/availability',
-    params: { specialistId },
-    query: { fromDate },
-    schema: specialistAvailabilityResponseSchema,
-    ...(signal ? { signal } : {}),
+function specialistWindowQueryOptions(specialistId: string, fromDate: string) {
+  return queryOptions({
+    queryKey: publicAgendaKeys.rawWindow(specialistId, fromDate),
+    queryFn: ({ signal }) =>
+      apiFetch({
+        path: '/search/specialists/:specialistId/availability',
+        params: { specialistId },
+        query: { fromDate },
+        schema: specialistAvailabilityResponseSchema,
+        signal,
+      }),
+    staleTime: 60_000,
   });
 }
 
@@ -48,8 +51,12 @@ export function specialistFreeDaysQueryOptions(
 ) {
   return queryOptions({
     queryKey: publicAgendaKeys.window(specialistId, fromDate),
-    queryFn: async ({ signal }) =>
-      toOfficeFreeDays(await readWindow(specialistId, fromDate, signal)),
+    queryFn: async ({ client }) =>
+      toOfficeFreeDays(
+        await client.query(
+          specialistWindowQueryOptions(specialistId, fromDate),
+        ),
+      ),
     staleTime: 60_000,
   });
 }
@@ -72,11 +79,13 @@ export function specialistMonthQueryOptions(
   const monthEnd = lastDayOf(month);
   return queryOptions({
     queryKey: publicAgendaKeys.month(specialistId, month, from),
-    queryFn: async ({ signal }): Promise<OfficeFreeDays> => {
+    queryFn: async ({ client }): Promise<OfficeFreeDays> => {
       const days: Partial<Record<string, Set<string>>> = {};
       let start: string | null = from <= monthEnd ? from : null;
       for (let round = 0; start !== null && round < maxWindows; round++) {
-        const response = await readWindow(specialistId, start, signal);
+        const response = await client.query(
+          specialistWindowQueryOptions(specialistId, start),
+        );
         for (const [officeId, free] of Object.entries(
           toOfficeFreeDays(response),
         )) {

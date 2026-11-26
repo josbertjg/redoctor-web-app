@@ -2114,7 +2114,7 @@
       "noWhatsapp": "nuestro WhatsApp de soporte"
     },
     "terms": {
-      "metaTitle": "Términos y condiciones de uso · Redoctor",
+      "metaTitle": "Términos y condiciones de uso",
       "metaDescription": "Las condiciones para usar Redoctor como paciente o como especialista: cuentas, citas, verificación, planes y pagos, reseñas y responsabilidades.",
       "title": "Términos y condiciones de uso",
       "updatedAt": "14 de octubre de 2026",
@@ -2203,7 +2203,7 @@
       }
     },
     "privacy": {
-      "metaTitle": "Política de privacidad · Redoctor",
+      "metaTitle": "Política de privacidad",
       "metaDescription": "Qué datos recoge Redoctor, para qué los usa, con quién los comparte, cuánto tiempo los conserva y qué derechos tienes sobre ellos, incluidos tus datos de salud.",
       "title": "Política de privacidad",
       "updatedAt": "2 de noviembre de 2026",
@@ -2268,7 +2268,7 @@
       }
     },
     "deleteAccount": {
-      "metaTitle": "Eliminar mi cuenta · Redoctor",
+      "metaTitle": "Eliminar mi cuenta",
       "metaDescription": "Elimina tu cuenta de Redoctor tú mismo, en el acto, y conoce qué se borra, qué se cancela y qué se conserva.",
       "title": "Eliminar mi cuenta",
       "updatedAt": "2 de noviembre de 2026",

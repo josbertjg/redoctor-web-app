@@ -129,41 +129,54 @@ export function PatientStep({
       id={patientFormId}
       noValidate
       onSubmit={(event) => {
-        void handleSubmit((values) => {
-          let attendee: BookingAttendee;
-          if (values.who === 'SELF') {
-            attendee = { kind: 'self' };
-          } else {
-            const known = people.find(
-              (person) => person.id === values.terceroId,
-            );
-            if (known) {
-              attendee = { kind: 'tercero', tercero: known };
+        const formElement = event.currentTarget;
+        void handleSubmit(
+          (values) => {
+            let attendee: BookingAttendee;
+            if (values.who === 'SELF') {
+              attendee = { kind: 'self' };
             } else {
-              if (values.sex === '') return;
-              attendee = {
-                kind: 'new',
-                person: {
-                  firstName: cleanPersonName(values.firstName),
-                  lastName: cleanPersonName(values.lastName),
-                  dateOfBirth: values.dateOfBirth,
-                  sex: values.sex,
-                  document: documentExempt(values.dateOfBirth, today)
-                    ? null
-                    : {
-                        type: values.documentType,
-                        number: cleanDocumentNumber(values.documentNumber),
-                      },
-                },
-              };
+              const known = people.find(
+                (person) => person.id === values.terceroId,
+              );
+              if (known) {
+                attendee = { kind: 'tercero', tercero: known };
+              } else {
+                if (values.sex === '') return;
+                attendee = {
+                  kind: 'new',
+                  person: {
+                    firstName: cleanPersonName(values.firstName),
+                    lastName: cleanPersonName(values.lastName),
+                    dateOfBirth: values.dateOfBirth,
+                    sex: values.sex,
+                    document: documentExempt(values.dateOfBirth, today)
+                      ? null
+                      : {
+                          type: values.documentType,
+                          number: cleanDocumentNumber(values.documentNumber),
+                        },
+                  },
+                };
+              }
             }
-          }
-          onDone({
-            values,
-            reasonId: values.reasonId === '' ? null : values.reasonId,
-            attendee,
-          });
-        })(event);
+            onDone({
+              values,
+              reasonId: values.reasonId === '' ? null : values.reasonId,
+              attendee,
+            });
+          },
+          () => {
+            requestAnimationFrame(() => {
+              const invalid = formElement.querySelector<HTMLElement>(
+                '[aria-invalid="true"]',
+              );
+              invalid
+                ?.closest('div, fieldset')
+                ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            });
+          },
+        )(event);
       }}
       className="flex flex-col gap-6"
     >
@@ -372,11 +385,8 @@ function usePatientResolver({
         check('lastName', person.name, values.lastName);
         check('dateOfBirth', person.dateOfBirth(false), values.dateOfBirth);
         check('sex', person.sex, values.sex);
-        // The document waits for a date that says whether it is needed.
-        if (
-          calendarDate.test(values.dateOfBirth) &&
-          !documentExempt(values.dateOfBirth, today)
-        ) {
+        // Validate the document whenever the document field is shown on screen.
+        if (!documentExempt(values.dateOfBirth, today)) {
           check('documentNumber', person.documentNumber, values.documentNumber);
         }
       });

@@ -92,7 +92,7 @@ const variants: Record<
 > = {
   hero: {
     wrapper: '',
-    form: 'mx-auto max-w-3xl flex-col rounded-2xl bg-pure-white shadow-md sm:min-h-14 sm:flex-row sm:items-center sm:gap-6 sm:rounded-full sm:px-5',
+    form: 'mx-auto max-w-4xl flex-col rounded-2xl bg-pure-white shadow-md sm:min-h-14 sm:flex-row sm:items-center sm:gap-6 sm:rounded-full sm:px-5',
     field: 'px-5 py-3 sm:self-stretch sm:px-0 sm:py-0',
     input: 'text-subtitle-s',
     where: '',
@@ -115,7 +115,7 @@ const variants: Record<
     // list: the positioned box a list hangs from is the field from 1280 px
     // (xl), the pill from tablets up, and the bar itself on phones.
     wrapper: 'max-md:static',
-    form: 'h-11 flex-row items-center gap-2 rounded-full bg-white-200 px-3 sm:gap-3 sm:px-4',
+    form: 'h-11 flex-row items-center gap-1.5 rounded-full bg-white-200 px-2.5 sm:gap-3 sm:px-4',
     field: 'py-0 max-xl:static xl:self-stretch',
     input: 'text-body-xs',
     where: 'hidden md:flex',
@@ -238,14 +238,21 @@ export function SearchBar({
       : baseWhat?.kind === 'specialty'
         ? { id: baseWhat.id, name: baseWhat.name }
         : null;
-  // The place in hand: chosen here, named by the address, or the last one
-  // this browser searched from.
-  const [chosen, setChosen] = useState<SearchLocation | null>(() =>
-    initialQuery && initialQuery.location.kind !== 'country'
-      ? initialQuery.location
-      : null,
-  );
-  const location = chosen ?? last ?? wholeCountry;
+  // The place in hand: on /search the URL leads (including whole-country when
+  // no lat/lng/near is in the URL); elsewhere the last remembered place does.
+  const whereKey = hasUrlQuery
+    ? `url:${JSON.stringify(initialQuery.location)}`
+    : 'remembered';
+  const [draftWhere, setDraftWhere] = useState<{
+    forKey: string;
+    location: SearchLocation;
+  } | null>(null);
+  const location =
+    draftWhere?.forKey === whereKey
+      ? draftWhere.location
+      : hasUrlQuery
+        ? initialQuery.location
+        : (last ?? wholeCountry);
   const [typedPlace, setTypedPlace] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
   // A place just taken in hand, while Google places it: a search that
@@ -272,7 +279,10 @@ export function SearchBar({
     setNoticeAway(false);
     void device.locate().then((coordinates) => {
       if (coordinates) {
-        setChosen({ kind: 'device', coordinates });
+        setDraftWhere({
+          forKey: whereKey,
+          location: { kind: 'device', coordinates },
+        });
         setTypedPlace('');
       }
     });
@@ -287,7 +297,7 @@ export function SearchBar({
           coordinates: resolved.coordinates,
           label: resolved.label,
         };
-        setChosen(picked);
+        setDraftWhere({ forKey: whereKey, location: picked });
         device.reset();
         return picked;
       },
@@ -420,7 +430,18 @@ export function SearchBar({
     } else if (urlText !== null && urlText !== '') {
       keepActive({ kind: 'text', text: urlText });
     }
-  }, [hasUrlQuery, urlSpecialtyId, initialSpecialtyName, urlText, keepActive]);
+    if (initialQuery.location.kind !== 'country') {
+      keep(initialQuery.location);
+    }
+  }, [
+    hasUrlQuery,
+    urlSpecialtyId,
+    initialSpecialtyName,
+    urlText,
+    initialQuery?.location,
+    keepActive,
+    keep,
+  ]);
 
   // In use while the focus is in the box; the shade's place is found on the
   // first use, from the box up.
@@ -533,6 +554,7 @@ export function SearchBar({
           hint={variant === 'bar' ? words.whatShortHint : words.whatHint}
           describedBy={problem ? problemId : undefined}
           invalid={problem !== null}
+          hideLeadingIconOnMobile={variant === 'bar'}
           className={style.field}
           inputClassName={style.input}
           popupClassName={style.whatPopup}
@@ -542,7 +564,7 @@ export function SearchBar({
           location={location}
           onLocationChange={(next) => {
             pendingPlace.current = null;
-            setChosen(next);
+            setDraftWhere({ forKey: whereKey, location: next });
             if (next.kind !== 'device') device.reset();
           }}
           device={{ status: device.status, locate }}

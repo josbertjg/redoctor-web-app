@@ -78,11 +78,19 @@ export function SessionButton({
   // Null outside the App Router (a component rendered on its own, a test),
   // whatever its type says.
   const searchParams = useSearchParams() as URLSearchParams | null;
-  const { status, expected, user, account, signOut } = useSession();
+  const { status, expected, user, account, accountStatus, signOut } =
+    useSession();
 
   useEffect(() => {
     if (expected && layout === 'bar') void loadAccountMenu();
   }, [expected, layout]);
+
+  if (
+    hideSignIn &&
+    (status !== 'signed-in' || user === null || accountStatus !== 'ready')
+  ) {
+    return null;
+  }
 
   if (status === 'signed-out' || (status === 'resolving' && !expected)) {
     if (hideSignIn) return null;

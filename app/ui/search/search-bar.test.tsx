@@ -7,6 +7,7 @@ import { axe } from 'jest-axe';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { saveLastLocation } from '@/app/lib/search/last-location';
 import { emptySearchQuery, type SearchQuery } from '@/app/lib/search/query';
 
 import { renderWithIntl } from '@/tests/render';
@@ -548,5 +549,89 @@ describe('SearchBar', () => {
     // Moving to a specialist profile afterwards shows the latest search from /search.
     renderBox('bar');
     expect(whatBox()).toHaveValue('Medicina');
+  });
+
+  it('reflects the URL’s whole-country location on /search?q=Medicina instead of stale remembered location, and follows URL location resets', async () => {
+    const user = userEvent.setup();
+    saveLastLocation({
+      kind: 'place',
+      label: 'Barquisimeto estado Lara',
+      coordinates: { lat: 10.07, lng: -69.35 },
+    });
+
+    function LocationHarness() {
+      const [inCity, setInCity] = useState(false);
+      return (
+        <QueryClientProvider client={new QueryClient()}>
+          <Box
+            variant="page"
+            initialQuery={
+              inCity
+                ? {
+                    ...emptySearchQuery,
+                    text: 'Medicina',
+                    location: {
+                      kind: 'place',
+                      label: 'Caracas',
+                      coordinates: { lat: 10.49, lng: -66.88 },
+                    },
+                  }
+                : { ...emptySearchQuery, text: 'Medicina' }
+            }
+          />
+          <button
+            type="button"
+            onClick={() => {
+              setInCity((value) => !value);
+            }}
+          >
+            Alternar ubicación URL
+          </button>
+        </QueryClientProvider>
+      );
+    }
+
+    renderWithIntl(<LocationHarness />);
+    expect(whereBox()).toHaveValue('');
+
+    await user.click(
+      screen.getByRole('button', { name: 'Alternar ubicación URL' }),
+    );
+    expect(whereBox()).toHaveValue('Caracas');
+
+    await user.click(
+      screen.getByRole('button', { name: 'Alternar ubicación URL' }),
+    );
+    expect(whereBox()).toHaveValue('');
+  });
+
+  it('stops spinning and shows an unavailable notice when geolocation hangs without answering', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const user = userEvent.setup({
+        advanceTimers: (ms) => vi.advanceTimersByTime(ms),
+      });
+      stubGeolocation(
+        vi.fn(() => {
+          // Simulates headless/desktop Chromium hanging forever without invoking success or error.
+        }),
+      );
+      renderBox('page');
+
+      await user.click(
+        screen.getByRole('button', { name: 'Usar mi ubicación' }),
+      );
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(7_000);
+      });
+
+      expect(
+        screen.getByText(
+          'No pudimos obtener tu ubicación. Vuelve a intentarlo o escribe una dirección.',
+        ),
+      ).toBeVisible();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
