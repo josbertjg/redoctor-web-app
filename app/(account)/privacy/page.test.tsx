@@ -25,10 +25,19 @@ describe('PrivacyPage', () => {
         name: '9. Datos de salud y secreto médico',
       }),
     ).toBeInTheDocument();
-    // The company's identification reaches the text as values.
+    // Official contact email and Barquisimeto domicile reach the text with zero placeholders.
     expect(
-      screen.getAllByText(/\[Razón social de Redoctor\]/).length,
+      screen.getAllByRole('link', { name: 'gerencia@redoctorapp.com' }).length,
     ).toBeGreaterThan(0);
+
+    const text = container.textContent;
+    expect(text).not.toMatch(/\[.*\]/);
+    expect(text).not.toMatch(/récipes?\s+(médicos?\s+)?digitales?/i);
+    expect(text).not.toMatch(/factura fiscal/i);
+    expect(text).not.toMatch(/inteligencia artificial/i);
+    expect(text).toMatch(/LOPNNA/);
+    expect(text).toMatch(/Barquisimeto, Estado Lara/);
+    expect(text).toMatch(/forma anónima/);
 
     expect(
       screen.getByRole('link', { name: 'Términos y condiciones de uso' }),

@@ -56,7 +56,6 @@ export function LegalDocument({
 
   const values = {
     company: tLegal('entity.name'),
-    rif: tLegal('entity.rif'),
     address: tLegal('entity.address'),
     email,
     whatsapp: whatsapp?.number ?? '',

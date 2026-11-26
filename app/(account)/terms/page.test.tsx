@@ -45,6 +45,21 @@ describe('TermsPage', () => {
       'href',
       expect.stringMatching(/^https:\/\/wa\.me\/58/),
     );
+    expect(
+      screen.getByRole('link', { name: 'gerencia@redoctorapp.com' }),
+    ).toHaveAttribute('href', 'mailto:gerencia@redoctorapp.com');
+
+    const text = container.textContent;
+    expect(text).not.toMatch(/\[.*\]/);
+    expect(text).not.toMatch(/récipes?\s+(médicos?\s+)?digitales?/i);
+    expect(text).not.toMatch(/factura fiscal/i);
+    expect(text).not.toMatch(/inteligencia artificial/i);
+    expect(text).toMatch(/LOPNNA/);
+    expect(text).toMatch(/911/);
+    expect(text).toMatch(/Banco Central de Venezuela/);
+    expect(text).toMatch(/tres \(3\) inasistencias/);
+    expect(text).toMatch(/forma anónima/);
+    expect(text).toMatch(/Barquisimeto, Estado Lara/);
 
     expect(await axe(container)).toHaveNoViolations();
   }, 20_000);

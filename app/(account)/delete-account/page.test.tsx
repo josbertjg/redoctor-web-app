@@ -45,6 +45,10 @@ describe('DeleteAccountPage', () => {
     expect(
       screen.getByRole('link', { name: 'Política de privacidad' }),
     ).toHaveAttribute('href', '/privacy');
+    expect(
+      screen.getByRole('link', { name: 'gerencia@redoctorapp.com' }),
+    ).toHaveAttribute('href', 'mailto:gerencia@redoctorapp.com');
+    expect(container.textContent).not.toMatch(/\[.*\]/);
 
     expect(await axe(container)).toHaveNoViolations();
   }, 20_000);
