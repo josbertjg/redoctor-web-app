@@ -8,7 +8,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
 import { canUseSpecialistArea } from '@/app/lib/auth/account';
-import { returnPath, routes } from '@/app/lib/routes';
+import { leavesOnSignOut, returnPath, routes } from '@/app/lib/routes';
 import { cn } from '@/app/lib/utils';
 
 import { Button } from '@/app/ui/button';
@@ -52,10 +52,26 @@ function backHere(pathname: string | null, search: string): string | undefined {
 // The menu's code (Radix's dropdown) comes for a signed-in person only,
 // fetched ahead when the hint says one is likely.
 /**
- * After signing out, a page that needs the session moves to the sign-in: the
- * wipe waits this long for it, and no longer on a page that stays.
+ * After signing out, a guarded page moves to `/sign-in`: the wipe waits up to
+ * 4s for a cold serverless render to land before opening (matching SignInCard),
+ * and waits nothing at all on a page that stays at its own address.
  */
-const SIGN_OUT_LANDING_MS = 600;
+const SIGN_OUT_LANDING_MS = 4000;
+
+export function signOutWithWipe(
+  pathname: string | null | undefined,
+  signOut: () => Promise<void>,
+): void {
+  const leaves = leavesOnSignOut(pathname);
+  void wipeScreen({
+    tone: 'primary',
+    whileCovered: async () => {
+      const landed = leaves ? nextNavigation(SIGN_OUT_LANDING_MS) : null;
+      await signOut();
+      if (landed !== null) await landed;
+    },
+  });
+}
 
 const loadAccountMenu = () => import('./account-menu');
 const AccountMenu = lazy(loadAccountMenu);
@@ -133,13 +149,7 @@ export function SessionButton({
   // under the blue wipe (AGENTS.md §8, rule 13). A page that needs the
   // session moves to the sign-in; the wipe opens once it has landed.
   const onSignOut = () => {
-    void wipeScreen({
-      tone: 'primary',
-      whileCovered: async () => {
-        await signOut();
-        await nextNavigation(SIGN_OUT_LANDING_MS);
-      },
-    });
+    signOutWithWipe(pathname, signOut);
   };
 
   if (layout === 'list') {

@@ -2,6 +2,8 @@
 
 import { useEffect, type ReactNode } from 'react';
 
+import type { Route } from 'next';
+
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -90,13 +92,27 @@ export function RequireSession({
     // The address is read as the page leaves: the plan a link asks for, a
     // list's filters, come back too.
     const back = returnTo ?? returnPath(pathname, window.location.search);
-    if (signedOut) router.replace(routes.signIn(back));
-    else if (mustSignUp) router.replace(routes.signUp(back));
-    else if (toPanel) router.replace(routes.specialistHome());
+    let target: Route | null = null;
+    if (signedOut) target = routes.signIn(back);
+    else if (mustSignUp) target = routes.signUp(back);
+    else if (toPanel) target = routes.specialistHome();
     else if (toHome) {
       forgetPanelHint();
-      router.replace(routes.home());
+      target = routes.home();
     }
+    if (target === null) return;
+    router.replace(target);
+    // Safety net: if an RSC fetch fails or is dropped on a degraded edge,
+    // Next's router swallows the error and would leave the skeleton up forever.
+    const destination = target;
+    const fallbackTimer = setTimeout(() => {
+      if (window.location.pathname === pathname) {
+        window.location.replace(destination);
+      }
+    }, 4000);
+    return () => {
+      clearTimeout(fallbackTimer);
+    };
   }, [signedOut, mustSignUp, toPanel, toHome, returnTo, pathname, router]);
 
   // The skeleton gives way to the page in a transition, so the page enters
@@ -111,7 +127,7 @@ export function RequireSession({
     stateClassName === undefined ? {} : { className: stateClassName };
 
   if (session.accountStatus === 'error') {
-    return <AccountErrorState headingLevel={1} {...surface} />;
+    return <AccountErrorState headingLevel={1} canSwitchAccount {...surface} />;
   }
 
   const { account } = session;

@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { meResponseSchema, toAccount } from '@/app/lib/schemas/identity';
 
+import { announceNavigation } from '@/app/ui/motion/navigation-events';
 import { renderWithIntl } from '@/tests/render';
 
 import { SessionContext, type Session } from '@/app/hooks/use-session';
@@ -240,5 +241,39 @@ describe('SessionButton', () => {
     // The blue wipe grows from the item: the menu goes with the session,
     // under the colour, instead of shrinking where the colour starts.
     expect(screen.getByRole('menu')).toBeInTheDocument();
+  });
+
+  it('waits past 600ms for /sign-in to land when signing out from /panel', async () => {
+    vi.useFakeTimers();
+    try {
+      navigation.pathname = '/panel';
+      let wipeSettled = false;
+      const wipeModule = await import('@/app/ui/motion/screen-wipe');
+      const spy = vi
+        .spyOn(wipeModule, 'wipeScreen')
+        .mockImplementation(async ({ whileCovered }) => {
+          await whileCovered();
+          wipeSettled = true;
+        });
+
+      const value = session({
+        status: 'signed-in',
+        user,
+        accountStatus: 'error',
+      });
+      renderWithSession(value, <SessionButton layout="list" />);
+
+      screen.getByRole('button', { name: 'Cerrar sesión' }).click();
+      await vi.advanceTimersByTimeAsync(1500);
+      // Cold serverless `/sign-in` has not landed yet at 1.5s: still covered.
+      expect(wipeSettled).toBe(false);
+
+      announceNavigation();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(wipeSettled).toBe(true);
+      spy.mockRestore();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

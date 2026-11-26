@@ -198,3 +198,20 @@ export function isSafeRedirect(value: string | null | undefined): boolean {
     return false;
   }
 }
+
+/**
+ * Whether signing out from `pathname` leaves the page for `/sign-in` (every
+ * segment guarded by `RequireSession`: `/panel/*`, `/pay`, `/appointments`).
+ * Pages that handle a missing session in place (`/a`, `/i`, `/book`, `/s`, `/`)
+ * stay at their own address.
+ */
+export function leavesOnSignOut(pathname: string | null | undefined): boolean {
+  if (!pathname) return false;
+  return (
+    pathname === '/panel' ||
+    pathname.startsWith('/panel/') ||
+    pathname === '/pay' ||
+    pathname === '/appointments' ||
+    pathname.startsWith('/appointments/')
+  );
+}

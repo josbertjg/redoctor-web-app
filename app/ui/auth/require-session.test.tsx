@@ -97,7 +97,7 @@ describe('RequireSession', () => {
     expect(screen.queryByText('Contenido privado')).not.toBeInTheDocument();
   });
 
-  it('lets the account retry when the API could not answer', async () => {
+  it('lets the account retry or switch account when the API could not answer', async () => {
     const value = session({
       status: 'signed-in',
       user,
@@ -111,6 +111,10 @@ describe('RequireSession', () => {
     ).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
     expect(value.retryAccount).toHaveBeenCalledOnce();
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Entrar con otra cuenta' }),
+    );
+    expect(value.signOut).toHaveBeenCalledOnce();
   });
 
   it('sends a patient-only account from the specialist area straight home', () => {

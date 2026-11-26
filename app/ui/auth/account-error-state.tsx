@@ -8,6 +8,8 @@ import { EmptyState } from '@/app/ui/empty-state';
 
 import { useSession } from '@/app/hooks/use-session';
 
+import { signOutWithWipe } from './session-button';
+
 type AccountErrorStateProps = {
   /** 1 when it is the page's only heading. */
   headingLevel?: 1 | 2;
@@ -50,7 +52,7 @@ export function AccountErrorState({
               variant="white"
               shape="soft"
               onClick={() => {
-                void session.signOut();
+                signOutWithWipe(window.location.pathname, session.signOut);
               }}
             >
               {t('auth.switchAccount')}

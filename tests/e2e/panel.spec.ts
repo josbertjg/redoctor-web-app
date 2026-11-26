@@ -1,5 +1,12 @@
 import { expect, test } from '@playwright/test';
 
+import {
+  people,
+  signInWith,
+  test as signedInTest,
+  wipeOpened,
+} from './signed-in';
+
 /*
  * The specialist's panel (M14): every section is the specialist's own, so
  * a stranger is sent to sign in and brought back to the same address — the
@@ -60,3 +67,50 @@ test('a specialist’s browser goes to the panel, never to the landing', async (
     new URL(response.headers().location ?? '', 'http://localhost').pathname,
   ).toBe('/panel');
 });
+
+signedInTest(
+  'signing out from /panel when /identity/me fails redirects straight to /sign-in',
+  async ({ page, providers }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    providers.next = people.doctor;
+    await page.route('**/api/v1/identity/me', (route) =>
+      route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          code: 'ERR_9999',
+          message: 'An internal error occurred',
+        }),
+      }),
+    );
+
+    await page.goto('/sign-in');
+    await signInWith(page);
+    await expect(
+      page.getByRole('heading', { name: 'No pudimos leer tu cuenta' }),
+    ).toBeVisible({ timeout: 15_000 });
+
+    await page.goto('/panel');
+    await expect(
+      page.getByRole('heading', { name: 'No pudimos leer tu cuenta' }),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(
+      page.getByRole('button', { name: 'Entrar con otra cuenta' }),
+    ).toBeVisible();
+
+    // Simulate a cold serverless render of `/sign-in` (> 600ms): the wipe must
+    // keep covering `/panel` until `/sign-in` lands, never opening on skeletons.
+    await page.route('**/sign-in?**', async (route) => {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 1500);
+      });
+      await route.continue();
+    });
+
+    await page.getByRole('button', { name: 'Tu cuenta' }).click();
+    await page.getByRole('menuitem', { name: 'Cerrar sesión' }).click();
+    await wipeOpened(page);
+
+    expect(new URL(page.url()).pathname).toBe('/sign-in');
+  },
+);
