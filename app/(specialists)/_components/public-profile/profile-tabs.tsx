@@ -21,52 +21,82 @@ const corners = ['rounded-tr-xl', 'rounded-t-xl', 'rounded-tl-xl'] as const;
  * header card's foot and stay at the top of the screen while the content
  * scrolls under them, a shadow beneath them once they do.
  */
+const scrollKeys = new Set([
+  'ArrowUp',
+  'ArrowDown',
+  'PageUp',
+  'PageDown',
+  'Home',
+  'End',
+  ' ',
+]);
+
 export function ProfileTabs({ label, sections }: ProfileTabsProps) {
   const nav = useRef<HTMLElement>(null);
   const sentinel = useRef<HTMLDivElement>(null);
-  const pinned = useRef<{
-    id: string;
-    armedAt: number;
-    settledY: number | null;
-  } | null>(null);
+  const pinnedId = useRef<string | null>(null);
   const [active, setActive] = useState(sections[0]?.id ?? '');
   const [stuck, setStuck] = useState(false);
 
-  // The section being read: the last whose top has reached the scroll-mt-20
-  // anchor line below the sticky tabs; a tab just clicked stays pinned at the
-  // scroll position its anchor jump landed on until the reader scrolls away.
+  // The section being read: a tab chosen (or named in the URL hash) stays
+  // active throughout smooth/anchor scrolling until the reader scrolls by hand;
+  // at the very bottom of a tall screen, a short final section still counts.
   useEffect(() => {
+    const syncHash = () => {
+      const hash = decodeURIComponent(window.location.hash.replace(/^#/, ''));
+      if (hash && sections.some((section) => section.id === hash)) {
+        pinnedId.current = hash;
+        setActive(hash);
+      }
+    };
+    queueMicrotask(syncHash);
+
+    const releasePin = () => {
+      pinnedId.current = null;
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (scrollKeys.has(event.key)) pinnedId.current = null;
+    };
+
     const onScroll = () => {
-      const pin = pinned.current;
-      if (pin !== null) {
-        if (performance.now() - pin.armedAt < 150) {
-          pin.settledY = window.scrollY;
-          setActive(pin.id);
-          return;
-        }
-        pin.settledY ??= window.scrollY;
-        if (Math.abs(window.scrollY - pin.settledY) < 12) {
-          setActive(pin.id);
-          return;
-        }
-        pinned.current = null;
+      if (pinnedId.current !== null) {
+        setActive(pinnedId.current);
+        return;
       }
 
       const line = Math.max(
         (nav.current?.getBoundingClientRect().bottom ?? 0) + 44,
         96,
       );
+      const docHeight = document.documentElement.scrollHeight;
+      const atBottom =
+        window.scrollY > 0 &&
+        docHeight > 0 &&
+        window.innerHeight + window.scrollY >= docHeight - 4;
+      const threshold = atBottom
+        ? Math.max(line, window.innerHeight * 0.65)
+        : line;
+
       let current = sections[0]?.id ?? '';
       for (const section of sections) {
         const top = document
           .getElementById(section.id)
           ?.getBoundingClientRect().top;
-        if (top !== undefined && top <= line) current = section.id;
+        if (top !== undefined && top <= threshold) current = section.id;
       }
       setActive(current);
     };
+
+    window.addEventListener('hashchange', syncHash);
+    window.addEventListener('wheel', releasePin, { passive: true });
+    window.addEventListener('touchmove', releasePin, { passive: true });
+    window.addEventListener('keydown', onKeyDown);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => {
+      window.removeEventListener('hashchange', syncHash);
+      window.removeEventListener('wheel', releasePin);
+      window.removeEventListener('touchmove', releasePin);
+      window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('scroll', onScroll);
     };
   }, [sections]);
@@ -105,11 +135,7 @@ export function ProfileTabs({ label, sections }: ProfileTabsProps) {
                 href={`#${section.id}`}
                 aria-current={active === section.id ? 'location' : undefined}
                 onClick={() => {
-                  pinned.current = {
-                    id: section.id,
-                    armedAt: performance.now(),
-                    settledY: null,
-                  };
+                  pinnedId.current = section.id;
                   setActive(section.id);
                 }}
                 className={cn(

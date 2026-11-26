@@ -60,8 +60,18 @@ describe('HomePage', () => {
   it('renders the landing without accessibility violations', async () => {
     const { container } = await renderHome();
 
+    const heroHeading = screen.getByRole('heading', {
+      level: 1,
+      name: 'Confianza, salud y gestión eficiente, en un solo click.',
+    });
+    expect(heroHeading).toHaveAttribute(
+      'aria-label',
+      'Confianza, salud y gestión eficiente, en un solo click.',
+    );
     expect(
-      screen.getByRole('heading', { level: 1, name: /en un solo click\./ }),
+      screen.getByRole('region', {
+        name: 'Confianza, salud y gestión eficiente, en un solo click.',
+      }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('search', { name: 'Buscar especialistas' }),

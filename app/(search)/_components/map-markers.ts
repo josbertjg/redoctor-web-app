@@ -42,6 +42,15 @@ function createDot(): HTMLElement {
   return dot;
 }
 
+function detachMarker(marker: Marker): void {
+  try {
+    marker.map = null;
+  } catch {
+    // Google's AdvancedMarkerElement throws (`getRootNode`) if torn down after
+    // a Maps auth or runtime failure; the map itself is leaving anyway.
+  }
+}
+
 export type MarkerStore = ReturnType<typeof createMarkerStore>;
 
 export function createMarkerStore(
@@ -58,7 +67,7 @@ export function createMarkerStore(
       const keep = new Set(results.map((result) => result.id));
       for (const [id, pin] of pins) {
         if (!keep.has(id)) {
-          pin.marker.map = null;
+          detachMarker(pin.marker);
           pins.delete(id);
         }
       }
@@ -88,7 +97,7 @@ export function createMarkerStore(
     /** The point searched from, or none. */
     place(point: Coordinates | null, title: string) {
       if (dot) {
-        dot.map = null;
+        detachMarker(dot);
         dot = null;
       }
       if (point) {
@@ -132,9 +141,9 @@ export function createMarkerStore(
     },
 
     clear() {
-      for (const pin of pins.values()) pin.marker.map = null;
+      for (const pin of pins.values()) detachMarker(pin.marker);
       pins.clear();
-      if (dot) dot.map = null;
+      if (dot) detachMarker(dot);
       dot = null;
     },
   };

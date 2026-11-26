@@ -48,14 +48,22 @@ export function HeroTitle({ lead, title, waitForSplash }: HeroTitleProps) {
     advance('cursor', 'click');
   }, [advance]);
 
+  const accessibleTitle = `${lead} ${title.map((part) => part.text).join('')}`
+    .replace(/\s+/g, ' ')
+    .trim();
+
   return (
-    <h1 id="hero-title" className="text-pure-white">
+    <h1
+      id="hero-title"
+      aria-label={accessibleTitle}
+      className="text-pure-white"
+    >
       <StaggeredText
         segments={[{ text: lead }]}
         play={start}
         onComplete={toTitle}
         className="block text-headline-sm font-bold sm:text-headline-lg lg:text-title-xxl"
-      />
+      />{' '}
       <span className="mt-1 inline-flex items-end gap-1 text-display-sm font-bold sm:gap-2 sm:text-display-lg lg:text-display-xl">
         <StaggeredText
           segments={title}
@@ -112,6 +120,7 @@ function Cursor({ stage, onEntered }: { stage: Stage; onEntered: () => void }) {
 
   return (
     <m.span
+      aria-hidden="true"
       className="relative mb-1 inline-block size-6 sm:size-9 lg:mb-2 lg:size-13"
       initial={false}
       animate={reduced ? shown : visible ? arriving : waiting}

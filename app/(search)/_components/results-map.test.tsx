@@ -69,7 +69,7 @@ describe('ResultsMap', () => {
     }
 
     class FakeAdvancedMarkerElement {
-      map: unknown;
+      private currentMap: unknown;
       content: HTMLElement;
       constructor(opts: { map: unknown; content: HTMLElement }) {
         if (brokenRuntime) {
@@ -77,8 +77,19 @@ describe('ResultsMap', () => {
           const broken = undefined as unknown as Record<string, unknown>;
           Object.keys(broken.keys as Record<string, unknown>);
         }
-        this.map = opts.map;
+        this.currentMap = opts.map;
         this.content = opts.content;
+      }
+      get map() {
+        return this.currentMap;
+      }
+      set map(next: unknown) {
+        if (brokenRuntime && next === null) {
+          throw new TypeError(
+            "Cannot read properties of undefined (reading 'getRootNode')",
+          );
+        }
+        this.currentMap = next;
       }
       addEventListener() {
         return undefined;

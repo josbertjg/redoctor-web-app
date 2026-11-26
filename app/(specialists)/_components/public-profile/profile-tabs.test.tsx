@@ -1,7 +1,13 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'jest-axe';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ProfileTabs } from './profile-tabs';
 
@@ -97,15 +103,38 @@ describe('ProfileTabs', () => {
       'location',
     );
 
-    // Click Sobre este especialista -> short bottom section stops at 240px while #opiniones is at 20px.
-    tops = {
-      descripcion: -260,
-      opiniones: 20,
-      'sobre-el-especialista': 240,
-    };
+    // Click Sobre este especialista -> multi-frame smooth scroll over 500ms stops at bottom (top = 290px).
+    const nowSpy = vi.spyOn(performance, 'now');
+    nowSpy.mockReturnValue(1000);
     await userEvent.click(
       screen.getByRole('link', { name: 'Sobre este especialista' }),
     );
+
+    // Frame 1 at +80ms (mid-scroll, scrollY = 360)
+    nowSpy.mockReturnValue(1080);
+    tops = {
+      descripcion: -180,
+      opiniones: 90,
+      'sobre-el-especialista': 360,
+    };
+    act(() => {
+      Object.defineProperty(window, 'scrollY', {
+        value: 360,
+        configurable: true,
+      });
+      fireEvent.scroll(window);
+    });
+    expect(
+      screen.getByRole('link', { name: 'Sobre este especialista' }),
+    ).toHaveAttribute('aria-current', 'location');
+
+    // Frame 2 at +450ms (smooth scroll settles at bottom of 1440x900, scrollY = 460, top = 290px > 96px)
+    nowSpy.mockReturnValue(1450);
+    tops = {
+      descripcion: -260,
+      opiniones: 20,
+      'sobre-el-especialista': 290,
+    };
     act(() => {
       Object.defineProperty(window, 'scrollY', {
         value: 460,
@@ -116,5 +145,39 @@ describe('ProfileTabs', () => {
     expect(
       screen.getByRole('link', { name: 'Sobre este especialista' }),
     ).toHaveAttribute('aria-current', 'location');
+
+    // Manual wheel scroll back up releases the pin and follows the section in view.
+    tops = {
+      descripcion: 40,
+      opiniones: 380,
+      'sobre-el-especialista': 680,
+    };
+    act(() => {
+      fireEvent.wheel(window);
+      Object.defineProperty(window, 'scrollY', {
+        value: 40,
+        configurable: true,
+      });
+      fireEvent.scroll(window);
+    });
+    expect(screen.getByRole('link', { name: 'Descripción' })).toHaveAttribute(
+      'aria-current',
+      'location',
+    );
+    nowSpy.mockRestore();
+  });
+
+  it('honors an initial URL hash on mount', async () => {
+    window.history.replaceState(null, '', '#sobre-el-especialista');
+    try {
+      render(<ProfileTabs label="Secciones del perfil" sections={sections} />);
+      await waitFor(() => {
+        expect(
+          screen.getByRole('link', { name: 'Sobre este especialista' }),
+        ).toHaveAttribute('aria-current', 'location');
+      });
+    } finally {
+      window.history.replaceState(null, '', '/');
+    }
   });
 });

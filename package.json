@@ -1,6 +1,6 @@
 {
   "name": "redoctor-web-app",
-  "version": "0.41.1",
+  "version": "0.41.2",
   "private": true,
   "engines": {
     "node": ">=24"

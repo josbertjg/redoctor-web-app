@@ -82,7 +82,11 @@ export function ResultsMap({
   useEffect(() => {
     const node = container.current;
     if (!node || hasMapsAuthFailed()) return;
+    const host = document.createElement('div');
+    host.className = 'size-full';
+    node.append(host);
     const gone = new AbortController();
+    let mapInstance: google.maps.Map | null = null;
     let markers: MarkerStore | null = null;
     // A key Google refuses for this API: the map says so, in our words.
     const stopListening = onMapsAuthFailure(() => {
@@ -99,7 +103,7 @@ export function ResultsMap({
           importMapsLibrary('marker'),
         ]);
         if (gone.signal.aborted || hasMapsAuthFailed()) return;
-        const map = new maps.Map(node, {
+        const map = new maps.Map(host, {
           mapId: googleMapId(),
           center: venezuelaCenter,
           zoom: 6,
@@ -108,6 +112,7 @@ export function ResultsMap({
           clickableIcons: false,
           gestureHandling: 'greedy',
         });
+        mapInstance = map;
         map.addListener('dragend', () => {
           setMoved(true);
         });
@@ -125,6 +130,14 @@ export function ResultsMap({
       gone.abort();
       stopListening();
       markers?.clear();
+      try {
+        if (mapInstance) {
+          google.maps.event.clearInstanceListeners(mapInstance);
+        }
+        host.remove();
+      } catch {
+        // Ignore teardown errors from Google Maps internals during route change.
+      }
     };
   }, []);
 
